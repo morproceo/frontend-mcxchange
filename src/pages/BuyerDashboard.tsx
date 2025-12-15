@@ -1,0 +1,765 @@
+import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  Heart,
+  MessageSquare,
+  CheckCircle,
+  Clock,
+  Search,
+  TrendingUp,
+  Eye,
+  SlidersHorizontal,
+  X,
+  LayoutDashboard,
+  Unlock,
+  Coins,
+  Sparkles,
+  MapPin
+} from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import TrustBadge from '../components/ui/TrustBadge'
+import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
+import MCCard from '../components/MCCard'
+import { mockListings } from '../utils/mockData'
+import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
+import { FilterOptions } from '../types'
+
+const BuyerDashboard = () => {
+  const { user: _user } = useAuth()
+  const [savedListings] = useState<Set<string>>(new Set(['1', '3']))
+  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace' | 'saved'>('overview')
+  const [userCredits] = useState(4) // Mock user credits
+
+  // Mock unlocked listings
+  const unlockedListings = [
+    {
+      id: '1',
+      listing: mockListings[0],
+      unlockedAt: new Date('2024-01-10'),
+      mcNumber: '123456',
+      dotNumber: '1234567',
+      legalName: 'Transport Pro Logistics LLC',
+      state: 'TX',
+      amazonScore: 'A',
+      sellingWithEmail: true,
+      sellingWithPhone: true
+    },
+    {
+      id: '2',
+      listing: mockListings[2],
+      unlockedAt: new Date('2024-01-08'),
+      mcNumber: '789012',
+      dotNumber: '7890123',
+      legalName: 'Quick Freight Services Inc',
+      state: 'CA',
+      amazonScore: 'B',
+      sellingWithEmail: true,
+      sellingWithPhone: false
+    }
+  ]
+
+  // Marketplace state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const myOffers = [
+    {
+      id: '1',
+      listing: mockListings[0],
+      amount: 42000,
+      status: 'pending',
+      createdAt: '2 hours ago',
+      expiresAt: '5 days'
+    },
+    {
+      id: '2',
+      listing: mockListings[1],
+      amount: 58000,
+      status: 'countered',
+      counterAmount: 60000,
+      createdAt: '1 day ago',
+      expiresAt: '4 days'
+    }
+  ]
+
+  const [filters, setFilters] = useState<FilterOptions>({
+    priceMin: undefined,
+    priceMax: undefined,
+    yearsActiveMin: undefined,
+    operationTypes: [],
+    safetyRating: [],
+    trustLevel: [],
+    verified: undefined,
+    sortBy: 'newest'
+  })
+
+  const stats = [
+    {
+      icon: Coins,
+      label: 'Credits Available',
+      value: userCredits,
+      change: 'Unlock MC details',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50'
+    },
+    {
+      icon: Unlock,
+      label: 'Unlocked MCs',
+      value: unlockedListings.length,
+      change: 'Full access',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50'
+    },
+    {
+      icon: Heart,
+      label: 'Saved Listings',
+      value: savedListings.size,
+      change: '+2 this week',
+      color: 'text-red-500',
+      bgColor: 'bg-red-50'
+    },
+    {
+      icon: Eye,
+      label: 'Viewed',
+      value: '24',
+      change: 'Last 30 days',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    }
+  ]
+
+  const handleSaveListing = (id: string) => {
+    // Toggle save/unsave logic would go here
+    console.log('Toggle save for listing:', id)
+  }
+
+  const filteredListings = useMemo(() => {
+    let results = mockListings.filter(listing => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchesSearch =
+          listing.mcNumber.includes(query) ||
+          listing.title.toLowerCase().includes(query) ||
+          listing.description.toLowerCase().includes(query)
+        if (!matchesSearch) return false
+      }
+
+      if (filters.priceMin && listing.price < filters.priceMin) return false
+      if (filters.priceMax && listing.price > filters.priceMax) return false
+      if (filters.yearsActiveMin && listing.yearsActive < filters.yearsActiveMin) return false
+      if (filters.trustLevel && filters.trustLevel.length > 0) {
+        if (!filters.trustLevel.includes(listing.trustLevel)) return false
+      }
+      if (filters.verified !== undefined && listing.verified !== filters.verified) return false
+
+      return true
+    })
+
+    switch (filters.sortBy) {
+      case 'price-asc':
+        results.sort((a, b) => a.price - b.price)
+        break
+      case 'price-desc':
+        results.sort((a, b) => b.price - a.price)
+        break
+      case 'trust-score':
+        results.sort((a, b) => b.trustScore - a.trustScore)
+        break
+      case 'newest':
+        results.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        break
+      case 'oldest':
+        results.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        break
+      case 'years-active':
+        results.sort((a, b) => b.yearsActive - a.yearsActive)
+        break
+    }
+
+    return results
+  }, [searchQuery, filters])
+
+  const clearFilters = () => {
+    setFilters({
+      priceMin: undefined,
+      priceMax: undefined,
+      yearsActiveMin: undefined,
+      operationTypes: [],
+      safetyRating: [],
+      trustLevel: [],
+      verified: undefined,
+      sortBy: 'newest'
+    })
+    setSearchQuery('')
+  }
+
+  return (
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Credits Banner */}
+        <Card className="mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 -m-6 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                  <Coins className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-amber-600">{userCredits}</span>
+                    <span className="text-gray-500">credits remaining</span>
+                  </div>
+                  <p className="text-sm text-gray-500">Use credits to unlock full MC details</p>
+                </div>
+              </div>
+              <Link to="/buyer/subscription">
+                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Get More Credits
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
+
+        {/* Tabs */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-2">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'overview'
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Overview</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('unlocked')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'unlocked'
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Unlock className="w-4 h-4" />
+              <span>Unlocked MCs</span>
+              {unlockedListings.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-xs">
+                  {unlockedListings.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('marketplace')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'marketplace'
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Search className="w-4 h-4" />
+              <span>Browse Market</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('saved')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'saved'
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Heart className="w-4 h-4" />
+              <span>Saved</span>
+              {savedListings.size > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-secondary-500 text-white text-xs">
+                  {savedListings.size}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`p-3 rounded-xl ${stat.bgColor}`}>
+                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                    <div className="text-gray-500 text-sm mb-1">{stat.label}</div>
+                    <div className="text-xs text-gray-400">{stat.change}</div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* My Offers */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">My Offers</h2>
+                  <Link to="/buyer/offers" className="text-secondary-600 hover:text-secondary-700 text-sm font-medium">
+                    View All
+                  </Link>
+                </div>
+
+                {myOffers.length > 0 ? (
+                  <div className="space-y-4">
+                    {myOffers.map((offer) => (
+                      <Card key={offer.id}>
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <Link
+                              to={`/mc/${offer.listing.id}`}
+                              className="text-xl font-bold text-gray-900 hover:text-secondary-600 transition-colors"
+                            >
+                              MC #{getPartialMCNumber(offer.listing.mcNumber)}
+                            </Link>
+                            <p className="text-gray-500 text-sm">{offer.listing.title}</p>
+                          </div>
+
+                          {offer.status === 'pending' && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Pending
+                            </span>
+                          )}
+                          {offer.status === 'countered' && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-50 border border-purple-200 text-purple-700 flex items-center gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              Countered
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">Your Offer</div>
+                            <div className="text-xl font-bold text-secondary-600">
+                              ${offer.amount.toLocaleString()}
+                            </div>
+                          </div>
+
+                          {offer.status === 'countered' && offer.counterAmount && (
+                            <div>
+                              <div className="text-sm text-gray-500 mb-1">Counter Offer</div>
+                              <div className="text-xl font-bold text-purple-600">
+                                ${offer.counterAmount.toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                          <span>Submitted {offer.createdAt}</span>
+                          <span>Expires in {offer.expiresAt}</span>
+                        </div>
+
+                        {offer.status === 'countered' && (
+                          <div className="flex gap-2">
+                            <Button size="sm" fullWidth>Accept Counter</Button>
+                            <Button size="sm" fullWidth variant="secondary">
+                              Counter Again
+                            </Button>
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <div className="text-center py-12">
+                      <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">No active offers</h3>
+                      <p className="text-gray-500 mb-6">
+                        Browse the marketplace and make offers on listings
+                      </p>
+                      <Link to="/marketplace">
+                        <Button>Browse Marketplace</Button>
+                      </Link>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Saved Listings */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">Saved</h2>
+                  <Link to="/buyer/saved" className="text-secondary-600 hover:text-secondary-700 text-sm font-medium">
+                    View All
+                  </Link>
+                </div>
+
+                {savedListings.size > 0 ? (
+                  <div className="space-y-4">
+                    {mockListings
+                      .filter(l => savedListings.has(l.id))
+                      .map((listing) => (
+                        <Card key={listing.id}>
+                          <Link to={`/mc/${listing.id}`}>
+                            <div className="mb-3">
+                              <h3 className="font-bold text-gray-900 hover:text-secondary-600 transition-colors">
+                                MC #{getPartialMCNumber(listing.mcNumber)}
+                              </h3>
+                              <p className="text-sm text-gray-500 line-clamp-1">
+                                {listing.title}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between mb-3">
+                              <TrustBadge
+                                score={listing.trustScore}
+                                level={getTrustLevel(listing.trustScore)}
+                                size="sm"
+                                showScore={false}
+                              />
+                              <div className="text-secondary-600 font-bold">
+                                ${listing.price.toLocaleString()}
+                              </div>
+                            </div>
+
+                            <Button size="sm" fullWidth variant="outline">
+                              View Details
+                            </Button>
+                          </Link>
+                        </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <div className="text-center py-8">
+                      <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 mb-4">No saved listings yet</p>
+                      <Link to="/marketplace">
+                        <Button size="sm">Browse Marketplace</Button>
+                      </Link>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Marketplace Tab */}
+        {activeTab === 'marketplace' && (
+          <div className="space-y-6">
+            {/* Search and Filter */}
+            <Card>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Search by MC number, title, or description..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      icon={<Search className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    Filters
+                  </Button>
+                </div>
+
+                {/* Filters Panel */}
+                {showFilters && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="pt-4 border-t border-gray-100"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+                      <Input
+                        label="Min Price"
+                        type="number"
+                        placeholder="$0"
+                        value={filters.priceMin || ''}
+                        onChange={(e) =>
+                          setFilters(prev => ({ ...prev, priceMin: e.target.value ? Number(e.target.value) : undefined }))
+                        }
+                      />
+
+                      <Input
+                        label="Max Price"
+                        type="number"
+                        placeholder="$100,000"
+                        value={filters.priceMax || ''}
+                        onChange={(e) =>
+                          setFilters(prev => ({ ...prev, priceMax: e.target.value ? Number(e.target.value) : undefined }))
+                        }
+                      />
+
+                      <Input
+                        label="Min Years Active"
+                        type="number"
+                        placeholder="0"
+                        value={filters.yearsActiveMin || ''}
+                        onChange={(e) =>
+                          setFilters(prev => ({
+                            ...prev,
+                            yearsActiveMin: e.target.value ? Number(e.target.value) : undefined
+                          }))
+                        }
+                      />
+
+                      <Select
+                        label="Sort By"
+                        value={filters.sortBy || 'newest'}
+                        onChange={(e) =>
+                          setFilters(prev => ({
+                            ...prev,
+                            sortBy: e.target.value as FilterOptions['sortBy']
+                          }))
+                        }
+                        options={[
+                          { value: 'newest', label: 'Newest First' },
+                          { value: 'oldest', label: 'Oldest First' },
+                          { value: 'price-asc', label: 'Price: Low to High' },
+                          { value: 'price-desc', label: 'Price: High to Low' },
+                          { value: 'trust-score', label: 'Trust Score' },
+                          { value: 'years-active', label: 'Years Active' }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button variant="ghost" onClick={clearFilters} className="flex items-center gap-2">
+                        <X className="w-4 h-4" />
+                        Clear Filters
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </Card>
+
+            {/* Results */}
+            <div className="mb-4">
+              <p className="text-gray-500">
+                {filteredListings.length} {filteredListings.length === 1 ? 'listing' : 'listings'} found
+              </p>
+            </div>
+
+            {/* Listings Grid */}
+            {filteredListings.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredListings.map((listing) => (
+                  <MCCard
+                    key={listing.id}
+                    listing={listing}
+                    onSave={handleSaveListing}
+                    isSaved={savedListings.has(listing.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <div className="text-center py-12">
+                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No listings found</h3>
+                  <p className="text-gray-500 mb-4">Try adjusting your filters or search query</p>
+                  <Button onClick={clearFilters}>Clear Filters</Button>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Unlocked MCs Tab */}
+        {activeTab === 'unlocked' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Unlocked MC Authorities</h2>
+                <p className="text-gray-500">Full access to {unlockedListings.length} MC details</p>
+              </div>
+            </div>
+
+            {unlockedListings.length > 0 ? (
+              <div className="space-y-4">
+                {unlockedListings.map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 -m-6 mb-4 p-4 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <Unlock className="w-5 h-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <Link
+                              to={`/mc/${item.listing.id}`}
+                              className="text-xl font-bold text-gray-900 hover:text-secondary-600 transition-colors"
+                            >
+                              MC #{item.mcNumber}
+                            </Link>
+                            <div className="text-sm text-gray-500">
+                              Unlocked on {item.unlockedAt.toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-emerald-600">
+                            ${item.listing.price.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-500">Asking Price</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      <div className="bg-gray-50 rounded-xl p-3">
+                        <div className="text-xs text-gray-500 mb-1">DOT Number</div>
+                        <div className="font-semibold text-gray-900">{item.dotNumber}</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-3">
+                        <div className="text-xs text-gray-500 mb-1">Legal Name</div>
+                        <div className="font-semibold text-gray-900 text-sm">{item.legalName}</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-3">
+                        <div className="text-xs text-gray-500 mb-1">State</div>
+                        <div className="font-semibold text-gray-900 flex items-center gap-1">
+                          <MapPin className="w-4 h-4 text-secondary-500" />
+                          {item.state}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-3">
+                        <div className="text-xs text-gray-500 mb-1">Amazon Score</div>
+                        <div className={`font-bold text-lg ${
+                          item.amazonScore === 'A' ? 'text-emerald-600' :
+                          item.amazonScore === 'B' ? 'text-green-600' :
+                          item.amazonScore === 'C' ? 'text-amber-600' : 'text-orange-600'
+                        }`}>
+                          {item.amazonScore}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                        item.sellingWithEmail
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                          : 'bg-gray-50 border border-gray-200 text-gray-500'
+                      }`}>
+                        {item.sellingWithEmail ? <CheckCircle className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                        Email Included
+                      </div>
+                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                        item.sellingWithPhone
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                          : 'bg-gray-50 border border-gray-200 text-gray-500'
+                      }`}>
+                        {item.sellingWithPhone ? <CheckCircle className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                        Phone Included
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Link to={`/mc/${item.listing.id}`} className="flex-1">
+                        <Button fullWidth>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Full Details
+                        </Button>
+                      </Link>
+                      <Button variant="outline">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Contact Seller
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <div className="text-center py-12">
+                  <Unlock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No unlocked MCs yet</h3>
+                  <p className="text-gray-500 mb-6">
+                    Browse the marketplace and use your credits to unlock MC details
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button onClick={() => setActiveTab('marketplace')}>
+                      <Search className="w-4 h-4 mr-2" />
+                      Browse Marketplace
+                    </Button>
+                    <Link to="/buyer/subscription">
+                      <Button variant="outline">
+                        <Coins className="w-4 h-4 mr-2" />
+                        Get Credits
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Saved Tab */}
+        {activeTab === 'saved' && (
+          <div>
+            {savedListings.size > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mockListings
+                  .filter(l => savedListings.has(l.id))
+                  .map((listing) => (
+                    <MCCard
+                      key={listing.id}
+                      listing={listing}
+                      onSave={handleSaveListing}
+                      isSaved={true}
+                    />
+                  ))}
+              </div>
+            ) : (
+              <Card>
+                <div className="text-center py-12">
+                  <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No saved listings yet</h3>
+                  <p className="text-gray-500 mb-6">
+                    Save listings from the marketplace to easily find them later
+                  </p>
+                  <Button onClick={() => setActiveTab('marketplace')}>
+                    <Search className="w-4 h-4 mr-2" />
+                    Browse Marketplace
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default BuyerDashboard

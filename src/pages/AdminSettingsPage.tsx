@@ -1,0 +1,645 @@
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+  Settings,
+  CreditCard,
+  DollarSign,
+  Link2,
+  CheckCircle,
+  AlertTriangle,
+  Download,
+  Search,
+  TrendingUp,
+  Calendar,
+  Building2,
+  ExternalLink,
+  Shield,
+  Bell,
+  Globe
+} from 'lucide-react'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+
+const AdminSettingsPage = () => {
+  const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'notifications' | 'security'>('general')
+  const [stripeConnected, setStripeConnected] = useState(true)
+  const [transactionFilter, setTransactionFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Mock Stripe account data
+  const stripeAccount = {
+    id: 'acct_1234567890',
+    email: 'admin@domilea.com',
+    businessName: 'Domilea LLC',
+    status: 'active',
+    balance: 45750.00,
+    pendingBalance: 12350.00,
+    lastPayout: '2024-01-15',
+    payoutSchedule: 'Daily',
+    currency: 'USD'
+  }
+
+  // Mock transactions data
+  const transactions = [
+    {
+      id: 'txn_001',
+      type: 'payment',
+      description: 'MC Authority Purchase - MC #789012',
+      amount: 15000.00,
+      fee: 465.00,
+      net: 14535.00,
+      status: 'completed',
+      customer: 'John Smith',
+      date: '2024-01-15 14:32:00',
+      paymentMethod: 'card'
+    },
+    {
+      id: 'txn_002',
+      type: 'payment',
+      description: 'MC Authority Purchase - MC #345678',
+      amount: 8500.00,
+      fee: 276.50,
+      net: 8223.50,
+      status: 'completed',
+      customer: 'Sarah Johnson',
+      date: '2024-01-15 11:15:00',
+      paymentMethod: 'card'
+    },
+    {
+      id: 'txn_003',
+      type: 'payout',
+      description: 'Payout to Bank Account ****4567',
+      amount: -25000.00,
+      fee: 0,
+      net: -25000.00,
+      status: 'completed',
+      customer: 'Domilea LLC',
+      date: '2024-01-14 09:00:00',
+      paymentMethod: 'bank'
+    },
+    {
+      id: 'txn_004',
+      type: 'payment',
+      description: 'Premium Listing Fee - MC #901234',
+      amount: 500.00,
+      fee: 14.80,
+      net: 485.20,
+      status: 'pending',
+      customer: 'Mike Wilson',
+      date: '2024-01-15 16:45:00',
+      paymentMethod: 'card'
+    },
+    {
+      id: 'txn_005',
+      type: 'refund',
+      description: 'Refund - MC #123456 (Cancelled)',
+      amount: -3500.00,
+      fee: 0,
+      net: -3500.00,
+      status: 'completed',
+      customer: 'Emily Davis',
+      date: '2024-01-13 10:20:00',
+      paymentMethod: 'card'
+    },
+    {
+      id: 'txn_006',
+      type: 'payment',
+      description: 'Credit Package - 50 Credits',
+      amount: 250.00,
+      fee: 7.55,
+      net: 242.45,
+      status: 'failed',
+      customer: 'Robert Brown',
+      date: '2024-01-15 08:30:00',
+      paymentMethod: 'card'
+    }
+  ]
+
+  const filteredTransactions = transactions.filter(txn => {
+    const matchesFilter = transactionFilter === 'all' || txn.status === transactionFilter
+    const matchesSearch = txn.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         txn.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         txn.id.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesFilter && matchesSearch
+  })
+
+  const stats = {
+    totalRevenue: 158450.00,
+    monthlyRevenue: 45750.00,
+    totalFees: 4825.50,
+    totalPayouts: 95000.00
+  }
+
+  return (
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-1">Admin Settings</h1>
+          <p className="text-gray-500">Manage platform settings and financial integrations</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'general'
+                ? 'bg-primary-500 text-gray-900'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            General
+          </button>
+          <button
+            onClick={() => setActiveTab('finance')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'finance'
+                ? 'bg-primary-500 text-gray-900'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <DollarSign className="w-4 h-4" />
+            Finance & Stripe
+          </button>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'notifications'
+                ? 'bg-primary-500 text-gray-900'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Bell className="w-4 h-4" />
+            Notifications
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'security'
+                ? 'bg-primary-500 text-gray-900'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Security
+          </button>
+        </div>
+
+        {/* General Settings Tab */}
+        {activeTab === 'general' && (
+          <div className="space-y-6">
+            <Card>
+              <h2 className="text-xl font-bold mb-4">Platform Settings</h2>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Platform Name</label>
+                    <input
+                      type="text"
+                      defaultValue="Domilea"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Support Email</label>
+                    <input
+                      type="email"
+                      defaultValue="support@domilea.com"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Platform Description</label>
+                  <textarea
+                    defaultValue="The trusted marketplace for buying and selling MC Authorities"
+                    rows={3}
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:border-primary-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Listing Fee (%)</label>
+                    <input
+                      type="number"
+                      defaultValue="3"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Premium Listing Price ($)</label>
+                    <input
+                      type="number"
+                      defaultValue="500"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Credit Price ($)</label>
+                    <input
+                      type="number"
+                      defaultValue="5"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button>Save Settings</Button>
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <h2 className="text-xl font-bold mb-4">Site Features</h2>
+
+              <div className="space-y-4">
+                {[
+                  { label: 'Enable User Registration', enabled: true },
+                  { label: 'Enable Premium Listings', enabled: true },
+                  { label: 'Enable Credit System', enabled: true },
+                  { label: 'Require Email Verification', enabled: true },
+                  { label: 'Enable AI Due Diligence', enabled: true },
+                  { label: 'Maintenance Mode', enabled: false }
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium">{feature.label}</span>
+                    <button
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        feature.enabled ? 'bg-primary-500' : 'bg-gray-200'
+                      }`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                        feature.enabled ? 'left-7' : 'left-1'
+                      }`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Finance & Stripe Tab */}
+        {activeTab === 'finance' && (
+          <div className="space-y-6">
+            {/* Stripe Connection Status */}
+            <Card>
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold mb-1">Stripe Integration</h2>
+                  <p className="text-gray-500 text-sm">Manage your payment processing connection</p>
+                </div>
+                {stripeConnected ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-trust-high/20 border border-trust-high/30">
+                    <CheckCircle className="w-4 h-4 text-trust-high" />
+                    <span className="text-sm font-medium text-trust-high">Connected</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30">
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                    <span className="text-sm font-medium text-red-400">Not Connected</span>
+                  </div>
+                )}
+              </div>
+
+              {stripeConnected ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-sm text-gray-500 mb-1">Account ID</div>
+                      <div className="font-mono text-sm">{stripeAccount.id}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-sm text-gray-500 mb-1">Business Name</div>
+                      <div className="font-semibold">{stripeAccount.businessName}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-sm text-gray-500 mb-1">Payout Schedule</div>
+                      <div className="font-semibold">{stripeAccount.payoutSchedule}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-sm text-gray-500 mb-1">Last Payout</div>
+                      <div className="font-semibold">{stripeAccount.lastPayout}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button variant="secondary">
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Open Stripe Dashboard
+                    </Button>
+                    <Button variant="ghost" className="text-red-400 hover:bg-red-400/10">
+                      Disconnect Account
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CreditCard className="w-16 h-16 text-gray-900/20 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Connect Your Stripe Account</h3>
+                  <p className="text-gray-500 mb-4">Link your Stripe account to start processing payments</p>
+                  <Button onClick={() => setStripeConnected(true)}>
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Connect Stripe Account
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {/* Revenue Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card>
+                  <div className="flex items-center justify-between mb-2">
+                    <DollarSign className="w-8 h-8 text-trust-high" />
+                    <TrendingUp className="w-4 h-4 text-trust-high" />
+                  </div>
+                  <div className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">Total Revenue</div>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Card>
+                  <div className="flex items-center justify-between mb-2">
+                    <Calendar className="w-8 h-8 text-primary-400" />
+                    <TrendingUp className="w-4 h-4 text-trust-high" />
+                  </div>
+                  <div className="text-2xl font-bold">${stats.monthlyRevenue.toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">This Month</div>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card>
+                  <div className="flex items-center justify-between mb-2">
+                    <CreditCard className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div className="text-2xl font-bold">${stats.totalFees.toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">Processing Fees</div>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card>
+                  <div className="flex items-center justify-between mb-2">
+                    <Building2 className="w-8 h-8 text-blue-400" />
+                  </div>
+                  <div className="text-2xl font-bold">${stats.totalPayouts.toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">Total Payouts</div>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Balance Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="border-l-4 border-l-trust-high">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Available Balance</div>
+                    <div className="text-3xl font-bold text-trust-high">
+                      ${stripeAccount.balance.toLocaleString()}
+                    </div>
+                  </div>
+                  <Button>
+                    <Download className="w-4 h-4 mr-2" />
+                    Payout Now
+                  </Button>
+                </div>
+              </Card>
+
+              <Card className="border-l-4 border-l-yellow-400">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Pending Balance</div>
+                    <div className="text-3xl font-bold text-yellow-400">
+                      ${stripeAccount.pendingBalance.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Available in 2-3 days
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Transactions */}
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Recent Transactions</h2>
+                <Button variant="secondary" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search transactions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  {(['all', 'completed', 'pending', 'failed'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setTransactionFilter(filter)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
+                        transactionFilter === filter
+                          ? 'bg-primary-500 text-gray-900'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Transactions Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Transaction</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Customer</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Date</th>
+                      <th className="text-right py-3 px-2 text-sm font-medium text-gray-500">Amount</th>
+                      <th className="text-right py-3 px-2 text-sm font-medium text-gray-500">Fee</th>
+                      <th className="text-right py-3 px-2 text-sm font-medium text-gray-500">Net</th>
+                      <th className="text-center py-3 px-2 text-sm font-medium text-gray-500">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTransactions.map((txn) => (
+                      <tr key={txn.id} className="border-b border-white/5 hover:bg-white">
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-sm">{txn.description}</div>
+                          <div className="text-xs text-gray-400 font-mono">{txn.id}</div>
+                        </td>
+                        <td className="py-3 px-2 text-sm">{txn.customer}</td>
+                        <td className="py-3 px-2 text-sm text-gray-500">{txn.date}</td>
+                        <td className={`py-3 px-2 text-sm text-right font-medium ${
+                          txn.amount >= 0 ? 'text-trust-high' : 'text-red-400'
+                        }`}>
+                          {txn.amount >= 0 ? '+' : ''}${Math.abs(txn.amount).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-2 text-sm text-right text-gray-500">
+                          ${txn.fee.toLocaleString()}
+                        </td>
+                        <td className={`py-3 px-2 text-sm text-right font-medium ${
+                          txn.net >= 0 ? 'text-gray-900' : 'text-red-400'
+                        }`}>
+                          {txn.net >= 0 ? '+' : ''}${Math.abs(txn.net).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            txn.status === 'completed'
+                              ? 'bg-trust-high/20 text-trust-high'
+                              : txn.status === 'pending'
+                              ? 'bg-yellow-400/20 text-yellow-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {txn.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredTransactions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No transactions found
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-6">
+            <Card>
+              <h2 className="text-xl font-bold mb-4">Email Notifications</h2>
+
+              <div className="space-y-4">
+                {[
+                  { label: 'New User Registration', description: 'Get notified when a new user signs up', enabled: true },
+                  { label: 'New Listing Submitted', description: 'Get notified when a seller submits a new listing', enabled: true },
+                  { label: 'Payment Received', description: 'Get notified for all successful payments', enabled: true },
+                  { label: 'User Reports', description: 'Get notified when a user or listing is reported', enabled: true },
+                  { label: 'Premium Requests', description: 'Get notified for premium listing contact requests', enabled: true },
+                  { label: 'Daily Summary', description: 'Receive a daily summary of platform activity', enabled: false },
+                  { label: 'Weekly Report', description: 'Receive weekly analytics and performance report', enabled: true }
+                ].map((notification, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium">{notification.label}</div>
+                      <div className="text-sm text-gray-500">{notification.description}</div>
+                    </div>
+                    <button
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        notification.enabled ? 'bg-primary-500' : 'bg-gray-200'
+                      }`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                        notification.enabled ? 'left-7' : 'left-1'
+                      }`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && (
+          <div className="space-y-6">
+            <Card>
+              <h2 className="text-xl font-bold mb-4">Security Settings</h2>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium">Two-Factor Authentication</div>
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-trust-high/20 text-trust-high">Enabled</span>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-3">Add an extra layer of security to your admin account</p>
+                  <Button variant="secondary" size="sm">Manage 2FA</Button>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="font-medium mb-2">Change Password</div>
+                  <p className="text-sm text-gray-500 mb-3">Update your admin password regularly for security</p>
+                  <Button variant="secondary" size="sm">Update Password</Button>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="font-medium mb-2">Active Sessions</div>
+                  <p className="text-sm text-gray-500 mb-3">View and manage your active login sessions</p>
+                  <div className="space-y-2 mt-3">
+                    <div className="flex items-center justify-between p-2 bg-white rounded">
+                      <div className="flex items-center gap-3">
+                        <Globe className="w-4 h-4 text-gray-500" />
+                        <div>
+                          <div className="text-sm">Chrome on MacOS</div>
+                          <div className="text-xs text-gray-400">Current session</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-trust-high">Active now</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg border border-red-500/30">
+                  <div className="font-medium text-red-400 mb-2">Danger Zone</div>
+                  <p className="text-sm text-gray-500 mb-3">Irreversible actions that affect the entire platform</p>
+                  <div className="flex gap-3">
+                    <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-400/10">
+                      Reset All User Sessions
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-400/10">
+                      Export All Data
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default AdminSettingsPage
