@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -15,7 +15,8 @@ import {
   Unlock,
   Coins,
   Sparkles,
-  MapPin
+  MapPin,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
@@ -24,67 +25,80 @@ import TrustBadge from '../components/ui/TrustBadge'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import MCCard from '../components/MCCard'
-import { mockListings } from '../utils/mockData'
+import api from '../services/api'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
-import { FilterOptions } from '../types'
+import { FilterOptions, MCListing } from '../types'
 
 const BuyerDashboard = () => {
-  const { user: _user } = useAuth()
-  const [savedListings] = useState<Set<string>>(new Set(['1', '3']))
+  const { user } = useAuth()
+  const [savedListings] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace' | 'saved'>('overview')
-  const [userCredits] = useState(4) // Mock user credits
+  // Credits from user data (will be 0 for new users)
+  const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
 
-  // Mock unlocked listings
-  const unlockedListings = [
-    {
-      id: '1',
-      listing: mockListings[0],
-      unlockedAt: new Date('2024-01-10'),
-      mcNumber: '123456',
-      dotNumber: '1234567',
-      legalName: 'Transport Pro Logistics LLC',
-      state: 'TX',
-      amazonScore: 'A',
-      sellingWithEmail: true,
-      sellingWithPhone: true
-    },
-    {
-      id: '2',
-      listing: mockListings[2],
-      unlockedAt: new Date('2024-01-08'),
-      mcNumber: '789012',
-      dotNumber: '7890123',
-      legalName: 'Quick Freight Services Inc',
-      state: 'CA',
-      amazonScore: 'B',
-      sellingWithEmail: true,
-      sellingWithPhone: false
+  // API data state
+  const [listings, setListings] = useState<MCListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch listings from API
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await api.getListings()
+
+        // Transform backend data to frontend MCListing format
+        const transformedListings: MCListing[] = (response.listings || []).map((listing: any) => ({
+          id: listing.id,
+          mcNumber: listing.mcNumber,
+          title: listing.title || `MC Authority #${listing.mcNumber}`,
+          description: listing.description || '',
+          price: listing.askingPrice || 0,
+          yearsActive: listing.yearsActive || 0,
+          fleetSize: listing.fleetSize || 0,
+          operationType: listing.operationType || [],
+          safetyRating: listing.safetyRating || 'satisfactory',
+          insuranceStatus: listing.insuranceStatus || 'active',
+          verified: listing.verified || false,
+          premium: listing.isPremium || false,
+          trustScore: listing.trustScore || 70,
+          trustLevel: getTrustLevel(listing.trustScore || 70),
+          createdAt: new Date(listing.createdAt),
+          seller: {
+            id: listing.seller?.id || listing.sellerId,
+            name: listing.seller?.name || 'Unknown Seller',
+            email: listing.seller?.email || '',
+            verified: listing.seller?.isVerified || false,
+            trustScore: listing.seller?.trustScore || 70,
+            memberSince: new Date(listing.seller?.createdAt || Date.now()),
+            completedDeals: listing.seller?.completedDeals || 0
+          }
+        }))
+
+        setListings(transformedListings)
+      } catch (err) {
+        console.error('Failed to fetch listings:', err)
+        setError('Failed to load listings')
+        setListings([])
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    fetchListings()
+  }, [])
+
+  // Unlocked listings - will be empty until user unlocks some via API
+  const unlockedListings: any[] = []
 
   // Marketplace state
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
-  const myOffers = [
-    {
-      id: '1',
-      listing: mockListings[0],
-      amount: 42000,
-      status: 'pending',
-      createdAt: '2 hours ago',
-      expiresAt: '5 days'
-    },
-    {
-      id: '2',
-      listing: mockListings[1],
-      amount: 58000,
-      status: 'countered',
-      counterAmount: 60000,
-      createdAt: '1 day ago',
-      expiresAt: '4 days'
-    }
-  ]
+  // My offers - will be fetched from API in future
+  const myOffers: any[] = []
 
   const [filters, setFilters] = useState<FilterOptions>({
     priceMin: undefined,
@@ -118,15 +132,15 @@ const BuyerDashboard = () => {
       icon: Heart,
       label: 'Saved Listings',
       value: savedListings.size,
-      change: '+2 this week',
+      change: 'Your favorites',
       color: 'text-red-500',
       bgColor: 'bg-red-50'
     },
     {
       icon: Eye,
-      label: 'Viewed',
-      value: '24',
-      change: 'Last 30 days',
+      label: 'Active Listings',
+      value: listings.length,
+      change: 'In marketplace',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     }
@@ -138,7 +152,7 @@ const BuyerDashboard = () => {
   }
 
   const filteredListings = useMemo(() => {
-    let results = mockListings.filter(listing => {
+    let results = listings.filter(listing => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
         const matchesSearch =
@@ -181,7 +195,7 @@ const BuyerDashboard = () => {
     }
 
     return results
-  }, [searchQuery, filters])
+  }, [searchQuery, filters, listings])
 
   const clearFilters = () => {
     setFilters({
@@ -413,9 +427,9 @@ const BuyerDashboard = () => {
                   </Link>
                 </div>
 
-                {savedListings.size > 0 ? (
+                {savedListings.size > 0 && listings.filter(l => savedListings.has(l.id)).length > 0 ? (
                   <div className="space-y-4">
-                    {mockListings
+                    {listings
                       .filter(l => savedListings.has(l.id))
                       .map((listing) => (
                         <Card key={listing.id}>
@@ -571,7 +585,22 @@ const BuyerDashboard = () => {
             </div>
 
             {/* Listings Grid */}
-            {filteredListings.length > 0 ? (
+            {loading ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading listings...</p>
+                </div>
+              </Card>
+            ) : error ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Error loading listings</h3>
+                  <p className="text-gray-500 mb-4">{error}</p>
+                </div>
+              </Card>
+            ) : filteredListings.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredListings.map((listing) => (
                   <MCCard
@@ -727,9 +756,16 @@ const BuyerDashboard = () => {
         {/* Saved Tab */}
         {activeTab === 'saved' && (
           <div>
-            {savedListings.size > 0 ? (
+            {loading ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading saved listings...</p>
+                </div>
+              </Card>
+            ) : savedListings.size > 0 && listings.filter(l => savedListings.has(l.id)).length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mockListings
+                {listings
                   .filter(l => savedListings.has(l.id))
                   .map((listing) => (
                     <MCCard

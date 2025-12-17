@@ -99,7 +99,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                       <MessageSquare className="w-6 h-6 text-primary-400" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">Talk to Maria</h2>
+                      <h2 className="text-2xl font-bold">Talk to a Representative</h2>
                       <p className="text-sm text-white/60">Expert MC Authority Consultation</p>
                     </div>
                   </div>
@@ -119,10 +119,10 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                         <User className="w-8 h-8 text-primary-400" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold mb-1">Maria Rodriguez</h3>
+                        <h3 className="font-bold mb-1">Domilea Representative</h3>
                         <p className="text-sm text-white/80 mb-2">Senior MC Authority Consultant</p>
                         <p className="text-xs text-white/60">
-                          15+ years of experience helping carriers navigate MC authority purchases,
+                          Our team has 15+ years of experience helping carriers navigate MC authority purchases,
                           compliance, and business growth strategies.
                         </p>
                       </div>
@@ -185,7 +185,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                     <div>
                       <label className="block text-sm font-medium mb-2">What would you like to discuss? *</label>
                       <Textarea
-                        placeholder="Tell Maria about your situation, questions, or what you need help with..."
+                        placeholder="Tell us about your situation, questions, or what you need help with..."
                         value={formData.message}
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         rows={4}
@@ -306,7 +306,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
 
                     <h3 className="text-2xl font-bold mb-2">Consultation Booked!</h3>
                     <p className="text-white/80 mb-6">
-                      Thank you! Maria will reach out to you shortly to confirm your consultation.
+                      Thank you! Our representative will reach out to you shortly to confirm your consultation.
                     </p>
 
                     <div className="glass-subtle rounded-lg p-6 text-left mb-6">

@@ -12,7 +12,8 @@ export function cn(...inputs: ClassValue[]) {
  * @param mcNumber - The full MC number
  * @returns Partially hidden MC number (e.g., "123456" becomes "123•••")
  */
-export const getPartialMCNumber = (mcNumber: string): string => {
+export const getPartialMCNumber = (mcNumber: string | undefined | null): string => {
+  if (!mcNumber) return '••••••'
   const halfLength = Math.ceil(mcNumber.length / 2)
   const visiblePart = mcNumber.substring(0, halfLength)
   const hiddenPart = '•'.repeat(mcNumber.length - halfLength)

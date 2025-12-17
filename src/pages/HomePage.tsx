@@ -16,7 +16,7 @@ import Button from '../components/ui/Button'
 import TalkToMariaModal from '../components/TalkToMariaModal'
 
 const HomePage = () => {
-  const [isTalkToMariaOpen, setIsTalkToMariaOpen] = useState(false)
+  const [isConsultationOpen, setIsConsultationOpen] = useState(false)
   const features = [
     {
       icon: Shield,
@@ -77,7 +77,7 @@ const HomePage = () => {
             <h1 className="text-5xl lg:text-7xl font-bold mb-6 text-gray-900">
               The Trusted Marketplace
               <br />
-              <span className="gradient-text">for MC Authorities</span>
+              <span className="gradient-text">for All Trucking Needs</span>
             </h1>
 
             <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
@@ -224,33 +224,33 @@ const HomePage = () => {
                 size="lg"
                 variant="ghost"
                 className="min-w-[200px] text-white hover:bg-white/10"
-                onClick={() => setIsTalkToMariaOpen(true)}
+                onClick={() => setIsConsultationOpen(true)}
               >
                 <MessageSquare className="w-5 h-5 mr-2" />
-                Talk to Maria
+                Talk to a Rep
               </Button>
             </div>
           </div>
         </Card>
       </section>
 
-      {/* Floating Talk to Maria Button */}
+      {/* Floating Consultation Button */}
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 1, type: 'spring' }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsTalkToMariaOpen(true)}
+        onClick={() => setIsConsultationOpen(true)}
         className="fixed bottom-8 right-8 z-40 w-16 h-16 rounded-full bg-black shadow-2xl flex items-center justify-center hover:bg-gray-800 transition-colors"
       >
         <MessageSquare className="w-8 h-8 text-white" />
       </motion.button>
 
-      {/* Talk to Maria Modal */}
+      {/* Consultation Modal */}
       <TalkToMariaModal
-        isOpen={isTalkToMariaOpen}
-        onClose={() => setIsTalkToMariaOpen(false)}
+        isOpen={isConsultationOpen}
+        onClose={() => setIsConsultationOpen(false)}
       />
     </div>
   )

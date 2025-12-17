@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import Button from './ui/Button'
-import { DomileaLogoFull } from './ui/DomileaLogo'
+import { DomileaMainLogo } from './ui/DomileaLogo'
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth()
@@ -63,7 +63,7 @@ const Navbar = () => {
               whileTap={{ scale: 0.98 }}
               className="flex items-center text-gray-900"
             >
-              <DomileaLogoFull height={28} />
+              <DomileaMainLogo height={36} />
             </motion.div>
           </Link>
 

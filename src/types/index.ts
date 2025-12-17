@@ -1,5 +1,96 @@
 export type UserRole = 'buyer' | 'seller' | 'admin'
 
+// ============================================
+// API Response Types (matching backend structure)
+// ============================================
+
+export interface ApiResponse<T = unknown> {
+  success: boolean
+  data?: T
+  message?: string
+  error?: string
+  errors?: ValidationError[]
+  pagination?: PaginationInfo
+}
+
+export interface ValidationError {
+  field: string
+  message: string
+}
+
+export interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
+}
+
+// Auth API Response Types
+export interface AuthTokens {
+  accessToken: string
+  refreshToken: string
+  expiresIn?: string
+}
+
+export interface AuthLoginResponse {
+  user: UserResponse
+  tokens: AuthTokens
+}
+
+export interface AuthRegisterResponse {
+  user: UserResponse
+  tokens: AuthTokens
+}
+
+export interface UserResponse {
+  id: string
+  email: string
+  name: string
+  role: string
+  verified: boolean
+  emailVerified: boolean
+  trustScore: number
+  memberSince: string
+  avatar?: string
+  totalCredits: number
+  usedCredits: number
+}
+
+// Subscription Types
+export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise'
+export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'INCOMPLETE'
+
+export interface SubscriptionInfo {
+  id: string
+  plan: SubscriptionPlan
+  status: SubscriptionStatus
+  creditsPerMonth: number
+  creditsRemaining: number
+  startDate: string
+  endDate: string
+  renewalDate: string
+  isYearly: boolean
+}
+
+export interface CreditsInfo {
+  total: number
+  used: number
+  available: number
+}
+
+export interface SubscriptionResponse {
+  subscription: SubscriptionInfo | null
+  credits: CreditsInfo
+  recentTransactions: CreditTransaction[]
+}
+
+export interface CheckoutSessionResponse {
+  sessionId: string
+  url: string
+}
+
 export interface User {
   id: string
   email: string
@@ -11,6 +102,8 @@ export interface User {
   memberSince: Date
   completedDeals: number
   reviews: Review[]
+  totalCredits?: number
+  usedCredits?: number
 }
 
 export type TrustLevel = 'high' | 'medium' | 'low'

@@ -1,24 +1,25 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
-import Select from '../components/ui/Select'
 import { DomileaIcon } from '../components/ui/DomileaLogo'
-import { UserRole } from '../types'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<UserRole>('buyer')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const { login } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  // Get redirect URL from query params (set by ProtectedRoute)
+  const redirectUrl = searchParams.get('redirect')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,10 +27,17 @@ const LoginPage = () => {
     setLoading(true)
 
     try {
-      await login(email, password, role)
+      // Login returns the user with their actual role from the database
+      const user = await login(email, password)
 
-      // Navigate based on role
-      switch (role) {
+      // If there's a redirect URL, use it (after validating it's a local path)
+      if (redirectUrl && redirectUrl.startsWith('/')) {
+        navigate(redirectUrl)
+        return
+      }
+
+      // Otherwise navigate based on the user's actual role from the database
+      switch (user.role) {
         case 'seller':
           navigate('/seller/dashboard')
           break
@@ -42,8 +50,8 @@ const LoginPage = () => {
         default:
           navigate('/')
       }
-    } catch (err) {
-      setError('Invalid credentials. Please try again.')
+    } catch (err: any) {
+      setError(err.message || 'Invalid credentials. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -73,17 +81,6 @@ const LoginPage = () => {
                 {error}
               </div>
             )}
-
-            <Select
-              label="I am a"
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              options={[
-                { value: 'buyer', label: 'Buyer' },
-                { value: 'seller', label: 'Seller' },
-                { value: 'admin', label: 'Admin' }
-              ]}
-            />
 
             <Input
               label="Email"

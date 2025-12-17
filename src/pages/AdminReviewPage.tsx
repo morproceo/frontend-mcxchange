@@ -42,8 +42,9 @@ import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
-import { mockListings } from '../utils/mockData'
+import api from '../services/api'
 import { getTrustLevel, formatPrice } from '../utils/helpers'
+import { MCListing } from '../types'
 
 interface CreditSafeReport {
   companyName: string
@@ -117,8 +118,62 @@ const AdminReviewPage = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchError, setSearchError] = useState('')
 
-  // Mock pending listing - in real app, fetch from API
-  const listing = mockListings.find(l => l.id === id)
+  // API data state
+  const [listing, setListing] = useState<MCListing | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+
+  // Fetch listing from API (using admin endpoint to get any status)
+  useEffect(() => {
+    const fetchListing = async () => {
+      if (!id) return
+      try {
+        setLoading(true)
+        setFetchError(null)
+        const response = await api.getAdminListing(id)
+
+        // Admin endpoint returns data directly
+        if (response.data || response.success) {
+          const data = response.data
+          const transformedListing: MCListing = {
+            id: data.id,
+            mcNumber: data.mcNumber,
+            title: data.title || `MC Authority #${data.mcNumber}`,
+            description: data.description || '',
+            price: data.askingPrice || 0,
+            yearsActive: data.yearsActive || 0,
+            fleetSize: data.fleetSize || 0,
+            operationType: data.operationType || [],
+            safetyRating: data.safetyRating || 'satisfactory',
+            insuranceStatus: data.insuranceStatus || 'active',
+            verified: data.verified || false,
+            premium: data.isPremium || false,
+            trustScore: data.trustScore || 70,
+            trustLevel: getTrustLevel(data.trustScore || 70),
+            createdAt: new Date(data.createdAt),
+            seller: {
+              id: data.seller?.id || data.sellerId,
+              name: data.seller?.name || 'Unknown Seller',
+              email: data.seller?.email || '',
+              verified: data.seller?.isVerified || false,
+              trustScore: data.seller?.trustScore || 70,
+              memberSince: new Date(data.seller?.createdAt || Date.now()),
+              completedDeals: data.seller?.completedDeals || 0
+            }
+          }
+          setListing(transformedListing)
+        }
+      } catch (err) {
+        console.error('Failed to fetch listing:', err)
+        setFetchError('Failed to load listing')
+        setListing(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchListing()
+  }, [id])
 
   // Extended listing data matching CreateListingPage fields
   const listingDetails = {
@@ -389,13 +444,28 @@ const AdminReviewPage = () => {
     return 'text-red-400'
   }
 
-  if (!listing) {
+  if (loading) {
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
           <GlassCard>
             <div className="text-center py-12">
-              <h2 className="text-2xl font-bold mb-4">Listing Not Found</h2>
+              <RefreshCw className="w-12 h-12 text-white/40 mx-auto mb-4 animate-spin" />
+              <h2 className="text-2xl font-bold mb-4">Loading Listing...</h2>
+            </div>
+          </GlassCard>
+        </div>
+      </div>
+    )
+  }
+
+  if (fetchError || !listing) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <GlassCard>
+            <div className="text-center py-12">
+              <h2 className="text-2xl font-bold mb-4">{fetchError || 'Listing Not Found'}</h2>
               <Button onClick={() => navigate('/admin/dashboard')}>
                 Back to Dashboard
               </Button>

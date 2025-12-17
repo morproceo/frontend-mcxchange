@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -29,7 +29,8 @@ import {
   Crown,
   X,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -38,18 +39,91 @@ import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
 import Input from '../components/ui/Input'
-import { mockListings } from '../utils/mockData'
+import { api } from '../services/api'
 import { formatDistanceToNow } from 'date-fns'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
+import { MCListing, AmazonStatus } from '../types'
 
 const MCDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
-  const listing = mockListings.find(l => l.id === id)
+  const [listing, setListing] = useState<MCListing | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isUnlocked, setIsUnlocked] = useState(false)
-  const [userCredits, setUserCredits] = useState(4) // Mock user credits
+  const [unlocking, setUnlocking] = useState(false)
+
+  // Fetch listing from API and check unlock status
+  useEffect(() => {
+    const fetchListing = async () => {
+      if (!id) return
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await api.getListing(id)
+        const data = response.listing || response
+
+        // Transform backend data to frontend format
+        const transformedListing: MCListing = {
+          id: data.id,
+          mcNumber: data.mcNumber,
+          sellerId: data.sellerId,
+          seller: data.seller || { id: data.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
+          title: data.title,
+          description: data.description || '',
+          price: parseFloat(data.price) || 0,
+          trustScore: data.seller?.trustScore || 50,
+          trustLevel: (data.seller?.trustScore || 50) >= 80 ? 'high' : (data.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
+          verified: data.seller?.verified || false,
+          verificationBadges: [],
+          yearsActive: data.yearsActive || 0,
+          operationType: data.cargoTypes ? (typeof data.cargoTypes === 'string' ? JSON.parse(data.cargoTypes) : data.cargoTypes) : [],
+          fleetSize: data.fleetSize || 0,
+          safetyRating: (data.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
+          insuranceStatus: data.insuranceOnFile ? 'active' : 'pending',
+          state: data.state,
+          amazonStatus: (data.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
+          amazonRelayScore: data.amazonRelayScore,
+          highwaySetup: data.highwaySetup || false,
+          sellingWithEmail: data.sellingWithEmail || false,
+          sellingWithPhone: data.sellingWithPhone || false,
+          isPremium: data.isPremium || false,
+          documents: [],
+          status: (data.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
+          visibility: (data.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
+          views: data.views || 0,
+          saves: data.saves || 0,
+          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+        }
+
+        setListing(transformedListing)
+
+        // Check if listing is already unlocked by this user
+        if (isAuthenticated && user?.role === 'buyer') {
+          try {
+            const unlocked = await api.checkListingUnlocked(id)
+            setIsUnlocked(unlocked)
+          } catch (err) {
+            console.error('Failed to check unlock status:', err)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch listing:', err)
+        setError('Failed to load listing details')
+        setListing(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchListing()
+  }, [id, isAuthenticated, user?.role])
+
+  // Get user's available credits
+  const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [premiumRequestSent, setPremiumRequestSent] = useState(false)
   const [premiumMessage, setPremiumMessage] = useState('')
@@ -114,12 +188,25 @@ const MCDetailPage = () => {
     }
   }
 
-  if (!listing) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card>
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Listing Not Found</h2>
+            <Loader2 className="w-16 h-16 text-primary-500 mx-auto mb-4 animate-spin" />
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">Loading Listing...</h2>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error || !listing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">{error || 'Listing Not Found'}</h2>
             <Button onClick={() => navigate('/marketplace')}>
               Back to Marketplace
             </Button>
@@ -129,17 +216,35 @@ const MCDetailPage = () => {
     )
   }
 
-  const handleUnlockWithCredit = () => {
+  const handleUnlockWithCredit = async () => {
     if (!isAuthenticated) {
       navigate('/login')
+      return
+    }
+    if (user?.role !== 'buyer') {
+      // Only buyers can unlock listings
       return
     }
     if (userCredits < 1) {
       navigate('/buyer/subscription')
       return
     }
-    setUserCredits(prev => prev - 1)
-    setIsUnlocked(true)
+    if (!id) return
+
+    setUnlocking(true)
+    try {
+      const response = await api.unlockListing(id)
+      if (response.success) {
+        setIsUnlocked(true)
+        // Note: User credits will be updated on next page load/login
+        // For immediate feedback, we could refresh user data here
+      }
+    } catch (err: any) {
+      console.error('Failed to unlock listing:', err)
+      alert(err.message || 'Failed to unlock listing. Please try again.')
+    } finally {
+      setUnlocking(false)
+    }
   }
 
   const handlePremiumRequest = () => {
@@ -173,6 +278,45 @@ const MCDetailPage = () => {
     setShowContactModal(false)
     setContactMessage('')
     setContactPhone('')
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary-600 mb-4" />
+            <p className="text-gray-500">Loading listing details...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error || !listing) {
+    return (
+      <div className="min-h-screen py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <Card className="p-8 text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load Listing</h2>
+            <p className="text-gray-500 mb-4">{error || 'The listing could not be found.'}</p>
+            <Button onClick={() => navigate('/marketplace')}>
+              Back to Marketplace
+            </Button>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -275,7 +419,9 @@ const MCDetailPage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>Listed {formatDistanceToNow(listing.createdAt, { addSuffix: true })}</span>
+                  <span>Listed {listing.createdAt instanceof Date && !isNaN(listing.createdAt.getTime())
+                    ? formatDistanceToNow(listing.createdAt, { addSuffix: true })
+                    : 'Recently'}</span>
                 </div>
               </div>
             </Card>
@@ -957,17 +1103,55 @@ const MCDetailPage = () => {
                     </div>
                   )}
                 </>
-              ) : (
-                // Regular Listing - Credit Unlock
+              ) : !isAuthenticated ? (
+                // Not logged in - Show Login/Register prompt
+                <>
+                  <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-4 p-4 border-b border-indigo-500/20">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-indigo-500" />
+                      <span className="font-semibold text-gray-900">Sign in to Unlock</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-center">
+                      <Lock className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                      <div className="font-bold text-gray-900 mb-1">Unlock Full Details</div>
+                      <div className="text-sm text-gray-500 mb-4">
+                        Sign in or create an account to unlock this MC listing and view all details.
+                      </div>
+                      <div className="text-2xl font-bold text-indigo-600">1 Credit</div>
+                    </div>
+
+                    <Link to="/login">
+                      <Button fullWidth>
+                        <Lock className="w-4 h-4 mr-2" />
+                        Sign In to Unlock
+                      </Button>
+                    </Link>
+
+                    <Link to="/register">
+                      <Button fullWidth variant="secondary">
+                        Create Account
+                      </Button>
+                    </Link>
+
+                    <p className="text-xs text-center text-gray-500">
+                      New buyers get credits with their subscription
+                    </p>
+                  </div>
+                </>
+              ) : user?.role === 'buyer' ? (
+                // Logged in as buyer - Show credits and unlock
                 <>
                   <div className="bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 -m-6 mb-4 p-4 border-b border-white/10">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Coins className="w-5 h-5 text-yellow-400" />
-                        <span className="font-semibold">Your Credits</span>
+                        <Coins className="w-5 h-5 text-yellow-500" />
+                        <span className="font-semibold text-gray-900">Your Credits</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-yellow-400">{userCredits}</span>
+                        <span className="text-2xl font-bold text-yellow-500">{userCredits}</span>
                         <span className="text-sm text-gray-500">remaining</span>
                       </div>
                     </div>
@@ -975,10 +1159,10 @@ const MCDetailPage = () => {
 
                   {isUnlocked ? (
                     <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-trust-high/10 border border-trust-high/30 text-center">
-                        <Unlock className="w-8 h-8 text-trust-high mx-auto mb-2" />
-                        <div className="font-bold text-trust-high">MC Unlocked!</div>
-                        <div className="text-sm text-gray-500">Full details are now visible</div>
+                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                        <Unlock className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                        <div className="font-bold text-emerald-700">MC Unlocked!</div>
+                        <div className="text-sm text-emerald-600">Full details are now visible</div>
                       </div>
 
                       <Button fullWidth variant="secondary">
@@ -997,15 +1181,24 @@ const MCDetailPage = () => {
                         fullWidth
                         onClick={handleUnlockWithCredit}
                         className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                        disabled={userCredits < 1}
+                        disabled={userCredits < 1 || unlocking}
                       >
-                        <Unlock className="w-4 h-4 mr-2" />
-                        Unlock Full MC with 1 Credit
+                        {unlocking ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Unlocking...
+                          </>
+                        ) : (
+                          <>
+                            <Unlock className="w-4 h-4 mr-2" />
+                            Unlock Full MC with 1 Credit
+                          </>
+                        )}
                       </Button>
 
                       {userCredits < 1 && (
-                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-center">
-                          <p className="text-sm text-red-400 mb-2">You're out of credits!</p>
+                        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-center">
+                          <p className="text-sm text-red-600 mb-2">You're out of credits!</p>
                           <Link to="/buyer/subscription">
                             <Button size="sm" variant="secondary">
                               <CreditCard className="w-4 h-4 mr-2" />
@@ -1023,23 +1216,37 @@ const MCDetailPage = () => {
                       <div className="text-center">
                         <Link
                           to="/buyer/subscription"
-                          className="text-sm text-primary-400 hover:text-primary-300 flex items-center justify-center gap-1"
+                          className="text-sm text-indigo-600 hover:text-indigo-500 flex items-center justify-center gap-1"
                         >
                           <Sparkles className="w-4 h-4" />
                           Upgrade for more credits
                         </Link>
                       </div>
-
-                      {!isAuthenticated && (
-                        <p className="text-xs text-center text-gray-500">
-                          <Link to="/login" className="text-primary-400 hover:text-primary-300">
-                            Sign in
-                          </Link>{' '}
-                          to unlock this listing
-                        </p>
-                      )}
                     </div>
                   )}
+                </>
+              ) : (
+                // Logged in as seller/admin - Just show listing info
+                <>
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-50 -m-6 mb-4 p-4 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-gray-500" />
+                      <span className="font-semibold text-gray-900">Listing Preview</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-center">
+                      <div className="text-sm text-gray-500">
+                        {user?.role === 'seller' ? 'You are viewing as a seller' : 'You are viewing as an admin'}
+                      </div>
+                    </div>
+
+                    <Button fullWidth variant="secondary">
+                      <Heart className="w-4 h-4 mr-2" />
+                      Save Listing
+                    </Button>
+                  </div>
                 </>
               )}
             </Card>

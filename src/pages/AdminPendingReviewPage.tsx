@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -7,277 +7,135 @@ import {
   XCircle,
   Eye,
   Search,
-  Star,
   DollarSign,
-  Send,
   X,
   Crown,
   Shield,
   TruckIcon,
   Calendar,
-  Package
+  Package,
+  RefreshCw,
+  AlertCircle,
+  User,
+  Mail,
+  MapPin,
+  FileText,
+  Loader2
 } from 'lucide-react'
-import GlassCard from '../components/ui/GlassCard'
+import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Textarea from '../components/ui/Textarea'
 import TrustBadge from '../components/ui/TrustBadge'
 import { getTrustLevel, formatPrice } from '../utils/helpers'
+import { api } from '../services/api'
 
 interface PendingListing {
   id: string
   mcNumber: string
+  dotNumber?: string
   title: string
-  description: string
+  description?: string
   price: number
   isPremium: boolean
-  premiumPrice?: number
-  premiumPriceSent?: boolean
-  premiumPriceAccepted?: boolean
   seller: {
     id: string
     name: string
     email: string
-    trustScore: number
-    verified: boolean
-    memberSince: string
-    completedDeals: number
+    trustScore?: number
+    verified?: boolean
   }
   yearsActive: number
   fleetSize: number
   safetyRating: string
-  insuranceStatus: string
-  operationType: string[]
-  submittedAt: string
-  documentsCount: number
-  verifiedDocuments: number
+  insuranceOnFile?: boolean
+  city: string
+  state: string
+  cargoTypes?: string[]
+  amazonStatus?: string
+  createdAt: string
+  updatedAt: string
 }
 
 const AdminPendingReviewPage = () => {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
+  const [pendingListings, setPendingListings] = useState<PendingListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Modal states
   const [selectedListing, setSelectedListing] = useState<PendingListing | null>(null)
-  const [showPremiumPriceModal, setShowPremiumPriceModal] = useState(false)
-  const [premiumPrice, setPremiumPrice] = useState('')
-  const [premiumMessage, setPremiumMessage] = useState('')
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
   const [approvalNotes, setApprovalNotes] = useState('')
+  const [processing, setProcessing] = useState(false)
 
-  // Mock pending listings data
-  const [pendingListings, setPendingListings] = useState<PendingListing[]>([
-    {
-      id: '1',
-      mcNumber: '123456',
-      title: 'Established Dry Van Authority - Clean Record',
-      description: 'Well-maintained authority with 8 years of operation. Perfect safety record, all insurance current. Ready for immediate transfer.',
-      price: 45000,
-      isPremium: true,
-      premiumPriceSent: false,
-      seller: {
-        id: 's1',
-        name: 'John Smith',
-        email: 'john@transportpro.com',
-        trustScore: 92,
-        verified: true,
-        memberSince: '2022-01-15',
-        completedDeals: 12
-      },
-      yearsActive: 8,
-      fleetSize: 15,
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'active',
-      operationType: ['Dry Van', 'Interstate', 'Intrastate'],
-      submittedAt: '2 hours ago',
-      documentsCount: 5,
-      verifiedDocuments: 4
-    },
-    {
-      id: '2',
-      mcNumber: '789012',
-      title: 'Reefer Authority with Regional Routes',
-      description: 'Established reefer operation serving the Midwest. Strong customer base, excellent compliance history.',
-      price: 62000,
-      isPremium: true,
-      premiumPriceSent: true,
-      premiumPrice: 299,
-      premiumPriceAccepted: false,
-      seller: {
-        id: 's2',
-        name: 'Sarah Johnson',
-        email: 'sarah@coldchain.com',
-        trustScore: 88,
-        verified: true,
-        memberSince: '2021-06-20',
-        completedDeals: 18
-      },
-      yearsActive: 12,
-      fleetSize: 22,
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'active',
-      operationType: ['Reefer', 'Regional', 'Interstate'],
-      submittedAt: '5 hours ago',
-      documentsCount: 6,
-      verifiedDocuments: 6
-    },
-    {
-      id: '3',
-      mcNumber: '345678',
-      title: 'Flatbed & Heavy Haul Specialist',
-      description: 'Specialized flatbed and heavy haul authority. All permits and bonding in place. Strong reputation.',
-      price: 78000,
-      isPremium: false,
-      seller: {
-        id: 's3',
-        name: 'Mike Williams',
-        email: 'mike@heavyhaul.com',
-        trustScore: 75,
-        verified: false,
-        memberSince: '2023-03-10',
-        completedDeals: 3
-      },
-      yearsActive: 15,
-      fleetSize: 18,
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'active',
-      operationType: ['Flatbed', 'Heavy Haul', 'Oversized', 'Interstate'],
-      submittedAt: '1 day ago',
-      documentsCount: 4,
-      verifiedDocuments: 2
-    },
-    {
-      id: '4',
-      mcNumber: '567890',
-      title: 'Growing LTL Authority - West Coast',
-      description: 'Less-than-truckload authority with established West Coast routes. Clean safety record.',
-      price: 38000,
-      isPremium: true,
-      premiumPriceSent: true,
-      premiumPrice: 199,
-      premiumPriceAccepted: true,
-      seller: {
-        id: 's4',
-        name: 'David Chen',
-        email: 'david@westcoastltl.com',
-        trustScore: 85,
-        verified: true,
-        memberSince: '2022-08-05',
-        completedDeals: 8
-      },
-      yearsActive: 5,
-      fleetSize: 8,
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'active',
-      operationType: ['LTL', 'Regional', 'Dry Van'],
-      submittedAt: '3 days ago',
-      documentsCount: 5,
-      verifiedDocuments: 5
-    },
-    {
-      id: '5',
-      mcNumber: '901234',
-      title: 'Box Truck Authority - Local Delivery',
-      description: 'Local delivery authority with box trucks. Great for Amazon and other delivery contracts.',
-      price: 28000,
-      isPremium: false,
-      seller: {
-        id: 's5',
-        name: 'Lisa Anderson',
-        email: 'lisa@localdelivery.com',
-        trustScore: 70,
-        verified: false,
-        memberSince: '2023-11-20',
-        completedDeals: 1
-      },
-      yearsActive: 4,
-      fleetSize: 12,
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'pending',
-      operationType: ['Box Truck', 'Local', 'Intrastate'],
-      submittedAt: '4 days ago',
-      documentsCount: 3,
-      verifiedDocuments: 1
-    },
-    {
-      id: '6',
-      mcNumber: '234567',
-      title: 'Tanker Authority - Hazmat Certified',
-      description: 'Tanker authority with full hazmat certification. Excellent safety record and compliance.',
-      price: 85000,
-      isPremium: true,
-      premiumPriceSent: false,
-      seller: {
-        id: 's6',
-        name: 'Robert Martinez',
-        email: 'robert@hazmattanker.com',
-        trustScore: 90,
-        verified: true,
-        memberSince: '2020-04-12',
-        completedDeals: 25
-      },
-      yearsActive: 10,
-      fleetSize: 14,
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'active',
-      operationType: ['Tanker', 'Hazmat', 'Interstate'],
-      submittedAt: '6 hours ago',
-      documentsCount: 8,
-      verifiedDocuments: 7
+  // Fetch pending listings from API
+  const fetchPendingListings = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.getAdminListings({ status: 'PENDING_REVIEW', limit: 100 })
+
+      // Handle both direct data and wrapped response
+      const listings = response?.data?.listings || response?.listings || response?.data || []
+      setPendingListings(Array.isArray(listings) ? listings : [])
+    } catch (err: any) {
+      console.error('Failed to fetch pending listings:', err)
+      setError(err.message || 'Failed to fetch pending listings')
+      setPendingListings([])
+    } finally {
+      setLoading(false)
     }
-  ])
+  }
+
+  useEffect(() => {
+    fetchPendingListings()
+  }, [])
 
   const filteredListings = pendingListings.filter(listing => {
     const matchesSearch =
-      listing.mcNumber.includes(searchTerm) ||
-      listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.seller.name.toLowerCase().includes(searchTerm.toLowerCase())
+      listing.mcNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      listing.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      listing.seller?.name?.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSearch
   })
 
-  const getPremiumStatus = (listing: PendingListing) => {
-    if (!listing.isPremium) return null
-    if (listing.premiumPriceAccepted) {
-      return { status: 'accepted', label: 'Premium Paid', color: 'text-trust-high' }
-    }
-    if (listing.premiumPriceSent) {
-      return { status: 'pending', label: `Premium: ${formatPrice(listing.premiumPrice || 0)} (Pending)`, color: 'text-yellow-400' }
-    }
-    return { status: 'not-sent', label: 'Premium - Price Not Sent', color: 'text-orange-400' }
-  }
+  const handleApprove = async () => {
+    if (!selectedListing) return
 
-  const handleSendPremiumPrice = () => {
-    if (selectedListing && premiumPrice) {
-      setPendingListings(prev => prev.map(l =>
-        l.id === selectedListing.id
-          ? { ...l, premiumPriceSent: true, premiumPrice: Number(premiumPrice) }
-          : l
-      ))
-      setShowPremiumPriceModal(false)
-      setPremiumPrice('')
-      setPremiumMessage('')
-      setSelectedListing(null)
-      alert(`Premium price of ${formatPrice(Number(premiumPrice))} sent to ${selectedListing.seller.name}`)
-    }
-  }
-
-  const handleApprove = () => {
-    if (selectedListing) {
+    setProcessing(true)
+    try {
+      await api.approveListing(selectedListing.id, approvalNotes || undefined)
       setPendingListings(prev => prev.filter(l => l.id !== selectedListing.id))
       setShowApproveModal(false)
       setApprovalNotes('')
       setSelectedListing(null)
-      alert(`Listing MC #${selectedListing.mcNumber} has been approved and is now live!`)
+    } catch (err: any) {
+      console.error('Failed to approve listing:', err)
+      alert(`Failed to approve listing: ${err.message}`)
+    } finally {
+      setProcessing(false)
     }
   }
 
-  const handleReject = () => {
-    if (selectedListing && rejectionReason) {
+  const handleReject = async () => {
+    if (!selectedListing || !rejectionReason.trim()) return
+
+    setProcessing(true)
+    try {
+      await api.rejectListing(selectedListing.id, rejectionReason)
       setPendingListings(prev => prev.filter(l => l.id !== selectedListing.id))
       setShowRejectModal(false)
       setRejectionReason('')
       setSelectedListing(null)
-      alert(`Listing MC #${selectedListing.mcNumber} has been rejected. Seller has been notified.`)
+    } catch (err: any) {
+      console.error('Failed to reject listing:', err)
+      alert(`Failed to reject listing: ${err.message}`)
+    } finally {
+      setProcessing(false)
     }
   }
 
@@ -286,350 +144,301 @@ const AdminPendingReviewPage = () => {
       icon: Clock,
       label: 'Total Pending',
       value: pendingListings.length,
-      color: 'text-yellow-400'
+      color: 'bg-yellow-100 text-yellow-700'
     },
     {
       icon: Crown,
       label: 'Premium Listings',
       value: pendingListings.filter(l => l.isPremium).length,
-      color: 'text-purple-400'
-    },
-    {
-      icon: DollarSign,
-      label: 'Premium Price Pending',
-      value: pendingListings.filter(l => l.isPremium && l.premiumPriceSent && !l.premiumPriceAccepted).length,
-      color: 'text-orange-400'
+      color: 'bg-purple-100 text-purple-700'
     },
     {
       icon: CheckCircle,
-      label: 'Ready to Approve',
-      value: pendingListings.filter(l => !l.isPremium || l.premiumPriceAccepted).length,
-      color: 'text-trust-high'
+      label: 'Ready to Review',
+      value: pendingListings.length,
+      color: 'bg-green-100 text-green-700'
     }
   ]
 
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      satisfactory: 'bg-green-100 text-green-700',
+      conditional: 'bg-yellow-100 text-yellow-700',
+      unsatisfactory: 'bg-red-100 text-red-700',
+      'not-rated': 'bg-gray-100 text-gray-600'
+    }
+    return styles[status?.toLowerCase()] || 'bg-gray-100 text-gray-600'
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    } catch {
+      return dateString
+    }
+  }
+
+  // Safely parse cargo types which might be string, array, or undefined
+  const parseCargoTypes = (cargoTypes: any): string[] => {
+    if (!cargoTypes) return []
+    if (Array.isArray(cargoTypes)) return cargoTypes
+    if (typeof cargoTypes === 'string') {
+      try {
+        const parsed = JSON.parse(cargoTypes)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Pending Review</h1>
-          <p className="text-white/60">Review and approve MC listings pending verification</p>
+    <div className="p-4 lg:p-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Pending Review</h1>
+          <p className="text-gray-600 mt-1">Review and approve MC listings pending verification</p>
         </div>
+        <Button
+          variant="outline"
+          onClick={fetchPendingListings}
+          disabled={loading}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <GlassCard>
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-lg glass-subtle ${stat.color}`}>
-                    <stat.icon className="w-6 h-6" />
-                  </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <Card className="p-4">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${stat.color}`}>
+                  <stat.icon className="w-6 h-6" />
                 </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-white/60 text-sm">{stat.label}</div>
-              </GlassCard>
-            </motion.div>
-          ))}
-        </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-sm text-gray-600">{stat.label}</p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
 
-        {/* Search */}
-        <div className="mb-6">
+      {/* Search */}
+      <Card className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             placeholder="Search by MC number, title, or seller name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            icon={<Search className="w-4 h-4" />}
+            className="pl-10"
           />
         </div>
+      </Card>
 
-        {/* Pending Listings */}
+      {/* Loading State */}
+      {loading && (
+        <Card className="p-12">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-indigo-600 mx-auto mb-4 animate-spin" />
+            <p className="text-gray-600">Loading pending listings...</p>
+          </div>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <Card className="p-8 border-red-200 bg-red-50">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Listings</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={fetchPendingListings}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Pending Listings */}
+      {!loading && !error && (
         <div className="space-y-4">
-          {filteredListings.map((listing) => {
-            const premiumStatus = getPremiumStatus(listing)
-            const canApprove = !listing.isPremium || listing.premiumPriceAccepted
-
-            return (
-              <motion.div
-                key={listing.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <GlassCard hover>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      {/* Header Row */}
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="text-xl font-bold">MC #{listing.mcNumber}</h3>
-                        <span className="glass-subtle px-3 py-1 rounded-full text-xs text-yellow-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Pending Review
+          {filteredListings.map((listing) => (
+            <motion.div
+              key={listing.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card hover className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1">
+                    {/* Header Row */}
+                    <div className="flex items-center gap-3 mb-3 flex-wrap">
+                      <h3 className="text-xl font-bold text-gray-900">MC #{listing.mcNumber}</h3>
+                      {listing.dotNumber && (
+                        <span className="text-sm text-gray-500">DOT #{listing.dotNumber}</span>
+                      )}
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Pending Review
+                      </span>
+                      {listing.isPremium && (
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+                          <Crown className="w-3 h-3" />
+                          Premium
                         </span>
-                        {listing.isPremium && (
-                          <span className="px-3 py-1 rounded-full text-xs bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-400/30 text-purple-300 flex items-center gap-1">
-                            <Crown className="w-3 h-3" />
-                            Premium MC
-                          </span>
-                        )}
-                        {premiumStatus && (
-                          <span className={`glass-subtle px-3 py-1 rounded-full text-xs ${premiumStatus.color}`}>
-                            {premiumStatus.label}
-                          </span>
-                        )}
-                      </div>
+                      )}
+                    </div>
 
-                      <p className="text-white/80 mb-2">{listing.title}</p>
-                      <p className="text-sm text-white/60 mb-4">{listing.description}</p>
+                    <p className="text-gray-900 font-medium mb-2">{listing.title}</p>
+                    {listing.description && (
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{listing.description}</p>
+                    )}
 
-                      {/* Details Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                        <div className="glass-subtle rounded-lg p-3">
-                          <div className="text-xs text-white/60 mb-1">Years Active</div>
-                          <div className="font-semibold flex items-center gap-1">
-                            <Calendar className="w-4 h-4 text-primary-400" />
-                            {listing.yearsActive}
-                          </div>
-                        </div>
-                        <div className="glass-subtle rounded-lg p-3">
-                          <div className="text-xs text-white/60 mb-1">Fleet Size</div>
-                          <div className="font-semibold flex items-center gap-1">
-                            <TruckIcon className="w-4 h-4 text-primary-400" />
-                            {listing.fleetSize}
-                          </div>
-                        </div>
-                        <div className="glass-subtle rounded-lg p-3">
-                          <div className="text-xs text-white/60 mb-1">Safety</div>
-                          <div className="font-semibold capitalize text-sm">
-                            {listing.safetyRating.replace('-', ' ')}
-                          </div>
-                        </div>
-                        <div className="glass-subtle rounded-lg p-3">
-                          <div className="text-xs text-white/60 mb-1">Documents</div>
-                          <div className="font-semibold text-sm">
-                            {listing.verifiedDocuments}/{listing.documentsCount} verified
-                          </div>
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 mb-1">Years Active</div>
+                        <div className="font-semibold text-gray-900 flex items-center gap-1">
+                          <Calendar className="w-4 h-4 text-indigo-600" />
+                          {listing.yearsActive || 0}
                         </div>
                       </div>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 mb-1">Fleet Size</div>
+                        <div className="font-semibold text-gray-900 flex items-center gap-1">
+                          <TruckIcon className="w-4 h-4 text-indigo-600" />
+                          {listing.fleetSize || 0}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 mb-1">Safety Rating</div>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getStatusBadge(listing.safetyRating)}`}>
+                          {listing.safetyRating?.replace('-', ' ') || 'Not Rated'}
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 mb-1">Location</div>
+                        <div className="font-semibold text-gray-900 text-sm flex items-center gap-1">
+                          <MapPin className="w-4 h-4 text-indigo-600" />
+                          {listing.city}, {listing.state}
+                        </div>
+                      </div>
+                    </div>
 
-                      {/* Seller Info */}
-                      <div className="flex items-center gap-3 glass-subtle rounded-lg p-3">
-                        <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center">
-                          <span className="font-bold text-primary-400">
-                            {listing.seller.name.charAt(0)}
-                          </span>
+                    {/* Seller Info */}
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{listing.seller?.name || 'Unknown Seller'}</div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          {listing.seller?.email || 'No email'}
                         </div>
-                        <div className="flex-1">
-                          <div className="font-semibold">{listing.seller.name}</div>
-                          <div className="text-xs text-white/60">{listing.seller.email}</div>
-                        </div>
+                      </div>
+                      {listing.seller?.trustScore && (
                         <TrustBadge
                           score={listing.seller.trustScore}
                           level={getTrustLevel(listing.seller.trustScore)}
-                          verified={listing.seller.verified}
+                          verified={listing.seller.verified || false}
                           size="sm"
                         />
-                        <div className="text-right text-sm">
-                          <div className="text-white/60">{listing.seller.completedDeals} deals</div>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
-                    <div className="text-right ml-6">
-                      <div className="text-3xl font-bold text-primary-400">
-                        {formatPrice(listing.price)}
+                    {/* Cargo Types */}
+                    {parseCargoTypes(listing.cargoTypes).length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {parseCargoTypes(listing.cargoTypes).map((type: string) => (
+                          <span
+                            key={type}
+                            className="px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700"
+                          >
+                            {type}
+                          </span>
+                        ))}
                       </div>
-                      <div className="text-xs text-white/60 mt-1">Listing Price</div>
-                      <div className="text-xs text-white/40 mt-2">
-                        Submitted {listing.submittedAt}
-                      </div>
+                    )}
+                  </div>
+
+                  <div className="lg:text-right lg:ml-6 lg:min-w-[160px]">
+                    <div className="text-2xl font-bold text-indigo-600">
+                      {formatPrice(listing.price)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Listing Price</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      Submitted {formatDate(listing.createdAt)}
                     </div>
                   </div>
+                </div>
 
-                  {/* Operation Types */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {listing.operationType.map((type) => (
-                      <span
-                        key={type}
-                        className="glass-subtle px-3 py-1 rounded-full text-xs"
-                      >
-                        {type}
-                      </span>
-                    ))}
-                  </div>
+                {/* Actions */}
+                <div className="flex flex-wrap gap-3 pt-4 mt-4 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/admin/review/${listing.id}`)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Full Details
+                  </Button>
 
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-3 pt-4 border-t border-white/10">
-                    <Button
-                      variant="secondary"
-                      onClick={() => navigate(`/admin/review/${listing.id}`)}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Full Details
-                    </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedListing(listing)
+                      setShowApproveModal(true)
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Approve
+                  </Button>
 
-                    {listing.isPremium && !listing.premiumPriceSent && (
-                      <Button
-                        variant="secondary"
-                        className="border-purple-400/50 hover:bg-purple-500/20"
-                        onClick={() => {
-                          setSelectedListing(listing)
-                          setShowPremiumPriceModal(true)
-                        }}
-                      >
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Send Premium Price
-                      </Button>
-                    )}
+                  <Button
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => {
+                      setSelectedListing(listing)
+                      setShowRejectModal(true)
+                    }}
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Reject
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
 
-                    {listing.isPremium && listing.premiumPriceSent && !listing.premiumPriceAccepted && (
-                      <Button
-                        variant="ghost"
-                        className="text-yellow-400 border border-yellow-400/30"
-                        disabled
-                      >
-                        <Clock className="w-4 h-4 mr-2" />
-                        Awaiting Payment
-                      </Button>
-                    )}
-
-                    <Button
-                      onClick={() => {
-                        setSelectedListing(listing)
-                        setShowApproveModal(true)
-                      }}
-                      disabled={!canApprove}
-                      className={!canApprove ? 'opacity-50 cursor-not-allowed' : ''}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve
-                    </Button>
-
-                    <Button
-                      variant="danger"
-                      onClick={() => {
-                        setSelectedListing(listing)
-                        setShowRejectModal(true)
-                      }}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-
-                  {!canApprove && (
-                    <p className="text-xs text-yellow-400 mt-3">
-                      * Premium listing requires payment before approval
-                    </p>
-                  )}
-                </GlassCard>
-              </motion.div>
-            )
-          })}
-
-          {filteredListings.length === 0 && (
-            <GlassCard>
-              <div className="text-center py-12">
-                <Package className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">No pending listings</h3>
-                <p className="text-white/60">All listings have been reviewed</p>
+          {filteredListings.length === 0 && !loading && (
+            <Card className="p-12">
+              <div className="text-center">
+                <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No pending listings</h3>
+                <p className="text-gray-600">All listings have been reviewed</p>
               </div>
-            </GlassCard>
+            </Card>
           )}
         </div>
-      </div>
-
-      {/* Premium Price Modal */}
-      <AnimatePresence>
-        {showPremiumPriceModal && selectedListing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPremiumPriceModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-strong rounded-2xl p-6 max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/30 to-pink-500/30">
-                    <Crown className="w-6 h-6 text-purple-400" />
-                  </div>
-                  <h3 className="text-xl font-bold">Set Premium Price</h3>
-                </div>
-                <button
-                  onClick={() => setShowPremiumPriceModal(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="glass-subtle rounded-lg p-4 mb-6">
-                <div className="text-sm text-white/60 mb-1">Listing</div>
-                <div className="font-semibold">MC #{selectedListing.mcNumber}</div>
-                <div className="text-white/80 text-sm mt-1">{selectedListing.title}</div>
-                <div className="text-sm text-white/60 mt-2">
-                  Seller: {selectedListing.seller.name}
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                <Input
-                  label="Premium Price ($)"
-                  type="number"
-                  placeholder="Enter premium fee amount..."
-                  value={premiumPrice}
-                  onChange={(e) => setPremiumPrice(e.target.value)}
-                  icon={<DollarSign className="w-4 h-4" />}
-                />
-
-                <Textarea
-                  label="Message to Seller (Optional)"
-                  placeholder="Add a personalized message explaining the premium benefits..."
-                  value={premiumMessage}
-                  onChange={(e) => setPremiumMessage(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="text-sm text-white/60 mb-6 glass-subtle rounded-lg p-3">
-                <Star className="w-4 h-4 inline mr-2 text-yellow-400" />
-                Premium MC listings receive enhanced visibility, priority placement, and verified badge on the marketplace.
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => setShowPremiumPriceModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  fullWidth
-                  onClick={handleSendPremiumPrice}
-                  disabled={!premiumPrice}
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Price to Seller
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      )}
 
       {/* Approve Modal */}
       <AnimatePresence>
@@ -638,36 +447,36 @@ const AdminPendingReviewPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
             onClick={() => setShowApproveModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-strong rounded-2xl p-6 max-w-md w-full"
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-trust-high/20">
-                    <CheckCircle className="w-6 h-6 text-trust-high" />
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-bold">Approve Listing</h3>
+                  <h3 className="text-xl font-bold text-gray-900">Approve Listing</h3>
                 </div>
                 <button
                   onClick={() => setShowApproveModal(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
 
-              <div className="glass-subtle rounded-lg p-4 mb-6">
-                <div className="text-sm text-white/60 mb-1">Listing</div>
-                <div className="font-semibold">MC #{selectedListing.mcNumber}</div>
-                <div className="text-white/80 text-sm mt-1">{selectedListing.title}</div>
-                <div className="text-primary-400 font-bold mt-2">
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="text-sm text-gray-500 mb-1">Listing</div>
+                <div className="font-semibold text-gray-900">MC #{selectedListing.mcNumber}</div>
+                <div className="text-gray-700 text-sm mt-1">{selectedListing.title}</div>
+                <div className="text-indigo-600 font-bold mt-2">
                   {formatPrice(selectedListing.price)}
                 </div>
               </div>
@@ -680,21 +489,31 @@ const AdminPendingReviewPage = () => {
                 rows={3}
               />
 
-              <p className="text-sm text-white/60 my-4">
-                <Shield className="w-4 h-4 inline mr-2 text-trust-high" />
+              <p className="text-sm text-gray-600 my-4 flex items-start gap-2">
+                <Shield className="w-4 h-4 text-green-600 mt-0.5" />
                 This listing will be immediately visible on the marketplace after approval.
               </p>
 
               <div className="flex gap-3">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   fullWidth
                   onClick={() => setShowApproveModal(false)}
+                  disabled={processing}
                 >
                   Cancel
                 </Button>
-                <Button fullWidth onClick={handleApprove}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
+                <Button
+                  fullWidth
+                  onClick={handleApprove}
+                  disabled={processing}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                  )}
                   Approve Listing
                 </Button>
               </div>
@@ -710,37 +529,37 @@ const AdminPendingReviewPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
             onClick={() => setShowRejectModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-strong rounded-2xl p-6 max-w-md w-full"
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-500/20">
-                    <XCircle className="w-6 h-6 text-red-400" />
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <XCircle className="w-6 h-6 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-bold">Reject Listing</h3>
+                  <h3 className="text-xl font-bold text-gray-900">Reject Listing</h3>
                 </div>
                 <button
                   onClick={() => setShowRejectModal(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
 
-              <div className="glass-subtle rounded-lg p-4 mb-6">
-                <div className="text-sm text-white/60 mb-1">Listing</div>
-                <div className="font-semibold">MC #{selectedListing.mcNumber}</div>
-                <div className="text-white/80 text-sm mt-1">{selectedListing.title}</div>
-                <div className="text-sm text-white/60 mt-2">
-                  Seller: {selectedListing.seller.name}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="text-sm text-gray-500 mb-1">Listing</div>
+                <div className="font-semibold text-gray-900">MC #{selectedListing.mcNumber}</div>
+                <div className="text-gray-700 text-sm mt-1">{selectedListing.title}</div>
+                <div className="text-sm text-gray-500 mt-2">
+                  Seller: {selectedListing.seller?.name}
                 </div>
               </div>
 
@@ -753,25 +572,30 @@ const AdminPendingReviewPage = () => {
                 required
               />
 
-              <p className="text-sm text-red-400/80 my-4">
+              <p className="text-sm text-red-600 my-4">
                 The seller will be notified of this rejection with your explanation.
               </p>
 
               <div className="flex gap-3">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   fullWidth
                   onClick={() => setShowRejectModal(false)}
+                  disabled={processing}
                 >
                   Cancel
                 </Button>
                 <Button
-                  variant="danger"
                   fullWidth
                   onClick={handleReject}
-                  disabled={!rejectionReason.trim()}
+                  disabled={!rejectionReason.trim() || processing}
+                  className="bg-red-600 hover:bg-red-700"
                 >
-                  <XCircle className="w-4 h-4 mr-2" />
+                  {processing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" />
+                  )}
                   Reject Listing
                 </Button>
               </div>

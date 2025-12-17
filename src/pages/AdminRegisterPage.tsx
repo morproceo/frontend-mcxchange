@@ -1,26 +1,22 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User as UserIcon } from 'lucide-react'
+import { Mail, Lock, User as UserIcon, Shield, Key } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
-import Select from '../components/ui/Select'
 import { DomileaIcon } from '../components/ui/DomileaLogo'
-import { UserRole } from '../types'
 
-const RegisterPage = () => {
-  const [searchParams] = useSearchParams()
-  const roleParam = searchParams.get('role')
-  // Only allow buyer or seller from URL params
-  const initialRole: UserRole = (roleParam === 'seller' || roleParam === 'buyer') ? roleParam : 'buyer'
+// Secret admin registration code - in production, this should be stored securely
+const ADMIN_SECRET_CODE = 'DOMILEA-ADMIN-2024'
 
+const AdminRegisterPage = () => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [role, setRole] = useState<UserRole>(initialRole)
+  const [secretCode, setSecretCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -30,6 +26,12 @@ const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // Validate secret code
+    if (secretCode !== ADMIN_SECRET_CODE) {
+      setError('Invalid admin registration code')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -44,23 +46,9 @@ const RegisterPage = () => {
     setLoading(true)
 
     try {
-      // Register returns the user with their role
-      const user = await register(email, password, name, role)
-
-      // Navigate based on the user's role from the API response
-      switch (user.role) {
-        case 'seller':
-          navigate('/seller/dashboard')
-          break
-        case 'buyer':
-          navigate('/buyer/dashboard')
-          break
-        case 'admin':
-          navigate('/admin/dashboard')
-          break
-        default:
-          navigate('/')
-      }
+      // Register as admin (uppercase for backend validation)
+      await register(email, password, name, 'ADMIN' as any)
+      navigate('/admin/dashboard')
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {
@@ -77,30 +65,41 @@ const RegisterPage = () => {
       >
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-              <DomileaIcon size={40} />
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+              <Shield className="w-8 h-8 text-red-600" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-500">Join the Domilea marketplace</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Registration</h1>
+          <p className="text-gray-500">Create an administrator account</p>
         </div>
 
         <Card>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Warning Banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-sm">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span className="font-medium">Restricted Access</span>
+              </div>
+              <p className="mt-1 text-xs">
+                This page is for authorized personnel only. You need a valid admin registration code.
+              </p>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm">
                 {error}
               </div>
             )}
 
-            <Select
-              label="I want to"
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              options={[
-                { value: 'buyer', label: 'Buy MC Authorities' },
-                { value: 'seller', label: 'Sell MC Authorities' }
-              ]}
+            <Input
+              label="Admin Registration Code"
+              type="password"
+              placeholder="Enter secret code"
+              value={secretCode}
+              onChange={(e) => setSecretCode(e.target.value)}
+              icon={<Key className="w-4 h-4" />}
+              required
             />
 
             <Input
@@ -116,7 +115,7 @@ const RegisterPage = () => {
             <Input
               label="Email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="admin@domilea.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               icon={<Mail className="w-4 h-4" />}
@@ -126,7 +125,7 @@ const RegisterPage = () => {
             <Input
               label="Password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Min 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               icon={<Lock className="w-4 h-4" />}
@@ -136,7 +135,7 @@ const RegisterPage = () => {
             <Input
               label="Confirm Password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Confirm your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               icon={<Lock className="w-4 h-4" />}
@@ -147,24 +146,23 @@ const RegisterPage = () => {
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                   required
                 />
                 <span>
-                  I agree to the{' '}
-                  <Link to="/terms" className="text-secondary-600 hover:text-secondary-700 font-medium">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link to="/privacy" className="text-secondary-600 hover:text-secondary-700 font-medium">
-                    Privacy Policy
-                  </Link>
+                  I confirm that I am authorized to create an administrator account and will handle all data responsibly.
                 </span>
               </label>
             </div>
 
-            <Button type="submit" fullWidth size="lg" loading={loading}>
-              Create Account
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              loading={loading}
+              className="!bg-red-600 hover:!bg-red-700"
+            >
+              Create Admin Account
             </Button>
 
             <div className="text-center text-sm text-gray-500">
@@ -175,9 +173,13 @@ const RegisterPage = () => {
             </div>
           </form>
         </Card>
+
+        <p className="text-center text-xs text-gray-400 mt-6">
+          This page is not linked from the public site.
+        </p>
       </motion.div>
     </div>
   )
 }
 
-export default RegisterPage
+export default AdminRegisterPage

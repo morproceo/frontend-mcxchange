@@ -1,11 +1,14 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+import type {
+  ApiResponse,
+  AuthLoginResponse,
+  AuthRegisterResponse,
+  AuthTokens,
+  SubscriptionResponse,
+  CheckoutSessionResponse,
+  UserResponse,
+} from '../types';
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 class ApiService {
   private token: string | null = null;
@@ -25,7 +28,8 @@ class ApiService {
   }
 
   getToken() {
-    return this.token;
+    // Always check localStorage as fallback to handle hot-reload and timing issues
+    return this.token || localStorage.getItem('mcx_token');
   }
 
   private async request<T>(
@@ -39,8 +43,15 @@ class ApiService {
       ...options.headers,
     };
 
-    if (this.token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
+    // Always check localStorage for the most current token
+    // This ensures we pick up tokens set by other tabs or after hot-reload
+    const currentToken = this.token || localStorage.getItem('mcx_token');
+    if (currentToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${currentToken}`;
+      // Sync instance token if it was only in localStorage
+      if (!this.token && currentToken) {
+        this.token = currentToken;
+      }
     }
 
     const response = await fetch(url, {
@@ -59,35 +70,47 @@ class ApiService {
 
   // Auth endpoints
   async login(email: string, password: string) {
-    const response = await this.request<{
-      user: any;
-      accessToken: string;
-      refreshToken: string;
-    }>('/auth/login', {
+    const response = await this.request<ApiResponse<AuthLoginResponse>>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
 
-    this.setToken(response.accessToken);
-    localStorage.setItem('mcx_refresh_token', response.refreshToken);
+    if (!response.data) {
+      throw new Error('Invalid response from server');
+    }
 
-    return response;
+    // Backend returns tokens in a nested object: data.tokens.accessToken
+    this.setToken(response.data.tokens.accessToken);
+    localStorage.setItem('mcx_refresh_token', response.data.tokens.refreshToken);
+
+    // Return flattened structure for compatibility with rest of app
+    return {
+      user: response.data.user,
+      accessToken: response.data.tokens.accessToken,
+      refreshToken: response.data.tokens.refreshToken,
+    };
   }
 
   async register(data: { email: string; password: string; name: string; role: string }) {
-    const response = await this.request<{
-      user: any;
-      accessToken: string;
-      refreshToken: string;
-    }>('/auth/register', {
+    const response = await this.request<ApiResponse<AuthRegisterResponse>>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
 
-    this.setToken(response.accessToken);
-    localStorage.setItem('mcx_refresh_token', response.refreshToken);
+    if (!response.data) {
+      throw new Error('Invalid response from server');
+    }
 
-    return response;
+    // Backend returns tokens in a nested object: data.tokens.accessToken
+    this.setToken(response.data.tokens.accessToken);
+    localStorage.setItem('mcx_refresh_token', response.data.tokens.refreshToken);
+
+    // Return flattened structure for compatibility with rest of app
+    return {
+      user: response.data.user,
+      accessToken: response.data.tokens.accessToken,
+      refreshToken: response.data.tokens.refreshToken,
+    };
   }
 
   async logout() {
@@ -100,7 +123,8 @@ class ApiService {
   }
 
   async getCurrentUser() {
-    return this.request<{ user: any }>('/auth/me');
+    const response = await this.request<{ success: boolean; data: any }>('/auth/me');
+    return { user: response.data };
   }
 
   async refreshToken() {
@@ -110,17 +134,20 @@ class ApiService {
     }
 
     const response = await this.request<{
-      accessToken: string;
-      refreshToken: string;
+      success: boolean;
+      data: {
+        accessToken: string;
+        refreshToken: string;
+      };
     }>('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     });
 
-    this.setToken(response.accessToken);
-    localStorage.setItem('mcx_refresh_token', response.refreshToken);
+    this.setToken(response.data.accessToken);
+    localStorage.setItem('mcx_refresh_token', response.data.refreshToken);
 
-    return response;
+    return response.data;
   }
 
   // Admin endpoints
@@ -209,6 +236,49 @@ class ApiService {
     });
   }
 
+  async getAdminListing(listingId: string) {
+    return this.request<any>(`/admin/listings/${listingId}`);
+  }
+
+  async updateAdminListing(listingId: string, data: {
+    mcNumber?: string;
+    dotNumber?: string;
+    legalName?: string;
+    dbaName?: string;
+    title?: string;
+    description?: string;
+    price?: number;
+    city?: string;
+    state?: string;
+    address?: string;
+    yearsActive?: number;
+    fleetSize?: number;
+    totalDrivers?: number;
+    safetyRating?: string;
+    saferScore?: string;
+    insuranceOnFile?: boolean;
+    bipdCoverage?: number;
+    cargoCoverage?: number;
+    bondAmount?: number;
+    amazonStatus?: string;
+    amazonRelayScore?: string;
+    highwaySetup?: boolean;
+    sellingWithEmail?: boolean;
+    sellingWithPhone?: boolean;
+    contactEmail?: string;
+    contactPhone?: string;
+    cargoTypes?: string[];
+    reviewNotes?: string;
+    status?: string;
+    visibility?: string;
+    isPremium?: boolean;
+  }) {
+    return this.request<any>(`/admin/listings/${listingId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Listings endpoints
   async getListings(params?: {
     page?: number;
@@ -250,6 +320,339 @@ class ApiService {
   // Health check
   async healthCheck() {
     return this.request<{ status: string; timestamp: string }>('/health');
+  }
+
+  // Buyer subscription endpoints
+  async getSubscription() {
+    return this.request<ApiResponse<SubscriptionResponse>>('/buyer/subscription');
+  }
+
+  async createSubscriptionCheckout(plan: string, isYearly: boolean) {
+    return this.request<ApiResponse<CheckoutSessionResponse>>('/buyer/subscription/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ plan, isYearly }),
+    });
+  }
+
+  async cancelSubscription() {
+    return this.request<ApiResponse<{ message: string; subscription: SubscriptionResponse['subscription'] }>>('/buyer/subscription/cancel', {
+      method: 'POST',
+    });
+  }
+
+  async verifySubscription() {
+    return this.request<ApiResponse<{
+      fulfilled: boolean;
+      message: string;
+      subscription?: SubscriptionResponse;
+    }>>('/buyer/subscription/verify', {
+      method: 'POST',
+    });
+  }
+
+  // Seller endpoints
+  async getSellerDashboard() {
+    return this.request<any>('/seller/dashboard');
+  }
+
+  async getSellerListings(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/seller/listings${query ? `?${query}` : ''}`);
+  }
+
+  async getSellerOffers(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+
+    const query = searchParams.toString();
+    return this.request<any>(`/seller/offers${query ? `?${query}` : ''}`);
+  }
+
+  // Listing fee checkout
+  async createListingFeeCheckout(mcNumber: string, successUrl: string, cancelUrl: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        sessionId: string;
+        url: string;
+      };
+    }>('/seller/listing-fee/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ mcNumber, successUrl, cancelUrl }),
+    });
+  }
+
+  // Create listing
+  async createListing(data: {
+    mcNumber: string;
+    dotNumber: string;
+    legalName: string;
+    dbaName?: string;
+    title: string;
+    description?: string;
+    price: number;
+    city: string;
+    state: string;
+    address?: string;
+    yearsActive?: number;
+    fleetSize?: number;
+    totalDrivers?: number;
+    safetyRating?: string;
+    insuranceOnFile?: boolean;
+    bipdCoverage?: number;
+    cargoCoverage?: number;
+    bondAmount?: number;
+    amazonStatus?: string;
+    amazonRelayScore?: string;
+    highwaySetup?: boolean;
+    sellingWithEmail?: boolean;
+    sellingWithPhone?: boolean;
+    contactEmail?: string;
+    contactPhone?: string;
+    cargoTypes?: string[];
+    submitForReview?: boolean;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/listings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Unlock a listing (uses 1 credit)
+  async unlockListing(listingId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        alreadyUnlocked?: boolean;
+      };
+      message: string;
+    }>(`/listings/${listingId}/unlock`, {
+      method: 'POST',
+    });
+  }
+
+  // Get user's unlocked listings
+  async getUnlockedListings(params?: { page?: number; limit?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/listings/unlocked${query ? `?${query}` : ''}`);
+  }
+
+  // Check if a specific listing is unlocked by the user
+  async checkListingUnlocked(listingId: string) {
+    try {
+      const response = await this.getUnlockedListings({ limit: 1000 });
+      const unlockedIds = response.data.map((item: any) => item.id);
+      return unlockedIds.includes(listingId);
+    } catch {
+      return false;
+    }
+  }
+
+  // Offer endpoints
+  async createOffer(data: {
+    listingId: string;
+    amount: number;
+    message?: string;
+    isBuyNow?: boolean;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/offers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getBuyerOffers(params?: { status?: string }) {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+    }>(`/offers/my-offers${query ? `?${query}` : ''}`);
+  }
+
+  // Admin offer endpoints
+  async getAdminOffers(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/admin/offers${query ? `?${query}` : ''}`);
+  }
+
+  async approveOffer(offerId: string, notes?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/admin/offers/${offerId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async rejectOffer(offerId: string, reason: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/admin/offers/${offerId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  // Buyer offer actions
+  async withdrawOffer(offerId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/offers/${offerId}/withdraw`, {
+      method: 'POST',
+    });
+  }
+
+  async acceptCounterOffer(offerId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/offers/${offerId}/accept-counter`, {
+      method: 'POST',
+    });
+  }
+
+  // Get single offer by ID
+  async getOffer(offerId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>(`/offers/${offerId}`);
+  }
+
+  // Deposit payment for an offer/transaction
+  async createDepositCheckout(offerId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        sessionId: string;
+        url: string;
+      };
+    }>(`/offers/${offerId}/deposit-checkout`, {
+      method: 'POST',
+    });
+  }
+
+  // Get buyer's transactions
+  async getBuyerTransactions(params?: { page?: number; limit?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/buyer/transactions${query ? `?${query}` : ''}`);
+  }
+
+  // Get single transaction by ID
+  async getTransaction(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>(`/transactions/${transactionId}`);
+  }
+
+  // Create deposit checkout for a transaction (Stripe)
+  async createTransactionDepositCheckout(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        sessionId: string;
+        url: string;
+      };
+    }>(`/transactions/${transactionId}/deposit-checkout`, {
+      method: 'POST',
+    });
+  }
+
+  // Record deposit payment (Zelle/Wire/Check)
+  async recordDeposit(transactionId: string, paymentMethod: 'STRIPE' | 'ZELLE' | 'WIRE' | 'CHECK', reference?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/transactions/${transactionId}/deposit`, {
+      method: 'POST',
+      body: JSON.stringify({ paymentMethod, reference }),
+    });
   }
 }
 

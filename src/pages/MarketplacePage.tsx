@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -8,15 +8,16 @@ import {
   Crown,
   Mail,
   Phone,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react'
 import MCCard from '../components/MCCard'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
-import { mockListings } from '../utils/mockData'
-import { FilterOptions, TrustLevel, AmazonStatus } from '../types'
+import { api } from '../services/api'
+import { FilterOptions, TrustLevel, AmazonStatus, MCListing } from '../types'
 
 // US States for filter
 const US_STATES = [
@@ -77,6 +78,9 @@ const MarketplacePage = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [savedListings, setSavedListings] = useState<Set<string>>(new Set())
+  const [listings, setListings] = useState<MCListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [filters, setFilters] = useState<FilterOptions>({
     priceMin: undefined,
@@ -94,6 +98,71 @@ const MarketplacePage = () => {
     isPremium: undefined,
     sortBy: 'newest'
   })
+
+  // Fetch listings from API
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await api.getListings({
+          search: searchQuery || undefined,
+          minPrice: filters.priceMin,
+          maxPrice: filters.priceMax,
+          state: filters.state,
+          amazonStatus: filters.amazonStatus === 'all' ? undefined : filters.amazonStatus,
+        })
+
+        // Transform backend data to frontend format
+        const transformedListings: MCListing[] = (response.data || response.listings || []).map((listing: any) => ({
+          id: listing.id,
+          mcNumber: listing.mcNumber,
+          sellerId: listing.sellerId,
+          seller: listing.seller || { id: listing.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
+          title: listing.title,
+          description: listing.description || '',
+          price: parseFloat(listing.price) || 0,
+          trustScore: listing.seller?.trustScore || 50,
+          trustLevel: (listing.seller?.trustScore || 50) >= 80 ? 'high' : (listing.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
+          verified: listing.seller?.verified || false,
+          verificationBadges: [],
+          yearsActive: listing.yearsActive || 0,
+          operationType: (() => {
+            if (!listing.cargoTypes) return [];
+            if (Array.isArray(listing.cargoTypes)) return listing.cargoTypes;
+            try { return JSON.parse(listing.cargoTypes); } catch { return []; }
+          })(),
+          fleetSize: listing.fleetSize || 0,
+          safetyRating: (listing.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
+          insuranceStatus: listing.insuranceOnFile ? 'active' : 'pending',
+          state: listing.state,
+          amazonStatus: (listing.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
+          amazonRelayScore: listing.amazonRelayScore,
+          highwaySetup: listing.highwaySetup || false,
+          sellingWithEmail: listing.sellingWithEmail || false,
+          sellingWithPhone: listing.sellingWithPhone || false,
+          isPremium: listing.isPremium || false,
+          documents: [],
+          status: (listing.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
+          visibility: (listing.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
+          views: listing.views || 0,
+          saves: listing.saves || 0,
+          createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
+          updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
+        }))
+
+        setListings(transformedListings)
+      } catch (err) {
+        console.error('Failed to fetch listings:', err)
+        setError('Failed to load listings. Please try again.')
+        setListings([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchListings()
+  }, [searchQuery, filters.priceMin, filters.priceMax, filters.state, filters.amazonStatus])
 
   const handleSaveListing = (id: string) => {
     setSavedListings(prev => {
@@ -125,7 +194,7 @@ const MarketplacePage = () => {
   }, [filters])
 
   const filteredListings = useMemo(() => {
-    let results = mockListings.filter(listing => {
+    let results = listings.filter(listing => {
       // Search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
@@ -198,7 +267,7 @@ const MarketplacePage = () => {
     }
 
     return results
-  }, [searchQuery, filters])
+  }, [listings, searchQuery, filters])
 
   const clearFilters = () => {
     setFilters({
@@ -524,12 +593,35 @@ const MarketplacePage = () => {
         {/* Results */}
         <div className="mb-4 flex items-center justify-between">
           <p className="text-gray-500">
-            {filteredListings.length} {filteredListings.length === 1 ? 'listing' : 'listings'} found
+            {loading ? 'Loading...' : `${filteredListings.length} ${filteredListings.length === 1 ? 'listing' : 'listings'} found`}
           </p>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <div className="text-center py-12">
+              <Loader2 className="w-16 h-16 text-primary-500 mx-auto mb-4 animate-spin" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Loading listings...</h3>
+              <p className="text-gray-500">Fetching available MC authorities</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card>
+            <div className="text-center py-12">
+              <X className="w-16 h-16 text-red-300 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Error loading listings</h3>
+              <p className="text-gray-500 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
+            </div>
+          </Card>
+        )}
+
         {/* Listings Grid */}
-        {filteredListings.length > 0 ? (
+        {!loading && !error && filteredListings.length > 0 && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredListings.map((listing) => (
               <MCCard
@@ -540,7 +632,10 @@ const MarketplacePage = () => {
               />
             ))}
           </div>
-        ) : (
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && filteredListings.length === 0 && (
           <Card>
             <div className="text-center py-12">
               <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />

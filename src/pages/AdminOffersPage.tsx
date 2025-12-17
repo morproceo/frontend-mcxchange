@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
@@ -15,216 +15,196 @@ import {
   X,
   AlertCircle,
   Check,
-  FileText
+  FileText,
+  ShoppingCart,
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import { TransactionOffer, OfferStatus } from '../types'
+import api from '../services/api'
+
+interface Offer {
+  id: string
+  amount: number
+  message?: string
+  status: string
+  isBuyNow?: boolean
+  counterAmount?: number
+  counterMessage?: string
+  counterAt?: string
+  expiresAt?: string
+  respondedAt?: string
+  adminReviewedBy?: string
+  adminReviewedAt?: string
+  adminNotes?: string
+  listingId: string
+  buyerId: string
+  sellerId: string
+  createdAt: string
+  updatedAt: string
+  listing?: {
+    id: string
+    mcNumber: string
+    title: string
+    price: number
+    status: string
+  }
+  buyer?: {
+    id: string
+    name: string
+    email: string
+    phone?: string
+    verified: boolean
+    trustScore: number
+  }
+  seller?: {
+    id: string
+    name: string
+    email: string
+    phone?: string
+    verified: boolean
+  }
+}
+
+type FilterStatus = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACCEPTED'
 
 const AdminOffersPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<OfferStatus | 'all'>('all')
-  const [selectedOffer, setSelectedOffer] = useState<TransactionOffer | null>(null)
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [adminNotes, setAdminNotes] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [offers, setOffers] = useState<Offer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  })
 
-  // Mock offers data
-  const offers: TransactionOffer[] = [
-    {
-      id: 'offer-1',
-      listingId: 'listing-1',
-      listing: {
-        id: 'listing-1',
-        mcNumber: '789012',
-        title: 'Established 5-Year MC Authority',
-        price: 15000
-      } as any,
-      buyerId: 'buyer-1',
-      buyer: {
-        id: 'buyer-1',
-        name: 'John Smith',
-        email: 'john@example.com',
-        trustScore: 85
-      } as any,
-      sellerId: 'seller-1',
-      seller: {
-        id: 'seller-1',
-        name: 'Transport Co',
-        email: 'transport@example.com',
-        trustScore: 92
-      } as any,
-      offerAmount: 14000,
-      message: 'I am very interested in this MC authority. Ready to proceed quickly.',
-      status: 'pending',
-      depositAmount: 1000,
-      depositPaid: false,
-      createdAt: new Date('2024-01-18T10:30:00'),
-      updatedAt: new Date('2024-01-18T10:30:00')
-    },
-    {
-      id: 'offer-2',
-      listingId: 'listing-2',
-      listing: {
-        id: 'listing-2',
-        mcNumber: '456789',
-        title: '3-Year MC with Highway Setup',
-        price: 12000
-      } as any,
-      buyerId: 'buyer-2',
-      buyer: {
-        id: 'buyer-2',
-        name: 'Sarah Johnson',
-        email: 'sarah@example.com',
-        trustScore: 78
-      } as any,
-      sellerId: 'seller-2',
-      seller: {
-        id: 'seller-2',
-        name: 'Freight Masters',
-        email: 'freight@example.com',
-        trustScore: 88
-      } as any,
-      offerAmount: 11500,
-      message: 'Looking to expand my business. This MC fits my needs perfectly.',
-      status: 'pending',
-      depositAmount: 1000,
-      depositPaid: false,
-      createdAt: new Date('2024-01-17T14:15:00'),
-      updatedAt: new Date('2024-01-17T14:15:00')
-    },
-    {
-      id: 'offer-3',
-      listingId: 'listing-3',
-      listing: {
-        id: 'listing-3',
-        mcNumber: '123456',
-        title: '7-Year Premium MC Authority',
-        price: 22000
-      } as any,
-      buyerId: 'buyer-3',
-      buyer: {
-        id: 'buyer-3',
-        name: 'Mike Davis',
-        email: 'mike@example.com',
-        trustScore: 92
-      } as any,
-      sellerId: 'seller-3',
-      seller: {
-        id: 'seller-3',
-        name: 'Quick Haul LLC',
-        email: 'quickhaul@example.com',
-        trustScore: 95
-      } as any,
-      offerAmount: 20000,
-      message: 'Willing to pay deposit immediately upon approval.',
-      status: 'admin-approved',
-      adminNotes: 'Verified buyer with good history. Proceed with deposit.',
-      depositAmount: 1000,
-      depositPaid: false,
-      createdAt: new Date('2024-01-16T09:00:00'),
-      updatedAt: new Date('2024-01-17T11:00:00')
-    },
-    {
-      id: 'offer-4',
-      listingId: 'listing-4',
-      listing: {
-        id: 'listing-4',
-        mcNumber: '987654',
-        title: '2-Year MC Fresh Start',
-        price: 8000
-      } as any,
-      buyerId: 'buyer-4',
-      buyer: {
-        id: 'buyer-4',
-        name: 'Lisa Chen',
-        email: 'lisa@example.com',
-        trustScore: 70
-      } as any,
-      sellerId: 'seller-4',
-      seller: {
-        id: 'seller-4',
-        name: 'New Roads Inc',
-        email: 'newroads@example.com',
-        trustScore: 82
-      } as any,
-      offerAmount: 7000,
-      message: 'First time buyer, eager to get started.',
-      status: 'deposit-paid',
-      adminNotes: 'Deposit received and verified.',
-      depositAmount: 1000,
-      depositPaid: true,
-      depositPaidAt: new Date('2024-01-15T16:00:00'),
-      transactionId: 'txn-123',
-      createdAt: new Date('2024-01-14T08:00:00'),
-      updatedAt: new Date('2024-01-15T16:00:00')
+  const fetchOffers = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params: { page?: number; limit?: number; status?: string } = {
+        page: pagination.page,
+        limit: pagination.limit,
+      }
+      if (statusFilter !== 'all') {
+        params.status = statusFilter
+      }
+      const response = await api.getAdminOffers(params)
+      setOffers(response.data || [])
+      if (response.pagination) {
+        setPagination(response.pagination)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load offers')
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
-  const getStatusBadge = (status: OfferStatus) => {
-    const config = {
-      'pending': { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-      'admin-approved': { label: 'Approved', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-      'admin-rejected': { label: 'Rejected', color: 'bg-red-100 text-red-700', icon: XCircle },
-      'deposit-pending': { label: 'Awaiting Deposit', color: 'bg-blue-100 text-blue-700', icon: CreditCard },
-      'deposit-paid': { label: 'Deposit Received', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
-      'in-transaction': { label: 'In Transaction', color: 'bg-purple-100 text-purple-700', icon: FileText },
-      'completed': { label: 'Completed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-      'cancelled': { label: 'Cancelled', color: 'bg-gray-100 text-gray-700', icon: X }
+  useEffect(() => {
+    fetchOffers()
+  }, [statusFilter, pagination.page])
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { label: string; color: string; icon: any }> = {
+      'PENDING': { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+      'APPROVED': { label: 'Approved', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+      'REJECTED': { label: 'Rejected', color: 'bg-red-100 text-red-700', icon: XCircle },
+      'ACCEPTED': { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+      'COUNTERED': { label: 'Countered', color: 'bg-blue-100 text-blue-700', icon: MessageSquare },
+      'EXPIRED': { label: 'Expired', color: 'bg-gray-100 text-gray-700', icon: Clock },
+      'WITHDRAWN': { label: 'Withdrawn', color: 'bg-gray-100 text-gray-700', icon: X }
     }
-    return config[status]
+    return config[status] || { label: status, color: 'bg-gray-100 text-gray-700', icon: Clock }
   }
 
   const filteredOffers = offers.filter(offer => {
     const matchesSearch =
-      offer.listing.mcNumber.includes(searchQuery) ||
-      offer.buyer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      offer.seller.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || offer.status === statusFilter
-    return matchesSearch && matchesStatus
+      offer.listing?.mcNumber?.includes(searchQuery) ||
+      offer.buyer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      offer.seller?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch
   })
 
   const stats = {
-    pending: offers.filter(o => o.status === 'pending').length,
-    approved: offers.filter(o => o.status === 'admin-approved').length,
-    depositPaid: offers.filter(o => o.status === 'deposit-paid').length,
-    inTransaction: offers.filter(o => o.status === 'in-transaction').length
+    pending: offers.filter(o => o.status === 'PENDING').length,
+    approved: offers.filter(o => o.status === 'APPROVED').length,
+    accepted: offers.filter(o => o.status === 'ACCEPTED').length,
+    buyNow: offers.filter(o => o.isBuyNow).length
   }
 
   const handleApprove = async () => {
     if (!selectedOffer) return
     setProcessing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setProcessing(false)
-    setShowDetailModal(false)
-    alert('Offer approved! Buyer will be notified to pay deposit.')
+    try {
+      await api.approveOffer(selectedOffer.id, adminNotes || undefined)
+      setShowDetailModal(false)
+      setAdminNotes('')
+      fetchOffers()
+    } catch (err: any) {
+      alert(err.message || 'Failed to approve offer')
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const handleReject = async () => {
     if (!selectedOffer) return
+    if (!adminNotes.trim()) {
+      alert('Please provide a reason for rejection')
+      return
+    }
     setProcessing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setProcessing(false)
-    setShowDetailModal(false)
-    alert('Offer rejected. Buyer will be notified.')
+    try {
+      await api.rejectOffer(selectedOffer.id, adminNotes)
+      setShowDetailModal(false)
+      setAdminNotes('')
+      fetchOffers()
+    } catch (err: any) {
+      alert(err.message || 'Failed to reject offer')
+    } finally {
+      setProcessing(false)
+    }
   }
 
-  const handleCreateTransaction = async () => {
-    if (!selectedOffer) return
-    setProcessing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setProcessing(false)
-    setShowDetailModal(false)
-    alert('Transaction room created! Both parties will be notified.')
+  if (loading && offers.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Offer Management</h1>
-        <p className="text-gray-500">Review and manage buyer offers</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Offer Management</h1>
+          <p className="text-gray-500">Review and manage buyer offers and buy now requests</p>
+        </div>
+        <Button variant="outline" onClick={fetchOffers} disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
+
+      {error && (
+        <Card className="bg-red-50 border-red-200">
+          <div className="flex items-center gap-3 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -256,19 +236,19 @@ const AdminOffersPage = () => {
               <CreditCard className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-sm text-emerald-600">Deposit Paid</p>
-              <p className="text-2xl font-bold text-emerald-700">{stats.depositPaid}</p>
+              <p className="text-sm text-emerald-600">Accepted</p>
+              <p className="text-2xl font-bold text-emerald-700">{stats.accepted}</p>
             </div>
           </div>
         </Card>
         <Card className="bg-purple-50 border-purple-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-purple-600" />
+              <ShoppingCart className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-purple-600">In Transaction</p>
-              <p className="text-2xl font-bold text-purple-700">{stats.inTransaction}</p>
+              <p className="text-sm text-purple-600">Buy Now Requests</p>
+              <p className="text-2xl font-bold text-purple-700">{stats.buyNow}</p>
             </div>
           </div>
         </Card>
@@ -291,15 +271,14 @@ const AdminOffersPage = () => {
             <Filter className="w-5 h-5 text-gray-400" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as OfferStatus | 'all')}
+              onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
               className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900"
             >
               <option value="all">All Status</option>
-              <option value="pending">Pending Review</option>
-              <option value="admin-approved">Approved</option>
-              <option value="admin-rejected">Rejected</option>
-              <option value="deposit-paid">Deposit Paid</option>
-              <option value="in-transaction">In Transaction</option>
+              <option value="PENDING">Pending Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="ACCEPTED">Accepted</option>
             </select>
           </div>
         </div>
@@ -340,8 +319,16 @@ const AdminOffersPage = () => {
                           <Building2 className="w-5 h-5 text-gray-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">MC #{offer.listing.mcNumber}</h3>
-                          <p className="text-sm text-gray-500">{offer.listing.title}</p>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900">MC #{offer.listing?.mcNumber || 'N/A'}</h3>
+                            {offer.isBuyNow && (
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                <ShoppingCart className="w-3 h-3" />
+                                Buy Now
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">{offer.listing?.title || 'N/A'}</p>
                         </div>
                       </div>
 
@@ -350,14 +337,14 @@ const AdminOffersPage = () => {
                           <p className="text-gray-500">Buyer</p>
                           <p className="font-medium text-gray-900 flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            {offer.buyer.name}
+                            {offer.buyer?.name || 'N/A'}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Seller</p>
                           <p className="font-medium text-gray-900 flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            {offer.seller.name}
+                            {offer.seller?.name || 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -371,66 +358,37 @@ const AdminOffersPage = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Offer Amount</p>
-                        <p className="text-xl font-bold text-gray-900">${offer.offerAmount.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-gray-900">${Number(offer.amount).toLocaleString()}</p>
                         <p className="text-xs text-gray-400">
-                          Asking: ${offer.listing.price.toLocaleString()}
+                          Asking: ${Number(offer.listing?.price || 0).toLocaleString()}
                         </p>
                       </div>
                     </div>
 
                     {/* Quick Actions */}
                     <div className="flex items-center gap-2">
-                      {offer.status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedOffer(offer)
-                              setAdminNotes('')
-                              setShowDetailModal(true)
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Review
-                          </Button>
-                        </>
-                      )}
-                      {offer.status === 'deposit-paid' && !offer.transactionId && (
+                      {offer.status === 'PENDING' && (
                         <Button
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
                             setSelectedOffer(offer)
-                            handleCreateTransaction()
+                            setAdminNotes('')
+                            setShowDetailModal(true)
                           }}
                         >
-                          <ArrowRight className="w-4 h-4 mr-1" />
-                          Create Transaction
-                        </Button>
-                      )}
-                      {offer.transactionId && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            window.location.href = `/transaction/${offer.transactionId}`
-                          }}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          View Transaction
+                          <Eye className="w-4 h-4 mr-1" />
+                          Review
                         </Button>
                       )}
                     </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-                    <span>Submitted: {offer.createdAt.toLocaleDateString()} at {offer.createdAt.toLocaleTimeString()}</span>
-                    {offer.depositPaid && (
-                      <span className="flex items-center gap-1 text-emerald-600">
-                        <CheckCircle className="w-4 h-4" />
-                        Deposit Paid
+                    <span>Submitted: {new Date(offer.createdAt).toLocaleDateString()} at {new Date(offer.createdAt).toLocaleTimeString()}</span>
+                    {offer.adminReviewedAt && (
+                      <span className="flex items-center gap-1 text-gray-500">
+                        Reviewed: {new Date(offer.adminReviewedAt).toLocaleDateString()}
                       </span>
                     )}
                   </div>
@@ -440,6 +398,31 @@ const AdminOffersPage = () => {
           })
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page === 1}
+            onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+          >
+            Previous
+          </Button>
+          <span className="flex items-center px-4 text-sm text-gray-600">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page === pagination.totalPages}
+            onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {/* Detail Modal */}
       <AnimatePresence>
@@ -460,7 +443,15 @@ const AdminOffersPage = () => {
             >
               <div className="p-6 border-b border-gray-100">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">Offer Details</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-gray-900">Offer Details</h2>
+                    {selectedOffer.isBuyNow && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex items-center gap-1">
+                        <ShoppingCart className="w-3 h-3" />
+                        Buy Now Request
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={() => setShowDetailModal(false)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -479,18 +470,18 @@ const AdminOffersPage = () => {
                         <Building2 className="w-6 h-6 text-gray-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">MC #{selectedOffer.listing.mcNumber}</h3>
-                        <p className="text-sm text-gray-500">{selectedOffer.listing.title}</p>
+                        <h3 className="font-semibold text-gray-900">MC #{selectedOffer.listing?.mcNumber || 'N/A'}</h3>
+                        <p className="text-sm text-gray-500">{selectedOffer.listing?.title || 'N/A'}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Asking Price</p>
-                      <p className="text-lg font-bold text-gray-900">${selectedOffer.listing.price.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-gray-900">${Number(selectedOffer.listing?.price || 0).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <span className="text-gray-600">Offer Amount</span>
-                    <span className="text-2xl font-bold text-green-600">${selectedOffer.offerAmount.toLocaleString()}</span>
+                    <span className="text-2xl font-bold text-green-600">${Number(selectedOffer.amount).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -498,36 +489,40 @@ const AdminOffersPage = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-blue-50 rounded-xl p-4">
                     <h4 className="text-sm font-medium text-blue-800 mb-3">Buyer</h4>
-                    <p className="font-semibold text-gray-900">{selectedOffer.buyer.name}</p>
-                    <p className="text-sm text-gray-500">{selectedOffer.buyer.email}</p>
+                    <p className="font-semibold text-gray-900">{selectedOffer.buyer?.name || 'N/A'}</p>
+                    <p className="text-sm text-gray-500">{selectedOffer.buyer?.email || 'N/A'}</p>
+                    {selectedOffer.buyer?.phone && (
+                      <p className="text-sm text-gray-500">{selectedOffer.buyer.phone}</p>
+                    )}
                     <div className="mt-2 flex items-center gap-1 text-sm">
                       <span className="text-gray-500">Trust Score:</span>
-                      <span className="font-medium text-gray-900">{selectedOffer.buyer.trustScore}%</span>
+                      <span className="font-medium text-gray-900">{selectedOffer.buyer?.trustScore || 0}%</span>
                     </div>
                   </div>
                   <div className="bg-purple-50 rounded-xl p-4">
                     <h4 className="text-sm font-medium text-purple-800 mb-3">Seller</h4>
-                    <p className="font-semibold text-gray-900">{selectedOffer.seller.name}</p>
-                    <p className="text-sm text-gray-500">{selectedOffer.seller.email}</p>
-                    <div className="mt-2 flex items-center gap-1 text-sm">
-                      <span className="text-gray-500">Trust Score:</span>
-                      <span className="font-medium text-gray-900">{selectedOffer.seller.trustScore}%</span>
-                    </div>
+                    <p className="font-semibold text-gray-900">{selectedOffer.seller?.name || 'N/A'}</p>
+                    <p className="text-sm text-gray-500">{selectedOffer.seller?.email || 'N/A'}</p>
+                    {selectedOffer.seller?.phone && (
+                      <p className="text-sm text-gray-500">{selectedOffer.seller.phone}</p>
+                    )}
                   </div>
                 </div>
 
                 {/* Buyer Message */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Buyer's Message</h4>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-gray-700">{selectedOffer.message}</p>
+                {selectedOffer.message && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Buyer's Message</h4>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-gray-700">{selectedOffer.message}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Admin Notes */}
-                {selectedOffer.status === 'pending' && (
+                {selectedOffer.status === 'PENDING' && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Notes</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Notes (required for rejection)</h4>
                     <textarea
                       value={adminNotes}
                       onChange={(e) => setAdminNotes(e.target.value)}
@@ -538,7 +533,7 @@ const AdminOffersPage = () => {
                   </div>
                 )}
 
-                {selectedOffer.adminNotes && selectedOffer.status !== 'pending' && (
+                {selectedOffer.adminNotes && selectedOffer.status !== 'PENDING' && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Notes</h4>
                     <div className="bg-yellow-50 rounded-xl p-4">
@@ -548,30 +543,15 @@ const AdminOffersPage = () => {
                 )}
 
                 {/* Info Box */}
-                {selectedOffer.status === 'pending' && (
+                {selectedOffer.status === 'PENDING' && (
                   <div className="bg-blue-50 rounded-xl p-4">
                     <div className="flex gap-3">
                       <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-800">
                         <p className="font-medium mb-1">Approval Flow</p>
                         <p className="text-blue-700">
-                          Upon approval, the buyer will be prompted to pay a $1,000 refundable deposit.
+                          Upon approval, the buyer will be notified and prompted to pay a deposit.
                           Once paid, a transaction room will be created for both parties.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedOffer.status === 'deposit-paid' && !selectedOffer.transactionId && (
-                  <div className="bg-emerald-50 rounded-xl p-4">
-                    <div className="flex gap-3">
-                      <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-emerald-800">
-                        <p className="font-medium mb-1">Ready for Transaction</p>
-                        <p className="text-emerald-700">
-                          Deposit has been received. Click "Create Transaction Room" to open the shared
-                          transaction space where both parties can review and approve the deal.
                         </p>
                       </div>
                     </div>
@@ -580,7 +560,7 @@ const AdminOffersPage = () => {
               </div>
 
               <div className="p-6 border-t border-gray-100 flex gap-3">
-                {selectedOffer.status === 'pending' && (
+                {selectedOffer.status === 'PENDING' && (
                   <>
                     <Button
                       variant="outline"
@@ -602,23 +582,13 @@ const AdminOffersPage = () => {
                     </Button>
                   </>
                 )}
-                {selectedOffer.status === 'deposit-paid' && !selectedOffer.transactionId && (
+                {selectedOffer.status !== 'PENDING' && (
                   <Button
                     fullWidth
-                    onClick={handleCreateTransaction}
-                    loading={processing}
+                    variant="outline"
+                    onClick={() => setShowDetailModal(false)}
                   >
-                    <ArrowRight className="w-4 h-4 mr-2" />
-                    Create Transaction Room
-                  </Button>
-                )}
-                {selectedOffer.transactionId && (
-                  <Button
-                    fullWidth
-                    onClick={() => window.location.href = `/transaction/${selectedOffer.transactionId}`}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    View Transaction Room
+                    Close
                   </Button>
                 )}
               </div>

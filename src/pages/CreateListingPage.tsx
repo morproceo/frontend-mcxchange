@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload,
@@ -34,6 +34,7 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Textarea from '../components/ui/Textarea'
 import Select from '../components/ui/Select'
+import api from '../services/api'
 
 const US_STATES = [
   { value: '', label: 'Select State' },
@@ -107,6 +108,7 @@ const stepInfo = [
 
 const CreateListingPage = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState(1)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(false)
@@ -114,6 +116,100 @@ const CreateListingPage = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [paymentComplete, setPaymentComplete] = useState(false)
   const [invoiceNumber] = useState(`INV-${Date.now().toString().slice(-8)}`)
+
+  const [listingCreated, setListingCreated] = useState(false)
+  const [creatingListing, setCreatingListing] = useState(false)
+  const [listingAttempted, setListingAttempted] = useState(false)
+
+  // Handle return from Stripe checkout
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment')
+    const mc = searchParams.get('mc')
+
+    if (paymentStatus === 'success' && !listingCreated && !creatingListing && !listingAttempted) {
+      // Payment was successful - create the listing
+      const createListingAfterPayment = async () => {
+        setCreatingListing(true)
+        setListingAttempted(true) // Mark that we've attempted to create the listing
+
+        // Retrieve form data from localStorage
+        const savedFormData = localStorage.getItem('mcx_listing_form_data')
+        if (!savedFormData) {
+          setFmcsaError('Form data not found. Please try creating the listing again.')
+          setStep(1)
+          setCreatingListing(false)
+          return
+        }
+
+        try {
+          const parsedFormData = JSON.parse(savedFormData)
+
+          // Update form state with saved data
+          setFormData(parsedFormData)
+
+          // Get city from physical address or use state
+          const city = parsedFormData.physicalAddress?.split(',')[0] || 'Unknown'
+
+          // Create the listing in database
+          const response = await api.createListing({
+            mcNumber: parsedFormData.mcNumber,
+            dotNumber: parsedFormData.dotNumber,
+            legalName: parsedFormData.legalName,
+            dbaName: parsedFormData.dbaName || undefined,
+            title: parsedFormData.title,
+            description: parsedFormData.description || undefined,
+            price: parseFloat(parsedFormData.price) || 0,
+            city: city,
+            state: parsedFormData.state,
+            address: parsedFormData.physicalAddress || undefined,
+            yearsActive: parseInt(parsedFormData.yearsActive) || 0,
+            fleetSize: parseInt(parsedFormData.fleetSize) || parseInt(parsedFormData.powerUnits) || 0,
+            totalDrivers: parseInt(parsedFormData.drivers) || 0,
+            safetyRating: parsedFormData.safetyRating || 'NONE',
+            insuranceOnFile: parsedFormData.insuranceStatus === 'active',
+            amazonStatus: parsedFormData.amazonStatus?.toUpperCase() || 'NONE',
+            amazonRelayScore: parsedFormData.amazonRelayScore || undefined,
+            highwaySetup: parsedFormData.highwaySetup === 'yes',
+            sellingWithEmail: parsedFormData.sellingWithEmail === 'yes',
+            sellingWithPhone: parsedFormData.sellingWithPhone === 'yes',
+            cargoTypes: parsedFormData.cargoCarried || [],
+            submitForReview: true, // Set status to PENDING_REVIEW since payment was made
+          })
+
+          if (response.success) {
+            // Clear saved form data
+            localStorage.removeItem('mcx_listing_form_data')
+            setListingCreated(true)
+            setPaymentComplete(true)
+            setStep(6)
+          } else {
+            throw new Error('Failed to create listing')
+          }
+        } catch (err: any) {
+          console.error('Error creating listing:', err)
+          // Clear saved form data to prevent retries with bad data
+          localStorage.removeItem('mcx_listing_form_data')
+          setFmcsaError(err.message || 'Failed to create listing. Please contact support.')
+          setStep(6) // Still show confirmation but with error
+        } finally {
+          setCreatingListing(false)
+        }
+      }
+
+      createListingAfterPayment()
+    } else if (paymentStatus === 'cancelled') {
+      // Payment was cancelled - stay on payment step and restore form data
+      const savedFormData = localStorage.getItem('mcx_listing_form_data')
+      if (savedFormData) {
+        try {
+          setFormData(JSON.parse(savedFormData))
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+      setStep(5)
+    }
+  }, [searchParams, listingCreated, creatingListing])
 
   const [formData, setFormData] = useState({
     // Basic Info
@@ -186,7 +282,7 @@ const CreateListingPage = () => {
     factoringLOR: null
   })
 
-  // Mock FMCSA lookup function
+  // FMCSA lookup function - uses real API
   const handleFMCSALookup = async () => {
     if (!formData.mcNumber && !formData.dotNumber) {
       setFmcsaError('Please enter an MC or DOT number first')
@@ -196,61 +292,137 @@ const CreateListingPage = () => {
     setIsFetchingFMCSA(true)
     setFmcsaError('')
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    try {
+      let response
 
-    // Mock FMCSA data
-    const mockFMCSAData = {
-      legalName: 'Transport Pro Logistics LLC',
-      dbaName: 'TransportPro',
-      dotNumber: formData.dotNumber || '1234567',
-      mcNumber: formData.mcNumber || '123456',
-      physicalAddress: '1234 Trucking Way, Dallas, TX 75201',
-      mailingAddress: '1234 Trucking Way, Dallas, TX 75201',
-      phone: '(555) 123-4567',
-      powerUnits: '15',
-      drivers: '18',
-      mcs150Date: '2024-06-15',
-      operatingStatus: 'AUTHORIZED',
-      entityType: 'CARRIER',
-      state: 'TX',
-      cargoCarried: ['General Freight', 'Household Goods', 'Metal: sheets, coils, rolls'],
-      safetyRating: 'satisfactory',
-      insuranceStatus: 'active'
+      // Prefer MC number lookup, fall back to DOT
+      if (formData.mcNumber) {
+        response = await api.fmcsaLookupByMC(formData.mcNumber)
+      } else if (formData.dotNumber) {
+        response = await api.fmcsaLookupByDOT(formData.dotNumber)
+      }
+
+      if (!response || !response.data) {
+        setFmcsaError('No carrier found with that number. Please check and try again.')
+        setIsFetchingFMCSA(false)
+        return
+      }
+
+      // The API returns carrier data directly in response.data (not nested under 'carrier')
+      const carrier = response.data
+      const authority = response.authority || null
+
+      if (!carrier || !carrier.dotNumber) {
+        setFmcsaError('No carrier data found. Please verify the number and try again.')
+        setIsFetchingFMCSA(false)
+        return
+      }
+
+      // Map the API response to our form fields
+      const fullAddress = [carrier.physicalAddress, carrier.hqCity, carrier.hqState].filter(Boolean).join(', ')
+
+      // Determine safety rating status
+      let safetyRatingValue = 'not-rated'
+      if (carrier.safetyRating) {
+        const rating = carrier.safetyRating.toLowerCase()
+        if (rating.includes('satisfactory')) safetyRatingValue = 'satisfactory'
+        else if (rating.includes('conditional')) safetyRatingValue = 'conditional'
+        else if (rating.includes('unsatisfactory')) safetyRatingValue = 'unsatisfactory'
+      }
+
+      // Determine operating status
+      const operatingStatus = carrier.allowedToOperate === 'Y' ? 'AUTHORIZED' : 'NOT AUTHORIZED'
+
+      // Determine insurance status
+      const insuranceStatus = carrier.insuranceOnFile ? 'active' : 'expired'
+
+      // Calculate years active from MCS-150 date if available
+      let yearsActive = ''
+      if (carrier.mcs150Date) {
+        try {
+          const mcsDate = new Date(carrier.mcs150Date)
+          const now = new Date()
+          const years = Math.floor((now.getTime() - mcsDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          if (years > 0) yearsActive = String(years)
+        } catch (e) {
+          // Ignore date parsing errors
+        }
+      }
+
+      // Auto-generate title from legal name and MC number
+      const mcNum = formData.mcNumber || carrier.dotNumber
+      const generatedTitle = `${carrier.legalName} - MC #${mcNum}`
+
+      setFormData(prev => ({
+        ...prev,
+        dotNumber: carrier.dotNumber || prev.dotNumber,
+        legalName: carrier.legalName || '',
+        dbaName: carrier.dbaName || '',
+        physicalAddress: fullAddress,
+        mailingAddress: fullAddress,
+        phone: carrier.phone || '',
+        powerUnits: String(carrier.totalPowerUnits || 0),
+        drivers: String(carrier.totalDrivers || 0),
+        mcs150Date: carrier.mcs150Date || '',
+        operatingStatus: operatingStatus,
+        entityType: carrier.carrierOperation || 'CARRIER',
+        state: carrier.hqState || prev.state,
+        cargoCarried: carrier.cargoTypes || [],
+        fleetSize: String(carrier.totalPowerUnits || 0),
+        safetyRating: safetyRatingValue,
+        insuranceStatus: insuranceStatus,
+        yearsActive: yearsActive || prev.yearsActive,
+        title: generatedTitle
+      }))
+
+      // If we have authority info, we could use it too
+      if (authority) {
+        console.log('Authority history:', authority)
+      }
+
+      setFmcsaFetched(true)
+    } catch (err: any) {
+      console.error('FMCSA lookup error:', err)
+      setFmcsaError(err.message || 'Failed to fetch FMCSA data. Please try again.')
+    } finally {
+      setIsFetchingFMCSA(false)
     }
-
-    setFormData(prev => ({
-      ...prev,
-      dotNumber: mockFMCSAData.dotNumber,
-      mcNumber: mockFMCSAData.mcNumber,
-      legalName: mockFMCSAData.legalName,
-      dbaName: mockFMCSAData.dbaName,
-      physicalAddress: mockFMCSAData.physicalAddress,
-      mailingAddress: mockFMCSAData.mailingAddress,
-      phone: mockFMCSAData.phone,
-      powerUnits: mockFMCSAData.powerUnits,
-      drivers: mockFMCSAData.drivers,
-      mcs150Date: mockFMCSAData.mcs150Date,
-      operatingStatus: mockFMCSAData.operatingStatus,
-      entityType: mockFMCSAData.entityType,
-      state: mockFMCSAData.state,
-      cargoCarried: mockFMCSAData.cargoCarried,
-      fleetSize: mockFMCSAData.powerUnits,
-      safetyRating: mockFMCSAData.safetyRating,
-      insuranceStatus: mockFMCSAData.insuranceStatus
-    }))
-
-    setFmcsaFetched(true)
-    setIsFetchingFMCSA(false)
   }
 
   const handlePayment = async () => {
+    if (!formData.mcNumber) {
+      setFmcsaError('MC number is required for payment')
+      return
+    }
+
     setPaymentProcessing(true)
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setPaymentProcessing(false)
-    setPaymentComplete(true)
-    setStep(6)
+
+    try {
+      // Save form data to localStorage before redirecting to Stripe
+      localStorage.setItem('mcx_listing_form_data', JSON.stringify(formData))
+
+      // Create Stripe checkout session for listing fee
+      const baseUrl = window.location.origin
+      const successUrl = `${baseUrl}/seller/create-listing?payment=success&mc=${formData.mcNumber}`
+      const cancelUrl = `${baseUrl}/seller/create-listing?payment=cancelled`
+
+      const response = await api.createListingFeeCheckout(
+        formData.mcNumber,
+        successUrl,
+        cancelUrl
+      )
+
+      if (response.success && response.data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = response.data.url
+      } else {
+        throw new Error('Failed to create checkout session')
+      }
+    } catch (err: any) {
+      console.error('Payment error:', err)
+      setFmcsaError(err.message || 'Failed to initiate payment. Please try again.')
+      setPaymentProcessing(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -352,7 +524,7 @@ const CreateListingPage = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen">
       <div className="max-w-6xl mx-auto">
         {/* Hero Header */}
         <motion.div
@@ -360,14 +532,14 @@ const CreateListingPage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary-500/20 to-purple-500/20 border border-primary-500/30 mb-4">
-            <Sparkles className="w-4 h-4 text-primary-400" />
-            <span className="text-sm font-medium text-primary-300">List Your MC Authority</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary-500/10 to-purple-500/10 border border-primary-500/20 mb-4">
+            <Sparkles className="w-4 h-4 text-primary-500" />
+            <span className="text-sm font-medium text-primary-600">List Your MC Authority</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-white via-primary-200 to-purple-200 bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900">
             Create Your Listing
           </h1>
-          <p className="text-white/60 max-w-xl mx-auto">
+          <p className="text-gray-500 max-w-xl mx-auto">
             Reach thousands of verified buyers looking for quality MC authorities
           </p>
         </motion.div>
@@ -378,15 +550,15 @@ const CreateListingPage = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="mb-8"
         >
-          <div className="glass rounded-2xl p-4 md:p-6">
+          <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-purple-500 flex items-center justify-center">
-                  <span className="text-lg font-bold">{calculateProgress()}%</span>
+                  <span className="text-lg font-bold text-white">{calculateProgress()}%</span>
                 </div>
-                <span className="text-sm text-white/60">Complete</span>
+                <span className="text-sm text-gray-500">Complete</span>
               </div>
-              <div className="text-sm text-white/40">Step {step} of 6</div>
+              <div className="text-sm text-gray-400">Step {step} of 6</div>
             </div>
 
             {/* Step Indicators */}
@@ -397,10 +569,10 @@ const CreateListingPage = () => {
                   onClick={() => setStep(s.num)}
                   className={`flex-1 min-w-[140px] p-3 rounded-xl transition-all relative group ${
                     step === s.num
-                      ? 'bg-gradient-to-r from-primary-500/30 to-purple-500/30 border-2 border-primary-500/50'
+                      ? 'bg-gradient-to-r from-primary-500/10 to-purple-500/10 border-2 border-primary-500/50'
                       : step > s.num
-                      ? 'bg-trust-high/10 border border-trust-high/30'
-                      : 'glass-subtle border border-white/10 hover:border-white/20'
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-gray-50 border border-gray-200 hover:border-gray-300'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -410,8 +582,8 @@ const CreateListingPage = () => {
                       step === s.num
                         ? 'bg-primary-500 text-white'
                         : step > s.num
-                        ? 'bg-trust-high text-white'
-                        : 'bg-white/10 text-white/60'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-500'
                     }`}>
                       {step > s.num ? (
                         <CheckCircle className="w-5 h-5" />
@@ -420,14 +592,14 @@ const CreateListingPage = () => {
                       )}
                     </div>
                     <div className="text-left">
-                      <div className={`text-sm font-semibold ${step === s.num ? 'text-white' : 'text-white/80'}`}>
+                      <div className={`text-sm font-semibold ${step === s.num ? 'text-gray-900' : 'text-gray-700'}`}>
                         {s.title}
                       </div>
-                      <div className="text-xs text-white/40 hidden md:block">{s.description}</div>
+                      <div className="text-xs text-gray-400 hidden md:block">{s.description}</div>
                     </div>
                   </div>
                   {index < stepInfo.length - 1 && (
-                    <ChevronRight className="absolute right-[-12px] top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 hidden md:block" />
+                    <ChevronRight className="absolute right-[-12px] top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 hidden md:block" />
                   )}
                 </motion.button>
               ))}
@@ -449,14 +621,14 @@ const CreateListingPage = () => {
               >
                 {/* MC/DOT Lookup Card */}
                 <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                  <div className="bg-gradient-to-r from-primary-500/5 via-purple-500/5 to-pink-500/5 -m-6 mb-6 p-6 border-b border-gray-100">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
                         <Search className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold">FMCSA Lookup</h2>
-                        <p className="text-white/60">Enter your MC or DOT to auto-fill your information</p>
+                        <h2 className="text-2xl font-bold text-gray-900">FMCSA Lookup</h2>
+                        <p className="text-gray-500">Enter your MC or DOT to auto-fill your information</p>
                       </div>
                     </div>
                   </div>
@@ -535,58 +707,58 @@ const CreateListingPage = () => {
                             </div>
                             <div>
                               <span className="font-bold text-trust-high">FMCSA Data Retrieved!</span>
-                              <p className="text-xs text-white/60">Information auto-filled from official records</p>
+                              <p className="text-xs text-gray-500">Information auto-filled from official records</p>
                             </div>
                           </div>
 
                           <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                                 <Building2 className="w-5 h-5 text-primary-400 mt-0.5" />
                                 <div>
-                                  <div className="text-xs text-white/50 mb-1">Legal Name</div>
-                                  <div className="font-semibold">{formData.legalName}</div>
+                                  <div className="text-xs text-gray-400 mb-1">Legal Name</div>
+                                  <div className="font-semibold text-gray-900">{formData.legalName}</div>
                                 </div>
                               </div>
                               {formData.dbaName && (
-                                <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                                   <Star className="w-5 h-5 text-yellow-400 mt-0.5" />
                                   <div>
-                                    <div className="text-xs text-white/50 mb-1">DBA Name</div>
-                                    <div className="font-semibold">{formData.dbaName}</div>
+                                    <div className="text-xs text-gray-400 mb-1">DBA Name</div>
+                                    <div className="font-semibold text-gray-900">{formData.dbaName}</div>
                                   </div>
                                 </div>
                               )}
-                              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                                 <MapPin className="w-5 h-5 text-pink-400 mt-0.5" />
                                 <div>
-                                  <div className="text-xs text-white/50 mb-1">Address</div>
+                                  <div className="text-xs text-gray-400 mb-1">Address</div>
                                   <div className="text-sm">{formData.physicalAddress}</div>
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-4">
-                              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                                 <TruckIcon className="w-5 h-5 text-blue-400 mt-0.5" />
                                 <div>
-                                  <div className="text-xs text-white/50 mb-1">Fleet Info</div>
-                                  <div className="font-semibold">{formData.powerUnits} Power Units • {formData.drivers} Drivers</div>
+                                  <div className="text-xs text-gray-400 mb-1">Fleet Info</div>
+                                  <div className="font-semibold text-gray-900">{formData.powerUnits} Power Units • {formData.drivers} Drivers</div>
                                 </div>
                               </div>
-                              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                                 <Shield className="w-5 h-5 text-trust-high mt-0.5" />
                                 <div>
-                                  <div className="text-xs text-white/50 mb-1">Operating Status</div>
+                                  <div className="text-xs text-gray-400 mb-1">Operating Status</div>
                                   <div className={`font-bold ${formData.operatingStatus === 'AUTHORIZED' ? 'text-trust-high' : 'text-yellow-400'}`}>
                                     {formData.operatingStatus}
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                                 <Calendar className="w-5 h-5 text-orange-400 mt-0.5" />
                                 <div>
-                                  <div className="text-xs text-white/50 mb-1">MCS-150 Date</div>
+                                  <div className="text-xs text-gray-400 mb-1">MCS-150 Date</div>
                                   <div className="text-sm">{formData.mcs150Date}</div>
                                 </div>
                               </div>
@@ -594,11 +766,11 @@ const CreateListingPage = () => {
                           </div>
 
                           {formData.cargoCarried.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-white/10">
-                              <div className="text-xs text-white/50 mb-2">Cargo Types</div>
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <div className="text-xs text-gray-400 mb-2">Cargo Types</div>
                               <div className="flex flex-wrap gap-2">
                                 {formData.cargoCarried.map((cargo, index) => (
-                                  <span key={index} className="px-3 py-1 rounded-full bg-white/10 text-sm border border-white/10">
+                                  <span key={index} className="px-3 py-1 rounded-full bg-gray-100 text-sm border border-gray-200">
                                     {cargo}
                                   </span>
                                 ))}
@@ -618,8 +790,8 @@ const CreateListingPage = () => {
                       <ClipboardCheck className="w-6 h-6 text-orange-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Entry Audit Status</h3>
-                      <p className="text-sm text-white/60">New authorities must complete an entry audit within 12-18 months</p>
+                      <h3 className="text-xl font-bold text-gray-900">Entry Audit Status</h3>
+                      <p className="text-sm text-gray-500">New authorities must complete an entry audit within 12-18 months</p>
                     </div>
                   </div>
 
@@ -637,16 +809,16 @@ const CreateListingPage = () => {
                         className={`p-4 rounded-xl border-2 transition-all text-center ${
                           formData.entryAuditCompleted === option.value
                             ? `border-${option.color} bg-${option.color}/10`
-                            : 'border-white/10 hover:border-white/30 bg-white/5'
+                            : 'border-gray-200 hover:border-gray-300 bg-gray-50'
                         }`}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <option.icon className={`w-6 h-6 mx-auto mb-2 ${
-                          formData.entryAuditCompleted === option.value ? `text-${option.color}` : 'text-white/40'
+                          formData.entryAuditCompleted === option.value ? `text-${option.color}` : 'text-gray-400'
                         }`} />
                         <div className={`text-sm font-medium ${
-                          formData.entryAuditCompleted === option.value ? 'text-white' : 'text-white/60'
+                          formData.entryAuditCompleted === option.value ? 'text-gray-900' : 'text-gray-500'
                         }`}>
                           {option.label}
                         </div>
@@ -703,14 +875,14 @@ const CreateListingPage = () => {
               >
                 {/* Listing Info Card */}
                 <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                  <div className="bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25">
                         <DollarSign className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold">Listing Information</h2>
-                        <p className="text-white/60">Set your price and describe your authority</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Listing Information</h2>
+                        <p className="text-gray-500">Set your price and describe your authority</p>
                       </div>
                     </div>
                   </div>
@@ -734,13 +906,20 @@ const CreateListingPage = () => {
                     />
                   </div>
 
-                  <Input
-                    label="Listing Title"
-                    placeholder="E.g., Established Dry Van Authority - 5 Years Clean Record"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
+                  <div>
+                    <Input
+                      label="Listing Title"
+                      placeholder="Auto-generated from FMCSA lookup"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      required
+                    />
+                    {fmcsaFetched && formData.title && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Auto-generated from FMCSA data. You can edit if needed.
+                      </p>
+                    )}
+                  </div>
 
                   <div className="mt-4">
                     <Textarea
@@ -753,35 +932,6 @@ const CreateListingPage = () => {
                     />
                   </div>
 
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-white/80 mb-3">Listing Visibility</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { value: 'public', label: 'Public', icon: Globe, desc: 'Anyone can see' },
-                        { value: 'private', label: 'Private', icon: Shield, desc: 'Verified buyers only' },
-                        { value: 'unlisted', label: 'Unlisted', icon: Eye, desc: 'Direct link only' }
-                      ].map((option) => (
-                        <motion.button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, visibility: option.value })}
-                          className={`p-4 rounded-xl border-2 transition-all ${
-                            formData.visibility === option.value
-                              ? 'border-primary-500 bg-primary-500/10'
-                              : 'border-white/10 hover:border-white/30 bg-white/5'
-                          }`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <option.icon className={`w-6 h-6 mx-auto mb-2 ${
-                            formData.visibility === option.value ? 'text-primary-400' : 'text-white/40'
-                          }`} />
-                          <div className="font-medium text-sm">{option.label}</div>
-                          <div className="text-xs text-white/40">{option.desc}</div>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
                 </GlassCard>
 
                 {/* Platform Integrations */}
@@ -791,18 +941,18 @@ const CreateListingPage = () => {
                       <Zap className="w-6 h-6 text-orange-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Platform Integrations</h3>
-                      <p className="text-sm text-white/60">Do you have any load board or delivery platform setups?</p>
+                      <h3 className="text-xl font-bold text-gray-900">Platform Integrations</h3>
+                      <p className="text-sm text-gray-500">Do you have any load board or delivery platform setups?</p>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
                           <span className="text-lg">📦</span>
                         </div>
-                        <span className="font-semibold">Amazon Relay</span>
+                        <span className="font-semibold text-gray-900">Amazon Relay</span>
                       </div>
                       <Select
                         value={formData.amazonStatus}
@@ -839,12 +989,12 @@ const CreateListingPage = () => {
                       )}
                     </div>
 
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                           <span className="text-lg">🛣️</span>
                         </div>
-                        <span className="font-semibold">Highway Setup</span>
+                        <span className="font-semibold text-gray-900">Highway Setup</span>
                       </div>
                       <Select
                         value={formData.highwaySetup}
@@ -867,8 +1017,8 @@ const CreateListingPage = () => {
                       <Package className="w-6 h-6 text-purple-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">What's Included in Sale?</h3>
-                      <p className="text-sm text-white/60">Let buyers know what they're getting</p>
+                      <h3 className="text-xl font-bold text-gray-900">What's Included in Sale?</h3>
+                      <p className="text-sm text-gray-500">Let buyers know what they're getting</p>
                     </div>
                   </div>
 
@@ -879,22 +1029,22 @@ const CreateListingPage = () => {
                       className={`p-5 rounded-xl border-2 transition-all flex items-center gap-4 ${
                         formData.sellingWithEmail === 'yes'
                           ? 'border-trust-high bg-trust-high/10'
-                          : 'border-white/10 bg-white/5 hover:border-white/30'
+                          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                       }`}
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                     >
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        formData.sellingWithEmail === 'yes' ? 'bg-trust-high/20' : 'bg-white/10'
+                        formData.sellingWithEmail === 'yes' ? 'bg-trust-high/20' : 'bg-gray-100'
                       }`}>
-                        <Mail className={`w-6 h-6 ${formData.sellingWithEmail === 'yes' ? 'text-trust-high' : 'text-white/40'}`} />
+                        <Mail className={`w-6 h-6 ${formData.sellingWithEmail === 'yes' ? 'text-trust-high' : 'text-gray-400'}`} />
                       </div>
                       <div className="text-left flex-1">
-                        <div className="font-semibold">Business Email</div>
-                        <div className="text-sm text-white/60">Include email with sale</div>
+                        <div className="font-semibold text-gray-900">Business Email</div>
+                        <div className="text-sm text-gray-500">Include email with sale</div>
                       </div>
                       <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        formData.sellingWithEmail === 'yes' ? 'border-trust-high bg-trust-high' : 'border-white/30'
+                        formData.sellingWithEmail === 'yes' ? 'border-trust-high bg-trust-high' : 'border-gray-300'
                       }`}>
                         {formData.sellingWithEmail === 'yes' && <CheckCircle className="w-4 h-4 text-white" />}
                       </div>
@@ -906,22 +1056,22 @@ const CreateListingPage = () => {
                       className={`p-5 rounded-xl border-2 transition-all flex items-center gap-4 ${
                         formData.sellingWithPhone === 'yes'
                           ? 'border-trust-high bg-trust-high/10'
-                          : 'border-white/10 bg-white/5 hover:border-white/30'
+                          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                       }`}
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                     >
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        formData.sellingWithPhone === 'yes' ? 'bg-trust-high/20' : 'bg-white/10'
+                        formData.sellingWithPhone === 'yes' ? 'bg-trust-high/20' : 'bg-gray-100'
                       }`}>
-                        <Phone className={`w-6 h-6 ${formData.sellingWithPhone === 'yes' ? 'text-trust-high' : 'text-white/40'}`} />
+                        <Phone className={`w-6 h-6 ${formData.sellingWithPhone === 'yes' ? 'text-trust-high' : 'text-gray-400'}`} />
                       </div>
                       <div className="text-left flex-1">
-                        <div className="font-semibold">Business Phone</div>
-                        <div className="text-sm text-white/60">Include phone with sale</div>
+                        <div className="font-semibold text-gray-900">Business Phone</div>
+                        <div className="text-sm text-gray-500">Include phone with sale</div>
                       </div>
                       <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        formData.sellingWithPhone === 'yes' ? 'border-trust-high bg-trust-high' : 'border-white/30'
+                        formData.sellingWithPhone === 'yes' ? 'border-trust-high bg-trust-high' : 'border-gray-300'
                       }`}>
                         {formData.sellingWithPhone === 'yes' && <CheckCircle className="w-4 h-4 text-white" />}
                       </div>
@@ -936,8 +1086,8 @@ const CreateListingPage = () => {
                       <Percent className="w-6 h-6 text-cyan-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Factoring Information</h3>
-                      <p className="text-sm text-white/60">Do you have an existing factoring agreement?</p>
+                      <h3 className="text-xl font-bold text-gray-900">Factoring Information</h3>
+                      <p className="text-sm text-gray-500">Do you have an existing factoring agreement?</p>
                     </div>
                   </div>
 
@@ -948,15 +1098,15 @@ const CreateListingPage = () => {
                       className={`p-4 rounded-xl border-2 transition-all ${
                         formData.hasFactoring === 'yes'
                           ? 'border-cyan-400 bg-cyan-400/10'
-                          : 'border-white/10 bg-white/5 hover:border-white/30'
+                          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                       }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <CheckCircle className={`w-8 h-8 mx-auto mb-2 ${
-                        formData.hasFactoring === 'yes' ? 'text-cyan-400' : 'text-white/30'
+                        formData.hasFactoring === 'yes' ? 'text-cyan-400' : 'text-gray-300'
                       }`} />
-                      <div className="font-semibold">Yes, I have factoring</div>
+                      <div className="font-semibold text-gray-900">Yes, I have factoring</div>
                     </motion.button>
 
                     <motion.button
@@ -965,15 +1115,15 @@ const CreateListingPage = () => {
                       className={`p-4 rounded-xl border-2 transition-all ${
                         formData.hasFactoring === 'no'
                           ? 'border-gray-400 bg-gray-400/10'
-                          : 'border-white/10 bg-white/5 hover:border-white/30'
+                          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                       }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <X className={`w-8 h-8 mx-auto mb-2 ${
-                        formData.hasFactoring === 'no' ? 'text-gray-400' : 'text-white/30'
+                        formData.hasFactoring === 'no' ? 'text-gray-400' : 'text-gray-300'
                       }`} />
-                      <div className="font-semibold">No factoring</div>
+                      <div className="font-semibold text-gray-900">No factoring</div>
                     </motion.button>
                   </div>
 
@@ -983,7 +1133,7 @@ const CreateListingPage = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="space-y-4 pt-4 border-t border-white/10"
+                        className="space-y-4 pt-4 border-t border-gray-200"
                       >
                         <div className="grid md:grid-cols-2 gap-4">
                           <Input
@@ -1004,19 +1154,19 @@ const CreateListingPage = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-white/80 mb-2">
-                            Letter of Release (LOR) <span className="text-white/40">- Optional</span>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Letter of Release (LOR) <span className="text-gray-400">- Optional</span>
                           </label>
                           {uploadedFiles.factoringLOR ? (
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-200">
                               <div className="flex items-center gap-3">
                                 <FileText className="w-5 h-5 text-cyan-400" />
                                 <div>
                                   <div className="font-medium text-sm">{uploadedFiles.factoringLOR.name}</div>
-                                  <div className="text-xs text-white/60">{uploadedFiles.factoringLOR.size}</div>
+                                  <div className="text-xs text-gray-500">{uploadedFiles.factoringLOR.size}</div>
                                 </div>
                               </div>
-                              <button type="button" onClick={() => removeFile('factoringLOR')} className="p-2 hover:bg-white/10 rounded-lg">
+                              <button type="button" onClick={() => removeFile('factoringLOR')} className="p-2 hover:bg-gray-100 rounded-lg">
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
@@ -1024,10 +1174,10 @@ const CreateListingPage = () => {
                             <button
                               type="button"
                               onClick={() => simulateFileUpload('factoringLOR')}
-                              className="w-full p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-cyan-400/50 transition-colors text-center"
+                              className="w-full p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-cyan-400/50 transition-colors text-center"
                             >
-                              <Upload className="w-6 h-6 text-white/40 mx-auto mb-2" />
-                              <div className="text-sm text-white/60">Click to upload LOR document</div>
+                              <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                              <div className="text-sm text-gray-500">Click to upload LOR document</div>
                             </button>
                           )}
                         </div>
@@ -1064,14 +1214,14 @@ const CreateListingPage = () => {
                 className="space-y-6"
               >
                 <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-violet-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                  <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-violet-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
                         <TruckIcon className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold">Authority Details</h2>
-                        <p className="text-white/60">Tell buyers about your fleet and operations</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Authority Details</h2>
+                        <p className="text-gray-500">Tell buyers about your fleet and operations</p>
                       </div>
                     </div>
                   </div>
@@ -1117,8 +1267,8 @@ const CreateListingPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-3">
-                      Operation Types <span className="text-white/40">- Select all that apply</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Operation Types <span className="text-gray-400">- Select all that apply</span>
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {operationTypeOptions.map((type) => (
@@ -1129,14 +1279,14 @@ const CreateListingPage = () => {
                           className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
                             formData.operationTypes.includes(type.name)
                               ? 'border-primary-500 bg-primary-500/10'
-                              : 'border-white/10 bg-white/5 hover:border-white/30'
+                              : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                           }`}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           <span className="text-lg">{type.icon}</span>
                           <span className={`text-sm font-medium ${
-                            formData.operationTypes.includes(type.name) ? 'text-white' : 'text-white/70'
+                            formData.operationTypes.includes(type.name) ? 'text-gray-900' : 'text-gray-600'
                           }`}>
                             {type.name}
                           </span>
@@ -1163,8 +1313,8 @@ const CreateListingPage = () => {
                       { label: 'Entry Audit', value: formData.entryAuditCompleted === 'yes' ? 'Completed' : formData.entryAuditCompleted || '-', color: 'yellow' },
                       { label: 'Factoring', value: formData.hasFactoring || '-', color: 'pink' }
                     ].map((item, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-white/5 border border-white/10">
-                        <div className="text-xs text-white/50 mb-1">{item.label}</div>
+                      <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">{item.label}</div>
                         <div className="font-semibold text-sm capitalize">{item.value}</div>
                       </div>
                     ))}
@@ -1199,21 +1349,21 @@ const CreateListingPage = () => {
                 className="space-y-6"
               >
                 <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-red-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                  <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-red-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/25">
                         <FileText className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold">Upload Documents</h2>
-                        <p className="text-white/60">Required documents for verification</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Upload Documents</h2>
+                        <p className="text-gray-500">Required documents for verification</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* Article of Incorporation */}
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           uploadedFiles.articleOfIncorporation ? 'bg-trust-high/20' : 'bg-pink-500/20'
@@ -1225,7 +1375,7 @@ const CreateListingPage = () => {
                           )}
                         </div>
                         <div>
-                          <span className="font-semibold">Article of Incorporation</span>
+                          <span className="font-semibold text-gray-900">Article of Incorporation</span>
                           <span className="text-red-400 ml-1">*</span>
                         </div>
                       </div>
@@ -1235,7 +1385,7 @@ const CreateListingPage = () => {
                             <FileText className="w-4 h-4 text-trust-high" />
                             <span className="text-sm">{uploadedFiles.articleOfIncorporation.name}</span>
                           </div>
-                          <button type="button" onClick={() => removeFile('articleOfIncorporation')} className="p-1 hover:bg-white/10 rounded">
+                          <button type="button" onClick={() => removeFile('articleOfIncorporation')} className="p-1 hover:bg-gray-100 rounded">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -1243,16 +1393,16 @@ const CreateListingPage = () => {
                         <button
                           type="button"
                           onClick={() => simulateFileUpload('articleOfIncorporation')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-white/20 hover:border-pink-400/50 transition-colors"
+                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-pink-400/50 transition-colors"
                         >
-                          <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                          <div className="text-sm text-white/60">Click to upload</div>
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <div className="text-sm text-gray-500">Click to upload</div>
                         </button>
                       )}
                     </div>
 
                     {/* EIN Letter */}
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           uploadedFiles.einLetter ? 'bg-trust-high/20' : 'bg-rose-500/20'
@@ -1264,7 +1414,7 @@ const CreateListingPage = () => {
                           )}
                         </div>
                         <div>
-                          <span className="font-semibold">EIN Letter</span>
+                          <span className="font-semibold text-gray-900">EIN Letter</span>
                           <span className="text-red-400 ml-1">*</span>
                         </div>
                       </div>
@@ -1274,7 +1424,7 @@ const CreateListingPage = () => {
                             <FileText className="w-4 h-4 text-trust-high" />
                             <span className="text-sm">{uploadedFiles.einLetter.name}</span>
                           </div>
-                          <button type="button" onClick={() => removeFile('einLetter')} className="p-1 hover:bg-white/10 rounded">
+                          <button type="button" onClick={() => removeFile('einLetter')} className="p-1 hover:bg-gray-100 rounded">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -1282,16 +1432,16 @@ const CreateListingPage = () => {
                         <button
                           type="button"
                           onClick={() => simulateFileUpload('einLetter')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-white/20 hover:border-rose-400/50 transition-colors"
+                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-rose-400/50 transition-colors"
                         >
-                          <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                          <div className="text-sm text-white/60">Click to upload</div>
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <div className="text-sm text-gray-500">Click to upload</div>
                         </button>
                       )}
                     </div>
 
                     {/* Driver License */}
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           uploadedFiles.driverLicense ? 'bg-trust-high/20' : 'bg-purple-500/20'
@@ -1303,7 +1453,7 @@ const CreateListingPage = () => {
                           )}
                         </div>
                         <div>
-                          <span className="font-semibold">Driver License</span>
+                          <span className="font-semibold text-gray-900">Driver License</span>
                           <span className="text-red-400 ml-1">*</span>
                         </div>
                       </div>
@@ -1313,7 +1463,7 @@ const CreateListingPage = () => {
                             <FileText className="w-4 h-4 text-trust-high" />
                             <span className="text-sm">{uploadedFiles.driverLicense.name}</span>
                           </div>
-                          <button type="button" onClick={() => removeFile('driverLicense')} className="p-1 hover:bg-white/10 rounded">
+                          <button type="button" onClick={() => removeFile('driverLicense')} className="p-1 hover:bg-gray-100 rounded">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -1321,16 +1471,16 @@ const CreateListingPage = () => {
                         <button
                           type="button"
                           onClick={() => simulateFileUpload('driverLicense')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-white/20 hover:border-purple-400/50 transition-colors"
+                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-purple-400/50 transition-colors"
                         >
-                          <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                          <div className="text-sm text-white/60">Click to upload</div>
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <div className="text-sm text-gray-500">Click to upload</div>
                         </button>
                       )}
                     </div>
 
                     {/* COI - Certificate of Insurance */}
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           uploadedFiles.coi ? 'bg-trust-high/20' : 'bg-cyan-500/20'
@@ -1342,7 +1492,7 @@ const CreateListingPage = () => {
                           )}
                         </div>
                         <div>
-                          <span className="font-semibold">COI (Certificate of Insurance)</span>
+                          <span className="font-semibold text-gray-900">COI (Certificate of Insurance)</span>
                           <span className="text-red-400 ml-1">*</span>
                         </div>
                       </div>
@@ -1352,7 +1502,7 @@ const CreateListingPage = () => {
                             <FileText className="w-4 h-4 text-trust-high" />
                             <span className="text-sm">{uploadedFiles.coi.name}</span>
                           </div>
-                          <button type="button" onClick={() => removeFile('coi')} className="p-1 hover:bg-white/10 rounded">
+                          <button type="button" onClick={() => removeFile('coi')} className="p-1 hover:bg-gray-100 rounded">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -1360,16 +1510,16 @@ const CreateListingPage = () => {
                         <button
                           type="button"
                           onClick={() => simulateFileUpload('coi')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-white/20 hover:border-cyan-400/50 transition-colors"
+                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-cyan-400/50 transition-colors"
                         >
-                          <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                          <div className="text-sm text-white/60">Click to upload</div>
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <div className="text-sm text-gray-500">Click to upload</div>
                         </button>
                       )}
                     </div>
 
                     {/* Loss Run Report */}
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           uploadedFiles.lossRun ? 'bg-trust-high/20' : 'bg-orange-500/20'
@@ -1381,7 +1531,7 @@ const CreateListingPage = () => {
                           )}
                         </div>
                         <div>
-                          <span className="font-semibold">Copy of Loss Run</span>
+                          <span className="font-semibold text-gray-900">Copy of Loss Run</span>
                           <span className="text-red-400 ml-1">*</span>
                         </div>
                       </div>
@@ -1391,7 +1541,7 @@ const CreateListingPage = () => {
                             <FileText className="w-4 h-4 text-trust-high" />
                             <span className="text-sm">{uploadedFiles.lossRun.name}</span>
                           </div>
-                          <button type="button" onClick={() => removeFile('lossRun')} className="p-1 hover:bg-white/10 rounded">
+                          <button type="button" onClick={() => removeFile('lossRun')} className="p-1 hover:bg-gray-100 rounded">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -1399,10 +1549,10 @@ const CreateListingPage = () => {
                         <button
                           type="button"
                           onClick={() => simulateFileUpload('lossRun')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-white/20 hover:border-orange-400/50 transition-colors"
+                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-orange-400/50 transition-colors"
                         >
-                          <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                          <div className="text-sm text-white/60">Click to upload</div>
+                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <div className="text-sm text-gray-500">Click to upload</div>
                         </button>
                       )}
                     </div>
@@ -1410,19 +1560,19 @@ const CreateListingPage = () => {
 
                   {/* Additional Documents */}
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-white/80 mb-3">
-                      Additional Documents <span className="text-white/40">- Optional</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Additional Documents <span className="text-gray-400">- Optional</span>
                     </label>
 
                     {uploadedFiles.additional.length > 0 && (
                       <div className="space-y-2 mb-4">
                         {uploadedFiles.additional.map((file) => (
-                          <div key={file.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                          <div key={file.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-200">
                             <div className="flex items-center gap-2">
                               <FileText className="w-4 h-4 text-primary-400" />
                               <span className="text-sm">{file.name}</span>
                             </div>
-                            <button type="button" onClick={() => removeFile('additional', file.id)} className="p-1 hover:bg-white/10 rounded">
+                            <button type="button" onClick={() => removeFile('additional', file.id)} className="p-1 hover:bg-gray-100 rounded">
                               <X className="w-4 h-4" />
                             </button>
                           </div>
@@ -1433,10 +1583,10 @@ const CreateListingPage = () => {
                     <button
                       type="button"
                       onClick={() => simulateFileUpload('additional')}
-                      className="w-full p-4 rounded-lg border-2 border-dashed border-white/20 hover:border-primary-400/50 transition-colors text-center"
+                      className="w-full p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-400/50 transition-colors text-center"
                     >
-                      <Upload className="w-6 h-6 text-white/30 mx-auto mb-2" />
-                      <div className="text-sm text-white/60">Safety records, UCC filings, etc.</div>
+                      <Upload className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                      <div className="text-sm text-gray-500">Safety records, UCC filings, etc.</div>
                     </button>
                   </div>
                 </GlassCard>
@@ -1446,7 +1596,7 @@ const CreateListingPage = () => {
                   <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-semibold text-yellow-400 mb-1">Document Verification</p>
-                    <p className="text-white/70">Your documents will be reviewed by our team within 24-48 hours. You'll receive a notification once approved.</p>
+                    <p className="text-gray-600">Your documents will be reviewed by our team within 24-48 hours. You'll receive a notification once approved.</p>
                   </div>
                 </div>
 
@@ -1478,40 +1628,40 @@ const CreateListingPage = () => {
                 className="space-y-6"
               >
                 <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                  <div className="bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25">
                         <DollarSign className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold">Listing Activation Fee</h2>
-                        <p className="text-white/60">One-time payment to activate your listing</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Listing Activation Fee</h2>
+                        <p className="text-gray-500">One-time payment to activate your listing</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Invoice Details */}
-                  <div className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-6">
                     <div className="flex justify-between items-start mb-6">
                       <div>
                         <h3 className="text-lg font-bold text-primary-400">INVOICE</h3>
-                        <p className="text-sm text-white/60">{invoiceNumber}</p>
+                        <p className="text-sm text-gray-500">{invoiceNumber}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-white/60">Date</p>
-                        <p className="font-medium">{new Date().toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-500">Date</p>
+                        <p className="font-medium text-gray-900">{new Date().toLocaleDateString()}</p>
                       </div>
                     </div>
 
-                    <div className="border-t border-b border-white/10 py-4 mb-4">
+                    <div className="border-t border-b border-gray-200 py-4 mb-4">
                       <div className="flex justify-between items-center mb-3">
                         <div>
-                          <p className="font-medium">MC Authority Listing Activation</p>
-                          <p className="text-sm text-white/60">MC #{formData.mcNumber || 'N/A'} • {formData.state || 'N/A'}</p>
+                          <p className="font-medium text-gray-900">MC Authority Listing Activation</p>
+                          <p className="text-sm text-gray-500">MC #{formData.mcNumber || 'N/A'} • {formData.state || 'N/A'}</p>
                         </div>
-                        <p className="font-semibold">$35.00</p>
+                        <p className="font-semibold text-gray-900">$35.00</p>
                       </div>
-                      <div className="text-sm text-white/60 space-y-1">
+                      <div className="text-sm text-gray-500 space-y-1">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-trust-high" />
                           <span>30-day listing visibility</span>
@@ -1537,60 +1687,49 @@ const CreateListingPage = () => {
                     </div>
                   </div>
 
-                  {/* Payment Method */}
+                  {/* Payment Method Info */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-white/80 mb-3">Payment Method</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { id: 'card', label: 'Credit Card', icon: '💳' },
-                        { id: 'paypal', label: 'PayPal', icon: '🅿️' },
-                        { id: 'apple', label: 'Apple Pay', icon: '🍎' }
-                      ].map((method) => (
-                        <motion.button
-                          key={method.id}
-                          type="button"
-                          className="p-4 rounded-xl border-2 border-primary-500 bg-primary-500/10 transition-all text-center"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <span className="text-2xl block mb-1">{method.icon}</span>
-                          <span className="text-sm font-medium">{method.label}</span>
-                        </motion.button>
-                      ))}
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-primary-500/10 border border-primary-500/30">
+                      <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                        <span className="text-2xl">💳</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Secure Stripe Checkout</p>
+                        <p className="text-sm text-gray-500">You'll be redirected to Stripe to complete your payment securely</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Card Details (Mock) */}
-                  <div className="space-y-4 mb-6">
-                    <Input
-                      label="Card Number"
-                      placeholder="4242 4242 4242 4242"
-                      icon={<span className="text-lg">💳</span>}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        label="Expiry Date"
-                        placeholder="MM/YY"
-                      />
-                      <Input
-                        label="CVC"
-                        placeholder="123"
-                      />
+                  {/* Accepted Payment Methods */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Accepted Payment Methods</label>
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <span className="text-2xl">💳</span>
+                      <span className="text-2xl">🅿️</span>
+                      <span className="text-2xl">🍎</span>
+                      <span className="text-sm text-gray-500 ml-auto">Credit Card, PayPal, Apple Pay & more</span>
                     </div>
-                    <Input
-                      label="Cardholder Name"
-                      placeholder="John Doe"
-                    />
                   </div>
 
                   {/* Security Notice */}
                   <div className="p-4 rounded-xl bg-trust-high/10 border border-trust-high/30 flex items-start gap-3 mb-6">
                     <Shield className="w-5 h-5 text-trust-high flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-semibold text-trust-high mb-1">Secure Payment</p>
-                      <p className="text-white/70">Your payment is encrypted and secure. We never store your card details.</p>
+                      <p className="font-semibold text-trust-high mb-1">Secure Payment via Stripe</p>
+                      <p className="text-gray-600">Your payment is processed securely by Stripe. We never see or store your payment details.</p>
                     </div>
                   </div>
+
+                  {/* Error Display */}
+                  {fmcsaError && (
+                    <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 mb-6">
+                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-semibold text-red-600 mb-1">Payment Error</p>
+                        <p className="text-red-600">{fmcsaError}</p>
+                      </div>
+                    </div>
+                  )}
                 </GlassCard>
 
                 {/* Navigation */}
@@ -1603,10 +1742,11 @@ const CreateListingPage = () => {
                     onClick={handlePayment}
                     size="lg"
                     loading={paymentProcessing}
+                    disabled={!formData.mcNumber}
                     className="bg-gradient-to-r from-trust-high to-green-500 hover:from-green-600 hover:to-emerald-600 px-8"
                   >
                     <DollarSign className="w-5 h-5 mr-2" />
-                    Pay $35.00
+                    {paymentProcessing ? 'Redirecting to Stripe...' : 'Pay $35.00 via Stripe'}
                   </Button>
                 </div>
               </motion.div>
@@ -1621,6 +1761,50 @@ const CreateListingPage = () => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="space-y-6"
               >
+                {/* Loading State while creating listing */}
+                {creatingListing && (
+                  <GlassCard className="text-center py-12">
+                    <div className="w-24 h-24 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
+                      <RefreshCw className="w-12 h-12 text-primary-500 animate-spin" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2 text-gray-900">Creating Your Listing...</h2>
+                    <p className="text-gray-500">Please wait while we set up your listing.</p>
+                  </GlassCard>
+                )}
+
+                {/* Error State */}
+                {!creatingListing && fmcsaError && (
+                  <GlassCard className="text-center py-12">
+                    <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
+                      <AlertCircle className="w-12 h-12 text-red-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2 text-gray-900">Something Went Wrong</h2>
+                    <p className="text-red-500 mb-6">{fmcsaError}</p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="lg"
+                        onClick={() => {
+                          setFmcsaError('')
+                          setStep(1)
+                        }}
+                      >
+                        Start Over
+                      </Button>
+                      <Button
+                        type="button"
+                        size="lg"
+                        onClick={() => navigate('/seller/listings')}
+                      >
+                        View My Listings
+                      </Button>
+                    </div>
+                  </GlassCard>
+                )}
+
+                {/* Success State */}
+                {!creatingListing && !fmcsaError && listingCreated && (
                 <GlassCard className="text-center py-12">
                   <motion.div
                     initial={{ scale: 0 }}
@@ -1636,8 +1820,8 @@ const CreateListingPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <h2 className="text-3xl font-bold mb-2">Payment Successful!</h2>
-                    <p className="text-white/60 mb-6">Your listing has been submitted for review</p>
+                    <h2 className="text-3xl font-bold mb-2 text-gray-900">Listing Created Successfully!</h2>
+                    <p className="text-gray-500 mb-6">Your listing has been submitted for admin review</p>
 
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-trust-high/20 border border-trust-high/30 mb-8">
                       <CheckCircle className="w-4 h-4 text-trust-high" />
@@ -1650,32 +1834,32 @@ const CreateListingPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="bg-white/5 rounded-xl p-6 border border-white/10 text-left max-w-md mx-auto mb-8"
+                    className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-left max-w-md mx-auto mb-8"
                   >
                     <h3 className="font-semibold mb-4 text-center">Listing Summary</h3>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-white/60">MC Number</span>
-                        <span className="font-medium">{formData.mcNumber || 'N/A'}</span>
+                        <span className="text-gray-500">MC Number</span>
+                        <span className="font-medium text-gray-900">{formData.mcNumber || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">DOT Number</span>
-                        <span className="font-medium">{formData.dotNumber || 'N/A'}</span>
+                        <span className="text-gray-500">DOT Number</span>
+                        <span className="font-medium text-gray-900">{formData.dotNumber || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">State</span>
-                        <span className="font-medium">{formData.state || 'N/A'}</span>
+                        <span className="text-gray-500">State</span>
+                        <span className="font-medium text-gray-900">{formData.state || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">Asking Price</span>
+                        <span className="text-gray-500">Asking Price</span>
                         <span className="font-medium text-trust-high">${Number(formData.price || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">Invoice Number</span>
-                        <span className="font-medium">{invoiceNumber}</span>
+                        <span className="text-gray-500">Invoice Number</span>
+                        <span className="font-medium text-gray-900">{invoiceNumber}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">Status</span>
+                        <span className="text-gray-500">Status</span>
                         <span className="font-medium text-yellow-400">Pending Review</span>
                       </div>
                     </div>
@@ -1694,24 +1878,24 @@ const CreateListingPage = () => {
                     </h3>
                     <div className="space-y-3 text-sm">
                       <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold">1</div>
+                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">1</div>
                         <div>
-                          <p className="font-medium">Document Review</p>
-                          <p className="text-white/60">Our team will verify your documents within 24-48 hours</p>
+                          <p className="font-medium text-gray-900">Document Review</p>
+                          <p className="text-gray-500">Our team will verify your documents within 24-48 hours</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold">2</div>
+                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">2</div>
                         <div>
-                          <p className="font-medium">Listing Approval</p>
-                          <p className="text-white/60">Once approved, your listing goes live on the marketplace</p>
+                          <p className="font-medium text-gray-900">Listing Approval</p>
+                          <p className="text-gray-500">Once approved, your listing goes live on the marketplace</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold">3</div>
+                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">3</div>
                         <div>
-                          <p className="font-medium">Receive Offers</p>
-                          <p className="text-white/60">Verified buyers can view and make offers on your MC</p>
+                          <p className="font-medium text-gray-900">Receive Offers</p>
+                          <p className="text-gray-500">Verified buyers can view and make offers on your MC</p>
                         </div>
                       </div>
                     </div>
@@ -1743,6 +1927,7 @@ const CreateListingPage = () => {
                     </Button>
                   </motion.div>
                 </GlassCard>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

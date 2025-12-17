@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -17,16 +17,90 @@ import {
   Eye,
   Calendar,
   ShoppingCart,
-  Package
+  Package,
+  Loader2
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
-import { mockListings } from '../utils/mockData'
+import api from '../services/api'
+import { getTrustLevel } from '../utils/helpers'
+
+interface PendingListing {
+  id: string
+  mcNumber: string
+  title: string
+  description: string
+  price: number
+  yearsActive: number
+  fleetSize: number
+  safetyRating: string
+  insuranceStatus: string
+  status: 'pending-verification'
+  submittedAt: string
+  seller: {
+    id: string
+    name: string
+    email: string
+    trustScore: number
+    verified: boolean
+  }
+}
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'pending' | 'premium' | 'reported' | 'users'>('pending')
+
+  // API data state
+  const [pendingListings, setPendingListings] = useState<PendingListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch pending listings from API
+  useEffect(() => {
+    const fetchPendingListings = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        // Fetch listings - in production, would use admin endpoint with status filter
+        const response = await api.getListings()
+
+        // Transform and filter for pending listings
+        const transformed: PendingListing[] = (response.listings || [])
+          .slice(0, 3) // Limit to 3 for dashboard
+          .map((listing: any) => ({
+            id: listing.id,
+            mcNumber: listing.mcNumber,
+            title: listing.title || `MC Authority #${listing.mcNumber}`,
+            description: listing.description || '',
+            price: listing.askingPrice || 0,
+            yearsActive: listing.yearsActive || 0,
+            fleetSize: listing.fleetSize || 0,
+            safetyRating: listing.safetyRating || 'satisfactory',
+            insuranceStatus: listing.insuranceStatus || 'active',
+            status: 'pending-verification' as const,
+            submittedAt: '2 hours ago',
+            seller: {
+              id: listing.seller?.id || listing.sellerId,
+              name: listing.seller?.name || 'Unknown Seller',
+              email: listing.seller?.email || '',
+              trustScore: listing.seller?.trustScore || 70,
+              verified: listing.seller?.isVerified || false
+            }
+          }))
+
+        setPendingListings(transformed)
+      } catch (err) {
+        console.error('Failed to fetch listings:', err)
+        setError('Failed to load pending listings')
+        setPendingListings([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPendingListings()
+  }, [])
 
   const stats = [
     {
@@ -76,11 +150,6 @@ const AdminDashboard = () => {
     }
   ]
 
-  const pendingListings = mockListings.slice(0, 3).map(l => ({
-    ...l,
-    status: 'pending-verification' as const,
-    submittedAt: '2 hours ago'
-  }))
 
   const reportedItems = [
     {
@@ -348,7 +417,30 @@ const AdminDashboard = () => {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Listings Pending Verification</h2>
 
-            {pendingListings.map((listing) => (
+            {loading ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading pending listings...</p>
+                </div>
+              </Card>
+            ) : error ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Error loading listings</h3>
+                  <p className="text-gray-500">{error}</p>
+                </div>
+              </Card>
+            ) : pendingListings.length === 0 ? (
+              <Card>
+                <div className="text-center py-12">
+                  <CheckCircle className="w-16 h-16 text-green-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">All caught up!</h3>
+                  <p className="text-gray-500">No listings pending verification</p>
+                </div>
+              </Card>
+            ) : pendingListings.map((listing) => (
               <Card key={listing.id} hover={true} className="cursor-pointer">
                 <div
                   onClick={() => navigate(`/admin/review/${listing.id}`)}

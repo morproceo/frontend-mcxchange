@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -11,126 +11,119 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  DollarSign
+  DollarSign,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
 import { getTrustLevel } from '../utils/helpers'
+import api from '../services/api'
+
+interface Listing {
+  id: string
+  mcNumber: string
+  dotNumber?: string
+  title: string
+  price: number
+  status: string
+  views: number
+  saves: number
+  createdAt: string
+  yearsInBusiness?: number
+  fleetSize?: number
+  trustScore?: number
+  _count?: {
+    offers: number
+    savedBy: number
+  }
+}
 
 const SellerListingsPage = () => {
   const navigate = useNavigate()
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'sold'>('all')
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [listings, setListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const myListings = [
-    {
-      id: '1',
-      mcNumber: '123456',
-      title: 'Established Interstate Authority - Clean Record',
-      price: 45000,
-      status: 'active',
-      views: 234,
-      saves: 12,
-      offers: 3,
-      createdAt: '2024-01-05',
-      yearsActive: 5,
-      fleetSize: 12,
-      trustScore: 85
-    },
-    {
-      id: '2',
-      mcNumber: '789012',
-      title: 'Regional Carrier Authority - Excellent Safety',
-      price: 32000,
-      status: 'pending',
-      views: 89,
-      saves: 5,
-      offers: 0,
-      createdAt: '2024-01-10',
-      yearsActive: 3,
-      fleetSize: 8,
-      trustScore: 78
-    },
-    {
-      id: '3',
-      mcNumber: '345678',
-      title: 'Long Haul Authority - Amazon Approved',
-      price: 52000,
-      status: 'sold',
-      views: 456,
-      saves: 28,
-      offers: 8,
-      createdAt: '2023-12-15',
-      yearsActive: 7,
-      fleetSize: 15,
-      trustScore: 92
-    },
-    {
-      id: '4',
-      mcNumber: '901234',
-      title: 'Expedited Freight Authority',
-      price: 38000,
-      status: 'active',
-      views: 178,
-      saves: 9,
-      offers: 2,
-      createdAt: '2024-01-08',
-      yearsActive: 4,
-      fleetSize: 6,
-      trustScore: 81
+  useEffect(() => {
+    fetchListings()
+  }, [activeFilter])
+
+  const fetchListings = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const statusParam = activeFilter === 'all' ? undefined : activeFilter.toUpperCase()
+      const response = await api.getSellerListings({ status: statusParam })
+      setListings(response.data || [])
+    } catch (err: any) {
+      console.error('Failed to fetch listings:', err)
+      setError(err.message || 'Failed to load listings')
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'text-trust-high'
-      case 'pending':
-        return 'text-yellow-400'
-      case 'sold':
-        return 'text-blue-400'
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        return 'text-green-600'
+      case 'PENDING_REVIEW':
+        return 'text-yellow-600'
+      case 'SOLD':
+        return 'text-blue-600'
+      case 'RESERVED':
+        return 'text-purple-600'
+      case 'REJECTED':
+        return 'text-red-600'
       default:
-        return 'text-white/60'
+        return 'text-gray-500'
     }
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
         return <CheckCircle className="w-4 h-4" />
-      case 'pending':
+      case 'PENDING_REVIEW':
         return <Clock className="w-4 h-4" />
-      case 'sold':
+      case 'SOLD':
         return <DollarSign className="w-4 h-4" />
+      case 'RESERVED':
+        return <Clock className="w-4 h-4" />
+      case 'REJECTED':
+        return <XCircle className="w-4 h-4" />
       default:
         return <XCircle className="w-4 h-4" />
     }
   }
 
-  const filteredListings = myListings.filter(listing =>
-    activeFilter === 'all' || listing.status === activeFilter
-  )
+  const formatStatus = (status: string) => {
+    return status.toLowerCase().replace(/_/g, ' ')
+  }
 
   const stats = [
     {
       label: 'Active Listings',
-      value: myListings.filter(l => l.status === 'active').length,
-      color: 'text-trust-high'
+      value: listings.filter(l => l.status.toUpperCase() === 'ACTIVE').length,
+      color: 'text-green-600'
     },
     {
       label: 'Pending Review',
-      value: myListings.filter(l => l.status === 'pending').length,
-      color: 'text-yellow-400'
+      value: listings.filter(l => l.status.toUpperCase() === 'PENDING_REVIEW').length,
+      color: 'text-yellow-600'
     },
     {
       label: 'Sold',
-      value: myListings.filter(l => l.status === 'sold').length,
-      color: 'text-blue-400'
+      value: listings.filter(l => l.status.toUpperCase() === 'SOLD').length,
+      color: 'text-blue-600'
     },
     {
       label: 'Total Views',
-      value: myListings.reduce((sum, l) => sum + l.views, 0),
-      color: 'text-primary-400'
+      value: listings.reduce((sum, l) => sum + (l.views || 0), 0),
+      color: 'text-primary-600'
     }
   ]
 
@@ -140,8 +133,8 @@ const SellerListingsPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold mb-1">My Listings</h2>
-            <p className="text-white/60">Manage your MC authority listings</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">My Listings</h2>
+            <p className="text-gray-500">Manage your MC authority listings</p>
           </div>
           <Button onClick={() => navigate('/seller/create-listing')}>
             <Package className="w-4 h-4 mr-2" />
@@ -159,7 +152,7 @@ const SellerListingsPage = () => {
               transition={{ delay: index * 0.1 }}
             >
               <GlassCard>
-                <div className="text-sm text-white/60 mb-1">{stat.label}</div>
+                <div className="text-sm text-gray-500 mb-1">{stat.label}</div>
                 <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
               </GlassCard>
             </motion.div>
@@ -168,110 +161,153 @@ const SellerListingsPage = () => {
 
         {/* Filters */}
         <div className="flex gap-2 mb-6">
-          {(['all', 'active', 'pending', 'sold'] as const).map((filter) => (
+          {(['all', 'active', 'pending_review', 'sold'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
               className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
                 activeFilter === filter
                   ? 'bg-primary-500 text-white'
-                  : 'glass-subtle text-white/80 hover:bg-white/15'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {filter}
+              {filter.replace(/_/g, ' ')}
             </button>
           ))}
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            <span className="ml-3 text-gray-500">Loading listings...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <GlassCard>
+            <div className="flex items-center justify-center py-8 text-red-500">
+              <AlertCircle className="w-6 h-6 mr-2" />
+              <span>{error}</span>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && listings.length === 0 && (
+          <GlassCard>
+            <div className="text-center py-12">
+              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Listings Yet</h3>
+              <p className="text-gray-500 mb-6">Create your first MC authority listing to get started.</p>
+              <Button onClick={() => navigate('/seller/create-listing')}>
+                <Package className="w-4 h-4 mr-2" />
+                Create New Listing
+              </Button>
+            </div>
+          </GlassCard>
+        )}
+
         {/* Listings */}
-        <div className="space-y-4">
-          {filteredListings.map((listing) => (
-            <GlassCard key={listing.id} hover={true}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold">MC #{listing.mcNumber}</h3>
-                    <span className={`glass-subtle px-3 py-1 rounded-full text-sm flex items-center gap-1.5 ${getStatusColor(listing.status)}`}>
-                      {getStatusIcon(listing.status)}
-                      <span className="capitalize">{listing.status}</span>
-                    </span>
-                    <TrustBadge
-                      score={listing.trustScore}
-                      level={getTrustLevel(listing.trustScore)}
-                      verified={true}
-                      size="sm"
-                    />
-                  </div>
-                  <p className="text-white/80 mb-3">{listing.title}</p>
-
-                  <div className="flex items-center gap-6 text-sm text-white/60">
-                    <div className="flex items-center gap-1.5">
-                      <Eye className="w-4 h-4" />
-                      <span>{listing.views} views</span>
+        {!loading && !error && listings.length > 0 && (
+          <div className="space-y-4">
+            {listings.map((listing) => (
+              <GlassCard key={listing.id} hover={true}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-gray-900">MC #{listing.mcNumber}</h3>
+                      <span className={`bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-1.5 ${getStatusColor(listing.status)}`}>
+                        {getStatusIcon(listing.status)}
+                        <span className="capitalize">{formatStatus(listing.status)}</span>
+                      </span>
+                      {listing.trustScore && (
+                        <TrustBadge
+                          score={listing.trustScore}
+                          level={getTrustLevel(listing.trustScore)}
+                          verified={true}
+                          size="sm"
+                        />
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Heart className="w-4 h-4" />
-                      <span>{listing.saves} saves</span>
+                    <p className="text-gray-600 mb-3">{listing.title}</p>
+
+                    <div className="flex items-center gap-6 text-sm text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <Eye className="w-4 h-4" />
+                        <span>{listing.views || 0} views</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Heart className="w-4 h-4" />
+                        <span>{listing._count?.savedBy || listing.saves || 0} saves</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>{listing._count?.offers || 0} offers</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{listing.offers} offers</span>
+                  </div>
+
+                  <div className="text-right ml-4">
+                    <div className="text-2xl font-bold text-primary-600 mb-2">
+                      ${(listing.price || 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Listed {new Date(listing.createdAt).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right ml-4">
-                  <div className="text-2xl font-bold text-primary-400 mb-2">
-                    ${listing.price.toLocaleString()}
+                {(listing.yearsInBusiness || listing.fleetSize) && (
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {listing.yearsInBusiness && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 mb-1">Years Active</div>
+                        <div className="font-semibold text-gray-900">{listing.yearsInBusiness} years</div>
+                      </div>
+                    )}
+                    {listing.fleetSize && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 mb-1">Fleet Size</div>
+                        <div className="font-semibold text-gray-900">{listing.fleetSize} trucks</div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs text-white/60">
-                    Listed {new Date(listing.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="glass-subtle rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Years Active</div>
-                  <div className="font-semibold">{listing.yearsActive} years</div>
-                </div>
-                <div className="glass-subtle rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Fleet Size</div>
-                  <div className="font-semibold">{listing.fleetSize} trucks</div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  fullWidth
-                  variant="secondary"
-                  onClick={() => navigate(`/mc/${listing.id}`)}
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  View
-                </Button>
-                {listing.status !== 'sold' && (
-                  <>
-                    <Button fullWidth variant="secondary">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button fullWidth variant="ghost">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </Button>
-                  </>
                 )}
-                {listing.offers > 0 && listing.status === 'active' && (
-                  <Button fullWidth onClick={() => navigate('/seller/offers')}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    View Offers
+
+                <div className="flex gap-3">
+                  <Button
+                    fullWidth
+                    variant="secondary"
+                    onClick={() => navigate(`/mc/${listing.id}`)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
                   </Button>
-                )}
-              </div>
-            </GlassCard>
-          ))}
-        </div>
+                  {listing.status.toUpperCase() !== 'SOLD' && (
+                    <>
+                      <Button fullWidth variant="secondary">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button fullWidth variant="ghost">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                  {listing._count && listing._count.offers > 0 && listing.status.toUpperCase() === 'ACTIVE' && (
+                    <Button fullWidth onClick={() => navigate('/seller/offers')}>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      View Offers
+                    </Button>
+                  )}
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

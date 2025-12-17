@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -13,12 +13,15 @@ import {
   FileText,
   Users,
   XCircle,
-  CreditCard
+  CreditCard,
+  Loader2
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { TransactionStatus } from '../types'
+import api from '../services/api'
+import toast from 'react-hot-toast'
 
 interface BuyerTransaction {
   id: string
@@ -40,58 +43,44 @@ interface BuyerTransaction {
 const BuyerTransactionsPage = () => {
   const { user: _user } = useAuth()
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
+  const [loading, setLoading] = useState(true)
+  const [transactions, setTransactions] = useState<BuyerTransaction[]>([])
 
-  // Mock transactions data
-  const transactions: BuyerTransaction[] = [
-    {
-      id: 'txn-1',
-      mcNumber: '123456',
-      mcTitle: '7-Year Premium MC Authority',
-      sellerName: 'Quick Haul LLC',
-      offerAmount: 20000,
-      depositPaid: true,
-      finalPaymentPaid: false,
-      status: 'in-review',
-      buyerApproved: false,
-      sellerApproved: false,
-      adminApproved: false,
-      hasPaymentInstructions: false,
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-01-18')
-    },
-    {
-      id: 'txn-2',
-      mcNumber: '789012',
-      mcTitle: '5-Year MC with Amazon Relay',
-      sellerName: 'Transport Co',
-      offerAmount: 15000,
-      depositPaid: true,
-      finalPaymentPaid: false,
-      status: 'payment-pending',
-      buyerApproved: true,
-      sellerApproved: true,
-      adminApproved: true,
-      hasPaymentInstructions: true,
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-17')
-    },
-    {
-      id: 'txn-3',
-      mcNumber: '456789',
-      mcTitle: '3-Year MC Clean Record',
-      sellerName: 'Freight Masters',
-      offerAmount: 12000,
-      depositPaid: true,
-      finalPaymentPaid: true,
-      status: 'completed',
-      buyerApproved: true,
-      sellerApproved: true,
-      adminApproved: true,
-      hasPaymentInstructions: true,
-      createdAt: new Date('2024-01-05'),
-      updatedAt: new Date('2024-01-12')
+  // Fetch transactions from API
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await api.getBuyerTransactions()
+        if (response.success && response.data) {
+          // Map API response to BuyerTransaction interface
+          const mapped = response.data.map((txn: any) => ({
+            id: txn.id,
+            mcNumber: txn.listing?.mcNumber || 'N/A',
+            mcTitle: txn.listing?.title || 'MC Authority',
+            sellerName: txn.seller?.name || 'Unknown Seller',
+            offerAmount: txn.agreedPrice || 0,
+            depositPaid: !!txn.depositPaidAt,
+            finalPaymentPaid: !!txn.finalPaymentPaidAt,
+            status: txn.status?.toLowerCase().replace(/_/g, '-') as TransactionStatus,
+            buyerApproved: txn.buyerApproved || false,
+            sellerApproved: txn.sellerApproved || false,
+            adminApproved: txn.adminApproved || false,
+            hasPaymentInstructions: !!txn.paymentInstructions,
+            createdAt: new Date(txn.createdAt),
+            updatedAt: new Date(txn.updatedAt),
+          }))
+          setTransactions(mapped)
+        }
+      } catch (err: any) {
+        console.error('Error fetching transactions:', err)
+        toast.error('Failed to load transactions')
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    fetchTransactions()
+  }, [])
 
   const getStatusConfig = (status: TransactionStatus) => {
     const configs: Record<string, { label: string; color: string; icon: any }> = {
@@ -126,6 +115,18 @@ const BuyerTransactionsPage = () => {
     ).length,
     completed: transactions.filter(t => t.status === 'completed').length,
     totalInvested: transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.offerAmount, 0)
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-500">Loading transactions...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

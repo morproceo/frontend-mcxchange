@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -7,19 +8,77 @@ import {
   DollarSign,
   Package,
   CheckCircle,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import MCCard from '../components/MCCard'
-import { mockListings } from '../utils/mockData'
+import api from '../services/api'
+import { MCListing } from '../types'
+import { getTrustLevel } from '../utils/helpers'
 
 const SellerDashboard = () => {
   const { user } = useAuth()
 
-  // Filter listings by current user (mock)
-  const myListings = mockListings.filter(l => l.sellerId === user?.id).slice(0, 2)
+  // API data state
+  const [myListings, setMyListings] = useState<MCListing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch seller's listings from API
+  useEffect(() => {
+    const fetchMyListings = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        // TODO: Add endpoint to get seller's own listings
+        // For now, fetch all and filter by sellerId (will be empty until listings exist)
+        const response = await api.getListings()
+
+        const transformedListings: MCListing[] = (response.listings || [])
+          .filter((listing: any) => listing.sellerId === user?.id)
+          .map((listing: any) => ({
+            id: listing.id,
+            mcNumber: listing.mcNumber,
+            title: listing.title || `MC Authority #${listing.mcNumber}`,
+            description: listing.description || '',
+            price: listing.askingPrice || 0,
+            yearsActive: listing.yearsActive || 0,
+            fleetSize: listing.fleetSize || 0,
+            operationType: listing.operationType || [],
+            safetyRating: listing.safetyRating || 'satisfactory',
+            insuranceStatus: listing.insuranceStatus || 'active',
+            verified: listing.verified || false,
+            premium: listing.isPremium || false,
+            trustScore: listing.trustScore || 70,
+            trustLevel: getTrustLevel(listing.trustScore || 70),
+            createdAt: new Date(listing.createdAt),
+            seller: {
+              id: listing.seller?.id || listing.sellerId,
+              name: listing.seller?.name || 'Unknown Seller',
+              email: listing.seller?.email || '',
+              verified: listing.seller?.isVerified || false,
+              trustScore: listing.seller?.trustScore || 70,
+              memberSince: new Date(listing.seller?.createdAt || Date.now()),
+              completedDeals: listing.seller?.completedDeals || 0
+            }
+          }))
+          .slice(0, 2)
+
+        setMyListings(transformedListings)
+      } catch (err) {
+        console.error('Failed to fetch listings:', err)
+        setError('Failed to load your listings')
+        setMyListings([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMyListings()
+  }, [user?.id])
 
   const stats = [
     {
@@ -134,7 +193,22 @@ const SellerDashboard = () => {
               </Link>
             </div>
 
-            {myListings.length > 0 ? (
+            {loading ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading your listings...</p>
+                </div>
+              </Card>
+            ) : error ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Error loading listings</h3>
+                  <p className="text-gray-500 mb-6">{error}</p>
+                </div>
+              </Card>
+            ) : myListings.length > 0 ? (
               <div className="space-y-4">
                 {myListings.map((listing) => (
                   <MCCard key={listing.id} listing={listing} />

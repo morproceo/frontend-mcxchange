@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -32,7 +32,6 @@ import {
   Mail,
   Globe,
   Award,
-  TrendingUp,
   AlertTriangle,
   Package,
   Star,
@@ -63,6 +62,8 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { TransactionRoom, TransactionStatus, TransactionMessage, TransactionDocument } from '../types'
+import api from '../services/api'
+import toast from 'react-hot-toast'
 
 // Transaction workflow steps for buyer
 type BuyerStep =
@@ -77,10 +78,11 @@ type BuyerStep =
 const TransactionRoomPage = () => {
   const { transactionId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'parties' | 'business' | 'documents' | 'financials' | 'messages'>('timeline')
+  const [activeTab, setActiveTab] = useState<'timeline' | 'parties' | 'business' | 'documents' | 'messages'>('timeline')
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   const [approving, setApproving] = useState(false)
@@ -100,6 +102,88 @@ const TransactionRoomPage = () => {
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'zelle'>('card')
   const [zelleSentConfirmed, setZelleSentConfirmed] = useState(false)
+
+  // Loading state
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // FMCSA verified data state
+  const [fmcsaData, setFmcsaData] = useState<{
+    dotNumber: string
+    legalName: string
+    dbaName?: string
+    carrierOperation: string
+    hqCity: string
+    hqState: string
+    physicalAddress: string
+    phone: string
+    safetyRating: string
+    safetyRatingDate?: string
+    totalDrivers: number
+    totalPowerUnits: number
+    mcs150Date?: string
+    allowedToOperate: string
+    bipdRequired: number
+    cargoRequired: number
+    bondRequired: number
+    insuranceOnFile: boolean
+    bipdOnFile: number
+    cargoOnFile: number
+    bondOnFile: number
+    verified: boolean
+    verifiedAt?: Date
+  } | null>(null)
+
+  // Authority history state (from FMCSA)
+  const [authorityHistory, setAuthorityHistory] = useState<{
+    commonAuthorityStatus: string
+    commonAuthorityGrantDate?: string
+    commonAuthorityReinstatedDate?: string
+    commonAuthorityRevokedDate?: string
+    contractAuthorityStatus: string
+    contractAuthorityGrantDate?: string
+    brokerAuthorityStatus: string
+    brokerAuthorityGrantDate?: string
+  } | null>(null)
+
+  // Insurance history state (from FMCSA)
+  const [insuranceHistory, setInsuranceHistory] = useState<Array<{
+    insurerName: string
+    policyNumber: string
+    insuranceType: string
+    coverageAmount: number
+    effectiveDate: string
+    cancellationDate?: string
+    status: string
+  }>>([])
+
+  // Listing-specific data state
+  const [listingData, setListingData] = useState<{
+    mcNumber: string
+    dotNumber: string
+    legalName: string
+    dbaName?: string
+    city: string
+    state: string
+    address?: string
+    yearsActive: number
+    fleetSize: number
+    totalDrivers: number
+    safetyRating: string
+    saferScore?: string
+    insuranceOnFile: boolean
+    bipdCoverage?: number
+    cargoCoverage?: number
+    bondAmount?: number
+    amazonStatus: string
+    amazonRelayScore?: string
+    highwaySetup: boolean
+    sellingWithEmail: boolean
+    sellingWithPhone: boolean
+    contactEmail?: string
+    contactPhone?: string
+    cargoTypes: string[]
+  } | null>(null)
 
   // Comprehensive mock transaction data
   const [transaction, setTransaction] = useState<TransactionRoom & {
@@ -358,11 +442,11 @@ const TransactionRoomPage = () => {
     ],
     messages: [
       { id: '1', transactionId: transactionId || '', senderId: 'system', senderName: 'System', senderRole: 'admin', message: 'Transaction room created. Welcome to the round table!', isSystemMessage: true, createdAt: new Date('2024-01-15T10:00:00') },
-      { id: '2', transactionId: transactionId || '', senderId: 'admin-1', senderName: 'Maria (Domilea)', senderRole: 'admin', message: 'Hello! I\'ll be facilitating this transaction. Please review all documents and let me know if you have any questions.', isSystemMessage: false, createdAt: new Date('2024-01-15T10:05:00') },
+      { id: '2', transactionId: transactionId || '', senderId: 'admin-1', senderName: 'Domilea Support', senderRole: 'admin', message: 'Hello! I\'ll be facilitating this transaction. Please review all documents and let me know if you have any questions.', isSystemMessage: false, createdAt: new Date('2024-01-15T10:05:00') },
       { id: '3', transactionId: transactionId || '', senderId: 'seller-1', senderName: 'Quick Haul LLC', senderRole: 'seller', message: 'I\'ve uploaded all the required documents including the MC Authority, DOT registration, insurance certificates, and safety records. Let me know if you need anything else.', isSystemMessage: false, createdAt: new Date('2024-01-16T09:30:00') },
       { id: '4', transactionId: transactionId || '', senderId: 'buyer-1', senderName: 'Mike Davis', senderRole: 'buyer', message: 'Thanks! I\'m reviewing the documents now. The safety record looks great. Can you confirm the Amazon Relay account will be transferred with the MC?', isSystemMessage: false, createdAt: new Date('2024-01-16T14:20:00') },
       { id: '5', transactionId: transactionId || '', senderId: 'seller-1', senderName: 'Quick Haul LLC', senderRole: 'seller', message: 'Yes, the Amazon Relay account with A-rating will be fully transferred. I\'ll provide all login credentials after the transaction is complete.', isSystemMessage: false, createdAt: new Date('2024-01-16T15:45:00') },
-      { id: '6', transactionId: transactionId || '', senderId: 'admin-1', senderName: 'Maria (Domilea)', senderRole: 'admin', message: 'I\'ve uploaded the draft transfer agreement for both parties to review. Please let me know if any changes are needed before we proceed.', isSystemMessage: false, createdAt: new Date('2024-01-18T11:00:00') },
+      { id: '6', transactionId: transactionId || '', senderId: 'admin-1', senderName: 'Domilea Support', senderRole: 'admin', message: 'I\'ve uploaded the draft transfer agreement for both parties to review. Please let me know if any changes are needed before we proceed.', isSystemMessage: false, createdAt: new Date('2024-01-18T11:00:00') },
     ],
     createdAt: new Date('2024-01-15'),
     updatedAt: new Date(),
@@ -531,6 +615,439 @@ const TransactionRoomPage = () => {
     }
   })
 
+  // Fetch transaction data from API
+  useEffect(() => {
+    const fetchTransaction = async () => {
+      if (!transactionId) {
+        setError('No transaction ID provided')
+        setLoading(false)
+        return
+      }
+
+      try {
+        const response = await api.getTransaction(transactionId)
+        if (response.success && response.data) {
+          const txn = response.data
+
+          // Debug: log the transaction and listing data
+          console.log('[TransactionRoomPage] Received transaction data:', txn)
+          console.log('[TransactionRoomPage] Listing data:', txn.listing)
+
+          // Map API response to component state structure
+          // Convert status from SNAKE_CASE to kebab-case
+          const statusMap: Record<string, TransactionStatus> = {
+            'AWAITING_DEPOSIT': 'awaiting-deposit',
+            'DEPOSIT_RECEIVED': 'deposit-received',
+            'IN_REVIEW': 'in-review',
+            'BUYER_APPROVED': 'buyer-approved',
+            'SELLER_APPROVED': 'seller-approved',
+            'BOTH_APPROVED': 'both-approved',
+            'ADMIN_FINAL_REVIEW': 'admin-final-review',
+            'PAYMENT_PENDING': 'payment-pending',
+            'PAYMENT_RECEIVED': 'payment-received',
+            'COMPLETED': 'completed',
+            'CANCELLED': 'cancelled',
+            'DISPUTED': 'disputed',
+          }
+
+          const mappedStatus = statusMap[txn.status] || 'in-review'
+          console.log('[TransactionRoomPage] Status mapping:', { backendStatus: txn.status, mappedStatus, depositPaidAt: txn.depositPaidAt })
+
+          // Update transaction state with real data while preserving mock structure for extended details
+          setTransaction(prev => ({
+            ...prev,
+            id: txn.id,
+            offerId: txn.offerId || prev.offerId,
+            offer: txn.offer || prev.offer,
+            listingId: txn.listingId || prev.listingId,
+            listing: txn.listing ? {
+              ...prev.listing,
+              id: txn.listing.id,
+              mcNumber: txn.listing.mcNumber || prev.listing.mcNumber,
+              dotNumber: txn.listing.dotNumber || (prev.listing as any).dotNumber,
+              legalName: txn.listing.legalName || (prev.listing as any).legalName,
+              dbaName: txn.listing.dbaName || (prev.listing as any).dbaName,
+              title: txn.listing.title || prev.listing.title,
+              description: txn.listing.description || prev.listing.description,
+              price: txn.listing.price || prev.listing.price,
+              yearsActive: txn.listing.yearsActive || prev.listing.yearsActive,
+              // Backend has cargoTypes as JSON string, parse and use as operationType
+              operationType: txn.listing.cargoTypes
+                ? (typeof txn.listing.cargoTypes === 'string'
+                    ? JSON.parse(txn.listing.cargoTypes)
+                    : txn.listing.cargoTypes)
+                : prev.listing.operationType,
+              fleetSize: txn.listing.fleetSize || prev.listing.fleetSize,
+              // Backend returns UPPERCASE enum, convert to lowercase
+              safetyRating: txn.listing.safetyRating?.toLowerCase() || prev.listing.safetyRating,
+              // Backend has insuranceOnFile boolean, convert to status string
+              insuranceStatus: txn.listing.insuranceOnFile ? 'active' : (txn.listing.insuranceOnFile === false ? 'expired' : prev.listing.insuranceStatus),
+              state: txn.listing.state || prev.listing.state,
+              city: txn.listing.city || (prev.listing as any).city,
+              // Backend returns UPPERCASE enum for amazonStatus
+              amazonStatus: txn.listing.amazonStatus?.toLowerCase() || prev.listing.amazonStatus,
+              amazonRelayScore: txn.listing.amazonRelayScore || prev.listing.amazonRelayScore,
+              highwaySetup: txn.listing.highwaySetup ?? prev.listing.highwaySetup,
+              sellingWithEmail: txn.listing.sellingWithEmail ?? prev.listing.sellingWithEmail,
+              sellingWithPhone: txn.listing.sellingWithPhone ?? prev.listing.sellingWithPhone,
+              trustScore: txn.listing.trustScore || prev.listing.trustScore,
+              verified: txn.listing.verified ?? prev.listing.verified,
+            } : prev.listing,
+            buyerId: txn.buyerId || prev.buyerId,
+            buyer: txn.buyer ? {
+              ...prev.buyer,
+              id: txn.buyer.id,
+              name: txn.buyer.name || prev.buyer.name,
+              email: txn.buyer.email || prev.buyer.email,
+              phone: txn.buyer.phone || (prev.buyer as any).phone,
+              trustScore: txn.buyer.trustScore || prev.buyer.trustScore,
+              verified: txn.buyer.verified ?? prev.buyer.verified,
+              companyName: txn.buyer.companyName,
+            } : prev.buyer,
+            sellerId: txn.sellerId || prev.sellerId,
+            seller: txn.seller ? {
+              ...prev.seller,
+              id: txn.seller.id,
+              name: txn.seller.name || txn.seller.companyName || prev.seller.name,
+              email: txn.seller.email || prev.seller.email,
+              phone: txn.seller.phone || (prev.seller as any).phone,
+              trustScore: txn.seller.trustScore || prev.seller.trustScore,
+              verified: txn.seller.verified ?? prev.seller.verified,
+              companyName: txn.seller.companyName,
+            } : prev.seller,
+            status: mappedStatus,
+            buyerApproved: txn.buyerApproved ?? prev.buyerApproved,
+            sellerApproved: txn.sellerApproved ?? prev.sellerApproved,
+            adminApproved: txn.adminApproved ?? prev.adminApproved,
+            agreedPrice: txn.agreedPrice || prev.agreedPrice,
+            depositAmount: txn.depositAmount || prev.depositAmount,
+            depositPaid: !!txn.depositPaidAt,
+            depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.depositPaidAt,
+            finalPaymentAmount: txn.finalPaymentAmount || (txn.agreedPrice - (txn.depositAmount || 1000)) || prev.finalPaymentAmount,
+            finalPaymentPaid: !!txn.finalPaymentPaidAt,
+            sellerDocuments: txn.documents?.length > 0 ? txn.documents.map((doc: any) => ({
+              id: doc.id,
+              transactionId: txn.id,
+              uploadedBy: doc.uploadedBy || 'seller',
+              uploaderId: doc.uploaderId || txn.sellerId,
+              name: doc.name || doc.filename,
+              type: doc.type || 'document',
+              url: doc.url || '#',
+              verified: doc.verified ?? false,
+              uploadedAt: new Date(doc.createdAt || doc.uploadedAt),
+            })) : prev.sellerDocuments,
+            messages: txn.messages?.length > 0 ? txn.messages.map((msg: any) => ({
+              id: msg.id,
+              transactionId: txn.id,
+              senderId: msg.senderId,
+              senderName: msg.senderName || 'Unknown',
+              senderRole: msg.senderRole || 'system',
+              message: msg.content || msg.message,
+              isSystemMessage: msg.isSystemMessage ?? false,
+              createdAt: new Date(msg.createdAt),
+            })) : prev.messages,
+            createdAt: txn.createdAt ? new Date(txn.createdAt) : prev.createdAt,
+            updatedAt: txn.updatedAt ? new Date(txn.updatedAt) : prev.updatedAt,
+            // Update business details from listing if available
+            businessDetails: {
+              ...prev.businessDetails,
+              mcNumber: txn.listing?.mcNumber || prev.businessDetails.mcNumber,
+              dotNumber: txn.listing?.dotNumber || prev.businessDetails.dotNumber,
+              // Use listing.legalName first, fallback to seller.companyName
+              legalName: txn.listing?.legalName || txn.seller?.companyName || prev.businessDetails.legalName,
+              dba: txn.listing?.dbaName || prev.businessDetails.dba,
+              // Build address from listing or seller data
+              businessAddress: txn.listing?.address
+                ? `${txn.listing.address}, ${txn.listing.city || ''}, ${txn.listing.state || ''}`
+                : (txn.seller?.companyAddress ? `${txn.seller.companyAddress}, ${txn.seller.city || ''}, ${txn.seller.state || ''}` : prev.businessDetails.businessAddress),
+              phoneNumber: txn.listing?.contactPhone || prev.businessDetails.phoneNumber,
+              email: txn.listing?.contactEmail || prev.businessDetails.email,
+              // Parse cargo types if available
+              cargoTypes: txn.listing?.cargoTypes
+                ? (typeof txn.listing.cargoTypes === 'string'
+                    ? JSON.parse(txn.listing.cargoTypes)
+                    : txn.listing.cargoTypes)
+                : prev.businessDetails.cargoTypes,
+            },
+            // Update safety record from listing if available
+            safetyRecord: {
+              ...prev.safetyRecord,
+              saferScore: txn.listing?.saferScore || txn.listing?.safetyRating?.toLowerCase() || prev.safetyRecord.saferScore,
+            },
+            // Update insurance info from listing if available
+            insuranceInfo: {
+              ...prev.insuranceInfo,
+              liabilityInsurance: {
+                ...prev.insuranceInfo.liabilityInsurance,
+                coverage: txn.listing?.bipdCoverage || prev.insuranceInfo.liabilityInsurance.coverage,
+                status: txn.listing?.insuranceOnFile ? 'Active' : prev.insuranceInfo.liabilityInsurance.status,
+              },
+              cargoInsurance: {
+                ...prev.insuranceInfo.cargoInsurance,
+                coverage: txn.listing?.cargoCoverage || prev.insuranceInfo.cargoInsurance.coverage,
+              },
+              bondInfo: {
+                ...prev.insuranceInfo.bondInfo,
+                amount: txn.listing?.bondAmount || prev.insuranceInfo.bondInfo.amount,
+              },
+            },
+            // Update seller info
+            sellerInfo: {
+              ...prev.sellerInfo,
+              contactName: txn.seller?.name || prev.sellerInfo.contactName,
+              contactPhone: txn.seller?.phone || prev.sellerInfo.contactPhone,
+              contactEmail: txn.seller?.email || prev.sellerInfo.contactEmail,
+              verificationStatus: txn.seller?.verified ? 'verified' : 'pending',
+            },
+            // Update buyer info
+            buyerInfo: {
+              ...prev.buyerInfo,
+              companyName: txn.buyer?.companyName || prev.buyerInfo.companyName,
+              contactName: txn.buyer?.name || prev.buyerInfo.contactName,
+              contactPhone: txn.buyer?.phone || prev.buyerInfo.contactPhone,
+              contactEmail: txn.buyer?.email || prev.buyerInfo.contactEmail,
+              verificationStatus: txn.buyer?.verified ? 'verified' : 'pending',
+            },
+            // Update driver history from listing if available
+            driverHistory: {
+              ...prev.driverHistory,
+              totalDrivers: txn.listing?.totalDrivers || prev.driverHistory.totalDrivers,
+            },
+            // Determine workflow step based on status
+            workflow: {
+              ...prev.workflow,
+              currentStep: mappedStatus === 'awaiting-deposit' ? 'deposit-payment' as BuyerStep :
+                          mappedStatus === 'deposit-received' ? 'awaiting-admin' as BuyerStep :
+                          (mappedStatus === 'in-review' || mappedStatus === 'buyer-approved' || mappedStatus === 'seller-approved') ? 'bill-of-sale' as BuyerStep :
+                          (mappedStatus === 'both-approved' || mappedStatus === 'admin-final-review') ? 'awaiting-admin' as BuyerStep :
+                          mappedStatus === 'payment-pending' ? 'final-payment' as BuyerStep :
+                          (mappedStatus === 'payment-received' || mappedStatus === 'completed') ? 'completed' as BuyerStep :
+                          prev.workflow.currentStep,
+              depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.workflow.depositPaidAt,
+              finalPaymentPaidAt: txn.finalPaymentPaidAt ? new Date(txn.finalPaymentPaidAt) : prev.workflow.finalPaymentPaidAt,
+            },
+          }))
+
+          // Update buyer step based on transaction status
+          if (mappedStatus === 'awaiting-deposit') {
+            setBuyerStep('deposit-payment')
+          } else if (mappedStatus === 'deposit-received') {
+            setBuyerStep('awaiting-admin')
+          } else if (mappedStatus === 'in-review' || mappedStatus === 'buyer-approved' || mappedStatus === 'seller-approved') {
+            setBuyerStep('bill-of-sale')
+          } else if (mappedStatus === 'both-approved' || mappedStatus === 'admin-final-review') {
+            setBuyerStep('awaiting-admin')
+          } else if (mappedStatus === 'payment-pending') {
+            setBuyerStep('final-payment')
+          } else if (mappedStatus === 'payment-received' || mappedStatus === 'completed') {
+            setBuyerStep('completed')
+          }
+
+          // Log the computed buyer step for debugging
+          console.log('[TransactionRoomPage] Setting buyer step based on mappedStatus:', mappedStatus)
+
+          // Parse FMCSA data from listing if available
+          if (txn.listing?.fmcsaData) {
+            try {
+              const parsedFmcsa = typeof txn.listing.fmcsaData === 'string'
+                ? JSON.parse(txn.listing.fmcsaData)
+                : txn.listing.fmcsaData
+
+              console.log('[TransactionRoomPage] Parsed FMCSA data:', parsedFmcsa)
+
+              setFmcsaData({
+                dotNumber: parsedFmcsa.dotNumber || '',
+                legalName: parsedFmcsa.legalName || '',
+                dbaName: parsedFmcsa.dbaName,
+                carrierOperation: parsedFmcsa.carrierOperation || 'Unknown',
+                hqCity: parsedFmcsa.hqCity || '',
+                hqState: parsedFmcsa.hqState || '',
+                physicalAddress: parsedFmcsa.physicalAddress || '',
+                phone: parsedFmcsa.phone || '',
+                safetyRating: parsedFmcsa.safetyRating || 'None',
+                safetyRatingDate: parsedFmcsa.safetyRatingDate,
+                totalDrivers: parsedFmcsa.totalDrivers || 0,
+                totalPowerUnits: parsedFmcsa.totalPowerUnits || 0,
+                mcs150Date: parsedFmcsa.mcs150Date,
+                allowedToOperate: parsedFmcsa.allowedToOperate || 'N',
+                bipdRequired: parsedFmcsa.bipdRequired || 0,
+                cargoRequired: parsedFmcsa.cargoRequired || 0,
+                bondRequired: parsedFmcsa.bondRequired || 0,
+                insuranceOnFile: parsedFmcsa.insuranceOnFile ?? false,
+                bipdOnFile: parsedFmcsa.bipdOnFile || 0,
+                cargoOnFile: parsedFmcsa.cargoOnFile || 0,
+                bondOnFile: parsedFmcsa.bondOnFile || 0,
+                verified: true,
+                verifiedAt: txn.listing.fmcsaVerifiedAt ? new Date(txn.listing.fmcsaVerifiedAt) : new Date(),
+              })
+            } catch (parseError) {
+              console.error('[TransactionRoomPage] Error parsing FMCSA data:', parseError)
+            }
+          }
+
+          // Parse authority history from listing
+          if (txn.listing.authorityHistory) {
+            try {
+              const rawAuthority = typeof txn.listing.authorityHistory === 'string'
+                ? JSON.parse(txn.listing.authorityHistory)
+                : txn.listing.authorityHistory
+              setAuthorityHistory({
+                commonAuthorityStatus: rawAuthority.commonAuthorityStatus || 'N/A',
+                commonAuthorityGrantDate: rawAuthority.commonAuthorityGrantDate,
+                commonAuthorityReinstatedDate: rawAuthority.commonAuthorityReinstatedDate,
+                commonAuthorityRevokedDate: rawAuthority.commonAuthorityRevokedDate,
+                contractAuthorityStatus: rawAuthority.contractAuthorityStatus || 'N/A',
+                contractAuthorityGrantDate: rawAuthority.contractAuthorityGrantDate,
+                brokerAuthorityStatus: rawAuthority.brokerAuthorityStatus || 'N/A',
+                brokerAuthorityGrantDate: rawAuthority.brokerAuthorityGrantDate,
+              })
+            } catch (parseError) {
+              console.error('[TransactionRoomPage] Error parsing authority history:', parseError)
+            }
+          }
+
+          // Parse insurance history from listing
+          if (txn.listing.insuranceHistory) {
+            try {
+              const rawInsurance = typeof txn.listing.insuranceHistory === 'string'
+                ? JSON.parse(txn.listing.insuranceHistory)
+                : txn.listing.insuranceHistory
+              if (Array.isArray(rawInsurance)) {
+                setInsuranceHistory(rawInsurance.map((ins: any) => ({
+                  insurerName: ins.insurerName || 'Unknown',
+                  policyNumber: ins.policyNumber || 'N/A',
+                  insuranceType: ins.insuranceType || 'Unknown',
+                  coverageAmount: ins.coverageAmount || 0,
+                  effectiveDate: ins.effectiveDate || '',
+                  cancellationDate: ins.cancellationDate,
+                  status: ins.status || 'Unknown',
+                })))
+              }
+            } catch (parseError) {
+              console.error('[TransactionRoomPage] Error parsing insurance history:', parseError)
+            }
+          }
+
+          // Parse listing-specific data
+          const listing = txn.listing
+          let cargoTypesArray: string[] = []
+          if (listing.cargoTypes) {
+            try {
+              cargoTypesArray = typeof listing.cargoTypes === 'string'
+                ? JSON.parse(listing.cargoTypes)
+                : listing.cargoTypes
+            } catch {
+              cargoTypesArray = []
+            }
+          }
+
+          setListingData({
+            mcNumber: listing.mcNumber || '',
+            dotNumber: listing.dotNumber || '',
+            legalName: listing.legalName || '',
+            dbaName: listing.dbaName,
+            city: listing.city || '',
+            state: listing.state || '',
+            address: listing.address,
+            yearsActive: listing.yearsActive || 0,
+            fleetSize: listing.fleetSize || 0,
+            totalDrivers: listing.totalDrivers || 0,
+            safetyRating: listing.safetyRating || 'None',
+            saferScore: listing.saferScore,
+            insuranceOnFile: listing.insuranceOnFile ?? false,
+            bipdCoverage: listing.bipdCoverage,
+            cargoCoverage: listing.cargoCoverage,
+            bondAmount: listing.bondAmount,
+            amazonStatus: listing.amazonStatus || 'not-setup',
+            amazonRelayScore: listing.amazonRelayScore,
+            highwaySetup: listing.highwaySetup ?? false,
+            sellingWithEmail: listing.sellingWithEmail ?? false,
+            sellingWithPhone: listing.sellingWithPhone ?? false,
+            contactEmail: listing.contactEmail,
+            contactPhone: listing.contactPhone,
+            cargoTypes: cargoTypesArray,
+          })
+        }
+      } catch (err: any) {
+        console.error('Error fetching transaction:', err)
+        setError(err.message || 'Failed to load transaction')
+        toast.error('Failed to load transaction details')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTransaction()
+  }, [transactionId])
+
+  // Handle deposit payment success/cancelled query params from Stripe redirect
+  useEffect(() => {
+    const depositStatus = searchParams.get('deposit')
+
+    if (depositStatus === 'success') {
+      // Show success toast
+      toast.success('Deposit payment successful! Your transaction is now being processed.', {
+        duration: 5000,
+      })
+
+      // Clear the query param
+      searchParams.delete('deposit')
+      setSearchParams(searchParams, { replace: true })
+
+      // Poll for transaction update (webhook may take a moment)
+      const pollForUpdate = async () => {
+        let attempts = 0
+        const maxAttempts = 10
+        const pollInterval = 2000 // 2 seconds
+
+        const poll = async () => {
+          if (attempts >= maxAttempts) return
+          attempts++
+
+          try {
+            const response = await api.getTransaction(transactionId!)
+            if (response.success && response.data) {
+              const txn = response.data
+              // Check if deposit has been received
+              if (txn.status === 'DEPOSIT_RECEIVED' || txn.depositPaidAt) {
+                // Update local state
+                setTransaction(prev => ({
+                  ...prev,
+                  status: 'deposit-received',
+                  depositPaid: true,
+                  depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : new Date(),
+                  workflow: {
+                    ...prev.workflow,
+                    currentStep: 'awaiting-admin',
+                    depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : new Date(),
+                    depositPaymentMethod: 'card',
+                  }
+                }))
+                // Update the buyer step to show the correct UI
+                setBuyerStep('awaiting-admin')
+                toast.success('Deposit confirmed! Awaiting admin review.', { duration: 4000 })
+                return
+              }
+            }
+            // Continue polling if not yet updated
+            setTimeout(poll, pollInterval)
+          } catch (error) {
+            console.error('Error polling for transaction update:', error)
+          }
+        }
+
+        // Start polling after a short delay
+        setTimeout(poll, 1000)
+      }
+
+      pollForUpdate()
+    } else if (depositStatus === 'cancelled') {
+      toast.error('Deposit payment was cancelled. Please try again when ready.')
+      searchParams.delete('deposit')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, transactionId, setSearchParams])
+
   // Determine user role in this transaction
   const getUserRole = () => {
     if (user?.role === 'admin') return 'admin'
@@ -681,6 +1198,34 @@ For questions, contact us at escrow@domilea.com`
     if (userRole === 'admin') return '/admin/transactions'
     if (userRole === 'seller') return '/seller/transactions'
     return '/buyer/transactions'
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-500">Loading transaction details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Card className="max-w-md text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Transaction</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <Link to="/buyer/transactions">
+            <Button>Back to Transactions</Button>
+          </Link>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -894,10 +1439,10 @@ For questions, contact us at escrow@domilea.com`
           { id: 'timeline', label: 'Transaction Progress', icon: Clock },
           { id: 'parties', label: 'Buyer & Seller', icon: Users, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
           { id: 'business', label: 'Business Details', icon: Building2, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
-          { id: 'documents', label: 'Documents', icon: FileText, count: transaction.sellerDocuments.length, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
-          { id: 'financials', label: 'Financials', icon: DollarSign },
+          // Documents tab - hidden for buyers until transaction is completed
+          { id: 'documents', label: 'Documents', icon: FileText, count: transaction.sellerDocuments.length, hidden: userRole === 'buyer' && transaction.status !== 'completed' },
           { id: 'messages', label: 'Messages', icon: MessageSquare, count: transaction.messages.length }
-        ].map(tab => (
+        ].filter(tab => !tab.hidden).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -1209,49 +1754,16 @@ For questions, contact us at escrow@domilea.com`
                           </div>
                         </div>
 
-                        {/* Card Payment Form */}
+                        {/* Card Payment Info */}
                         {paymentMethod === 'card' && (
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
-                              <input
-                                type="text"
-                                value={billingName}
-                                onChange={(e) => setBillingName(e.target.value)}
-                                placeholder="Name on card"
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                              <input
-                                type="text"
-                                value={cardNumber}
-                                onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                                placeholder="1234 5678 9012 3456"
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry</label>
-                                <input
-                                  type="text"
-                                  value={cardExpiry}
-                                  onChange={(e) => setCardExpiry(e.target.value)}
-                                  placeholder="MM/YY"
-                                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">CVC</label>
-                                <input
-                                  type="text"
-                                  value={cardCvc}
-                                  onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                  placeholder="123"
-                                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
+                          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                            <div className="flex items-start gap-3">
+                              <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-sm text-blue-800">
+                                <p className="font-medium mb-2">Secure Card Payment via Stripe</p>
+                                <p className="text-blue-700">
+                                  Click the button below to proceed to Stripe's secure checkout page where you can enter your card details safely.
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -1322,24 +1834,22 @@ For questions, contact us at escrow@domilea.com`
                         <Button
                           fullWidth
                           loading={processingPayment}
-                          disabled={!billingName || cardNumber.length < 15 || !cardExpiry || cardCvc.length < 3}
-                          onClick={() => {
+                          onClick={async () => {
                             setProcessingPayment(true)
-                            setTimeout(() => {
+                            try {
+                              const response = await api.createTransactionDepositCheckout(transaction.id)
+                              if (response.success && response.data?.url) {
+                                // Redirect to Stripe Checkout
+                                window.location.href = response.data.url
+                              } else {
+                                alert('Failed to create checkout session. Please try again.')
+                                setProcessingPayment(false)
+                              }
+                            } catch (error) {
+                              console.error('Error creating checkout:', error)
+                              alert('An error occurred. Please try again.')
                               setProcessingPayment(false)
-                              setTransaction(prev => ({
-                                ...prev,
-                                depositPaid: true,
-                                depositPaidAt: new Date(),
-                                workflow: {
-                                  ...prev.workflow,
-                                  currentStep: 'awaiting-admin',
-                                  depositPaidAt: new Date(),
-                                  depositPaymentMethod: 'card',
-                                  depositStripeId: 'pi_' + Math.random().toString(36).substr(2, 14)
-                                }
-                              }))
-                            }, 2000)
+                            }
                           }}
                         >
                           <Lock className="w-4 h-4 mr-2" />
@@ -1351,21 +1861,35 @@ For questions, contact us at escrow@domilea.com`
                           loading={processingPayment}
                           disabled={!zelleSentConfirmed}
                           variant={zelleSentConfirmed ? 'primary' : 'secondary'}
-                          onClick={() => {
+                          onClick={async () => {
                             setProcessingPayment(true)
-                            setTimeout(() => {
-                              setProcessingPayment(false)
-                              setTransaction(prev => ({
-                                ...prev,
-                                workflow: {
-                                  ...prev.workflow,
-                                  currentStep: 'awaiting-admin',
-                                  depositPaymentMethod: 'zelle',
-                                  depositZellePending: true,
-                                  depositZelleSentAt: new Date()
+                            try {
+                              const response = await api.recordDeposit(transaction.id, 'ZELLE', `TXN-${transaction.id}`)
+                              if (response.success) {
+                                // Refresh transaction data to get updated status
+                                const txnResponse = await api.getTransaction(transaction.id)
+                                if (txnResponse.success && txnResponse.data) {
+                                  setTransaction(prev => ({
+                                    ...prev,
+                                    ...txnResponse.data,
+                                    workflow: {
+                                      ...prev.workflow,
+                                      currentStep: 'awaiting-admin',
+                                      depositPaymentMethod: 'zelle',
+                                      depositZellePending: true,
+                                      depositZelleSentAt: new Date()
+                                    }
+                                  }))
                                 }
-                              }))
-                            }, 1000)
+                              } else {
+                                alert('Failed to record deposit. Please try again.')
+                              }
+                            } catch (error) {
+                              console.error('Error recording deposit:', error)
+                              alert('An error occurred. Please try again.')
+                            } finally {
+                              setProcessingPayment(false)
+                            }
                           }}
                         >
                           <Check className="w-4 h-4 mr-2" />
@@ -2747,6 +3271,480 @@ For questions, contact us at escrow@domilea.com`
             exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-6"
           >
+            {/* FMCSA Verified Information - Full Width */}
+            {fmcsaData && (
+              <Card className="lg:col-span-2 border-2 border-green-200 bg-gradient-to-br from-green-50 to-white">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-green-600" />
+                    FMCSA Verified Information
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-1">
+                      <BadgeCheck className="w-4 h-4" />
+                      Verified
+                    </span>
+                    {fmcsaData.verifiedAt && (
+                      <span className="text-xs text-gray-500">
+                        as of {fmcsaData.verifiedAt.toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {/* Operating Status - Prominent */}
+                  <div className="col-span-2 md:col-span-4 mb-2">
+                    <div className={`flex items-center gap-3 p-4 rounded-xl ${
+                      fmcsaData.allowedToOperate === 'Y'
+                        ? 'bg-green-100 border border-green-200'
+                        : 'bg-red-100 border border-red-200'
+                    }`}>
+                      {fmcsaData.allowedToOperate === 'Y' ? (
+                        <>
+                          <CheckCircle className="w-6 h-6 text-green-600" />
+                          <div>
+                            <p className="font-semibold text-green-800">Authorized to Operate</p>
+                            <p className="text-sm text-green-600">This carrier is currently allowed to operate</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-6 h-6 text-red-600" />
+                          <div>
+                            <p className="font-semibold text-red-800">Not Authorized to Operate</p>
+                            <p className="text-sm text-red-600">This carrier is not currently allowed to operate</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Legal Name */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Building2 className="w-3 h-3" />
+                      Legal Name
+                    </p>
+                    <p className="font-medium text-gray-900">{fmcsaData.legalName}</p>
+                  </div>
+
+                  {/* DBA */}
+                  <div>
+                    <p className="text-sm text-gray-500">DBA Name</p>
+                    <p className="font-medium text-gray-900">{fmcsaData.dbaName || 'N/A'}</p>
+                  </div>
+
+                  {/* DOT Number */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Hash className="w-3 h-3" />
+                      DOT Number
+                    </p>
+                    <p className="font-medium text-gray-900">#{fmcsaData.dotNumber}</p>
+                  </div>
+
+                  {/* Carrier Operation */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Truck className="w-3 h-3" />
+                      Operation Type
+                    </p>
+                    <p className="font-medium text-gray-900">{fmcsaData.carrierOperation}</p>
+                  </div>
+
+                  {/* Physical Address */}
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      Physical Address
+                    </p>
+                    <p className="font-medium text-gray-900">
+                      {fmcsaData.physicalAddress}, {fmcsaData.hqCity}, {fmcsaData.hqState}
+                    </p>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Phone className="w-3 h-3" />
+                      Phone
+                    </p>
+                    <p className="font-medium text-gray-900">{fmcsaData.phone || 'N/A'}</p>
+                  </div>
+
+                  {/* Safety Rating */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Safety Rating
+                    </p>
+                    <p className={`font-medium ${
+                      fmcsaData.safetyRating === 'Satisfactory' ? 'text-green-600' :
+                      fmcsaData.safetyRating === 'Conditional' ? 'text-yellow-600' :
+                      fmcsaData.safetyRating === 'Unsatisfactory' ? 'text-red-600' :
+                      'text-gray-900'
+                    }`}>
+                      {fmcsaData.safetyRating}
+                      {fmcsaData.safetyRatingDate && (
+                        <span className="text-xs text-gray-400 ml-1">
+                          ({fmcsaData.safetyRatingDate})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Total Drivers */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      Total Drivers
+                    </p>
+                    <p className="font-medium text-gray-900">{fmcsaData.totalDrivers}</p>
+                  </div>
+
+                  {/* Power Units */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Truck className="w-3 h-3" />
+                      Power Units
+                    </p>
+                    <p className="font-medium text-gray-900">{fmcsaData.totalPowerUnits}</p>
+                  </div>
+
+                  {/* MCS-150 Date */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      MCS-150 Date
+                    </p>
+                    <p className="font-medium text-gray-900">{fmcsaData.mcs150Date || 'N/A'}</p>
+                  </div>
+
+                  {/* Insurance on File */}
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <FileCheck className="w-3 h-3" />
+                      Insurance on File
+                    </p>
+                    <p className={`font-medium ${fmcsaData.insuranceOnFile ? 'text-green-600' : 'text-red-600'}`}>
+                      {fmcsaData.insuranceOnFile ? 'Yes' : 'No'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Insurance Details */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-4">Insurance Coverage</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-3 bg-white rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500">BIPD Required</p>
+                      <p className="font-semibold text-gray-900">${fmcsaData.bipdRequired.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">On File: ${fmcsaData.bipdOnFile.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500">Cargo Required</p>
+                      <p className="font-semibold text-gray-900">${fmcsaData.cargoRequired.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">On File: ${fmcsaData.cargoOnFile.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500">Bond Required</p>
+                      <p className="font-semibold text-gray-900">${fmcsaData.bondRequired.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">On File: ${fmcsaData.bondOnFile.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* FMCSA Link */}
+                <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                  <p className="text-xs text-gray-500">
+                    Data sourced from FMCSA SAFER System
+                  </p>
+                  <a
+                    href={`https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=${fmcsaData.dotNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    View on FMCSA SAFER
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </Card>
+            )}
+
+            {/* Authority History Card */}
+            {authorityHistory && (
+              <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <ScrollText className="w-5 h-5 text-blue-600" />
+                  Authority History
+                </h3>
+                <div className="space-y-4">
+                  {/* Common Authority */}
+                  <div className="p-4 bg-white rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-gray-900">Common Authority</p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        authorityHistory.commonAuthorityStatus === 'ACTIVE'
+                          ? 'bg-green-100 text-green-700'
+                          : authorityHistory.commonAuthorityStatus === 'INACTIVE'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {authorityHistory.commonAuthorityStatus}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {authorityHistory.commonAuthorityGrantDate && (
+                        <div>
+                          <p className="text-gray-500">Granted</p>
+                          <p className="text-gray-900">{authorityHistory.commonAuthorityGrantDate}</p>
+                        </div>
+                      )}
+                      {authorityHistory.commonAuthorityReinstatedDate && (
+                        <div>
+                          <p className="text-gray-500">Reinstated</p>
+                          <p className="text-gray-900">{authorityHistory.commonAuthorityReinstatedDate}</p>
+                        </div>
+                      )}
+                      {authorityHistory.commonAuthorityRevokedDate && (
+                        <div>
+                          <p className="text-gray-500">Revoked</p>
+                          <p className="text-red-600">{authorityHistory.commonAuthorityRevokedDate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Contract Authority */}
+                  <div className="p-4 bg-white rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-gray-900">Contract Authority</p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        authorityHistory.contractAuthorityStatus === 'ACTIVE'
+                          ? 'bg-green-100 text-green-700'
+                          : authorityHistory.contractAuthorityStatus === 'INACTIVE'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {authorityHistory.contractAuthorityStatus}
+                      </span>
+                    </div>
+                    {authorityHistory.contractAuthorityGrantDate && (
+                      <div className="text-sm">
+                        <p className="text-gray-500">Granted</p>
+                        <p className="text-gray-900">{authorityHistory.contractAuthorityGrantDate}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Broker Authority */}
+                  <div className="p-4 bg-white rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-gray-900">Broker Authority</p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        authorityHistory.brokerAuthorityStatus === 'ACTIVE'
+                          ? 'bg-green-100 text-green-700'
+                          : authorityHistory.brokerAuthorityStatus === 'INACTIVE'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {authorityHistory.brokerAuthorityStatus}
+                      </span>
+                    </div>
+                    {authorityHistory.brokerAuthorityGrantDate && (
+                      <div className="text-sm">
+                        <p className="text-gray-500">Granted</p>
+                        <p className="text-gray-900">{authorityHistory.brokerAuthorityGrantDate}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Insurance History Card */}
+            {insuranceHistory.length > 0 && (
+              <Card className="border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileCheck className="w-5 h-5 text-emerald-600" />
+                  Insurance History
+                </h3>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {insuranceHistory.map((insurance, idx) => (
+                    <div key={idx} className="p-4 bg-white rounded-xl border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium text-gray-900">{insurance.insurerName}</p>
+                          <p className="text-sm text-gray-500">{insurance.insuranceType}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          insurance.status === 'Active' || insurance.status === 'ACTIVE'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {insurance.status}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-gray-500">Policy #</p>
+                          <p className="text-gray-900">{insurance.policyNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Coverage</p>
+                          <p className="text-gray-900 font-semibold">${insurance.coverageAmount.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Effective</p>
+                          <p className="text-gray-900">{insurance.effectiveDate}</p>
+                        </div>
+                        {insurance.cancellationDate && (
+                          <div>
+                            <p className="text-gray-500">Cancelled</p>
+                            <p className="text-red-600">{insurance.cancellationDate}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Listing Data Card - Platform Integrations & Additional Info */}
+            {listingData && (
+              <Card className="lg:col-span-2 border border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-purple-600" />
+                  Platform Integrations & Listing Details
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Amazon Status */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Amazon Status</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      listingData.amazonStatus === 'active' ? 'bg-green-100 text-green-700' :
+                      listingData.amazonStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {listingData.amazonStatus === 'active' ? 'Active' :
+                       listingData.amazonStatus === 'pending' ? 'Pending' :
+                       listingData.amazonStatus === 'not-setup' ? 'Not Setup' : listingData.amazonStatus}
+                    </span>
+                    {listingData.amazonRelayScore && (
+                      <p className="text-sm text-gray-900 mt-1">Score: {listingData.amazonRelayScore}</p>
+                    )}
+                  </div>
+
+                  {/* Highway Setup */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Highway Setup</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      listingData.highwaySetup ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {listingData.highwaySetup ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  {/* Years Active */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Years Active</p>
+                    <p className="text-lg font-semibold text-gray-900">{listingData.yearsActive}</p>
+                  </div>
+
+                  {/* Fleet Size */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Fleet Size</p>
+                    <p className="text-lg font-semibold text-gray-900">{listingData.fleetSize}</p>
+                  </div>
+
+                  {/* Selling With Email */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Selling With Email</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      listingData.sellingWithEmail ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {listingData.sellingWithEmail ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  {/* Selling With Phone */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Selling With Phone</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      listingData.sellingWithPhone ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {listingData.sellingWithPhone ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  {/* SAFER Score */}
+                  {listingData.saferScore && (
+                    <div className="p-3 bg-white rounded-xl border border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">SAFER Score</p>
+                      <p className="text-lg font-semibold text-gray-900">{listingData.saferScore}</p>
+                    </div>
+                  )}
+
+                  {/* Safety Rating */}
+                  <div className="p-3 bg-white rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Safety Rating</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      listingData.safetyRating === 'Satisfactory' ? 'bg-green-100 text-green-700' :
+                      listingData.safetyRating === 'Conditional' ? 'bg-yellow-100 text-yellow-700' :
+                      listingData.safetyRating === 'Unsatisfactory' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {listingData.safetyRating}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Insurance Coverage from Listing */}
+                {(listingData.bipdCoverage || listingData.cargoCoverage || listingData.bondAmount) && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Listed Insurance Coverage</p>
+                    <div className="grid grid-cols-3 gap-4">
+                      {listingData.bipdCoverage && (
+                        <div className="p-3 bg-white rounded-lg border border-gray-100">
+                          <p className="text-xs text-gray-500">BIPD Coverage</p>
+                          <p className="font-semibold text-gray-900">${listingData.bipdCoverage.toLocaleString()}</p>
+                        </div>
+                      )}
+                      {listingData.cargoCoverage && (
+                        <div className="p-3 bg-white rounded-lg border border-gray-100">
+                          <p className="text-xs text-gray-500">Cargo Coverage</p>
+                          <p className="font-semibold text-gray-900">${listingData.cargoCoverage.toLocaleString()}</p>
+                        </div>
+                      )}
+                      {listingData.bondAmount && (
+                        <div className="p-3 bg-white rounded-lg border border-gray-100">
+                          <p className="text-xs text-gray-500">Bond Amount</p>
+                          <p className="font-semibold text-gray-900">${listingData.bondAmount.toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cargo Types from Listing */}
+                {listingData.cargoTypes.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Authorized Cargo Types</p>
+                    <div className="flex flex-wrap gap-2">
+                      {listingData.cargoTypes.map((cargo, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                          {cargo}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+
             {/* Company Information */}
             <Card>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -2757,35 +3755,51 @@ For questions, contact us at escrow@domilea.com`
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Legal Name</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.legalName}</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.legalName || fmcsaData?.legalName || transaction.businessDetails.legalName}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">DBA</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.dba}</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.dbaName || fmcsaData?.dbaName || transaction.businessDetails.dba || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">MC Number</p>
-                    <p className="font-medium text-gray-900">#{transaction.businessDetails.mcNumber}</p>
+                    <p className="font-medium text-gray-900">
+                      #{listingData?.mcNumber || transaction.businessDetails.mcNumber}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">DOT Number</p>
-                    <p className="font-medium text-gray-900">#{transaction.businessDetails.dotNumber}</p>
+                    <p className="font-medium text-gray-900">
+                      #{listingData?.dotNumber || fmcsaData?.dotNumber || transaction.businessDetails.dotNumber}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">EIN</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.einNumber}</p>
+                    <p className="text-sm text-gray-500">Total Drivers</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.totalDrivers || fmcsaData?.totalDrivers || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Entity Type</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.entityType}</p>
+                    <p className="text-sm text-gray-500">Fleet Size</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.fleetSize || fmcsaData?.totalPowerUnits || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">State of Incorporation</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.stateOfIncorporation}</p>
+                    <p className="text-sm text-gray-500">State</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.state || fmcsaData?.hqState || transaction.businessDetails.stateOfIncorporation}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Date Established</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.dateEstablished.toLocaleDateString()}</p>
+                    <p className="text-sm text-gray-500">Years Active</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.yearsActive || 0} years
+                    </p>
                   </div>
                 </div>
 
@@ -2793,7 +3807,12 @@ For questions, contact us at escrow@domilea.com`
                   <p className="text-sm text-gray-500 mb-2">Business Address</p>
                   <p className="font-medium text-gray-900 flex items-start gap-2">
                     <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                    {transaction.businessDetails.businessAddress}
+                    {listingData?.address
+                      ? `${listingData.address}, ${listingData.city}, ${listingData.state}`
+                      : fmcsaData?.physicalAddress
+                        ? `${fmcsaData.physicalAddress}, ${fmcsaData.hqCity}, ${fmcsaData.hqState}`
+                        : transaction.businessDetails.businessAddress
+                    }
                   </p>
                 </div>
 
@@ -2802,14 +3821,14 @@ For questions, contact us at escrow@domilea.com`
                     <p className="text-sm text-gray-500">Phone</p>
                     <p className="font-medium text-gray-900 flex items-center gap-2">
                       <Phone className="w-4 h-4" />
-                      {transaction.businessDetails.phoneNumber}
+                      {listingData?.contactPhone || fmcsaData?.phone || transaction.businessDetails.phoneNumber || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
                     <p className="font-medium text-gray-900 flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      {transaction.businessDetails.email}
+                      {listingData?.contactEmail || transaction.businessDetails.email || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -2825,26 +3844,31 @@ For questions, contact us at escrow@domilea.com`
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Operating Status</p>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                    {transaction.businessDetails.operatingStatus}
+                  <span className={`px-3 py-1 rounded-full font-medium ${
+                    fmcsaData?.allowedToOperate === 'Y'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {fmcsaData?.allowedToOperate === 'Y' ? 'Authorized' : transaction.businessDetails.operatingStatus}
                   </span>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Operation Classification</p>
+                  <p className="text-sm text-gray-500 mb-2">Operation Type</p>
                   <div className="flex flex-wrap gap-2">
-                    {transaction.businessDetails.operationClassification.map((op, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
-                        {op}
-                      </span>
-                    ))}
+                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                      {fmcsaData?.carrierOperation || 'Motor Carrier'}
+                    </span>
                   </div>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Cargo Types</p>
                   <div className="flex flex-wrap gap-2">
-                    {transaction.businessDetails.cargoTypes.map((cargo, idx) => (
+                    {(listingData?.cargoTypes && listingData.cargoTypes.length > 0
+                      ? listingData.cargoTypes
+                      : transaction.businessDetails.cargoTypes
+                    ).map((cargo, idx) => (
                       <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
                         {cargo}
                       </span>
@@ -2852,35 +3876,40 @@ For questions, contact us at escrow@domilea.com`
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm text-gray-500 mb-2">Equipment Types</p>
-                  <div className="flex flex-wrap gap-2">
-                    {transaction.businessDetails.equipmentTypes.map((eq, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">
-                        {eq}
-                      </span>
-                    ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Drivers</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.totalDrivers || fmcsaData?.totalDrivers || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Power Units</p>
+                    <p className="font-medium text-gray-900">
+                      {listingData?.fleetSize || fmcsaData?.totalPowerUnits || 0}
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Operating Radius</p>
-                    <p className="font-medium text-gray-900">{transaction.businessDetails.radius}</p>
+                    <p className="text-sm text-gray-500">Insurance on File</p>
+                    <p className={`font-medium ${
+                      (listingData?.insuranceOnFile || fmcsaData?.insuranceOnFile) ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {(listingData?.insuranceOnFile || fmcsaData?.insuranceOnFile) ? 'Yes' : 'No'}
+                    </p>
                   </div>
-                  <div className="flex gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Hazmat</p>
-                      <p className="font-medium text-gray-900">
-                        {transaction.businessDetails.hazmatCertified ? 'Yes' : 'No'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Bonded</p>
-                      <p className="font-medium text-gray-900">
-                        {transaction.businessDetails.bondedCarrier ? 'Yes' : 'No'}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Safety Rating</p>
+                    <p className={`font-medium ${
+                      listingData?.safetyRating === 'Satisfactory' ? 'text-green-600' :
+                      listingData?.safetyRating === 'Conditional' ? 'text-yellow-600' :
+                      listingData?.safetyRating === 'Unsatisfactory' ? 'text-red-600' :
+                      'text-gray-900'
+                    }`}>
+                      {listingData?.safetyRating || fmcsaData?.safetyRating || 'None'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2894,112 +3923,163 @@ For questions, contact us at escrow@domilea.com`
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
-                  <span className="font-medium text-gray-900">SAFER Rating</span>
-                  <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full font-bold text-lg">
-                    {transaction.safetyRecord.saferScore}
+                  <span className="font-medium text-gray-900">Safety Rating</span>
+                  <span className={`px-4 py-2 rounded-full font-bold text-lg ${
+                    (listingData?.safetyRating || fmcsaData?.safetyRating) === 'Satisfactory'
+                      ? 'bg-green-100 text-green-700'
+                      : (listingData?.safetyRating || fmcsaData?.safetyRating) === 'Conditional'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : (listingData?.safetyRating || fmcsaData?.safetyRating) === 'Unsatisfactory'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {listingData?.safetyRating || fmcsaData?.safetyRating || 'None'}
                   </span>
                 </div>
 
+                {listingData?.saferScore && (
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
+                    <span className="font-medium text-gray-900">SAFER Score</span>
+                    <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-bold text-lg">
+                      {listingData.saferScore}
+                    </span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{transaction.safetyRecord.totalInspections}</p>
-                    <p className="text-sm text-gray-500">Inspections</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {listingData?.totalDrivers || fmcsaData?.totalDrivers || 0}
+                    </p>
+                    <p className="text-sm text-gray-500">Drivers</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{transaction.safetyRecord.outOfServiceRate}%</p>
-                    <p className="text-sm text-gray-500">OOS Rate</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {listingData?.fleetSize || fmcsaData?.totalPowerUnits || 0}
+                    </p>
+                    <p className="text-sm text-gray-500">Power Units</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{transaction.safetyRecord.totalCrashes}</p>
-                    <p className="text-sm text-gray-500">Crashes</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {listingData?.yearsActive || 0}
+                    </p>
+                    <p className="text-sm text-gray-500">Years Active</p>
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm text-gray-500 mb-3">BASIC Scores</p>
-                  <div className="space-y-2">
-                    {Object.entries(transaction.safetyRecord.basicScores).map(([key, value]) => (
-                      <div key={key} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-600 w-40 capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${value < 50 ? 'bg-green-500' : value < 75 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${value}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium w-10 text-right">{value}%</span>
+                {fmcsaData && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-500 mb-3">MCS-150 Information</p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500">MCS-150 Date</p>
+                        <p className="font-medium text-gray-900">{fmcsaData.mcs150Date || 'N/A'}</p>
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-gray-500">Operating Authority</p>
+                        <p className={`font-medium ${fmcsaData.allowedToOperate === 'Y' ? 'text-green-600' : 'text-red-600'}`}>
+                          {fmcsaData.allowedToOperate === 'Y' ? 'Authorized' : 'Not Authorized'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </Card>
 
-            {/* Insurance */}
+            {/* Insurance & Bond - Using Real Data */}
             <Card>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FileCheck className="w-5 h-5" />
-                Insurance & Bond
+                Insurance & Bond (FMCSA Requirements)
               </h3>
               <div className="space-y-4">
+                {/* BIPD Insurance */}
                 <div className="p-4 bg-green-50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900">Liability Insurance</span>
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
-                      {transaction.insuranceInfo.liabilityInsurance.status}
+                    <span className="font-medium text-gray-900">BIPD (Liability) Insurance</span>
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      (fmcsaData?.bipdOnFile || 0) >= (fmcsaData?.bipdRequired || 0)
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {(fmcsaData?.bipdOnFile || 0) >= (fmcsaData?.bipdRequired || 0) ? 'Compliant' : 'Below Required'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-gray-500">Provider</p>
-                      <p className="font-medium">{transaction.insuranceInfo.liabilityInsurance.provider}</p>
+                      <p className="text-gray-500">Required</p>
+                      <p className="font-medium">${(fmcsaData?.bipdRequired || listingData?.bipdCoverage || 0).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Coverage</p>
-                      <p className="font-medium">${transaction.insuranceInfo.liabilityInsurance.coverage.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Policy #</p>
-                      <p className="font-medium">{transaction.insuranceInfo.liabilityInsurance.policyNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Expires</p>
-                      <p className="font-medium">{transaction.insuranceInfo.liabilityInsurance.expirationDate.toLocaleDateString()}</p>
+                      <p className="text-gray-500">On File</p>
+                      <p className="font-medium text-green-600">${(fmcsaData?.bipdOnFile || 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
 
+                {/* Cargo Insurance */}
                 <div className="p-4 bg-blue-50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-gray-900">Cargo Insurance</span>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-                      {transaction.insuranceInfo.cargoInsurance.status}
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      (fmcsaData?.cargoOnFile || 0) >= (fmcsaData?.cargoRequired || 0)
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {(fmcsaData?.cargoOnFile || 0) >= (fmcsaData?.cargoRequired || 0) ? 'On File' : 'Review Needed'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-gray-500">Coverage</p>
-                      <p className="font-medium">${transaction.insuranceInfo.cargoInsurance.coverage.toLocaleString()}</p>
+                      <p className="text-gray-500">Required</p>
+                      <p className="font-medium">${(fmcsaData?.cargoRequired || listingData?.cargoCoverage || 0).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Expires</p>
-                      <p className="font-medium">{transaction.insuranceInfo.cargoInsurance.expirationDate.toLocaleDateString()}</p>
+                      <p className="text-gray-500">On File</p>
+                      <p className="font-medium text-blue-600">${(fmcsaData?.cargoOnFile || 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
 
+                {/* Surety Bond */}
                 <div className="p-4 bg-purple-50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-gray-900">Surety Bond</span>
-                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">
-                      {transaction.insuranceInfo.bondInfo.status}
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      (fmcsaData?.bondOnFile || 0) >= (fmcsaData?.bondRequired || 0)
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {(fmcsaData?.bondOnFile || 0) >= (fmcsaData?.bondRequired || 0) ? 'On File' : 'Review Needed'}
                     </span>
                   </div>
-                  <div className="text-sm">
-                    <p className="text-gray-500">{transaction.insuranceInfo.bondInfo.type}</p>
-                    <p className="font-medium">${transaction.insuranceInfo.bondInfo.amount.toLocaleString()}</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-gray-500">Required</p>
+                      <p className="font-medium">${(fmcsaData?.bondRequired || listingData?.bondAmount || 0).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">On File</p>
+                      <p className="font-medium text-purple-600">${(fmcsaData?.bondOnFile || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Insurance Status Summary */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    {(listingData?.insuranceOnFile || fmcsaData?.insuranceOnFile) ? (
+                      <>
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <span className="text-sm text-green-700 font-medium">Insurance documentation on file with FMCSA</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-5 h-5 text-yellow-600" />
+                        <span className="text-sm text-yellow-700 font-medium">Insurance status requires verification</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3099,186 +4179,6 @@ For questions, contact us at escrow@domilea.com`
                     <Download className="w-5 h-5 mr-2" />
                     Download All Documents (ZIP)
                   </Button>
-                </div>
-              )}
-            </Card>
-          </motion.div>
-        )}
-
-        {activeTab === 'financials' && (
-          <motion.div
-            key="financials"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-          >
-            {/* Transaction Financials - Role Specific */}
-            <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Receipt className="w-5 h-5" />
-                Transaction Financials
-              </h3>
-              {userRole === 'seller' ? (
-                // Seller sees their listing price and payout info
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Your Listing Price</span>
-                    <span className="font-semibold text-gray-900">${transaction.listing.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Buyer Deposit (Escrow)</span>
-                    <span className="font-semibold text-blue-600">${transaction.depositAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold text-green-800">Your Payout</span>
-                      <span className="text-2xl font-bold text-green-700">${transaction.listing.price.toLocaleString()}</span>
-                    </div>
-                    <p className="text-sm text-green-600 mt-2">
-                      Payout will be processed within 2-3 business days after transaction completion
-                    </p>
-                  </div>
-                </div>
-              ) : userRole === 'buyer' ? (
-                // Buyer sees their price and payment breakdown
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Listed Price</span>
-                    <span className="text-gray-400 line-through">${transaction.listing.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Your Purchase Price</span>
-                    <span className="font-semibold text-gray-900">${transaction.agreedPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Deposit Paid</span>
-                    <span className="font-semibold text-blue-600">-${transaction.depositAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3">
-                    <span className="text-lg font-semibold text-gray-900">Balance Due</span>
-                    <span className="text-2xl font-bold text-gray-900">${transaction.finalPaymentAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              ) : (
-                // Admin sees full breakdown with commission
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Seller's Listing Price</span>
-                    <span className="font-semibold text-gray-900">${transaction.listing.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Buyer's Purchase Price</span>
-                    <span className="font-semibold text-gray-900">${transaction.agreedPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Platform Commission</span>
-                    <span className="font-semibold text-amber-600">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Deposit Held</span>
-                    <span className="font-semibold text-blue-600">${transaction.depositAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 pt-3">
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm text-green-600">Seller Payout</p>
-                      <p className="text-xl font-bold text-green-700">${transaction.listing.price.toLocaleString()}</p>
-                    </div>
-                    <div className="p-3 bg-amber-50 rounded-lg">
-                      <p className="text-sm text-amber-600">Platform Revenue</p>
-                      <p className="text-xl font-bold text-amber-700">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Business Financial History */}
-            <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Business Financial History
-              </h3>
-              <div className="space-y-4">
-                <div className="p-4 bg-green-50 rounded-xl">
-                  <p className="text-sm text-green-600 mb-1">Estimated Annual Revenue</p>
-                  <p className="text-2xl font-bold text-green-700">
-                    ${transaction.financialHistory.annualRevenue.toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Avg Monthly Loads</p>
-                    <p className="text-xl font-bold text-gray-900">{transaction.financialHistory.avgMonthlyLoads}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500">Avg Rate/Mile</p>
-                    <p className="text-xl font-bold text-gray-900">${transaction.financialHistory.avgRatePerMile}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-2">Annual Expenses (Estimated)</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Fuel Costs</span>
-                      <span className="font-medium">${transaction.financialHistory.fuelCosts.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Maintenance</span>
-                      <span className="font-medium">${transaction.financialHistory.maintenanceCosts.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Insurance</span>
-                      <span className="font-medium">${transaction.financialHistory.insuranceCosts.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Outstanding Debts/Liens</span>
-                    <span className={`font-bold ${transaction.financialHistory.outstandingDebts > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {transaction.financialHistory.outstandingDebts > 0
-                        ? `$${transaction.financialHistory.outstandingDebts.toLocaleString()}`
-                        : 'None'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* UCC Filings */}
-            <Card className="lg:col-span-2">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Scale className="w-5 h-5" />
-                UCC Filings & Liens
-              </h3>
-              {transaction.financialHistory.uccFilings.length === 0 ? (
-                <div className="text-center py-8 bg-green-50 rounded-xl">
-                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                  <p className="font-medium text-green-800">No Active UCC Filings</p>
-                  <p className="text-sm text-green-600">This MC authority has no outstanding liens or encumbrances.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {transaction.financialHistory.uccFilings.map((filing) => (
-                    <div key={filing.id} className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">UCC-1 Filing</p>
-                          <p className="text-sm text-gray-500">
-                            Filed: {filing.filingDate.toLocaleDateString()} | Secured Party: {filing.securedParty}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-yellow-700">${filing.amount.toLocaleString()}</p>
-                          <span className="text-sm text-yellow-600">{filing.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               )}
             </Card>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -37,7 +37,9 @@ import {
   AlertTriangle,
   ShieldCheck,
   Banknote,
-  Users
+  Users,
+  RefreshCw,
+  Loader2
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -46,6 +48,7 @@ import Select from '../components/ui/Select'
 import Textarea from '../components/ui/Textarea'
 import TrustBadge from '../components/ui/TrustBadge'
 import { getTrustLevel } from '../utils/helpers'
+import api from '../services/api'
 
 interface Listing {
   id: string
@@ -109,6 +112,11 @@ const AdminAllListingsPage = () => {
   const [sortField, setSortField] = useState<'mcNumber' | 'price' | 'createdAt' | 'views'>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
+  // Loading and error states
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [allListings, setAllListings] = useState<Listing[]>([])
+
   // Mock users for assignment
   const [users] = useState<User[]>([
     { id: 'admin-1', name: 'Admin (Me)', email: 'admin@domilea.com', role: 'admin' },
@@ -117,6 +125,125 @@ const AdminAllListingsPage = () => {
     { id: 'seller-3', name: 'Mike Wilson', email: 'mike@email.com', role: 'seller' },
     { id: 'seller-4', name: 'Emily Davis', email: 'emily@email.com', role: 'seller' },
   ])
+
+  // Helper to parse JSON fields safely
+  const parseJsonField = (field: any): string[] => {
+    if (!field) return []
+    if (Array.isArray(field)) return field
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  // Map API status to component status
+  const mapStatus = (status: string): 'active' | 'pending' | 'sold' | 'rejected' | 'draft' => {
+    const statusMap: Record<string, 'active' | 'pending' | 'sold' | 'rejected' | 'draft'> = {
+      'ACTIVE': 'active',
+      'PENDING_REVIEW': 'pending',
+      'SOLD': 'sold',
+      'REJECTED': 'rejected',
+      'DRAFT': 'draft',
+      'RESERVED': 'sold',
+      'SUSPENDED': 'rejected'
+    }
+    return statusMap[status] || 'draft'
+  }
+
+  // Fetch listings from API
+  const fetchListings = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Get filter status for API
+      const statusMap: Record<string, string> = {
+        'all': '',
+        'active': 'ACTIVE',
+        'pending': 'PENDING_REVIEW',
+        'sold': 'SOLD',
+        'rejected': 'REJECTED',
+        'draft': 'DRAFT',
+        'premium': ''
+      }
+
+      const params: any = { limit: 100 }
+      if (activeFilter !== 'all' && activeFilter !== 'premium') {
+        params.status = statusMap[activeFilter]
+      }
+      if (activeFilter === 'premium') {
+        params.isPremium = true
+      }
+      if (searchTerm) {
+        params.search = searchTerm
+      }
+
+      const response = await api.getAdminListings(params)
+      const listingsData = response?.data || response?.listings || []
+
+      // Transform API data to component format
+      const transformedListings: Listing[] = listingsData.map((item: any) => ({
+        id: item.id,
+        mcNumber: item.mcNumber || '',
+        dotNumber: item.dotNumber || '',
+        title: item.title || `MC Authority #${item.mcNumber}`,
+        legalName: item.legalName || '',
+        dbaName: item.dbaName || '',
+        price: item.askingPrice || 0,
+        status: mapStatus(item.status),
+        seller: {
+          id: item.seller?.id || item.sellerId || '',
+          name: item.seller?.name || 'Unknown',
+          email: item.seller?.email || '',
+          phone: item.seller?.phone || '',
+          trustScore: item.seller?.trustScore || 70,
+          verified: item.seller?.verified || false
+        },
+        views: item.views || 0,
+        saves: item.saves || 0,
+        offers: item.offerCount || 0,
+        createdAt: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : '',
+        updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '',
+        soldDate: item.soldAt ? new Date(item.soldAt).toISOString().split('T')[0] : undefined,
+        rejectedDate: item.status === 'REJECTED' ? item.updatedAt?.split('T')[0] : undefined,
+        rejectionReason: item.rejectionReason || undefined,
+        yearsActive: item.yearsActive || 0,
+        fleetSize: item.fleetSize || 0,
+        totalDrivers: item.totalDrivers || 0,
+        safetyRating: item.safetyRating || 'Satisfactory',
+        state: item.state || '',
+        city: item.city || '',
+        isPremium: item.isPremium || false,
+        amazonStatus: item.amazonStatus?.toLowerCase() || 'none',
+        amazonRelayScore: item.amazonRelayScore || null,
+        highwaySetup: item.highwaySetup || false,
+        sellingWithEmail: item.sellingWithEmail || false,
+        sellingWithPhone: item.sellingWithPhone || false,
+        insuranceOnFile: item.insuranceOnFile || false,
+        bipdCoverage: item.bipdCoverage || 0,
+        cargoCoverage: item.cargoCoverage || 0,
+        cargoTypes: parseJsonField(item.cargoTypes),
+        assignedAdmin: item.assignedAdmin || undefined
+      }))
+
+      setAllListings(transformedListings)
+    } catch (err: any) {
+      console.error('Failed to fetch listings:', err)
+      setError(err.message || 'Failed to load listings')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch listings on mount and when filter changes
+  useEffect(() => {
+    fetchListings()
+  }, [activeFilter])
 
   // New listing form state
   const [newListing, setNewListing] = useState({
@@ -144,325 +271,6 @@ const AdminAllListingsPage = () => {
     assignedTo: '',
     notes: ''
   })
-
-  const [allListings, setAllListings] = useState<Listing[]>([
-    {
-      id: '1',
-      mcNumber: '123456',
-      dotNumber: '1234567',
-      title: 'Established Interstate Authority - Clean Record',
-      legalName: 'TransportPro LLC',
-      dbaName: 'Transport Pro',
-      price: 45000,
-      status: 'active',
-      seller: {
-        id: 'seller-1',
-        name: 'John Smith',
-        email: 'john@transportpro.com',
-        phone: '(555) 123-4567',
-        trustScore: 85,
-        verified: true
-      },
-      views: 234,
-      saves: 12,
-      offers: 3,
-      createdAt: '2024-01-05',
-      updatedAt: '2024-01-10',
-      yearsActive: 5,
-      fleetSize: 12,
-      totalDrivers: 15,
-      safetyRating: 'Satisfactory',
-      state: 'TX',
-      city: 'Houston',
-      isPremium: false,
-      amazonStatus: 'active',
-      amazonRelayScore: 'A',
-      highwaySetup: true,
-      sellingWithEmail: true,
-      sellingWithPhone: true,
-      insuranceOnFile: true,
-      bipdCoverage: 1000000,
-      cargoCoverage: 100000,
-      cargoTypes: ['General Freight', 'Dry Van', 'Refrigerated']
-    },
-    {
-      id: '2',
-      mcNumber: '789012',
-      dotNumber: '7890123',
-      title: 'Regional Carrier Authority - Excellent Safety',
-      legalName: 'Regional Routes LLC',
-      dbaName: 'Regional Routes',
-      price: 32000,
-      status: 'sold',
-      seller: {
-        id: 'seller-2',
-        name: 'Sarah Johnson',
-        email: 'admin@regional.com',
-        phone: '(555) 234-5678',
-        trustScore: 78,
-        verified: true
-      },
-      views: 189,
-      saves: 8,
-      offers: 5,
-      createdAt: '2023-12-28',
-      updatedAt: '2024-01-09',
-      soldDate: '2024-01-09',
-      yearsActive: 3,
-      fleetSize: 8,
-      totalDrivers: 10,
-      safetyRating: 'Satisfactory',
-      state: 'IL',
-      city: 'Chicago',
-      isPremium: false,
-      amazonStatus: 'active',
-      amazonRelayScore: 'B',
-      highwaySetup: true,
-      sellingWithEmail: true,
-      sellingWithPhone: false,
-      insuranceOnFile: true,
-      bipdCoverage: 750000,
-      cargoCoverage: 100000,
-      cargoTypes: ['General Freight', 'Dry Van']
-    },
-    {
-      id: '3',
-      mcNumber: '345678',
-      dotNumber: '3456789',
-      title: 'Premium Long Haul Authority - Amazon Approved',
-      legalName: 'Highway Carriers Inc',
-      dbaName: 'Highway Carriers',
-      price: 82000,
-      status: 'active',
-      seller: {
-        id: 'seller-3',
-        name: 'Mike Wilson',
-        email: 'sales@highway.com',
-        phone: '(555) 345-6789',
-        trustScore: 92,
-        verified: true
-      },
-      views: 456,
-      saves: 28,
-      offers: 8,
-      createdAt: '2023-12-15',
-      updatedAt: '2024-01-08',
-      yearsActive: 7,
-      fleetSize: 15,
-      totalDrivers: 20,
-      safetyRating: 'Satisfactory',
-      state: 'CA',
-      city: 'Los Angeles',
-      isPremium: true,
-      amazonStatus: 'active',
-      amazonRelayScore: 'A',
-      highwaySetup: true,
-      sellingWithEmail: true,
-      sellingWithPhone: true,
-      insuranceOnFile: true,
-      bipdCoverage: 1000000,
-      cargoCoverage: 250000,
-      cargoTypes: ['General Freight', 'Refrigerated', 'Intermodal']
-    },
-    {
-      id: '4',
-      mcNumber: '901234',
-      dotNumber: '9012345',
-      title: 'Expedited Freight Authority',
-      legalName: 'Fast Freight Inc',
-      dbaName: 'Fast Freight',
-      price: 38000,
-      status: 'pending',
-      seller: {
-        id: 'seller-4',
-        name: 'Emily Davis',
-        email: 'info@fastfreight.com',
-        phone: '(555) 456-7890',
-        trustScore: 81,
-        verified: true
-      },
-      views: 45,
-      saves: 2,
-      offers: 0,
-      createdAt: '2024-01-10',
-      updatedAt: '2024-01-10',
-      yearsActive: 4,
-      fleetSize: 6,
-      totalDrivers: 8,
-      safetyRating: 'Satisfactory',
-      state: 'FL',
-      city: 'Miami',
-      isPremium: false,
-      amazonStatus: 'pending',
-      amazonRelayScore: null,
-      highwaySetup: false,
-      sellingWithEmail: true,
-      sellingWithPhone: true,
-      insuranceOnFile: true,
-      bipdCoverage: 750000,
-      cargoCoverage: 100000,
-      cargoTypes: ['General Freight', 'Expedited']
-    },
-    {
-      id: '5',
-      mcNumber: '456789',
-      dotNumber: '4567890',
-      title: 'Premium Specialized Hauling Authority',
-      legalName: 'Specialty Transport LLC',
-      dbaName: 'Specialty Transport',
-      price: 78000,
-      status: 'active',
-      seller: {
-        id: 'seller-1',
-        name: 'John Smith',
-        email: 'contact@specialty.com',
-        phone: '(555) 567-8901',
-        trustScore: 88,
-        verified: true
-      },
-      views: 312,
-      saves: 19,
-      offers: 6,
-      createdAt: '2024-01-02',
-      updatedAt: '2024-01-07',
-      yearsActive: 6,
-      fleetSize: 10,
-      totalDrivers: 12,
-      safetyRating: 'Satisfactory',
-      state: 'OH',
-      city: 'Columbus',
-      isPremium: true,
-      amazonStatus: 'none',
-      amazonRelayScore: null,
-      highwaySetup: true,
-      sellingWithEmail: true,
-      sellingWithPhone: true,
-      insuranceOnFile: true,
-      bipdCoverage: 1000000,
-      cargoCoverage: 500000,
-      cargoTypes: ['Heavy Haul', 'Oversized', 'Flatbed']
-    },
-    {
-      id: '6',
-      mcNumber: '998877',
-      dotNumber: '9988770',
-      title: 'Hazmat Certified Authority',
-      legalName: 'Safety First Transport LLC',
-      dbaName: 'Safety First',
-      price: 55000,
-      status: 'rejected',
-      seller: {
-        id: 'seller-2',
-        name: 'Sarah Johnson',
-        email: 'contact@safetyfirst.com',
-        phone: '(555) 678-9012',
-        trustScore: 62,
-        verified: false
-      },
-      views: 34,
-      saves: 1,
-      offers: 0,
-      createdAt: '2024-01-08',
-      updatedAt: '2024-01-09',
-      rejectedDate: '2024-01-09',
-      rejectionReason: 'Incomplete documentation - missing insurance certificates',
-      yearsActive: 2,
-      fleetSize: 5,
-      totalDrivers: 6,
-      safetyRating: 'Conditional',
-      state: 'NV',
-      city: 'Las Vegas',
-      isPremium: false,
-      amazonStatus: 'suspended',
-      amazonRelayScore: 'D',
-      highwaySetup: false,
-      sellingWithEmail: false,
-      sellingWithPhone: false,
-      insuranceOnFile: false,
-      bipdCoverage: 0,
-      cargoCoverage: 0,
-      cargoTypes: ['Hazmat', 'Tanker']
-    },
-    {
-      id: '7',
-      mcNumber: '112233',
-      dotNumber: '1122334',
-      title: 'Reefer Transport Authority',
-      legalName: 'Cold Chain Logistics Inc',
-      dbaName: 'Cold Chain',
-      price: 47000,
-      status: 'active',
-      seller: {
-        id: 'seller-3',
-        name: 'Mike Wilson',
-        email: 'admin@coldchain.com',
-        phone: '(555) 789-0123',
-        trustScore: 86,
-        verified: true
-      },
-      views: 298,
-      saves: 16,
-      offers: 7,
-      createdAt: '2023-12-10',
-      updatedAt: '2024-01-05',
-      yearsActive: 5,
-      fleetSize: 11,
-      totalDrivers: 14,
-      safetyRating: 'Satisfactory',
-      state: 'CO',
-      city: 'Denver',
-      isPremium: false,
-      amazonStatus: 'active',
-      amazonRelayScore: 'B',
-      highwaySetup: true,
-      sellingWithEmail: true,
-      sellingWithPhone: true,
-      insuranceOnFile: true,
-      bipdCoverage: 1000000,
-      cargoCoverage: 150000,
-      cargoTypes: ['Refrigerated', 'Temperature Controlled']
-    },
-    {
-      id: '8',
-      mcNumber: '556677',
-      dotNumber: '5566778',
-      title: 'Draft - New Authority Listing',
-      legalName: 'Pending Verification LLC',
-      dbaName: '',
-      price: 40000,
-      status: 'draft',
-      seller: {
-        id: 'admin-1',
-        name: 'Admin (Me)',
-        email: 'admin@domilea.com',
-        phone: '(555) 000-0000',
-        trustScore: 100,
-        verified: true
-      },
-      views: 0,
-      saves: 0,
-      offers: 0,
-      createdAt: '2024-01-11',
-      updatedAt: '2024-01-11',
-      yearsActive: 3,
-      fleetSize: 5,
-      totalDrivers: 6,
-      safetyRating: 'Satisfactory',
-      state: 'AZ',
-      city: 'Phoenix',
-      isPremium: false,
-      amazonStatus: 'none',
-      amazonRelayScore: null,
-      highwaySetup: false,
-      sellingWithEmail: false,
-      sellingWithPhone: false,
-      insuranceOnFile: true,
-      bipdCoverage: 750000,
-      cargoCoverage: 100000,
-      cargoTypes: ['General Freight'],
-      assignedAdmin: 'admin-1'
-    }
-  ])
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -631,6 +439,10 @@ const AdminAllListingsPage = () => {
           <p className="text-gray-600 mt-1">View and manage all MC authority listings</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={fetchListings} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}>
             {viewMode === 'table' ? 'Card View' : 'Table View'}
           </Button>
@@ -640,6 +452,19 @@ const AdminAllListingsPage = () => {
           </Button>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <Card className="p-4 bg-red-50 border-red-200">
+          <div className="flex items-center gap-3 text-red-700">
+            <AlertTriangle className="w-5 h-5" />
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={fetchListings} className="ml-auto">
+              Try Again
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="flex flex-wrap gap-2">
@@ -685,8 +510,18 @@ const AdminAllListingsPage = () => {
         </div>
       </Card>
 
+      {/* Loading State */}
+      {loading && (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center text-gray-500">
+            <Loader2 className="w-8 h-8 animate-spin mb-4" />
+            <p>Loading listings...</p>
+          </div>
+        </Card>
+      )}
+
       {/* Table View */}
-      {viewMode === 'table' && (
+      {!loading && viewMode === 'table' && (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -746,7 +581,7 @@ const AdminAllListingsPage = () => {
                   <tr
                     key={listing.id}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => openDetailModal(listing)}
+                    onClick={() => navigate(`/admin/listing/${listing.id}`)}
                   >
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
@@ -799,14 +634,16 @@ const AdminAllListingsPage = () => {
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => openDetailModal(listing)}
+                          onClick={() => navigate(`/admin/listing/${listing.id}`)}
                           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="View & Edit"
                         >
-                          <Eye className="w-4 h-4 text-gray-600" />
+                          <Edit className="w-4 h-4 text-gray-600" />
                         </button>
                         <button
-                          onClick={() => navigate(`/mc/${listing.id}`)}
+                          onClick={() => window.open(`/mc/${listing.id}`, '_blank')}
                           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="View Public Page"
                         >
                           <ExternalLink className="w-4 h-4 text-gray-600" />
                         </button>
@@ -814,6 +651,7 @@ const AdminAllListingsPage = () => {
                           <button
                             onClick={() => navigate(`/admin/review/${listing.id}`)}
                             className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Review"
                           >
                             <CheckCircle className="w-4 h-4 text-blue-600" />
                           </button>
@@ -837,14 +675,14 @@ const AdminAllListingsPage = () => {
       )}
 
       {/* Card View */}
-      {viewMode === 'cards' && (
+      {!loading && viewMode === 'cards' && (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredListings.map((listing) => (
             <Card
               key={listing.id}
               hover
               className="cursor-pointer"
-              onClick={() => openDetailModal(listing)}
+              onClick={() => navigate(`/admin/listing/${listing.id}`)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div>

@@ -1,10 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
 import MainLayout from './layouts/MainLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import AdminRegisterPage from './pages/AdminRegisterPage'
 import SellerVerificationPage from './pages/SellerVerificationPage'
 import MarketplacePage from './pages/MarketplacePage'
 import MCDetailPage from './pages/MCDetailPage'
@@ -31,6 +33,7 @@ import AdminAIDueDiligence from './pages/AdminAIDueDiligence'
 import AdminInvoiceGenerator from './pages/AdminInvoiceGenerator'
 import AdminPaymentTracking from './pages/AdminPaymentTracking'
 import AdminAllListingsPage from './pages/AdminAllListingsPage'
+import AdminListingDetailPage from './pages/AdminListingDetailPage'
 import AdminPendingReviewPage from './pages/AdminPendingReviewPage'
 import AdminPremiumRequestsPage from './pages/AdminPremiumRequestsPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
@@ -51,12 +54,14 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster position="top-right" />
         <Routes>
           {/* Public Routes with MainLayout */}
           <Route path="/" element={<MainLayout />}>
             <Route index element={<HomePage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
+            <Route path="admin-register" element={<AdminRegisterPage />} />
             <Route path="seller-verification" element={<SellerVerificationPage />} />
             <Route path="marketplace" element={<MarketplacePage />} />
             <Route path="mc/:id" element={<MCDetailPage />} />
@@ -129,6 +134,7 @@ function App() {
             <Route path="transactions" element={<AdminTransactionsPage />} />
             <Route path="active-closings" element={<AdminActiveClosingsPage />} />
             <Route path="listings" element={<AdminAllListingsPage />} />
+            <Route path="listing/:id" element={<AdminListingDetailPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="reports" element={<div className="p-8"><h1 className="text-2xl font-bold">Reports</h1></div>} />
           </Route>
