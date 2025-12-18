@@ -5,109 +5,165 @@ import {
   TrendingUp,
   Calendar,
   Download,
-  Eye,
   CheckCircle,
-  Clock,
-  CreditCard
+  CreditCard,
+  Loader2,
+  AlertCircle,
+  Receipt,
+  ExternalLink
 } from 'lucide-react'
 import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
+import { useSellerEarnings } from '../hooks/useSellerEarnings'
+import { format, formatDistanceToNow, subMonths, isAfter, startOfMonth } from 'date-fns'
+
+type ViewTab = 'deals' | 'payments'
 
 const SellerEarningsPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month')
+  const [activeTab, setActiveTab] = useState<ViewTab>('deals')
 
-  const earnings = {
-    total: 129000,
-    pending: 45000,
-    completed: 84000,
-    thisMonth: 45000,
-    lastMonth: 39000
+  const {
+    transactions,
+    totals,
+    stripePayments,
+    loading,
+    stripeLoading,
+    error,
+  } = useSellerEarnings()
+
+  // Calculate period-filtered data
+  const getFilteredTransactions = () => {
+    if (selectedPeriod === 'all') return transactions
+
+    const now = new Date()
+    let startDate: Date
+
+    switch (selectedPeriod) {
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case 'month':
+        startDate = subMonths(now, 1)
+        break
+      case 'year':
+        startDate = subMonths(now, 12)
+        break
+      default:
+        return transactions
+    }
+
+    return transactions.filter(t => isAfter(t.completedAt, startDate))
   }
 
-  const transactions = [
-    {
-      id: '1',
-      mcNumber: '345678',
-      listingTitle: 'Long Haul Authority - Amazon Approved',
-      amount: 52000,
-      status: 'completed',
-      buyerName: 'National Carriers LLC',
-      completedDate: '2024-01-08',
-      paymentMethod: 'Wire Transfer'
-    },
-    {
-      id: '2',
-      mcNumber: '567890',
-      listingTitle: 'Regional Freight Authority',
-      amount: 32000,
-      status: 'completed',
-      buyerName: 'Regional Express Inc',
-      completedDate: '2023-12-20',
-      paymentMethod: 'Wire Transfer'
-    },
-    {
-      id: '3',
-      mcNumber: '123456',
-      listingTitle: 'Established Interstate Authority',
-      amount: 45000,
-      status: 'pending',
-      buyerName: 'Express Freight Corp',
-      completedDate: null,
-      paymentMethod: 'Wire Transfer'
+  const filteredTransactions = getFilteredTransactions()
+
+  // Calculate earnings for selected period
+  const periodEarnings = filteredTransactions.reduce((sum, t) => sum + t.netEarnings, 0)
+
+  // Calculate monthly data for chart (last 7 months)
+  const monthlyData = Array.from({ length: 7 }, (_, i) => {
+    const date = subMonths(new Date(), 6 - i)
+    const monthStart = startOfMonth(date)
+    const monthEnd = startOfMonth(subMonths(date, -1))
+
+    const monthTransactions = transactions.filter(t =>
+      isAfter(t.completedAt, monthStart) && !isAfter(t.completedAt, monthEnd)
+    )
+
+    const amount = monthTransactions.reduce((sum, t) => sum + t.netEarnings, 0)
+
+    return {
+      month: format(date, 'MMM'),
+      amount,
     }
-  ]
+  })
 
-  const monthlyData = [
-    { month: 'Jul', amount: 28000 },
-    { month: 'Aug', amount: 0 },
-    { month: 'Sep', amount: 32000 },
-    { month: 'Oct', amount: 0 },
-    { month: 'Nov', amount: 0 },
-    { month: 'Dec', amount: 24000 },
-    { month: 'Jan', amount: 45000 }
-  ]
+  const maxAmount = Math.max(...monthlyData.map(d => d.amount), 1)
 
-  const maxAmount = Math.max(...monthlyData.map(d => d.amount))
+  // Calculate stats
+  const completedCount = transactions.length
+  const thisMonthEarnings = monthlyData[monthlyData.length - 1]?.amount || 0
+  const lastMonthEarnings = monthlyData[monthlyData.length - 2]?.amount || 0
+  const growthPercent = lastMonthEarnings > 0
+    ? Math.round(((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100)
+    : 0
+
+  // Calculate total Stripe payments
+  const totalStripePayments = stripePayments.reduce((sum, p) => sum + p.amount, 0)
+  const listingFeePayments = stripePayments.filter(p => p.type === 'listing_fee')
+  const totalListingFees = listingFeePayments.reduce((sum, p) => sum + p.amount, 0)
 
   const stats = [
     {
       icon: DollarSign,
       label: 'Total Earnings',
-      value: `$${earnings.total.toLocaleString()}`,
-      change: '+15.3% vs last month',
-      color: 'text-trust-high'
+      value: `$${totals.net.toLocaleString()}`,
+      change: `${completedCount} completed deals`,
+      color: 'text-emerald-500',
+      bgColor: 'bg-emerald-50'
     },
     {
       icon: CheckCircle,
-      label: 'Completed Sales',
-      value: `$${earnings.completed.toLocaleString()}`,
-      change: '2 transactions',
-      color: 'text-primary-400'
+      label: 'Gross Revenue',
+      value: `$${totals.gross.toLocaleString()}`,
+      change: `-$${totals.fees.toLocaleString()} in fees`,
+      color: 'text-secondary-500',
+      bgColor: 'bg-secondary-50'
     },
     {
-      icon: Clock,
-      label: 'Pending',
-      value: `$${earnings.pending.toLocaleString()}`,
-      change: '1 in escrow',
-      color: 'text-yellow-400'
+      icon: Receipt,
+      label: 'Listing Fees Paid',
+      value: `$${totalListingFees.toLocaleString()}`,
+      change: `${listingFeePayments.length} listings`,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-50'
     },
     {
       icon: TrendingUp,
       label: 'This Month',
-      value: `$${earnings.thisMonth.toLocaleString()}`,
-      change: `+${Math.round(((earnings.thisMonth - earnings.lastMonth) / earnings.lastMonth) * 100)}% growth`,
-      color: 'text-trust-high'
+      value: `$${thisMonthEarnings.toLocaleString()}`,
+      change: growthPercent >= 0 ? `+${growthPercent}% growth` : `${growthPercent}% change`,
+      color: 'text-emerald-500',
+      bgColor: 'bg-emerald-50'
     }
   ]
 
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-secondary-500" />
+            <span className="ml-3 text-gray-500">Loading earnings data...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <GlassCard className="p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Earnings</h3>
+            <p className="text-gray-500">{error}</p>
+          </GlassCard>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold mb-1">Earnings</h2>
-            <p className="text-white/60">Track your sales and revenue</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Earnings</h2>
+            <p className="text-gray-500">Track your sales, revenue, and payment history</p>
           </div>
           <Button variant="secondary">
             <Download className="w-4 h-4 mr-2" />
@@ -124,24 +180,24 @@ const SellerEarningsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <GlassCard>
+              <GlassCard hover={false}>
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-lg glass-subtle ${stat.color}`}>
+                  <div className={`p-3 rounded-lg ${stat.bgColor} ${stat.color}`}>
                     <stat.icon className="w-6 h-6" />
                   </div>
                 </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-white/60 text-sm mb-1">{stat.label}</div>
-                <div className="text-xs text-white/40">{stat.change}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                <div className="text-gray-500 text-sm mb-1">{stat.label}</div>
+                <div className="text-xs text-gray-400">{stat.change}</div>
               </GlassCard>
             </motion.div>
           ))}
         </div>
 
         {/* Monthly Chart */}
-        <GlassCard className="mb-8">
+        <GlassCard className="mb-8" hover={false}>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold">Revenue Overview</h3>
+            <h3 className="text-xl font-bold text-gray-900">Revenue Overview</h3>
             <div className="flex gap-2">
               {(['week', 'month', 'year', 'all'] as const).map((period) => (
                 <button
@@ -149,8 +205,8 @@ const SellerEarningsPage = () => {
                   onClick={() => setSelectedPeriod(period)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
                     selectedPeriod === period
-                      ? 'bg-primary-500 text-white'
-                      : 'glass-subtle text-white/80 hover:bg-white/15'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {period}
@@ -166,13 +222,13 @@ const SellerEarningsPage = () => {
                   initial={{ height: 0 }}
                   animate={{ height: `${(data.amount / maxAmount) * 100}%` }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className="w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t-lg mb-2 min-h-[4px]"
+                  className="w-full bg-gradient-to-t from-secondary-500 to-secondary-400 rounded-t-lg mb-2 min-h-[4px]"
                   style={{
                     opacity: data.amount === 0 ? 0.2 : 1
                   }}
                 />
-                <div className="text-xs text-white/60 mb-1">{data.month}</div>
-                <div className="text-xs font-semibold">
+                <div className="text-xs text-gray-500 mb-1">{data.month}</div>
+                <div className="text-xs font-semibold text-gray-900">
                   {data.amount > 0 ? `$${(data.amount / 1000).toFixed(0)}K` : '-'}
                 </div>
               </div>
@@ -180,69 +236,161 @@ const SellerEarningsPage = () => {
           </div>
         </GlassCard>
 
-        {/* Transactions */}
-        <GlassCard>
-          <h3 className="text-xl font-bold mb-4">Transaction History</h3>
+        {/* Tab Navigation */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => setActiveTab('deals')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'deals'
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <CheckCircle className="w-4 h-4 inline mr-2" />
+            Completed Deals ({transactions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'payments'
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <CreditCard className="w-4 h-4 inline mr-2" />
+            Stripe Payments ({stripePayments.length})
+          </button>
+        </div>
 
-          <div className="space-y-3">
-            {transactions.map((transaction) => (
-              <div key={transaction.id} className="glass-subtle rounded-lg p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-bold">MC #{transaction.mcNumber}</h4>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        transaction.status === 'completed'
-                          ? 'bg-trust-high/20 text-trust-high'
-                          : 'bg-yellow-400/20 text-yellow-400'
-                      }`}>
-                        {transaction.status === 'completed' ? (
-                          <span className="flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Completed
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Pending
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <p className="text-sm text-white/80 mb-2">{transaction.listingTitle}</p>
-                    <div className="flex items-center gap-4 text-xs text-white/60">
-                      <div className="flex items-center gap-1">
-                        <span>Buyer: {transaction.buyerName}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="w-3 h-3" />
-                        <span>{transaction.paymentMethod}</span>
-                      </div>
-                      {transaction.completedDate && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>{new Date(transaction.completedDate).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+        {/* Completed Deals Tab */}
+        {activeTab === 'deals' && (
+          <GlassCard hover={false}>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Completed Deals</h3>
 
-                  <div className="text-right ml-4">
-                    <div className="text-2xl font-bold text-trust-high mb-1">
-                      ${transaction.amount.toLocaleString()}
-                    </div>
-                    {transaction.status === 'completed' && (
-                      <Button variant="ghost" size="sm">
-                        <Eye className="w-3 h-3 mr-1" />
-                        Receipt
-                      </Button>
-                    )}
-                  </div>
-                </div>
+            {transactions.length === 0 ? (
+              <div className="text-center py-12">
+                <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No completed deals yet</p>
+                <p className="text-gray-400 text-sm">Completed transactions will appear here</p>
               </div>
-            ))}
-          </div>
-        </GlassCard>
+            ) : (
+              <div className="space-y-3">
+                {transactions.map((transaction) => (
+                  <div key={transaction.id} className="bg-gray-50 border border-gray-100 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-gray-900">MC #{transaction.mcNumber}</h4>
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-600">
+                            <span className="flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Completed
+                            </span>
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{transaction.listingTitle}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <span>Buyer: {transaction.buyerName}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{format(transaction.completedAt, 'MMM d, yyyy')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right ml-4">
+                        <div className="text-2xl font-bold text-emerald-600 mb-1">
+                          ${transaction.netEarnings.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Gross: ${transaction.agreedPrice.toLocaleString()} | Fee: ${transaction.platformFee.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        )}
+
+        {/* Stripe Payments Tab */}
+        {activeTab === 'payments' && (
+          <GlassCard hover={false}>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Stripe Payment History</h3>
+
+            {stripeLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-secondary-500" />
+                <span className="ml-2 text-gray-500">Loading payment history...</span>
+              </div>
+            ) : stripePayments.length === 0 ? (
+              <div className="text-center py-12">
+                <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No Stripe payments found</p>
+                <p className="text-gray-400 text-sm">Listing fees and other payments will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stripePayments.map((payment) => (
+                  <div key={payment.id} className="bg-gray-50 border border-gray-100 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-gray-900">
+                            {payment.type === 'listing_fee' ? 'Listing Fee' : 'Payment'}
+                          </h4>
+                          {payment.mcNumber && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-secondary-100 text-secondary-600">
+                              MC #{payment.mcNumber}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {payment.description || 'Payment processed'}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {payment.paymentMethod && (
+                            <div className="flex items-center gap-1">
+                              <CreditCard className="w-3 h-3" />
+                              <span className="capitalize">{payment.paymentMethod.brand} ****{payment.paymentMethod.last4}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{format(payment.created, 'MMM d, yyyy')}</span>
+                          </div>
+                          <span className="text-gray-400">
+                            {formatDistanceToNow(payment.created, { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right ml-4">
+                        <div className="text-2xl font-bold text-secondary-600 mb-1">
+                          ${payment.amount.toLocaleString()}
+                        </div>
+                        {payment.receiptUrl && (
+                          <a
+                            href={payment.receiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-secondary-500 hover:text-secondary-600 flex items-center justify-end gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View Receipt
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        )}
       </div>
     </div>
   )

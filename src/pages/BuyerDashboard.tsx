@@ -16,7 +16,11 @@ import {
   Coins,
   Sparkles,
   MapPin,
-  Loader2
+  Loader2,
+  ShoppingBag,
+  CreditCard,
+  Receipt,
+  DollarSign
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
@@ -29,10 +33,41 @@ import api from '../services/api'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
 import { FilterOptions, MCListing } from '../types'
 
+interface Payment {
+  id: string
+  type: 'DEPOSIT' | 'FINAL_PAYMENT' | 'CREDIT_PURCHASE' | 'SUBSCRIPTION' | 'LISTING_FEE'
+  amount: number
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED'
+  method?: 'STRIPE' | 'ZELLE' | 'WIRE' | 'CHECK'
+  stripePaymentId?: string
+  createdAt: string
+}
+
+interface Transaction {
+  id: string
+  status: string
+  agreedPrice: number
+  depositAmount: number
+  depositPaidAt?: string
+  completedAt?: string
+  createdAt: string
+  listing: {
+    id: string
+    mcNumber: string
+    dotNumber?: string
+    title: string
+  }
+  seller: {
+    id: string
+    name: string
+  }
+  payments?: Payment[]
+}
+
 const BuyerDashboard = () => {
   const { user } = useAuth()
   const [savedListings] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace' | 'saved'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'unlocked' | 'marketplace' | 'saved'>('overview')
   // Credits from user data (will be 0 for new users)
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
 
@@ -40,6 +75,10 @@ const BuyerDashboard = () => {
   const [listings, setListings] = useState<MCListing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Transactions/Purchases state
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactionsLoading, setTransactionsLoading] = useState(true)
 
   // Fetch listings from API
   useEffect(() => {
@@ -90,6 +129,23 @@ const BuyerDashboard = () => {
     fetchListings()
   }, [])
 
+  // Fetch transactions/purchases
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setTransactionsLoading(true)
+        const response = await api.getBuyerTransactions({ limit: 100 })
+        setTransactions(response.data || [])
+      } catch (err) {
+        console.error('Failed to fetch transactions:', err)
+      } finally {
+        setTransactionsLoading(false)
+      }
+    }
+
+    fetchTransactions()
+  }, [])
+
   // Unlocked listings - will be empty until user unlocks some via API
   const unlockedListings: any[] = []
 
@@ -111,7 +167,30 @@ const BuyerDashboard = () => {
     sortBy: 'newest'
   })
 
+  // Calculate total payments from transactions
+  const totalPaid = transactions.reduce((sum, txn) => {
+    const txnPayments = txn.payments || []
+    const completedPayments = txnPayments.filter(p => p.status === 'COMPLETED')
+    return sum + completedPayments.reduce((pSum, p) => pSum + Number(p.amount), 0)
+  }, 0)
+
   const stats = [
+    {
+      icon: ShoppingBag,
+      label: 'Active Purchases',
+      value: transactions.length,
+      change: 'Transactions',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      icon: DollarSign,
+      label: 'Total Paid',
+      value: `$${totalPaid.toLocaleString()}`,
+      change: 'Stripe payments',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
     {
       icon: Coins,
       label: 'Credits Available',
@@ -127,22 +206,6 @@ const BuyerDashboard = () => {
       change: 'Full access',
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50'
-    },
-    {
-      icon: Heart,
-      label: 'Saved Listings',
-      value: savedListings.size,
-      change: 'Your favorites',
-      color: 'text-red-500',
-      bgColor: 'bg-red-50'
-    },
-    {
-      icon: Eye,
-      label: 'Active Listings',
-      value: listings.length,
-      change: 'In marketplace',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
     }
   ]
 
@@ -253,6 +316,23 @@ const BuyerDashboard = () => {
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Overview</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('purchases')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'purchases'
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Purchases</span>
+              {transactions.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">
+                  {transactions.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -476,6 +556,155 @@ const BuyerDashboard = () => {
               </div>
             </div>
           </>
+        )}
+
+        {/* Purchases Tab */}
+        {activeTab === 'purchases' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">My Purchases & Payments</h2>
+                <p className="text-gray-500">View your transactions and Stripe payment history</p>
+              </div>
+              <Link to="/buyer/purchases">
+                <Button variant="outline">
+                  <Receipt className="w-4 h-4 mr-2" />
+                  View All with Invoices
+                </Button>
+              </Link>
+            </div>
+
+            {transactionsLoading ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading your transactions...</p>
+                </div>
+              </Card>
+            ) : transactions.length > 0 ? (
+              <div className="space-y-4">
+                {transactions.map((txn) => (
+                  <Card key={txn.id} className="overflow-hidden">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <Link
+                          to={`/transaction/${txn.id}`}
+                          className="text-xl font-bold text-gray-900 hover:text-secondary-600 transition-colors"
+                        >
+                          MC #{txn.listing.mcNumber}
+                        </Link>
+                        <p className="text-gray-500 text-sm">{txn.listing.title}</p>
+                        <p className="text-gray-400 text-xs mt-1">Seller: {txn.seller.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          txn.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                          txn.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {txn.status.replace(/_/g, ' ')}
+                        </span>
+                        <div className="text-2xl font-bold text-gray-900 mt-2">
+                          ${Number(txn.agreedPrice).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment History */}
+                    {txn.payments && txn.payments.length > 0 && (
+                      <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CreditCard className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-700">Stripe Payment History</span>
+                        </div>
+                        <div className="space-y-2">
+                          {txn.payments.map((payment) => (
+                            <div key={payment.id} className="flex items-center justify-between text-sm bg-white rounded-lg p-3 border border-gray-100">
+                              <div className="flex items-center gap-3">
+                                <span className={`w-2 h-2 rounded-full ${
+                                  payment.status === 'COMPLETED' ? 'bg-green-500' :
+                                  payment.status === 'PENDING' ? 'bg-amber-500' :
+                                  payment.status === 'PROCESSING' ? 'bg-blue-500' :
+                                  'bg-gray-400'
+                                }`} />
+                                <div>
+                                  <span className="font-medium text-gray-900 capitalize">
+                                    {payment.type.replace(/_/g, ' ').toLowerCase()}
+                                  </span>
+                                  {payment.method && (
+                                    <span className="text-gray-400 text-xs ml-2">via {payment.method}</span>
+                                  )}
+                                  {payment.stripePaymentId && (
+                                    <span className="text-gray-400 text-xs block">
+                                      ID: {payment.stripePaymentId.slice(0, 20)}...
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-bold text-gray-900">
+                                  ${Number(payment.amount).toLocaleString()}
+                                </span>
+                                <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                                  payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                  payment.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                  payment.status === 'PROCESSING' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {payment.status}
+                                </span>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  {new Date(payment.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No payments yet */}
+                    {(!txn.payments || txn.payments.length === 0) && (
+                      <div className="bg-amber-50 rounded-xl p-4 mb-4">
+                        <div className="flex items-center gap-2 text-amber-700">
+                          <Clock className="w-4 h-4" />
+                          <span className="text-sm font-medium">No payments recorded yet</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Link to={`/transaction/${txn.id}`} className="flex-1">
+                        <Button fullWidth variant="secondary">
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Transaction
+                        </Button>
+                      </Link>
+                      <Link to="/buyer/purchases">
+                        <Button variant="outline">
+                          <Receipt className="w-4 h-4 mr-2" />
+                          Invoice
+                        </Button>
+                      </Link>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <div className="text-center py-12">
+                  <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No purchases yet</h3>
+                  <p className="text-gray-500 mb-6">
+                    Your transactions and Stripe payments will appear here
+                  </p>
+                  <Link to="/marketplace">
+                    <Button>Browse Marketplace</Button>
+                  </Link>
+                </div>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* Marketplace Tab */}

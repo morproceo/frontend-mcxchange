@@ -1,0 +1,261 @@
+import { useState, useEffect, useCallback } from 'react'
+import { api } from '../services/api'
+import { useAuth } from '../context/AuthContext'
+import type {
+  MCListingExtended,
+  AmazonStatus,
+  SafetyRating,
+  ListingStatus,
+  ListingVisibility
+} from '../types'
+import { getTrustLevel } from '../utils/helpers'
+
+interface UseListingResult {
+  listing: MCListingExtended | null
+  loading: boolean
+  error: string | null
+  isUnlocked: boolean
+  unlocking: boolean
+  unlock: () => Promise<boolean>
+  refetch: () => Promise<void>
+}
+
+/**
+ * Custom hook to fetch and manage a single MC listing
+ * Handles data transformation from backend format to frontend types
+ */
+export function useListing(listingId: string | undefined): UseListingResult {
+  const { isAuthenticated, user } = useAuth()
+  const [listing, setListing] = useState<MCListingExtended | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isUnlocked, setIsUnlocked] = useState(false)
+  const [unlocking, setUnlocking] = useState(false)
+
+  /**
+   * Transform raw backend data to MCListingExtended type
+   */
+  const transformListing = useCallback((data: any): MCListingExtended => {
+    const trustScore = data.seller?.trustScore || 50
+
+    return {
+      // Core listing fields
+      id: data.id,
+      mcNumber: data.mcNumber,
+      sellerId: data.sellerId,
+      seller: data.seller || {
+        id: data.sellerId,
+        name: 'Unknown',
+        email: '',
+        role: 'seller',
+        verified: false,
+        trustScore: 50,
+        memberSince: new Date(),
+        completedDeals: 0,
+        reviews: []
+      },
+      title: data.title,
+      description: data.description || '',
+      price: parseFloat(data.price) || 0,
+
+      // Trust & Verification
+      trustScore,
+      trustLevel: getTrustLevel(trustScore),
+      verified: data.seller?.verified || false,
+      verificationBadges: [],
+
+      // MC Details
+      yearsActive: data.yearsActive || 0,
+      operationType: parseCargoTypes(data.cargoTypes),
+      fleetSize: data.fleetSize || 0,
+      safetyRating: normalizeSafetyRating(data.safetyRating),
+      insuranceStatus: data.insuranceOnFile ? 'active' : 'pending',
+
+      // Location
+      state: data.state || '',
+
+      // Platform Integrations
+      amazonStatus: normalizeAmazonStatus(data.amazonStatus),
+      amazonRelayScore: data.amazonRelayScore || null,
+      highwaySetup: Boolean(data.highwaySetup),
+
+      // What's Included
+      sellingWithEmail: Boolean(data.sellingWithEmail),
+      sellingWithPhone: Boolean(data.sellingWithPhone),
+
+      // Premium listing
+      isPremium: Boolean(data.isPremium),
+
+      // Documents
+      documents: data.documents || [],
+
+      // Status
+      status: normalizeListingStatus(data.status),
+      visibility: normalizeVisibility(data.visibility),
+
+      // Metadata
+      views: data.views || 0,
+      saves: data.saves || 0,
+      createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+      updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+      soldAt: data.soldAt ? new Date(data.soldAt) : undefined,
+
+      // Extended FMCSA fields
+      dotNumber: data.dotNumber || '',
+      legalName: data.legalName || '',
+      dbaName: data.dbaName || '',
+      city: data.city || '',
+      address: data.address || '',
+      totalDrivers: data.totalDrivers || 0,
+
+      // Insurance details
+      bipdCoverage: data.bipdCoverage,
+      cargoCoverage: data.cargoCoverage,
+      bondAmount: data.bondAmount,
+      insuranceOnFile: Boolean(data.insuranceOnFile),
+
+      // Contact info
+      contactEmail: data.contactEmail || '',
+      contactPhone: data.contactPhone || '',
+
+      // Safety
+      saferScore: data.saferScore || '',
+
+      // Unlock/ownership status
+      isUnlocked: Boolean(data.isUnlocked),
+      isSaved: Boolean(data.isSaved),
+      isOwner: Boolean(data.isOwner),
+    }
+  }, [])
+
+  /**
+   * Fetch listing data from API
+   */
+  const fetchListing = useCallback(async () => {
+    if (!listingId) return
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await api.getListing(listingId)
+      const data = response.data || response.listing || response
+      const transformedListing = transformListing(data)
+
+      setListing(transformedListing)
+
+      // Set unlock status from API response
+      if (data.isUnlocked || data.isOwner) {
+        setIsUnlocked(true)
+      } else if (isAuthenticated && user?.role === 'buyer') {
+        // Fallback: Check if listing is already unlocked
+        try {
+          const unlocked = await api.checkListingUnlocked(listingId)
+          setIsUnlocked(unlocked)
+        } catch (err) {
+          console.error('Failed to check unlock status:', err)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch listing:', err)
+      setError('Failed to load listing details')
+      setListing(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [listingId, isAuthenticated, user?.role, transformListing])
+
+  /**
+   * Unlock the listing using a credit
+   */
+  const unlock = useCallback(async (): Promise<boolean> => {
+    if (!listingId || !isAuthenticated || user?.role !== 'buyer') {
+      return false
+    }
+
+    setUnlocking(true)
+    try {
+      const response = await api.unlockListing(listingId)
+      if (response.success) {
+        setIsUnlocked(true)
+        return true
+      }
+      return false
+    } catch (err: any) {
+      console.error('Failed to unlock listing:', err)
+      throw err
+    } finally {
+      setUnlocking(false)
+    }
+  }, [listingId, isAuthenticated, user?.role])
+
+  // Fetch listing on mount and when dependencies change
+  useEffect(() => {
+    fetchListing()
+  }, [fetchListing])
+
+  return {
+    listing,
+    loading,
+    error,
+    isUnlocked,
+    unlocking,
+    unlock,
+    refetch: fetchListing,
+  }
+}
+
+// Helper functions for data normalization
+
+function parseCargoTypes(cargoTypes: unknown): string[] {
+  if (!cargoTypes) return []
+  if (Array.isArray(cargoTypes)) return cargoTypes
+  if (typeof cargoTypes === 'string') {
+    try {
+      return JSON.parse(cargoTypes)
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function normalizeSafetyRating(rating: string | undefined): SafetyRating {
+  if (!rating) return 'not-rated'
+  const normalized = rating.toLowerCase()
+  if (normalized === 'satisfactory') return 'satisfactory'
+  if (normalized === 'conditional') return 'conditional'
+  if (normalized === 'unsatisfactory') return 'unsatisfactory'
+  return 'not-rated'
+}
+
+function normalizeAmazonStatus(status: string | undefined): AmazonStatus {
+  if (!status) return 'none'
+  const normalized = status.toLowerCase()
+  if (normalized === 'active') return 'active'
+  if (normalized === 'pending') return 'pending'
+  if (normalized === 'suspended') return 'suspended'
+  return 'none'
+}
+
+function normalizeListingStatus(status: string | undefined): ListingStatus {
+  if (!status) return 'active'
+  const normalized = status.toLowerCase().replace('_', '-')
+  if (normalized === 'active') return 'active'
+  if (normalized === 'pending-verification') return 'pending-verification'
+  if (normalized === 'sold') return 'sold'
+  if (normalized === 'reserved') return 'reserved'
+  if (normalized === 'suspended') return 'suspended'
+  return 'active'
+}
+
+function normalizeVisibility(visibility: string | undefined): ListingVisibility {
+  if (!visibility) return 'public'
+  const normalized = visibility.toLowerCase()
+  if (normalized === 'public') return 'public'
+  if (normalized === 'private') return 'private'
+  if (normalized === 'unlisted') return 'unlisted'
+  return 'public'
+}
+
+export default useListing

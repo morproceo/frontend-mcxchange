@@ -46,6 +46,7 @@ type TransactionStep =
   | 'in-review'
   | 'approved'
   | 'awaiting-final'
+  | 'payment-received'
   | 'completed'
   | 'cancelled'
   | 'disputed'
@@ -133,6 +134,7 @@ const AdminActiveClosingsPage = () => {
   const [transactions, setTransactions] = useState<TransactionData[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null)
 
   const steps = [
     { id: 'terms-agreement', label: 'Terms', short: '1' },
@@ -141,7 +143,8 @@ const AdminActiveClosingsPage = () => {
     { id: 'in-review', label: 'Review', short: '4' },
     { id: 'approved', label: 'Approved', short: '5' },
     { id: 'awaiting-final', label: 'Final', short: '6' },
-    { id: 'completed', label: 'Complete', short: '7' }
+    { id: 'payment-received', label: 'Verify', short: '7' },
+    { id: 'completed', label: 'Complete', short: '8' }
   ]
 
   // Map backend status to frontend step
@@ -153,11 +156,28 @@ const AdminActiveClosingsPage = () => {
       'IN_REVIEW': 'in-review',
       'APPROVED': 'approved',
       'AWAITING_FINAL_PAYMENT': 'awaiting-final',
+      'PAYMENT_RECEIVED': 'payment-received',
       'COMPLETED': 'completed',
       'CANCELLED': 'cancelled',
       'DISPUTED': 'disputed'
     }
     return statusMap[status] || 'terms-agreement'
+  }
+
+  // Verify final payment
+  const handleVerifyFinalPayment = async (transactionId: string, paymentId: string) => {
+    setVerifyingPayment(transactionId)
+    try {
+      await api.adminVerifyFinalPayment(transactionId, paymentId)
+      toast.success('Final payment verified! Transaction completed.')
+      fetchTransactions(false)
+      setShowRoundTable(false)
+    } catch (err: any) {
+      console.error('Error verifying payment:', err)
+      toast.error(err.message || 'Failed to verify payment')
+    } finally {
+      setVerifyingPayment(null)
+    }
   }
 
   const fetchTransactions = async (showToast = false) => {
@@ -226,6 +246,14 @@ const AdminActiveClosingsPage = () => {
         </span>
       )
     }
+    if (status === 'PAYMENT_RECEIVED') {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
+          <CircleDollarSign className="w-3 h-3" />
+          Verify Payment
+        </span>
+      )
+    }
     if (step === 'completed') {
       return (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 flex items-center gap-1">
@@ -260,7 +288,7 @@ const AdminActiveClosingsPage = () => {
   ).length
 
   const needsReviewCount = transactions.filter(t =>
-    ['DEPOSIT_RECEIVED', 'IN_REVIEW'].includes(t.status)
+    ['DEPOSIT_RECEIVED', 'IN_REVIEW', 'PAYMENT_RECEIVED'].includes(t.status)
   ).length
 
   const depositsPaidCount = transactions.filter(t =>
@@ -469,7 +497,7 @@ const AdminActiveClosingsPage = () => {
                   {/* Price */}
                   <div className="text-right">
                     <p className="text-lg font-bold text-gray-900">${txn.agreedPrice.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">Fee: ${txn.platformFee.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Asking: ${(txn.listing?.price || txn.agreedPrice).toLocaleString()} | Margin: ${(txn.agreedPrice - (txn.listing?.price || txn.agreedPrice)).toLocaleString()}</p>
                   </div>
 
                   {/* Actions */}
@@ -856,25 +884,40 @@ const AdminActiveClosingsPage = () => {
                     <DollarSign className="w-5 h-5 text-indigo-600" />
                     Financial Summary
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
-                      <p className="text-sm text-gray-500">Sale Price</p>
-                      <p className="text-2xl font-bold text-gray-900">${selectedTransaction.agreedPrice.toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">Seller's Asking Price</p>
+                      <p className="text-2xl font-bold text-gray-700">${(selectedTransaction.listing?.price || selectedTransaction.agreedPrice).toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">What seller receives</p>
                     </div>
+                    <div className="p-4 bg-green-50 rounded-xl text-center border border-green-200">
+                      <p className="text-sm text-green-600">Listing Price (Buyer Pays)</p>
+                      <p className="text-2xl font-bold text-green-700">${selectedTransaction.agreedPrice.toLocaleString()}</p>
+                      <p className="text-xs text-green-500">Total transaction value</p>
+                    </div>
+                    <div className="p-4 bg-amber-50 rounded-xl text-center border border-amber-200">
+                      <p className="text-sm text-amber-600">Broker Margin</p>
+                      <p className="text-2xl font-bold text-amber-700">${(selectedTransaction.agreedPrice - (selectedTransaction.listing?.price || selectedTransaction.agreedPrice)).toLocaleString()}</p>
+                      <p className="text-xs text-amber-500">MC Exchange earnings</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Deposit</p>
                       <p className="text-2xl font-bold text-green-600">${(selectedTransaction.depositAmount || 1000).toLocaleString()}</p>
                       <p className="text-xs text-gray-400">{selectedTransaction.depositPaidAt ? 'Paid' : 'Pending'}</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
-                      <p className="text-sm text-gray-500">Platform Fee (5%)</p>
-                      <p className="text-2xl font-bold text-indigo-600">${selectedTransaction.platformFee.toLocaleString()}</p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Remaining Balance</p>
                       <p className="text-2xl font-bold text-gray-900">
                         ${(selectedTransaction.agreedPrice - (selectedTransaction.depositAmount || 1000)).toLocaleString()}
                       </p>
+                      <p className="text-xs text-gray-400">Due from buyer</p>
+                    </div>
+                    <div className="p-4 bg-indigo-50 rounded-xl text-center border border-indigo-200">
+                      <p className="text-sm text-indigo-600">Platform Fee (5%)</p>
+                      <p className="text-2xl font-bold text-indigo-600">${selectedTransaction.platformFee.toLocaleString()}</p>
+                      <p className="text-xs text-indigo-400">Processing fee</p>
                     </div>
                   </div>
                 </div>
@@ -913,6 +956,105 @@ const AdminActiveClosingsPage = () => {
                     })}
                   </div>
                 </div>
+
+                {/* Final Payment Verification (when status is PAYMENT_RECEIVED) */}
+                {selectedTransaction.status === 'PAYMENT_RECEIVED' && (
+                  <div className="mb-8 p-5 bg-purple-50 rounded-xl border-2 border-purple-300">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CircleDollarSign className="w-5 h-5 text-purple-600" />
+                      Final Payment Verification Required
+                    </h3>
+
+                    <div className="bg-white rounded-lg p-4 mb-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Payment Details</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Amount</p>
+                          <p className="text-xl font-bold text-gray-900">
+                            ${(selectedTransaction.agreedPrice - (selectedTransaction.depositAmount || 1000)).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Payment Method</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {selectedTransaction.finalPaymentMethod || 'Pending'}
+                          </p>
+                        </div>
+                        {selectedTransaction.finalPaymentRef && (
+                          <div className="col-span-2">
+                            <p className="text-sm text-gray-500">Reference Number</p>
+                            <p className="text-lg font-mono text-gray-900">
+                              {selectedTransaction.finalPaymentRef}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Payments List */}
+                    {selectedTransaction.payments && selectedTransaction.payments.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 mb-4">
+                        <h4 className="font-medium text-gray-900 mb-3">Submitted Payments</h4>
+                        <div className="space-y-3">
+                          {selectedTransaction.payments
+                            .filter(p => p.type === 'FINAL_PAYMENT')
+                            .map(payment => (
+                              <div
+                                key={payment.id}
+                                className={`p-3 border rounded-lg ${
+                                  payment.status === 'PENDING'
+                                    ? 'border-amber-300 bg-amber-50'
+                                    : payment.status === 'COMPLETED'
+                                    ? 'border-green-300 bg-green-50'
+                                    : 'border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-gray-900">
+                                      ${payment.amount.toLocaleString()} via {payment.method}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      Submitted: {new Date(payment.createdAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {payment.status === 'PENDING' ? (
+                                      <Button
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700"
+                                        loading={verifyingPayment === selectedTransaction.id}
+                                        onClick={() => handleVerifyFinalPayment(selectedTransaction.id, payment.id)}
+                                      >
+                                        <Check className="w-4 h-4 mr-1" />
+                                        Verify & Complete
+                                      </Button>
+                                    ) : payment.verifiedAt ? (
+                                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Verified {new Date(payment.verifiedAt).toLocaleDateString()}
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                                        {payment.status}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-amber-100 border border-amber-200 rounded-lg p-3">
+                      <p className="text-sm text-amber-800">
+                        <strong>Important:</strong> Verify that the payment has been received in your account before clicking "Verify & Complete".
+                        This action will complete the transaction and release all documents to the buyer.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Admin Actions */}
                 <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">

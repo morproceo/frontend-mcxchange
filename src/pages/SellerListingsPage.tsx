@@ -250,6 +250,7 @@ const SellerListingsPage = () => {
                   </div>
 
                   <div className="text-right ml-4">
+                    <div className="text-xs text-gray-500 mb-1">Your Asking Price</div>
                     <div className="text-2xl font-bold text-primary-600 mb-2">
                       ${(listing.price || 0).toLocaleString()}
                     </div>

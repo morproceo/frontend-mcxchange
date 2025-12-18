@@ -773,6 +773,176 @@ class ApiService {
     });
   }
 
+  // Record final payment (buyer submits payment with proof)
+  async recordFinalPayment(
+    transactionId: string,
+    paymentMethod: 'ZELLE' | 'WIRE',
+    reference?: string
+  ) {
+    return this.request<{
+      success: boolean;
+      data: {
+        id: string;
+        type: string;
+        amount: number;
+        method: string;
+        status: string;
+      };
+      message: string;
+    }>(`/transactions/${transactionId}/final-payment`, {
+      method: 'POST',
+      body: JSON.stringify({ paymentMethod, reference }),
+    });
+  }
+
+  // Get buyer's Stripe payment history
+  async getBuyerStripeHistory() {
+    return this.request<{
+      success: boolean;
+      data: {
+        charges: Array<{
+          id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          description: string | null;
+          receiptUrl: string | null;
+          created: string;
+          paymentMethod: { brand: string; last4: string } | null;
+          metadata: Record<string, string>;
+        }>;
+        paymentIntents: Array<{
+          id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          description: string | null;
+          created: string;
+          metadata: Record<string, string>;
+        }>;
+        checkoutSessions: Array<{
+          id: string;
+          amountTotal: number;
+          currency: string | null;
+          status: string | null;
+          paymentStatus: string;
+          mode: string;
+          created: string;
+          metadata: Record<string, string> | null;
+        }>;
+        subscriptions: Array<{
+          id: string;
+          status: string;
+          plan: string;
+          currentPeriodStart: string;
+          currentPeriodEnd: string;
+          created: string;
+          cancelAtPeriodEnd: boolean;
+        }>;
+        stripeCustomerId: string;
+      };
+    }>('/buyer/stripe-history');
+  }
+
+  // Get seller earnings (completed transactions)
+  async getSellerEarnings(params?: { page?: number; limit?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        listing: { mcNumber: string; title: string } | null;
+        buyer: { name: string } | null;
+        agreedPrice: number;
+        platformFee: number;
+        netEarnings: number;
+        completedAt: string;
+      }>;
+      totals: {
+        gross: number;
+        fees: number;
+        net: number;
+      };
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/seller/earnings${query ? `?${query}` : ''}`);
+  }
+
+  // Get seller's Stripe payment history
+  async getSellerStripeHistory() {
+    return this.request<{
+      success: boolean;
+      data: {
+        charges: Array<{
+          id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          description: string | null;
+          receiptUrl: string | null;
+          created: string;
+          paymentMethod: { brand: string; last4: string } | null;
+          metadata: Record<string, string>;
+        }>;
+        checkoutSessions: Array<{
+          id: string;
+          amountTotal: number;
+          currency: string | null;
+          status: string | null;
+          paymentStatus: string;
+          mode: string;
+          created: string;
+          metadata: Record<string, string> | null;
+          type: string;
+          mcNumber: string | null;
+        }>;
+        stripeCustomerId: string;
+      };
+    }>('/seller/stripe-history');
+  }
+
+  // Upload proof of payment for final payment
+  async uploadPaymentProof(transactionId: string, formData: FormData) {
+    const url = `${API_BASE_URL}/documents`;
+
+    // Add transactionId to formData
+    formData.append('transactionId', transactionId);
+    formData.append('type', 'PAYMENT_PROOF');
+
+    const currentToken = this.token || localStorage.getItem('mcx_token');
+    const headers: HeadersInit = {};
+
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Failed to upload payment proof');
+    }
+
+    return data as {
+      success: boolean;
+      data: any;
+      message: string;
+    };
+  }
+
   // Upload a document (handles FormData for file upload)
   // This uses the existing /documents endpoint
   async uploadTransactionDocument(transactionId: string, formData: FormData) {

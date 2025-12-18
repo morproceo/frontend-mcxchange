@@ -23,10 +23,12 @@ import {
   Crown,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Unlock,
   Handshake,
   Send,
-  Scale
+  Scale,
+  LucideIcon
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import TrustBadge from '../components/ui/TrustBadge'
@@ -38,20 +40,47 @@ interface DashboardLayoutProps {
   children?: React.ReactNode
 }
 
+interface MenuItem {
+  icon: LucideIcon
+  label: string
+  path: string
+}
+
+interface MenuCategory {
+  label: string
+  icon: LucideIcon
+  items: MenuItem[]
+}
+
+type MenuStructure = MenuItem[] | MenuCategory[]
+
 const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Sales Pipeline', 'Moderation']))
 
   const handleLogout = () => {
     logout()
     navigate('/')
   }
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(category)) {
+        newSet.delete(category)
+      } else {
+        newSet.add(category)
+      }
+      return newSet
+    })
+  }
+
   // Define menu items based on user role
-  const getMenuItems = () => {
+  const getMenuItems = (): MenuStructure => {
     switch (user?.role) {
       case 'seller':
         return [
@@ -74,21 +103,57 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
         ]
       case 'admin':
         return [
+          // Dashboard is standalone
           { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-          { icon: MessageSquare, label: 'MC Inquiries', path: '/admin/messages' },
-          { icon: Send, label: 'Offers', path: '/admin/offers' },
-          { icon: Scale, label: 'Active Closings', path: '/admin/active-closings' },
-          { icon: Handshake, label: 'Transactions', path: '/admin/transactions' },
-          { icon: Crown, label: 'Premium Requests', path: '/admin/premium-requests' },
-          { icon: Search, label: 'AI Due Diligence', path: '/admin/ai-due-diligence' },
-          { icon: Receipt, label: 'Invoice Generator', path: '/admin/invoices' },
-          { icon: CreditCard, label: 'Payment Tracking', path: '/admin/payments' },
-          { icon: AlertTriangle, label: 'Pending Review', path: '/admin/pending' },
-          { icon: Shield, label: 'Reported Items', path: '/admin/reported' },
-          { icon: Users, label: 'User Management', path: '/admin/users' },
-          { icon: Package, label: 'All Listings', path: '/admin/listings' },
-          { icon: FileText, label: 'Reports', path: '/admin/reports' },
-          { icon: Settings, label: 'Settings & Finance', path: '/admin/settings' },
+          // Sales Pipeline category
+          {
+            label: 'Sales Pipeline',
+            icon: Handshake,
+            items: [
+              { icon: MessageSquare, label: 'Inquiries', path: '/admin/messages' },
+              { icon: Send, label: 'Offers', path: '/admin/offers' },
+              { icon: Scale, label: 'Active Closings', path: '/admin/active-closings' },
+              { icon: Handshake, label: 'Transactions', path: '/admin/transactions' },
+            ]
+          },
+          // Finance category
+          {
+            label: 'Finance',
+            icon: DollarSign,
+            items: [
+              { icon: CreditCard, label: 'Payments', path: '/admin/payments' },
+              { icon: Receipt, label: 'Invoices', path: '/admin/invoices' },
+            ]
+          },
+          // Moderation category
+          {
+            label: 'Moderation',
+            icon: Shield,
+            items: [
+              { icon: AlertTriangle, label: 'Pending Review', path: '/admin/pending' },
+              { icon: Shield, label: 'Reported Items', path: '/admin/reported' },
+              { icon: Crown, label: 'Premium Requests', path: '/admin/premium-requests' },
+            ]
+          },
+          // Tools category
+          {
+            label: 'Tools',
+            icon: Search,
+            items: [
+              { icon: Search, label: 'AI Due Diligence', path: '/admin/ai-due-diligence' },
+            ]
+          },
+          // Management category
+          {
+            label: 'Management',
+            icon: Users,
+            items: [
+              { icon: Users, label: 'Users', path: '/admin/users' },
+              { icon: Package, label: 'Listings', path: '/admin/listings' },
+              { icon: FileText, label: 'Reports', path: '/admin/reports' },
+              { icon: Settings, label: 'Settings', path: '/admin/settings' },
+            ]
+          },
         ]
       default:
         return []
@@ -99,6 +164,127 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
 
   const isActivePath = (path: string) => {
     return location.pathname === path
+  }
+
+  // Check if any item in a category is active
+  const isCategoryActive = (category: MenuCategory) => {
+    return category.items.some(item => isActivePath(item.path))
+  }
+
+  // Check if item is a category (has items array)
+  const isCategory = (item: MenuItem | MenuCategory): item is MenuCategory => {
+    return 'items' in item
+  }
+
+  // Render a single menu item
+  const renderMenuItem = (item: MenuItem, indented: boolean = false) => {
+    const isActive = isActivePath(item.path)
+    const Icon = item.icon
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={clsx(
+          'flex items-center space-x-3 px-3 py-2 rounded-xl transition-all duration-200',
+          indented && !isCollapsed && 'ml-4',
+          isActive
+            ? 'bg-black text-white'
+            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+        )}
+      >
+        <Icon className={clsx('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-gray-500')} />
+        {!isCollapsed && (
+          <span className={clsx('font-medium text-inherit', indented ? 'text-sm' : '')}>{item.label}</span>
+        )}
+      </Link>
+    )
+  }
+
+  // Render a category with collapsible items
+  const renderCategory = (category: MenuCategory) => {
+    const isExpanded = expandedCategories.has(category.label)
+    const hasActiveItem = isCategoryActive(category)
+    const Icon = category.icon
+
+    return (
+      <div key={category.label} className="space-y-1">
+        <button
+          onClick={() => toggleCategory(category.label)}
+          className={clsx(
+            'w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200',
+            hasActiveItem
+              ? 'bg-gray-100 text-gray-900'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          )}
+        >
+          <div className="flex items-center space-x-3">
+            <Icon className={clsx('h-4 w-4 flex-shrink-0', hasActiveItem ? 'text-gray-900' : 'text-gray-500')} />
+            {!isCollapsed && (
+              <span className="font-medium text-sm">{category.label}</span>
+            )}
+          </div>
+          {!isCollapsed && (
+            <ChevronDown
+              className={clsx(
+                'h-4 w-4 text-gray-400 transition-transform duration-200',
+                isExpanded && 'rotate-180'
+              )}
+            />
+          )}
+        </button>
+
+        <AnimatePresence initial={false}>
+          {isExpanded && !isCollapsed && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-0.5 pt-1">
+                {category.items.map(item => renderMenuItem(item, true))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Show tooltip-like dropdown when collapsed */}
+        {isCollapsed && (
+          <div className="relative group">
+            <div className="absolute left-full top-0 ml-2 hidden group-hover:block z-50">
+              <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 min-w-[160px]">
+                <div className="text-xs font-semibold text-gray-500 px-3 py-1 mb-1">
+                  {category.label}
+                </div>
+                {category.items.map(item => {
+                  const isActive = isActivePath(item.path)
+                  const ItemIcon = item.icon
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={clsx(
+                        'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                        isActive
+                          ? 'bg-black text-white'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      )}
+                    >
+                      <ItemIcon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -119,14 +305,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
       {/* Sidebar */}
       <aside
         className={clsx(
-          'fixed left-0 top-0 h-screen bg-white border-r border-gray-100 transition-all duration-300 z-50',
-          'hidden lg:block',
+          'fixed left-0 top-0 h-screen bg-white border-r border-gray-100 transition-all duration-300 z-50 flex flex-col',
+          'hidden lg:flex',
           isCollapsed ? 'lg:w-20' : 'lg:w-64',
-          sidebarOpen && '!block w-64'
+          sidebarOpen && '!flex w-64'
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
           <Link to="/" className="flex items-center text-gray-900">
             {isCollapsed ? (
               <DomileaIcon size={32} />
@@ -156,7 +342,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
 
         {/* User Profile Card */}
         {!isCollapsed && (
-          <div className="px-4 py-4">
+          <div className="px-4 py-4 flex-shrink-0">
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -179,35 +365,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           </div>
         )}
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        {/* Navigation - scrollable */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
-            const isActive = isActivePath(item.path)
-            const Icon = item.icon
-
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={clsx(
-                  'flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200',
-                  isActive
-                    ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                )}
-              >
-                <Icon className={clsx('h-5 w-5 flex-shrink-0', isActive ? 'text-white' : 'text-gray-600')} />
-                {!isCollapsed && (
-                  <span className="font-medium text-inherit">{item.label}</span>
-                )}
-              </Link>
-            )
+            if (isCategory(item)) {
+              return renderCategory(item)
+            } else {
+              return renderMenuItem(item)
+            }
           })}
         </nav>
 
         {/* Bottom section */}
-        <div className="px-3 py-4 border-t border-gray-100 space-y-1">
+        <div className="px-3 py-4 border-t border-gray-100 space-y-1 flex-shrink-0">
           <Link
             to="/profile"
             onClick={() => setSidebarOpen(false)}

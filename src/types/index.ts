@@ -111,6 +111,18 @@ export type TrustLevel = 'high' | 'medium' | 'low'
 export type AmazonStatus = 'active' | 'pending' | 'suspended' | 'none'
 export type AmazonRelayScore = 'A' | 'B' | 'C' | 'D' | 'F' | null
 
+// Safety Rating enum for type safety
+export type SafetyRating = 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated'
+
+// Listing status enum
+export type ListingStatus = 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended'
+
+// Listing visibility enum
+export type ListingVisibility = 'public' | 'private' | 'unlisted'
+
+// Insurance status enum
+export type InsuranceStatus = 'active' | 'expired' | 'pending'
+
 export interface MCListing {
   id: string
   mcNumber: string
@@ -130,8 +142,8 @@ export interface MCListing {
   yearsActive: number
   operationType: string[]
   fleetSize: number
-  safetyRating: 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated'
-  insuranceStatus: 'active' | 'expired' | 'pending'
+  safetyRating: SafetyRating
+  insuranceStatus: InsuranceStatus
 
   // Location
   state: string
@@ -152,8 +164,8 @@ export interface MCListing {
   documents: Document[]
 
   // Status
-  status: 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended'
-  visibility: 'public' | 'private' | 'unlisted'
+  status: ListingStatus
+  visibility: ListingVisibility
 
   // Metadata
   views: number
@@ -161,6 +173,35 @@ export interface MCListing {
   createdAt: Date
   updatedAt: Date
   soldAt?: Date
+}
+
+// Extended listing details from backend (includes FMCSA data)
+export interface MCListingExtended extends MCListing {
+  // FMCSA / DOT data
+  dotNumber: string
+  legalName: string
+  dbaName: string
+  city: string
+  address: string
+  totalDrivers: number
+
+  // Insurance details
+  bipdCoverage?: number
+  cargoCoverage?: number
+  bondAmount?: number
+  insuranceOnFile: boolean
+
+  // Contact info
+  contactEmail: string
+  contactPhone: string
+
+  // Safety
+  saferScore: string
+
+  // Unlock/ownership status (set by backend based on authenticated user)
+  isUnlocked: boolean
+  isSaved: boolean
+  isOwner: boolean
 }
 
 export interface Document {

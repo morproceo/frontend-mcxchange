@@ -62,21 +62,21 @@ const ProfilePage = () => {
   ]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-1">My Profile</h2>
-          <p className="text-white/60">Manage your account and reputation</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">My Profile</h2>
+          <p className="text-gray-500">Manage your account and reputation</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Profile */}
           <div className="lg:col-span-2 space-y-6">
             {/* Profile Info */}
-            <GlassCard>
+            <GlassCard hover={false}>
               <div className="flex items-start justify-between mb-6">
-                <h2 className="text-2xl font-bold">Profile Information</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Profile Information</h2>
                 {!isEditing ? (
                   <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>
                     <Edit2 className="w-4 h-4 mr-2" />
@@ -106,8 +106,8 @@ const ProfilePage = () => {
               </div>
 
               <div className="flex items-center gap-6 mb-6">
-                <div className="w-24 h-24 rounded-full bg-primary-500/20 flex items-center justify-center">
-                  <span className="text-4xl font-bold text-primary-400">
+                <div className="w-24 h-24 rounded-full bg-secondary-100 flex items-center justify-center">
+                  <span className="text-4xl font-bold text-secondary-600">
                     {user?.name.charAt(0)}
                   </span>
                 </div>
@@ -133,13 +133,13 @@ const ProfilePage = () => {
                     </div>
                   ) : (
                     <>
-                      <h3 className="text-2xl font-bold mb-1">{user?.name}</h3>
-                      <p className="text-white/60 mb-3">{user?.email}</p>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">{user?.name}</h3>
+                      <p className="text-gray-500 mb-3">{user?.email}</p>
                       <div className="flex items-center gap-3">
-                        <span className="glass-subtle px-3 py-1 rounded-full text-sm capitalize">
+                        <span className="bg-gray-100 border border-gray-200 px-3 py-1 rounded-full text-sm capitalize text-gray-700">
                           {user?.role}
                         </span>
-                        <span className="text-sm text-white/60">
+                        <span className="text-sm text-gray-500">
                           Member since {user?.memberSince.getFullYear()}
                         </span>
                       </div>
@@ -148,7 +148,7 @@ const ProfilePage = () => {
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-white/10">
+              <div className="pt-6 border-t border-gray-200">
                 <TrustBadge
                   score={user?.trustScore || 0}
                   level={getTrustLevel(user?.trustScore || 0)}
@@ -159,12 +159,12 @@ const ProfilePage = () => {
             </GlassCard>
 
             {/* Reviews */}
-            <GlassCard>
-              <h2 className="text-2xl font-bold mb-6">Reviews & Ratings</h2>
+            <GlassCard hover={false}>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews & Ratings</h2>
 
               <div className="mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl font-bold">4.8</div>
+                  <div className="text-5xl font-bold text-gray-900">4.8</div>
                   <div>
                     <div className="flex items-center gap-1 mb-1">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -173,12 +173,12 @@ const ProfilePage = () => {
                           className={`w-5 h-5 ${
                             star <= 4
                               ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-white/20'
+                              : 'text-gray-300'
                           }`}
                         />
                       ))}
                     </div>
-                    <p className="text-sm text-white/60">Based on {mockReviews.length} reviews</p>
+                    <p className="text-sm text-gray-500">Based on {mockReviews.length} reviews</p>
                   </div>
                 </div>
               </div>
@@ -189,12 +189,12 @@ const ProfilePage = () => {
                     key={review.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="glass-subtle rounded-lg p-4"
+                    className="bg-gray-50 border border-gray-100 rounded-lg p-4"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <div className="font-semibold">{review.from}</div>
-                        <div className="text-xs text-white/60">{review.dealType}</div>
+                        <div className="font-semibold text-gray-900">{review.from}</div>
+                        <div className="text-xs text-gray-500">{review.dealType}</div>
                       </div>
                       <div className="flex items-center gap-1">
                         {Array.from({ length: review.rating }).map((_, i) => (
@@ -205,8 +205,8 @@ const ProfilePage = () => {
                         ))}
                       </div>
                     </div>
-                    <p className="text-white/80 text-sm mb-2">{review.comment}</p>
-                    <p className="text-xs text-white/60">
+                    <p className="text-gray-600 text-sm mb-2">{review.comment}</p>
+                    <p className="text-xs text-gray-400">
                       {formatDistanceToNow(review.date, { addSuffix: true })}
                     </p>
                   </motion.div>
@@ -218,47 +218,47 @@ const ProfilePage = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Stats */}
-            <GlassCard>
-              <h3 className="text-lg font-bold mb-4">Statistics</h3>
+            <GlassCard hover={false}>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Statistics</h3>
 
               <div className="space-y-4">
-                <div className="glass-subtle rounded-lg p-3">
-                  <div className="text-2xl font-bold text-primary-400">
+                <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-secondary-600">
                     {user?.completedDeals}
                   </div>
-                  <div className="text-sm text-white/60">Completed Deals</div>
+                  <div className="text-sm text-gray-500">Completed Deals</div>
                 </div>
 
-                <div className="glass-subtle rounded-lg p-3">
-                  <div className="text-2xl font-bold text-trust-high">
+                <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-emerald-600">
                     {mockReviews.length}
                   </div>
-                  <div className="text-sm text-white/60">Total Reviews</div>
+                  <div className="text-sm text-gray-500">Total Reviews</div>
                 </div>
 
-                <div className="glass-subtle rounded-lg p-3">
-                  <div className="text-2xl font-bold text-yellow-400">100%</div>
-                  <div className="text-sm text-white/60">Response Rate</div>
+                <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-amber-500">100%</div>
+                  <div className="text-sm text-gray-500">Response Rate</div>
                 </div>
 
-                <div className="glass-subtle rounded-lg p-3">
-                  <div className="text-2xl font-bold text-purple-400">~2h</div>
-                  <div className="text-sm text-white/60">Avg Response Time</div>
+                <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-purple-600">~2h</div>
+                  <div className="text-sm text-gray-500">Avg Response Time</div>
                 </div>
               </div>
             </GlassCard>
 
             {/* Recent Activity */}
-            <GlassCard>
-              <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
+            <GlassCard hover={false}>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
 
               <div className="space-y-3">
                 {activityLog.map((activity, index) => (
                   <div key={index} className="flex gap-3 text-sm">
-                    <div className="w-2 h-2 rounded-full bg-primary-400 mt-1.5 flex-shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-secondary-500 mt-1.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-white/80">{activity.message}</p>
-                      <p className="text-xs text-white/60">{activity.date}</p>
+                      <p className="text-gray-700">{activity.message}</p>
+                      <p className="text-xs text-gray-400">{activity.date}</p>
                     </div>
                   </div>
                 ))}

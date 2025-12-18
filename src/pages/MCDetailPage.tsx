@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -39,88 +39,17 @@ import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
 import Input from '../components/ui/Input'
-import { api } from '../services/api'
 import { formatDistanceToNow } from 'date-fns'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
-import { MCListing, AmazonStatus } from '../types'
+import { useListing } from '../hooks/useListing'
 
 const MCDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuth()
 
-  const [listing, setListing] = useState<MCListing | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isUnlocked, setIsUnlocked] = useState(false)
-  const [unlocking, setUnlocking] = useState(false)
-
-  // Fetch listing from API and check unlock status
-  useEffect(() => {
-    const fetchListing = async () => {
-      if (!id) return
-      try {
-        setLoading(true)
-        setError(null)
-        const response = await api.getListing(id)
-        const data = response.listing || response
-
-        // Transform backend data to frontend format
-        const transformedListing: MCListing = {
-          id: data.id,
-          mcNumber: data.mcNumber,
-          sellerId: data.sellerId,
-          seller: data.seller || { id: data.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
-          title: data.title,
-          description: data.description || '',
-          price: parseFloat(data.price) || 0,
-          trustScore: data.seller?.trustScore || 50,
-          trustLevel: (data.seller?.trustScore || 50) >= 80 ? 'high' : (data.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
-          verified: data.seller?.verified || false,
-          verificationBadges: [],
-          yearsActive: data.yearsActive || 0,
-          operationType: data.cargoTypes ? (typeof data.cargoTypes === 'string' ? JSON.parse(data.cargoTypes) : data.cargoTypes) : [],
-          fleetSize: data.fleetSize || 0,
-          safetyRating: (data.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
-          insuranceStatus: data.insuranceOnFile ? 'active' : 'pending',
-          state: data.state,
-          amazonStatus: (data.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
-          amazonRelayScore: data.amazonRelayScore,
-          highwaySetup: data.highwaySetup || false,
-          sellingWithEmail: data.sellingWithEmail || false,
-          sellingWithPhone: data.sellingWithPhone || false,
-          isPremium: data.isPremium || false,
-          documents: [],
-          status: (data.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
-          visibility: (data.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
-          views: data.views || 0,
-          saves: data.saves || 0,
-          createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-          updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
-        }
-
-        setListing(transformedListing)
-
-        // Check if listing is already unlocked by this user
-        if (isAuthenticated && user?.role === 'buyer') {
-          try {
-            const unlocked = await api.checkListingUnlocked(id)
-            setIsUnlocked(unlocked)
-          } catch (err) {
-            console.error('Failed to check unlock status:', err)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch listing:', err)
-        setError('Failed to load listing details')
-        setListing(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchListing()
-  }, [id, isAuthenticated, user?.role])
+  // Use custom hook for listing data management
+  const { listing, loading, error, isUnlocked, unlocking, unlock } = useListing(id)
 
   // Get user's available credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
@@ -132,118 +61,97 @@ const MCDetailPage = () => {
   const [contactPhone, setContactPhone] = useState('')
   const [messageSent, setMessageSent] = useState(false)
 
-  // Check if listing is premium (mock - in real app would come from listing data)
-  const isPremiumListing = listing?.price && listing.price > 50000 // Mock: listings over $50k are premium
+  // Check if listing is premium from actual listing data
+  const isPremiumListing = listing?.isPremium ?? false
 
-  // Extended listing data matching CreateListingPage fields
+  // Build listing details from the MCListingExtended data
+  // Using nullish coalescing for cleaner default values
   const listingDetails = {
     // Basic Info
-    mcNumber: listing?.mcNumber || '123456',
-    dotNumber: '1234567',
-    state: 'TX',
+    mcNumber: listing?.mcNumber ?? '',
+    dotNumber: listing?.dotNumber ?? '',
+    state: listing?.state ?? '',
+    city: listing?.city ?? '',
 
     // FMCSA Data
-    legalName: 'Transport Pro Logistics LLC',
-    dbaName: 'TransportPro',
-    physicalAddress: '1234 Trucking Way, Dallas, TX 75201',
-    phone: '(555) 123-4567',
-    powerUnits: '15',
-    drivers: '18',
-    operatingStatus: 'AUTHORIZED',
-    entityType: 'CARRIER',
-    cargoCarried: ['General Freight', 'Household Goods', 'Metal: sheets, coils, rolls'],
+    legalName: listing?.legalName ?? '',
+    dbaName: listing?.dbaName ?? '',
+    physicalAddress: listing?.address ?? '',
+    phone: listing?.contactPhone ?? '',
+    powerUnits: String(listing?.fleetSize ?? 0),
+    drivers: String(listing?.totalDrivers ?? 0),
+    operatingStatus: listing?.status === 'active' ? 'AUTHORIZED' : listing?.status?.toUpperCase() ?? 'UNKNOWN',
+    entityType: 'CARRIER' as const,
+    cargoCarried: listing?.operationType ?? [],
 
-    // Entry Audit
-    entryAuditCompleted: 'yes',
+    // Amazon & Highway - using booleans directly
+    amazonStatus: listing?.amazonStatus ?? 'none',
+    amazonRelayScore: listing?.amazonRelayScore ?? '',
+    highwaySetup: listing?.highwaySetup ?? false,
 
-    // Amazon & Highway
-    amazonStatus: 'active',
-    amazonRelayScore: 'A',
-    highwaySetup: 'yes',
-
-    // Selling with Email/Phone
-    sellingWithEmail: 'yes',
-    sellingWithPhone: 'yes',
-
-    // Factoring
-    hasFactoring: 'yes',
-    factoringCompany: 'RTS Financial',
-    factoringRate: '3.5',
+    // Selling with Email/Phone - using booleans directly
+    sellingWithEmail: listing?.sellingWithEmail ?? false,
+    sellingWithPhone: listing?.sellingWithPhone ?? false,
 
     // Safety Record (FMCSA)
     safetyRecord: {
-      saferScore: 'Satisfactory',
-      totalInspections: 47,
-      outOfServiceRate: 4.2,
-      totalCrashes: 0,
+      saferScore: listing?.saferScore || getSafetyRatingLabel(listing?.safetyRating),
+      totalInspections: 0, // Not available from API yet
+      outOfServiceRate: 0, // Not available from API yet
+      totalCrashes: 0, // Not available from API yet
       basicScores: {
-        unsafeDriving: 12,
-        hoursOfService: 8,
+        unsafeDriving: 0,
+        hoursOfService: 0,
         driverFitness: 0,
         controlledSubstances: 0,
-        vehicleMaintenance: 15,
+        vehicleMaintenance: 0,
         hazmat: 0,
-        crashIndicator: 5
+        crashIndicator: 0
       }
+    },
+
+    // Insurance info
+    insuranceOnFile: listing?.insuranceOnFile ?? false,
+    bipdCoverage: listing?.bipdCoverage,
+    cargoCoverage: listing?.cargoCoverage,
+    bondAmount: listing?.bondAmount,
+
+    // Compliance (not yet available from backend, will show defaults)
+    entryAuditCompleted: false,
+    hasFactoring: false,
+    factoringCompany: '',
+    factoringRate: 0,
+  }
+
+  // Helper function to convert safety rating enum to display label
+  function getSafetyRatingLabel(rating?: string): string {
+    switch (rating) {
+      case 'satisfactory': return 'Satisfactory'
+      case 'conditional': return 'Conditional'
+      case 'unsatisfactory': return 'Unsatisfactory'
+      default: return 'Not Rated'
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <div className="text-center py-12">
-            <Loader2 className="w-16 h-16 text-primary-500 mx-auto mb-4 animate-spin" />
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Loading Listing...</h2>
-          </div>
-        </Card>
-      </div>
-    )
-  }
-
-  if (error || !listing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">{error || 'Listing Not Found'}</h2>
-            <Button onClick={() => navigate('/marketplace')}>
-              Back to Marketplace
-            </Button>
-          </div>
-        </Card>
-      </div>
-    )
-  }
-
+  // Handler for unlocking listing with credit
   const handleUnlockWithCredit = async () => {
     if (!isAuthenticated) {
       navigate('/login')
       return
     }
     if (user?.role !== 'buyer') {
-      // Only buyers can unlock listings
       return
     }
     if (userCredits < 1) {
       navigate('/buyer/subscription')
       return
     }
-    if (!id) return
 
-    setUnlocking(true)
     try {
-      const response = await api.unlockListing(id)
-      if (response.success) {
-        setIsUnlocked(true)
-        // Note: User credits will be updated on next page load/login
-        // For immediate feedback, we could refresh user data here
-      }
+      await unlock()
     } catch (err: any) {
       console.error('Failed to unlock listing:', err)
       alert(err.message || 'Failed to unlock listing. Please try again.')
-    } finally {
-      setUnlocking(false)
     }
   }
 
@@ -534,17 +442,17 @@ const MCDetailPage = () => {
                 </div>
 
                 {/* Highway Setup */}
-                <div className={`rounded-xl p-4 border ${listingDetails.highwaySetup === 'yes' ? 'bg-trust-high/5 border-trust-high/20' : 'bg-white/5 border-white/10'}`}>
+                <div className={`rounded-xl p-4 border ${listingDetails.highwaySetup ? 'bg-trust-high/5 border-trust-high/20' : 'bg-white/5 border-white/10'}`}>
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">🛣️</span>
                     <div className="flex-1">
                       <span className="font-semibold text-lg">Highway</span>
-                      <div className={`text-sm ${listingDetails.highwaySetup === 'yes' ? 'text-trust-high' : 'text-gray-500'}`}>
-                        {listingDetails.highwaySetup === 'yes' ? '✅ Setup Complete' : '❌ Not Setup'}
+                      <div className={`text-sm ${listingDetails.highwaySetup ? 'text-trust-high' : 'text-gray-500'}`}>
+                        {listingDetails.highwaySetup ? '✅ Setup Complete' : '❌ Not Setup'}
                       </div>
                     </div>
                   </div>
-                  {listingDetails.highwaySetup === 'yes' && (
+                  {listingDetails.highwaySetup && (
                     <div className="bg-white/5 rounded-lg p-3">
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <CheckCircle className="w-4 h-4 text-trust-high" />
@@ -569,34 +477,34 @@ const MCDetailPage = () => {
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithEmail === 'yes' ? 'bg-trust-high/10 border-trust-high/30' : 'bg-white/5 border-white/10'}`}>
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${listingDetails.sellingWithEmail === 'yes' ? 'bg-trust-high/20' : 'bg-white/10'}`}>
-                    <Mail className={`w-6 h-6 ${listingDetails.sellingWithEmail === 'yes' ? 'text-trust-high' : 'text-white/40'}`} />
+                <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithEmail ? 'bg-trust-high/10 border-trust-high/30' : 'bg-white/5 border-white/10'}`}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${listingDetails.sellingWithEmail ? 'bg-trust-high/20' : 'bg-white/10'}`}>
+                    <Mail className={`w-6 h-6 ${listingDetails.sellingWithEmail ? 'text-trust-high' : 'text-white/40'}`} />
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold">Business Email</div>
                     <div className="text-sm text-gray-500">
-                      {listingDetails.sellingWithEmail === 'yes' ? 'Included with sale' : 'Not included'}
+                      {listingDetails.sellingWithEmail ? 'Included with sale' : 'Not included'}
                     </div>
                   </div>
-                  {listingDetails.sellingWithEmail === 'yes' ? (
+                  {listingDetails.sellingWithEmail ? (
                     <CheckCircle className="w-6 h-6 text-trust-high" />
                   ) : (
                     <XCircle className="w-6 h-6 text-white/30" />
                   )}
                 </div>
 
-                <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithPhone === 'yes' ? 'bg-trust-high/10 border-trust-high/30' : 'bg-white/5 border-white/10'}`}>
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${listingDetails.sellingWithPhone === 'yes' ? 'bg-trust-high/20' : 'bg-white/10'}`}>
-                    <Phone className={`w-6 h-6 ${listingDetails.sellingWithPhone === 'yes' ? 'text-trust-high' : 'text-white/40'}`} />
+                <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithPhone ? 'bg-trust-high/10 border-trust-high/30' : 'bg-white/5 border-white/10'}`}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${listingDetails.sellingWithPhone ? 'bg-trust-high/20' : 'bg-white/10'}`}>
+                    <Phone className={`w-6 h-6 ${listingDetails.sellingWithPhone ? 'text-trust-high' : 'text-white/40'}`} />
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold">Business Phone</div>
                     <div className="text-sm text-gray-500">
-                      {listingDetails.sellingWithPhone === 'yes' ? 'Included with sale' : 'Not included'}
+                      {listingDetails.sellingWithPhone ? 'Included with sale' : 'Not included'}
                     </div>
                   </div>
-                  {listingDetails.sellingWithPhone === 'yes' ? (
+                  {listingDetails.sellingWithPhone ? (
                     <CheckCircle className="w-6 h-6 text-trust-high" />
                   ) : (
                     <XCircle className="w-6 h-6 text-white/30" />
@@ -618,33 +526,33 @@ const MCDetailPage = () => {
 
               <div className="grid md:grid-cols-2 gap-4">
                 {/* Entry Audit */}
-                <div className={`rounded-xl p-4 border ${listingDetails.entryAuditCompleted === 'yes' ? 'bg-trust-high/10 border-trust-high/30' : 'bg-yellow-400/10 border-yellow-400/30'}`}>
+                <div className={`rounded-xl p-4 border ${listingDetails.entryAuditCompleted ? 'bg-trust-high/10 border-trust-high/30' : 'bg-yellow-400/10 border-yellow-400/30'}`}>
                   <div className="flex items-center gap-3">
-                    {listingDetails.entryAuditCompleted === 'yes' ? (
+                    {listingDetails.entryAuditCompleted ? (
                       <CheckCircle className="w-8 h-8 text-trust-high" />
                     ) : (
                       <ClipboardCheck className="w-8 h-8 text-yellow-400" />
                     )}
                     <div>
-                      <div className={`font-bold ${listingDetails.entryAuditCompleted === 'yes' ? 'text-trust-high' : 'text-yellow-400'}`}>
-                        Entry Audit {listingDetails.entryAuditCompleted === 'yes' ? 'Completed' : 'Pending'}
+                      <div className={`font-bold ${listingDetails.entryAuditCompleted ? 'text-trust-high' : 'text-yellow-400'}`}>
+                        Entry Audit {listingDetails.entryAuditCompleted ? 'Completed' : 'Pending'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {listingDetails.entryAuditCompleted === 'yes' ? 'Authority passed audit' : 'Audit not completed'}
+                        {listingDetails.entryAuditCompleted ? 'Authority passed audit' : 'Audit not completed'}
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Factoring */}
-                <div className={`rounded-xl p-4 border ${listingDetails.hasFactoring === 'yes' ? 'bg-cyan-400/10 border-cyan-400/30' : 'bg-white/5 border-white/10'}`}>
+                <div className={`rounded-xl p-4 border ${listingDetails.hasFactoring ? 'bg-cyan-400/10 border-cyan-400/30' : 'bg-white/5 border-white/10'}`}>
                   <div className="flex items-center gap-3 mb-2">
-                    <Percent className={`w-8 h-8 ${listingDetails.hasFactoring === 'yes' ? 'text-cyan-400' : 'text-white/40'}`} />
+                    <Percent className={`w-8 h-8 ${listingDetails.hasFactoring ? 'text-cyan-400' : 'text-white/40'}`} />
                     <div>
                       <div className="font-bold">
-                        {listingDetails.hasFactoring === 'yes' ? 'Active Factoring' : 'No Factoring'}
+                        {listingDetails.hasFactoring ? 'Active Factoring' : 'No Factoring'}
                       </div>
-                      {listingDetails.hasFactoring === 'yes' && (
+                      {listingDetails.hasFactoring && (
                         <div className="text-sm text-gray-500">
                           {listingDetails.factoringCompany} • {listingDetails.factoringRate}% rate
                         </div>
@@ -953,7 +861,7 @@ const MCDetailPage = () => {
                         <CheckCircle className="w-4 h-4 text-trust-high" />
                         Loss Run Report
                       </li>
-                      {listingDetails.hasFactoring === 'yes' && (
+                      {listingDetails.hasFactoring && (
                         <li className="flex items-center gap-2 text-white/80">
                           <CheckCircle className="w-4 h-4 text-trust-high" />
                           Factoring Letter of Release (LOR)

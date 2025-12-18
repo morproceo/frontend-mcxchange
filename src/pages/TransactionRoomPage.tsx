@@ -113,6 +113,13 @@ const TransactionRoomPage = () => {
   // Admin contract file state
   const [adminContractFile, setAdminContractFile] = useState<File | null>(null)
 
+  // Final payment flow state
+  const [finalPaymentMethod, setFinalPaymentMethod] = useState<'ZELLE' | 'WIRE'>('ZELLE')
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null)
+  const [paymentReference, setPaymentReference] = useState('')
+  const [paymentSubmitted, setPaymentSubmitted] = useState(false)
+  const [submittingFinalPayment, setSubmittingFinalPayment] = useState(false)
+
   // FMCSA verified data state
   const [fmcsaData, setFmcsaData] = useState<{
     dotNumber: string
@@ -1498,7 +1505,7 @@ For questions, contact us at escrow@domilea.com`
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
           <div>
             <p className="text-gray-400 text-sm">
-              {userRole === 'seller' ? 'Listing Price' : userRole === 'buyer' ? 'Your Price' : 'Transaction Value'}
+              {userRole === 'seller' ? 'Your Asking Price' : userRole === 'buyer' ? 'Your Price' : 'Transaction Value'}
             </p>
             <p className="text-2xl font-bold">
               ${userRole === 'seller' ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}
@@ -2267,8 +2274,8 @@ For questions, contact us at escrow@domilea.com`
                           <p className="text-gray-600 mb-2">
                             This agreement confirms the sale of MC Authority #{transaction.listing.mcNumber} from
                             {' '}<span className="font-medium">{transaction.seller.name}</span> to
-                            {' '}<span className="font-medium">{transaction.buyer.name}</span> for the agreed price of
-                            {' '}<span className="font-medium">${transaction.agreedPrice.toLocaleString()}</span>.
+                            {' '}<span className="font-medium">{transaction.buyer.name}</span> for the {userRole === 'seller' ? 'asking price' : 'agreed price'} of
+                            {' '}<span className="font-medium">${userRole === 'seller' ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
                           </p>
                           <p className="text-gray-500 text-xs">Generated: {new Date().toLocaleDateString()}</p>
                         </div>
@@ -2297,6 +2304,7 @@ For questions, contact us at escrow@domilea.com`
                         </div>
                       </div>
 
+                      {/* Payment Summary */}
                       <div className="bg-white rounded-xl p-4 mb-4">
                         <h4 className="font-semibold text-gray-900 mb-4">Payment Summary</h4>
                         <div className="space-y-3">
@@ -2315,41 +2323,247 @@ For questions, contact us at escrow@domilea.com`
                         </div>
                       </div>
 
-                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                        <h5 className="font-semibold text-blue-800 mb-2">Payment Instructions</h5>
-                        <p className="text-sm text-blue-700">
-                          Please complete the final payment to transfer the MC Authority.
-                          Once payment is confirmed, all business information and documents will be released to you.
-                        </p>
-                      </div>
+                      {/* Show different UI based on whether payment has been submitted */}
+                      {!paymentSubmitted ? (
+                        <>
+                          {/* Payment Instructions */}
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                            <h5 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                              <Banknote className="w-5 h-5" />
+                              Payment Instructions
+                            </h5>
+                            <p className="text-sm text-blue-700 mb-4">
+                              Please send the final payment using one of the methods below, then upload proof of payment.
+                            </p>
 
-                      <Button
-                        fullWidth
-                        loading={processingPayment}
-                        onClick={() => {
-                          setProcessingPayment(true)
-                          setTimeout(() => {
-                            setProcessingPayment(false)
-                            setTransaction(prev => ({
-                              ...prev,
-                              finalPaymentPaid: true,
-                              finalPaymentPaidAt: new Date(),
-                              status: 'completed',
-                              completedAt: new Date(),
-                              workflow: {
-                                ...prev.workflow,
-                                currentStep: 'completed',
-                                finalPaymentPaidAt: new Date(),
-                                finalPaymentStripeId: 'pi_' + Math.random().toString(36).substr(2, 14),
-                                completedAt: new Date()
+                            {/* Payment Method Selection */}
+                            <div className="space-y-3">
+                              <div
+                                className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                                  finalPaymentMethod === 'ZELLE'
+                                    ? 'border-blue-500 bg-blue-100'
+                                    : 'border-gray-200 bg-white hover:border-blue-300'
+                                }`}
+                                onClick={() => setFinalPaymentMethod('ZELLE')}
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                    finalPaymentMethod === 'ZELLE' ? 'border-blue-600' : 'border-gray-300'
+                                  }`}>
+                                    {finalPaymentMethod === 'ZELLE' && (
+                                      <div className="w-3 h-3 rounded-full bg-blue-600" />
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-gray-900">Zelle</span>
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Recommended</span>
+                                </div>
+                                {finalPaymentMethod === 'ZELLE' && (
+                                  <div className="ml-8 mt-3 space-y-2">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Mail className="w-4 h-4 text-gray-500" />
+                                      <span className="text-gray-600">Email:</span>
+                                      <span className="font-mono font-medium text-gray-900">payments@mcxchange.com</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      Send ${transaction.finalPaymentAmount.toLocaleString()} via Zelle to the email above.
+                                      Include transaction ID "{transactionId?.slice(-8)}" in the memo.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div
+                                className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                                  finalPaymentMethod === 'WIRE'
+                                    ? 'border-blue-500 bg-blue-100'
+                                    : 'border-gray-200 bg-white hover:border-blue-300'
+                                }`}
+                                onClick={() => setFinalPaymentMethod('WIRE')}
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                    finalPaymentMethod === 'WIRE' ? 'border-blue-600' : 'border-gray-300'
+                                  }`}>
+                                    {finalPaymentMethod === 'WIRE' && (
+                                      <div className="w-3 h-3 rounded-full bg-blue-600" />
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-gray-900">Wire Transfer</span>
+                                </div>
+                                {finalPaymentMethod === 'WIRE' && (
+                                  <div className="ml-8 mt-3 space-y-2 text-sm">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <span className="text-gray-500">Bank Name:</span>
+                                        <p className="font-medium text-gray-900">Chase Bank</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Account Name:</span>
+                                        <p className="font-medium text-gray-900">MC Exchange LLC</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Routing Number:</span>
+                                        <p className="font-mono font-medium text-gray-900">021000021</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Account Number:</span>
+                                        <p className="font-mono font-medium text-gray-900">•••••••4567</p>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      Include transaction ID "{transactionId?.slice(-8)}" in the wire reference.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Proof of Payment Upload */}
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                            <h5 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                              <Upload className="w-5 h-5" />
+                              Upload Proof of Payment
+                            </h5>
+                            <p className="text-sm text-amber-700 mb-4">
+                              After sending the payment, upload a screenshot or confirmation of your {finalPaymentMethod === 'ZELLE' ? 'Zelle' : 'wire'} transfer.
+                            </p>
+
+                            {/* Reference Input */}
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {finalPaymentMethod === 'ZELLE' ? 'Zelle Confirmation Number (optional)' : 'Wire Reference Number'}
+                              </label>
+                              <input
+                                type="text"
+                                value={paymentReference}
+                                onChange={(e) => setPaymentReference(e.target.value)}
+                                placeholder={finalPaymentMethod === 'ZELLE' ? 'Enter Zelle confirmation number' : 'Enter wire reference number'}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+
+                            {/* File Upload */}
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Payment Confirmation Screenshot *
+                              </label>
+                              <div className="border-2 border-dashed border-amber-300 rounded-lg p-4 text-center hover:border-amber-400 transition-colors">
+                                {paymentProofFile ? (
+                                  <div className="flex items-center justify-center gap-3">
+                                    <FileCheck className="w-8 h-8 text-green-600" />
+                                    <div className="text-left">
+                                      <p className="font-medium text-gray-900">{paymentProofFile.name}</p>
+                                      <p className="text-sm text-gray-500">
+                                        {(paymentProofFile.size / 1024 / 1024).toFixed(2)} MB
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => setPaymentProofFile(null)}
+                                      className="p-1 hover:bg-gray-100 rounded-full"
+                                    >
+                                      <X className="w-5 h-5 text-gray-500" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="cursor-pointer">
+                                    <input
+                                      type="file"
+                                      accept="image/*,.pdf"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) setPaymentProofFile(file)
+                                      }}
+                                    />
+                                    <Upload className="w-10 h-10 text-amber-400 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-600">
+                                      Click to upload or drag and drop
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      PNG, JPG, or PDF up to 10MB
+                                    </p>
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Submit Button */}
+                          <Button
+                            fullWidth
+                            loading={submittingFinalPayment}
+                            disabled={!paymentProofFile}
+                            onClick={async () => {
+                              if (!paymentProofFile) {
+                                toast.error('Please upload proof of payment')
+                                return
                               }
-                            }))
-                          }, 2000)
-                        }}
-                      >
-                        <Lock className="w-4 h-4 mr-2" />
-                        Pay ${transaction.finalPaymentAmount.toLocaleString()} - Complete Purchase
-                      </Button>
+
+                              setSubmittingFinalPayment(true)
+                              try {
+                                // First upload the proof of payment
+                                const formData = new FormData()
+                                formData.append('file', paymentProofFile)
+                                formData.append('title', `Final Payment Proof - ${finalPaymentMethod}`)
+                                formData.append('description', `${finalPaymentMethod} payment confirmation for transaction ${transactionId}`)
+
+                                await api.uploadPaymentProof(transactionId!, formData)
+
+                                // Then record the final payment
+                                await api.recordFinalPayment(
+                                  transactionId!,
+                                  finalPaymentMethod,
+                                  paymentReference || undefined
+                                )
+
+                                setPaymentSubmitted(true)
+                                toast.success('Payment submitted successfully! Awaiting admin verification.')
+                              } catch (err: any) {
+                                console.error('Error submitting payment:', err)
+                                toast.error(err.message || 'Failed to submit payment')
+                              } finally {
+                                setSubmittingFinalPayment(false)
+                              }
+                            }}
+                          >
+                            <Send className="w-4 h-4 mr-2" />
+                            Submit Payment for Verification
+                          </Button>
+
+                          <p className="text-xs text-gray-500 text-center mt-3">
+                            Your payment will be verified by our team within 1-2 business days.
+                            Once verified, all documents will be released.
+                          </p>
+                        </>
+                      ) : (
+                        /* Payment Submitted - Awaiting Admin Verification */
+                        <div className="text-center py-6">
+                          <div className="w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
+                            <Clock className="w-8 h-8 text-yellow-600" />
+                          </div>
+                          <h4 className="text-lg font-bold text-gray-900 mb-2">Payment Submitted</h4>
+                          <p className="text-gray-600 mb-4">
+                            Your {finalPaymentMethod === 'ZELLE' ? 'Zelle' : 'wire'} payment is being verified by our team.
+                          </p>
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-left">
+                            <h5 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              Awaiting Admin Verification
+                            </h5>
+                            <ul className="text-sm text-yellow-700 space-y-1">
+                              <li>• Payment amount: ${transaction.finalPaymentAmount.toLocaleString()}</li>
+                              <li>• Method: {finalPaymentMethod === 'ZELLE' ? 'Zelle' : 'Wire Transfer'}</li>
+                              {paymentReference && <li>• Reference: {paymentReference}</li>}
+                              <li>• Proof uploaded: Yes</li>
+                            </ul>
+                            <p className="text-xs text-yellow-600 mt-3">
+                              You will be notified once your payment is verified.
+                              This typically takes 1-2 business days.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   )}
 
@@ -2405,7 +2619,7 @@ For questions, contact us at escrow@domilea.com`
                   {userRole === 'seller' ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                       <div className="bg-green-50 rounded-xl p-4">
-                        <p className="text-sm text-green-600 mb-1">Your Listing Price</p>
+                        <p className="text-sm text-green-600 mb-1">Your Asking Price</p>
                         <p className="text-xl font-bold text-green-700">${transaction.listing.price.toLocaleString()}</p>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-4">
@@ -2421,11 +2635,11 @@ For questions, contact us at escrow@domilea.com`
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-gray-50 rounded-xl p-4">
-                        <p className="text-sm text-gray-500 mb-1">Seller's Price</p>
+                        <p className="text-sm text-gray-500 mb-1">Seller's Asking Price</p>
                         <p className="text-xl font-bold text-gray-700">${transaction.listing.price.toLocaleString()}</p>
                       </div>
                       <div className="bg-green-50 rounded-xl p-4">
-                        <p className="text-sm text-green-600 mb-1">Buyer's Price</p>
+                        <p className="text-sm text-green-600 mb-1">Listing Price (Buyer Pays)</p>
                         <p className="text-xl font-bold text-green-700">${transaction.agreedPrice.toLocaleString()}</p>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-4">
@@ -2433,7 +2647,7 @@ For questions, contact us at escrow@domilea.com`
                         <p className="text-xl font-bold text-blue-700">${transaction.depositAmount.toLocaleString()}</p>
                       </div>
                       <div className="bg-amber-50 rounded-xl p-4">
-                        <p className="text-sm text-amber-600 mb-1">Platform Fee</p>
+                        <p className="text-sm text-amber-600 mb-1">Broker Margin</p>
                         <p className="text-xl font-bold text-amber-700">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</p>
                       </div>
                     </div>
@@ -2595,8 +2809,8 @@ For questions, contact us at escrow@domilea.com`
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500">Agreed Price</p>
-                        <p className="text-lg font-bold text-gray-900">${transaction.agreedPrice.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">{userRole === 'seller' ? 'Your Asking Price' : userRole === 'buyer' ? 'Purchase Price' : 'Listing Price'}</p>
+                        <p className="text-lg font-bold text-gray-900">${userRole === 'seller' ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</p>
                       </div>
                       <div className={`rounded-lg p-3 ${transaction.depositPaid ? 'bg-green-50' : 'bg-yellow-50'}`}>
                         <p className="text-xs text-gray-500">Deposit</p>
@@ -2612,10 +2826,12 @@ For questions, contact us at escrow@domilea.com`
                           {transaction.finalPaymentPaid && <CheckCircle className="w-4 h-4 inline ml-1" />}
                         </p>
                       </div>
-                      <div className="bg-amber-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500">Platform Fee</p>
-                        <p className="text-lg font-bold text-amber-600">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</p>
-                      </div>
+                      {userRole === 'admin' && (
+                        <div className="bg-amber-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Broker Margin</p>
+                          <p className="text-lg font-bold text-amber-600">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
