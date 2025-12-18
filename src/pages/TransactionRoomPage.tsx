@@ -60,6 +60,7 @@ import {
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import AgreementApprovalPanel from '../components/AgreementApprovalPanel'
 import { useAuth } from '../context/AuthContext'
 import { TransactionRoom, TransactionStatus, TransactionMessage, TransactionDocument } from '../types'
 import api from '../services/api'
@@ -106,6 +107,11 @@ const TransactionRoomPage = () => {
   // Loading state
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [adminActionLoading, setAdminActionLoading] = useState(false)
+  const [approvalLoading, setApprovalLoading] = useState(false)
+
+  // Admin contract file state
+  const [adminContractFile, setAdminContractFile] = useState<File | null>(null)
 
   // FMCSA verified data state
   const [fmcsaData, setFmcsaData] = useState<{
@@ -817,9 +823,8 @@ const TransactionRoomPage = () => {
             workflow: {
               ...prev.workflow,
               currentStep: mappedStatus === 'awaiting-deposit' ? 'deposit-payment' as BuyerStep :
-                          mappedStatus === 'deposit-received' ? 'awaiting-admin' as BuyerStep :
-                          (mappedStatus === 'in-review' || mappedStatus === 'buyer-approved' || mappedStatus === 'seller-approved') ? 'bill-of-sale' as BuyerStep :
-                          (mappedStatus === 'both-approved' || mappedStatus === 'admin-final-review') ? 'awaiting-admin' as BuyerStep :
+                          (mappedStatus === 'deposit-received' || mappedStatus === 'in-review' || mappedStatus === 'buyer-approved' || mappedStatus === 'seller-approved') ? 'bill-of-sale' as BuyerStep :
+                          (mappedStatus === 'both-approved' || mappedStatus === 'admin-final-review') ? 'bill-of-sale' as BuyerStep :
                           mappedStatus === 'payment-pending' ? 'final-payment' as BuyerStep :
                           (mappedStatus === 'payment-received' || mappedStatus === 'completed') ? 'completed' as BuyerStep :
                           prev.workflow.currentStep,
@@ -831,12 +836,10 @@ const TransactionRoomPage = () => {
           // Update buyer step based on transaction status
           if (mappedStatus === 'awaiting-deposit') {
             setBuyerStep('deposit-payment')
-          } else if (mappedStatus === 'deposit-received') {
-            setBuyerStep('awaiting-admin')
-          } else if (mappedStatus === 'in-review' || mappedStatus === 'buyer-approved' || mappedStatus === 'seller-approved') {
+          } else if (mappedStatus === 'deposit-received' || mappedStatus === 'in-review' || mappedStatus === 'buyer-approved' || mappedStatus === 'seller-approved') {
             setBuyerStep('bill-of-sale')
           } else if (mappedStatus === 'both-approved' || mappedStatus === 'admin-final-review') {
-            setBuyerStep('awaiting-admin')
+            setBuyerStep('bill-of-sale')
           } else if (mappedStatus === 'payment-pending') {
             setBuyerStep('final-payment')
           } else if (mappedStatus === 'payment-received' || mappedStatus === 'completed') {
@@ -994,23 +997,53 @@ const TransactionRoomPage = () => {
       searchParams.delete('deposit')
       setSearchParams(searchParams, { replace: true })
 
-      // Poll for transaction update (webhook may take a moment)
-      const pollForUpdate = async () => {
+      // First, call verify-deposit-status to check Stripe directly and update DB
+      // This is needed because webhooks don't fire in local development
+      const verifyAndUpdateDeposit = async () => {
+        try {
+          console.log('[TransactionRoomPage] Verifying deposit status with Stripe...')
+          const verifyResponse = await api.verifyDepositStatus(transactionId!)
+          console.log('[TransactionRoomPage] Verify response:', verifyResponse)
+
+          if (verifyResponse.success && verifyResponse.data?.depositPaid) {
+            // Deposit confirmed! Update local state
+            setTransaction(prev => ({
+              ...prev,
+              status: 'deposit-received',
+              depositPaid: true,
+              depositPaidAt: verifyResponse.data.depositPaidAt ? new Date(verifyResponse.data.depositPaidAt) : new Date(),
+              workflow: {
+                ...prev.workflow,
+                currentStep: 'awaiting-admin',
+                depositPaidAt: verifyResponse.data.depositPaidAt ? new Date(verifyResponse.data.depositPaidAt) : new Date(),
+                depositPaymentMethod: 'card',
+              }
+            }))
+            setBuyerStep('awaiting-admin')
+            toast.success('Deposit confirmed! Awaiting admin review.', { duration: 4000 })
+            return
+          }
+        } catch (error) {
+          console.error('[TransactionRoomPage] Error verifying deposit:', error)
+        }
+
+        // Fallback: poll for transaction update (in case webhook updates it)
         let attempts = 0
-        const maxAttempts = 10
-        const pollInterval = 2000 // 2 seconds
+        const maxAttempts = 5
+        const pollInterval = 2000
 
         const poll = async () => {
-          if (attempts >= maxAttempts) return
+          if (attempts >= maxAttempts) {
+            toast.error('Could not confirm deposit. Please refresh the page.')
+            return
+          }
           attempts++
 
           try {
             const response = await api.getTransaction(transactionId!)
             if (response.success && response.data) {
               const txn = response.data
-              // Check if deposit has been received
               if (txn.status === 'DEPOSIT_RECEIVED' || txn.depositPaidAt) {
-                // Update local state
                 setTransaction(prev => ({
                   ...prev,
                   status: 'deposit-received',
@@ -1023,24 +1056,21 @@ const TransactionRoomPage = () => {
                     depositPaymentMethod: 'card',
                   }
                 }))
-                // Update the buyer step to show the correct UI
                 setBuyerStep('awaiting-admin')
                 toast.success('Deposit confirmed! Awaiting admin review.', { duration: 4000 })
                 return
               }
             }
-            // Continue polling if not yet updated
             setTimeout(poll, pollInterval)
           } catch (error) {
             console.error('Error polling for transaction update:', error)
           }
         }
 
-        // Start polling after a short delay
         setTimeout(poll, 1000)
       }
 
-      pollForUpdate()
+      verifyAndUpdateDeposit()
     } else if (depositStatus === 'cancelled') {
       toast.error('Deposit payment was cancelled. Please try again when ready.')
       searchParams.delete('deposit')
@@ -1049,14 +1079,20 @@ const TransactionRoomPage = () => {
   }, [searchParams, transactionId, setSearchParams])
 
   // Determine user role in this transaction
-  const getUserRole = () => {
+  const getUserRole = (): 'admin' | 'buyer' | 'seller' => {
     if (user?.role === 'admin') return 'admin'
     if (user?.id === transaction.buyerId) return 'buyer'
     if (user?.id === transaction.sellerId) return 'seller'
+    // Fallback: check user's account role if IDs don't match
+    if (user?.role === 'seller') return 'seller'
+    if (user?.role === 'buyer') return 'buyer'
     return 'buyer' // default for demo
   }
 
-  const userRole = getUserRole()
+  const userRole: 'admin' | 'buyer' | 'seller' = getUserRole()
+  const isBuyer = userRole === 'buyer'
+  const isSeller = userRole === 'seller'
+  const isAdmin = userRole === 'admin'
 
   // Buyer can only see seller contact info after final payment is received
   const canBuyerSeeSellerInfo = transaction.status === 'completed' && transaction.finalPaymentPaid
@@ -1111,29 +1147,46 @@ const TransactionRoomPage = () => {
   }
 
   const handleApprove = async () => {
+    if (!transactionId) return
     setApproving(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    if (userRole === 'buyer') {
-      setTransaction(prev => ({
-        ...prev,
-        buyerApproved: true,
-        buyerApprovedAt: new Date(),
-        status: prev.sellerApproved ? 'both-approved' : 'buyer-approved'
-      }))
-    } else if (userRole === 'seller') {
-      setTransaction(prev => ({
-        ...prev,
-        sellerApproved: true,
-        sellerApprovedAt: new Date(),
-        status: prev.buyerApproved ? 'both-approved' : 'seller-approved'
-      }))
-    } else if (userRole === 'admin') {
-      setTransaction(prev => ({
-        ...prev,
-        adminApproved: true,
-        adminApprovedAt: new Date(),
-        status: 'payment-pending',
-        paymentInstructions: `Payment Instructions for Transaction #${transaction.id}
+    try {
+      if (userRole === 'buyer') {
+        const response = await api.buyerApproveTransaction(transactionId)
+        if (response.success) {
+          toast.success('Transaction approved!')
+          setTransaction(prev => ({
+            ...prev,
+            buyerApproved: true,
+            buyerApprovedAt: new Date(),
+            status: prev.sellerApproved ? 'both-approved' : 'buyer-approved',
+            workflow: { ...prev.workflow, buyerApprovedBillOfSaleAt: new Date() }
+          }))
+          await refreshTransaction()
+        }
+      } else if (userRole === 'seller') {
+        const response = await api.sellerApproveTransaction(transactionId)
+        if (response.success) {
+          toast.success('Transaction approved!')
+          setTransaction(prev => ({
+            ...prev,
+            sellerApproved: true,
+            sellerApprovedAt: new Date(),
+            status: prev.buyerApproved ? 'both-approved' : 'seller-approved',
+            workflow: { ...prev.workflow, sellerApprovedBillOfSaleAt: new Date() }
+          }))
+          await refreshTransaction()
+        }
+      } else if (userRole === 'admin') {
+        const response = await api.adminApproveTransaction(transactionId)
+        if (response.success) {
+          toast.success('Transaction finalized! Payment instructions sent.')
+          setTransaction(prev => ({
+            ...prev,
+            adminApproved: true,
+            adminApprovedAt: new Date(),
+            status: 'payment-pending',
+            workflow: { ...prev.workflow, adminApprovedBillOfSaleAt: new Date() },
+            paymentInstructions: `Payment Instructions for Transaction #${transaction.id}
 
 Amount Due: $${transaction.finalPaymentAmount.toLocaleString()}
 
@@ -1150,9 +1203,16 @@ Once payment is received and verified (typically within 1-2 business days),
 all MC authority documents and credentials will be released to you.
 
 For questions, contact us at escrow@domilea.com`
-      }))
+          }))
+          await refreshTransaction()
+        }
+      }
+    } catch (err: any) {
+      console.error('Error approving transaction:', err)
+      toast.error(err.message || 'Failed to approve transaction')
+    } finally {
+      setApproving(false)
     }
-    setApproving(false)
   }
 
   const handleFinalPayment = async () => {
@@ -1164,6 +1224,166 @@ For questions, contact us at escrow@domilea.com`
       completedAt: new Date()
     }))
     setShowPaymentModal(false)
+  }
+
+  // Helper to refresh transaction data from API
+  const refreshTransaction = async () => {
+    if (!transactionId) return
+    try {
+      const response = await api.getTransaction(transactionId)
+      if (response.success && response.data) {
+        const txn = response.data
+        const statusMap: Record<string, TransactionStatus> = {
+          'AWAITING_DEPOSIT': 'awaiting-deposit',
+          'DEPOSIT_RECEIVED': 'deposit-received',
+          'IN_REVIEW': 'in-review',
+          'BUYER_APPROVED': 'buyer-approved',
+          'SELLER_APPROVED': 'seller-approved',
+          'BOTH_APPROVED': 'both-approved',
+          'ADMIN_FINAL_REVIEW': 'admin-final-review',
+          'PAYMENT_PENDING': 'payment-pending',
+          'PAYMENT_RECEIVED': 'payment-received',
+          'COMPLETED': 'completed',
+          'CANCELLED': 'cancelled',
+          'DISPUTED': 'disputed',
+        }
+        const mappedStatus = statusMap[txn.status] || 'in-review'
+        setTransaction(prev => ({
+          ...prev,
+          status: mappedStatus,
+          buyerApproved: txn.buyerApproved ?? prev.buyerApproved,
+          sellerApproved: txn.sellerApproved ?? prev.sellerApproved,
+          adminApproved: txn.adminApproved ?? prev.adminApproved,
+          depositPaid: !!txn.depositPaidAt,
+          depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.depositPaidAt,
+          finalPaymentPaid: !!txn.finalPaymentPaidAt,
+        }))
+      }
+    } catch (err) {
+      console.error('Error refreshing transaction:', err)
+    }
+  }
+
+  // Admin: Update transaction status via API
+  const handleAdminUpdateStatus = async (newStatus: string, notes?: string) => {
+    if (!transactionId) return
+    setAdminActionLoading(true)
+    try {
+      const response = await api.updateTransactionStatus(transactionId, newStatus, notes)
+      if (response.success) {
+        toast.success(response.message || 'Status updated successfully')
+        await refreshTransaction()
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status')
+    } finally {
+      setAdminActionLoading(false)
+    }
+  }
+
+  // Admin: Approve deposit and generate bill of sale
+  const handleAdminApproveDeposit = async () => {
+    if (!transactionId) return
+    setAdminActionLoading(true)
+    try {
+      // Update status to IN_REVIEW (bill of sale step)
+      const response = await api.updateTransactionStatus(transactionId, 'IN_REVIEW', 'Admin approved deposit and generated bill of sale')
+      if (response.success) {
+        toast.success('Deposit approved! Bill of Sale generated.')
+        // Update local state to reflect the change
+        setTransaction(prev => ({
+          ...prev,
+          workflow: {
+            ...prev.workflow,
+            currentStep: 'bill-of-sale',
+            adminApprovedDepositAt: new Date(),
+            billOfSaleGeneratedAt: new Date()
+          }
+        }))
+        await refreshTransaction()
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to approve deposit')
+    } finally {
+      setAdminActionLoading(false)
+    }
+  }
+
+  // Admin: Final approval after both parties approved
+  const handleAdminFinalApprove = async () => {
+    if (!transactionId) return
+    setAdminActionLoading(true)
+    try {
+      // If contract file is attached, upload it first
+      if (adminContractFile) {
+        const formData = new FormData()
+        formData.append('file', adminContractFile)
+        formData.append('type', 'BILL_OF_SALE')
+
+        try {
+          await api.uploadTransactionDocument(transactionId, formData)
+          toast.success('Contract document uploaded')
+        } catch (uploadErr: any) {
+          console.error('Error uploading contract:', uploadErr)
+          // Continue with approval even if upload fails
+          toast.error('Contract upload failed, but proceeding with approval')
+        }
+      }
+
+      const response = await api.adminApproveTransaction(transactionId)
+      if (response.success) {
+        toast.success('Transaction finalized! Payment instructions sent.')
+        setTransaction(prev => ({
+          ...prev,
+          adminApproved: true,
+          adminApprovedAt: new Date(),
+          status: 'payment-pending',
+          workflow: {
+            ...prev.workflow,
+            currentStep: 'final-payment',
+            adminApprovedBillOfSaleAt: new Date()
+          },
+          paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nWire/Zelle to: payments@domilea.com\nReference: TXN-${transaction.id}-FINAL`
+        }))
+        // Clear the contract file state after successful approval
+        setAdminContractFile(null)
+        await refreshTransaction()
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to approve transaction')
+    } finally {
+      setAdminActionLoading(false)
+    }
+  }
+
+  // Admin: Confirm final payment received
+  const handleAdminConfirmPayment = async () => {
+    if (!transactionId) return
+    setAdminActionLoading(true)
+    try {
+      const response = await api.updateTransactionStatus(transactionId, 'COMPLETED', 'Final payment confirmed')
+      if (response.success) {
+        toast.success('Payment confirmed! Transaction completed.')
+        setTransaction(prev => ({
+          ...prev,
+          finalPaymentPaid: true,
+          finalPaymentPaidAt: new Date(),
+          status: 'completed',
+          completedAt: new Date(),
+          workflow: {
+            ...prev.workflow,
+            currentStep: 'completed',
+            finalPaymentPaidAt: new Date(),
+            completedAt: new Date()
+          }
+        }))
+        await refreshTransaction()
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to confirm payment')
+    } finally {
+      setAdminActionLoading(false)
+    }
   }
 
   const canApprove = () => {
@@ -1966,19 +2186,73 @@ For questions, contact us at escrow@domilea.com`
                     </Card>
                   )}
 
-                  {/* Step 5: Bill of Sale */}
+                  {/* Step 5: Bill of Sale - Multi-Party Approval */}
                   {transaction.workflow.currentStep === 'bill-of-sale' && (
-                    <Card className="border-2 border-blue-200 bg-blue-50/30">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                          <FileCheck className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">Bill of Sale Review</h3>
-                          <p className="text-sm text-gray-600">Step 5 of 7</p>
-                        </div>
-                      </div>
-
+                    <AgreementApprovalPanel
+                      title="Bill of Sale Review"
+                      description="Step 5 of 7 - All parties must approve to proceed"
+                      approvalStatus={{
+                        buyerApproved: !!transaction.workflow.buyerApprovedBillOfSaleAt || transaction.buyerApproved,
+                        buyerApprovedAt: transaction.workflow.buyerApprovedBillOfSaleAt || transaction.buyerApprovedAt,
+                        sellerApproved: !!transaction.workflow.sellerApprovedBillOfSaleAt || transaction.sellerApproved,
+                        sellerApprovedAt: transaction.workflow.sellerApprovedBillOfSaleAt || transaction.sellerApprovedAt,
+                        adminApproved: !!transaction.workflow.adminApprovedBillOfSaleAt || transaction.adminApproved,
+                        adminApprovedAt: transaction.workflow.adminApprovedBillOfSaleAt || transaction.adminApprovedAt,
+                      }}
+                      buyer={{ id: transaction.buyer.id, name: transaction.buyer.name }}
+                      seller={{ id: transaction.seller.id, name: transaction.seller.name }}
+                      userRole={userRole}
+                      onBuyerApprove={async () => {
+                        if (!transactionId) return
+                        const response = await api.buyerApproveTransaction(transactionId)
+                        if (response.success) {
+                          toast.success('Bill of Sale approved!')
+                          setTransaction(prev => ({
+                            ...prev,
+                            buyerApproved: true,
+                            buyerApprovedAt: new Date(),
+                            workflow: { ...prev.workflow, buyerApprovedBillOfSaleAt: new Date() }
+                          }))
+                          await refreshTransaction()
+                        }
+                      }}
+                      onSellerApprove={async () => {
+                        if (!transactionId) return
+                        const response = await api.sellerApproveTransaction(transactionId)
+                        if (response.success) {
+                          toast.success('Bill of Sale approved!')
+                          setTransaction(prev => ({
+                            ...prev,
+                            sellerApproved: true,
+                            sellerApprovedAt: new Date(),
+                            workflow: { ...prev.workflow, sellerApprovedBillOfSaleAt: new Date() }
+                          }))
+                          await refreshTransaction()
+                        }
+                      }}
+                      onAdminApprove={async () => {
+                        if (!transactionId) return
+                        const response = await api.adminApproveTransaction(transactionId)
+                        if (response.success) {
+                          toast.success('Transaction finalized! Payment instructions sent.')
+                          setTransaction(prev => ({
+                            ...prev,
+                            adminApproved: true,
+                            adminApprovedAt: new Date(),
+                            status: 'payment-pending',
+                            workflow: {
+                              ...prev.workflow,
+                              adminApprovedBillOfSaleAt: new Date(),
+                              currentStep: 'final-payment'
+                            },
+                            paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nWire/Zelle to: payments@domilea.com\nReference: TXN-${transaction.id}-FINAL`
+                          }))
+                          await refreshTransaction()
+                        }
+                      }}
+                      adminApproveLabel="Finalize & Send Payment Instructions"
+                    >
+                      {/* Agreement Content */}
                       <div className="bg-white rounded-xl p-4 mb-4">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-semibold text-gray-900">Purchase Agreement</h4>
@@ -1988,7 +2262,7 @@ For questions, contact us at escrow@domilea.com`
                           </Button>
                         </div>
 
-                        <div className="border border-gray-200 rounded-lg p-4 mb-4 text-sm">
+                        <div className="border border-gray-200 rounded-lg p-4 text-sm">
                           <p className="font-semibold mb-2">MC Authority Bill of Sale</p>
                           <p className="text-gray-600 mb-2">
                             This agreement confirms the sale of MC Authority #{transaction.listing.mcNumber} from
@@ -1999,84 +2273,15 @@ For questions, contact us at escrow@domilea.com`
                           <p className="text-gray-500 text-xs">Generated: {new Date().toLocaleDateString()}</p>
                         </div>
 
-                        {/* Approval Status */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              Buyer Approval
-                            </span>
-                            {transaction.workflow.buyerApprovedBillOfSaleAt ? (
-                              <span className="flex items-center gap-1 text-green-600 text-sm">
-                                <CheckCircle className="w-4 h-4" />
-                                Approved
-                              </span>
-                            ) : (
-                              <span className="text-yellow-600 text-sm">Pending</span>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4" />
-                              Seller Approval
-                            </span>
-                            {transaction.workflow.sellerApprovedBillOfSaleAt ? (
-                              <span className="flex items-center gap-1 text-green-600 text-sm">
-                                <CheckCircle className="w-4 h-4" />
-                                Approved
-                              </span>
-                            ) : (
-                              <span className="text-yellow-600 text-sm">Pending</span>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span className="flex items-center gap-2">
-                              <Crown className="w-4 h-4" />
-                              Admin Approval
-                            </span>
-                            {transaction.workflow.adminApprovedBillOfSaleAt ? (
-                              <span className="flex items-center gap-1 text-green-600 text-sm">
-                                <CheckCircle className="w-4 h-4" />
-                                Approved
-                              </span>
-                            ) : (
-                              <span className="text-yellow-600 text-sm">Pending</span>
-                            )}
-                          </div>
+                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-xs text-amber-700">
+                            <strong>Important:</strong> By approving this agreement, you confirm that all information is accurate
+                            and you agree to the terms of sale. All three parties (Buyer, Seller, and Admin) must approve
+                            before the transaction can proceed to final payment.
+                          </p>
                         </div>
                       </div>
-
-                      {!transaction.workflow.buyerApprovedBillOfSaleAt && (
-                        <Button
-                          fullWidth
-                          onClick={() => {
-                            setTransaction(prev => ({
-                              ...prev,
-                              buyerApproved: true,
-                              buyerApprovedAt: new Date(),
-                              workflow: { ...prev.workflow, buyerApprovedBillOfSaleAt: new Date() }
-                            }))
-                          }}
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          Approve Bill of Sale
-                        </Button>
-                      )}
-
-                      {transaction.workflow.buyerApprovedBillOfSaleAt && !transaction.workflow.sellerApprovedBillOfSaleAt && (
-                        <div className="p-4 bg-yellow-50 rounded-xl text-center">
-                          <Clock className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                          <p className="text-sm text-yellow-700">Waiting for seller to approve...</p>
-                        </div>
-                      )}
-
-                      {transaction.workflow.buyerApprovedBillOfSaleAt && transaction.workflow.sellerApprovedBillOfSaleAt && !transaction.workflow.adminApprovedBillOfSaleAt && (
-                        <div className="p-4 bg-yellow-50 rounded-xl text-center">
-                          <Crown className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                          <p className="text-sm text-yellow-700">Waiting for admin final approval...</p>
-                        </div>
-                      )}
-                    </Card>
+                    </AgreementApprovalPanel>
                   )}
 
                   {/* Step 6: Final Payment */}
@@ -2633,19 +2838,14 @@ For questions, contact us at escrow@domilea.com`
                                 fullWidth
                                 variant="primary"
                                 className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-                                onClick={() => {
-                                  setTransaction(prev => ({
-                                    ...prev,
-                                    workflow: {
-                                      ...prev.workflow,
-                                      currentStep: 'bill-of-sale',
-                                      adminApprovedDepositAt: new Date(),
-                                      billOfSaleGeneratedAt: new Date()
-                                    }
-                                  }))
-                                }}
+                                onClick={handleAdminApproveDeposit}
+                                disabled={adminActionLoading}
                               >
-                                <FileCheck className="w-4 h-4 mr-2" />
+                                {adminActionLoading ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <FileCheck className="w-4 h-4 mr-2" />
+                                )}
                                 Approve Deposit & Generate Bill of Sale
                               </Button>
                             </div>
@@ -2673,28 +2873,57 @@ For questions, contact us at escrow@domilea.com`
 
                           {/* Admin can approve after both parties approved */}
                           {transaction.buyerApproved && transaction.sellerApproved && !transaction.adminApproved && (
-                            <Button
-                              fullWidth
-                              variant="primary"
-                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                              onClick={() => {
-                                setTransaction(prev => ({
-                                  ...prev,
-                                  adminApproved: true,
-                                  adminApprovedAt: new Date(),
-                                  status: 'payment-pending',
-                                  workflow: {
-                                    ...prev.workflow,
-                                    currentStep: 'final-payment',
-                                    adminApprovedBillOfSaleAt: new Date()
-                                  },
-                                  paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nWire/Zelle to: payments@domilea.com\nReference: TXN-${transaction.id}-FINAL`
-                                }))
-                              }}
-                            >
-                              <CheckCheck className="w-4 h-4 mr-2" />
-                              Finalize & Send Payment Instructions
-                            </Button>
+                            <div className="space-y-4">
+                              {/* Contract Upload Section */}
+                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                                  <FileCheck className="w-4 h-4" />
+                                  Attach Final Contract (Optional)
+                                </h4>
+                                <p className="text-sm text-amber-700 mb-3">
+                                  Upload the signed Bill of Sale or final contract document before approving.
+                                </p>
+                                <div className="space-y-2">
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.doc,.docx"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0] || null
+                                      setAdminContractFile(file)
+                                    }}
+                                    className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
+                                  />
+                                  {adminContractFile && (
+                                    <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-2 rounded-lg">
+                                      <CheckCircle className="w-4 h-4" />
+                                      <span className="truncate">{adminContractFile.name}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setAdminContractFile(null)}
+                                        className="ml-auto text-gray-500 hover:text-red-500"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <Button
+                                fullWidth
+                                variant="primary"
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                                onClick={handleAdminFinalApprove}
+                                disabled={adminActionLoading}
+                              >
+                                {adminActionLoading ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <CheckCheck className="w-4 h-4 mr-2" />
+                                )}
+                                {adminContractFile ? 'Upload Contract & Approve Bill of Sale' : 'Approve Bill of Sale & Send Payment Instructions'}
+                              </Button>
+                            </div>
                           )}
 
                           {/* Simulate party approvals for testing */}
@@ -2737,23 +2966,14 @@ For questions, contact us at escrow@domilea.com`
                               fullWidth
                               variant="primary"
                               className="bg-green-600 hover:bg-green-700"
-                              onClick={() => {
-                                setTransaction(prev => ({
-                                  ...prev,
-                                  finalPaymentPaid: true,
-                                  finalPaymentPaidAt: new Date(),
-                                  status: 'completed',
-                                  completedAt: new Date(),
-                                  workflow: {
-                                    ...prev.workflow,
-                                    currentStep: 'completed',
-                                    finalPaymentPaidAt: new Date(),
-                                    completedAt: new Date()
-                                  }
-                                }))
-                              }}
+                              onClick={handleAdminConfirmPayment}
+                              disabled={adminActionLoading}
                             >
-                              <CheckCircle className="w-4 h-4 mr-2" />
+                              {adminActionLoading ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              )}
                               Confirm Payment Received
                             </Button>
                             <Button
@@ -2855,17 +3075,19 @@ For questions, contact us at escrow@domilea.com`
                     <p className="text-xs text-gray-500 mb-3">Current Step: <span className="font-mono font-bold text-amber-600">{transaction.workflow.currentStep}</span></p>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { step: 'confirm-intent', label: '1. Confirm Intent' },
-                        { step: 'terms-agreement', label: '2. Terms' },
-                        { step: 'deposit-payment', label: '3. Deposit' },
-                        { step: 'awaiting-admin', label: '4. Awaiting Admin' },
-                        { step: 'bill-of-sale', label: '5. Bill of Sale' },
-                        { step: 'final-payment', label: '6. Final Payment' },
-                        { step: 'completed', label: '7. Completed' },
+                        { step: 'confirm-intent', label: '1. Confirm Intent', status: 'TERMS_PENDING' },
+                        { step: 'terms-agreement', label: '2. Terms', status: 'TERMS_PENDING' },
+                        { step: 'deposit-payment', label: '3. Deposit', status: 'AWAITING_DEPOSIT' },
+                        { step: 'awaiting-admin', label: '4. Awaiting Admin', status: 'DEPOSIT_RECEIVED' },
+                        { step: 'bill-of-sale', label: '5. Bill of Sale', status: 'IN_REVIEW' },
+                        { step: 'final-payment', label: '6. Final Payment', status: 'PAYMENT_PENDING' },
+                        { step: 'completed', label: '7. Completed', status: 'COMPLETED' },
                       ].map((item) => (
                         <button
                           key={item.step}
-                          onClick={() => {
+                          disabled={adminActionLoading}
+                          onClick={async () => {
+                            // Update local state immediately for responsiveness
                             setTransaction(prev => ({
                               ...prev,
                               depositPaid: ['awaiting-admin', 'bill-of-sale', 'final-payment', 'completed'].includes(item.step),
@@ -2876,12 +3098,14 @@ For questions, contact us at escrow@domilea.com`
                                 depositZellePending: item.step === 'awaiting-admin' ? prev.workflow.depositZellePending : false
                               }
                             }))
+                            // Also update backend status
+                            await handleAdminUpdateStatus(item.status, `Manual step change to ${item.label}`)
                           }}
                           className={`px-3 py-2 text-xs rounded-lg border transition-all ${
                             transaction.workflow.currentStep === item.step
                               ? 'bg-amber-500 text-white border-amber-500'
                               : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
-                          }`}
+                          } ${adminActionLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {item.label}
                         </button>

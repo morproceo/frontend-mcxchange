@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -19,11 +19,7 @@ import {
   Loader2,
   Phone,
   Mail,
-  Calendar,
-  Truck,
-  Hash,
   Search,
-  Filter,
   ChevronDown,
   ChevronUp,
   ExternalLink,
@@ -32,238 +28,160 @@ import {
   CircleDollarSign,
   Handshake,
   Target,
-  UserCheck,
   ShieldCheck,
   ScrollText,
-  AlertTriangle,
   RefreshCw
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import api from '../services/api'
+import toast from 'react-hot-toast'
 
-// Transaction workflow steps
+// Transaction status mapping from backend to frontend workflow steps
 type TransactionStep =
-  | 'confirm-intent'
   | 'terms-agreement'
-  | 'deposit-payment'
-  | 'awaiting-admin'
-  | 'bill-of-sale'
-  | 'final-payment'
+  | 'awaiting-deposit'
+  | 'deposit-received'
+  | 'in-review'
+  | 'approved'
+  | 'awaiting-final'
   | 'completed'
+  | 'cancelled'
+  | 'disputed'
 
-interface ActiveTransaction {
+interface TransactionData {
   id: string
-  mcNumber: string
-  mcName: string
-  askingPrice: number
-  depositAmount: number
+  status: string
+  agreedPrice: number
+  depositAmount: number | null
   platformFee: number
+  finalPaymentAmount: number | null
+  buyerApproved: boolean
+  buyerApprovedAt: string | null
+  sellerApproved: boolean
+  sellerApprovedAt: string | null
+  adminApproved: boolean
+  adminApprovedAt: string | null
+  buyerAcceptedTerms: boolean
+  buyerAcceptedTermsAt: string | null
+  sellerAcceptedTerms: boolean
+  sellerAcceptedTermsAt: string | null
+  depositPaidAt: string | null
+  depositPaymentMethod: string | null
+  depositPaymentRef: string | null
+  finalPaidAt: string | null
+  finalPaymentMethod: string | null
+  finalPaymentRef: string | null
+  escrowStatus: string | null
+  escrowReleaseAt: string | null
+  disputeReason: string | null
+  disputeOpenedAt: string | null
+  disputeResolvedAt: string | null
+  disputeResolution: string | null
+  buyerNotes: string | null
+  sellerNotes: string | null
+  adminNotes: string | null
+  completedAt: string | null
+  cancelledAt: string | null
+  createdAt: string
+  updatedAt: string
+  listing: {
+    id: string
+    mcNumber: string
+    dotNumber: string
+    legalName: string
+    dbaName: string | null
+    title: string
+    price: number
+    city: string
+    state: string
+  }
   buyer: {
     id: string
     name: string
     email: string
-    phone: string
+    phone: string | null
     verified: boolean
+    companyName: string | null
   }
   seller: {
     id: string
     name: string
     email: string
-    phone: string
+    phone: string | null
     verified: boolean
+    companyName: string | null
   }
-  currentStep: TransactionStep
-  status: 'active' | 'pending_admin' | 'completed' | 'cancelled'
-  createdAt: Date
-  updatedAt: Date
-  depositPaid: boolean
-  depositPaidAt?: Date
-  depositPaymentMethod?: 'card' | 'zelle'
-  depositZellePending?: boolean
-  finalPaymentPaid: boolean
-  finalPaymentPaidAt?: Date
-  finalPaymentMethod?: 'card' | 'zelle'
-  finalPaymentZellePending?: boolean
-  termsAccepted: boolean
-  termsAcceptedAt?: Date
-  billOfSaleGenerated: boolean
-  billOfSaleApprovedByBuyer: boolean
-  billOfSaleApprovedBySeller: boolean
-  documentsVerified: boolean
-  adminNotes: string[]
+  payments?: {
+    id: string
+    type: string
+    amount: number
+    status: string
+    method: string
+    verifiedAt: string | null
+    createdAt: string
+  }[]
 }
 
 const AdminActiveClosingsPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [stepFilter, setStepFilter] = useState<string>('all')
   const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null)
-  const [selectedTransaction, setSelectedTransaction] = useState<ActiveTransaction | null>(null)
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionData | null>(null)
   const [showRoundTable, setShowRoundTable] = useState(false)
-
-  // Mock active transactions data
-  const [transactions] = useState<ActiveTransaction[]>([
-    {
-      id: 'TXN-001',
-      mcNumber: 'MC-784521',
-      mcName: 'Swift Logistics LLC',
-      askingPrice: 45000,
-      depositAmount: 500,
-      platformFee: 2250,
-      buyer: {
-        id: 'buyer-1',
-        name: 'John Martinez',
-        email: 'john.martinez@email.com',
-        phone: '(555) 123-4567',
-        verified: true
-      },
-      seller: {
-        id: 'seller-1',
-        name: 'Mike Johnson',
-        email: 'mike.j@swiftlogistics.com',
-        phone: '(555) 987-6543',
-        verified: true
-      },
-      currentStep: 'awaiting-admin',
-      status: 'pending_admin',
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date(),
-      depositPaid: true,
-      depositPaidAt: new Date('2024-01-16'),
-      depositPaymentMethod: 'zelle',
-      depositZellePending: false,
-      finalPaymentPaid: false,
-      termsAccepted: true,
-      termsAcceptedAt: new Date('2024-01-15'),
-      billOfSaleGenerated: false,
-      billOfSaleApprovedByBuyer: false,
-      billOfSaleApprovedBySeller: false,
-      documentsVerified: false,
-      adminNotes: ['Deposit confirmed via Zelle', 'Awaiting document verification']
-    },
-    {
-      id: 'TXN-002',
-      mcNumber: 'MC-965432',
-      mcName: 'Highway Express Inc',
-      askingPrice: 62000,
-      depositAmount: 500,
-      platformFee: 3100,
-      buyer: {
-        id: 'buyer-2',
-        name: 'Sarah Williams',
-        email: 'sarah.w@email.com',
-        phone: '(555) 234-5678',
-        verified: true
-      },
-      seller: {
-        id: 'seller-2',
-        name: 'Robert Chen',
-        email: 'robert@highwayexpress.com',
-        phone: '(555) 876-5432',
-        verified: true
-      },
-      currentStep: 'bill-of-sale',
-      status: 'active',
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date(),
-      depositPaid: true,
-      depositPaidAt: new Date('2024-01-11'),
-      depositPaymentMethod: 'card',
-      finalPaymentPaid: false,
-      termsAccepted: true,
-      termsAcceptedAt: new Date('2024-01-10'),
-      billOfSaleGenerated: true,
-      billOfSaleApprovedByBuyer: true,
-      billOfSaleApprovedBySeller: false,
-      documentsVerified: true,
-      adminNotes: ['Documents verified', 'Bill of sale sent to parties', 'Awaiting seller signature']
-    },
-    {
-      id: 'TXN-003',
-      mcNumber: 'MC-123789',
-      mcName: 'Prime Freight Solutions',
-      askingPrice: 38500,
-      depositAmount: 500,
-      platformFee: 1925,
-      buyer: {
-        id: 'buyer-3',
-        name: 'David Thompson',
-        email: 'david.t@email.com',
-        phone: '(555) 345-6789',
-        verified: true
-      },
-      seller: {
-        id: 'seller-3',
-        name: 'Lisa Anderson',
-        email: 'lisa@primefreight.com',
-        phone: '(555) 765-4321',
-        verified: true
-      },
-      currentStep: 'final-payment',
-      status: 'active',
-      createdAt: new Date('2024-01-05'),
-      updatedAt: new Date(),
-      depositPaid: true,
-      depositPaidAt: new Date('2024-01-06'),
-      depositPaymentMethod: 'card',
-      finalPaymentPaid: false,
-      finalPaymentZellePending: true,
-      termsAccepted: true,
-      termsAcceptedAt: new Date('2024-01-05'),
-      billOfSaleGenerated: true,
-      billOfSaleApprovedByBuyer: true,
-      billOfSaleApprovedBySeller: true,
-      documentsVerified: true,
-      adminNotes: ['All documents verified', 'Bill of sale signed by both parties', 'Awaiting final payment - Zelle pending verification']
-    },
-    {
-      id: 'TXN-004',
-      mcNumber: 'MC-456123',
-      mcName: 'Reliable Transport Co',
-      askingPrice: 55000,
-      depositAmount: 500,
-      platformFee: 2750,
-      buyer: {
-        id: 'buyer-4',
-        name: 'Emily Davis',
-        email: 'emily.d@email.com',
-        phone: '(555) 456-7890',
-        verified: true
-      },
-      seller: {
-        id: 'seller-4',
-        name: 'James Wilson',
-        email: 'james@reliabletransport.com',
-        phone: '(555) 654-3210',
-        verified: true
-      },
-      currentStep: 'deposit-payment',
-      status: 'active',
-      createdAt: new Date('2024-01-18'),
-      updatedAt: new Date(),
-      depositPaid: false,
-      depositZellePending: true,
-      finalPaymentPaid: false,
-      termsAccepted: true,
-      termsAcceptedAt: new Date('2024-01-18'),
-      billOfSaleGenerated: false,
-      billOfSaleApprovedByBuyer: false,
-      billOfSaleApprovedBySeller: false,
-      documentsVerified: false,
-      adminNotes: ['Terms accepted', 'Deposit payment pending - Zelle claimed sent']
-    }
-  ])
+  const [transactions, setTransactions] = useState<TransactionData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   const steps = [
-    { id: 'confirm-intent', label: 'Intent', short: '1' },
-    { id: 'terms-agreement', label: 'Terms', short: '2' },
-    { id: 'deposit-payment', label: 'Deposit', short: '3' },
-    { id: 'awaiting-admin', label: 'Admin Review', short: '4' },
-    { id: 'bill-of-sale', label: 'Bill of Sale', short: '5' },
-    { id: 'final-payment', label: 'Final Payment', short: '6' },
+    { id: 'terms-agreement', label: 'Terms', short: '1' },
+    { id: 'awaiting-deposit', label: 'Deposit', short: '2' },
+    { id: 'deposit-received', label: 'Received', short: '3' },
+    { id: 'in-review', label: 'Review', short: '4' },
+    { id: 'approved', label: 'Approved', short: '5' },
+    { id: 'awaiting-final', label: 'Final', short: '6' },
     { id: 'completed', label: 'Complete', short: '7' }
   ]
+
+  // Map backend status to frontend step
+  const mapStatusToStep = (status: string): TransactionStep => {
+    const statusMap: Record<string, TransactionStep> = {
+      'TERMS_PENDING': 'terms-agreement',
+      'AWAITING_DEPOSIT': 'awaiting-deposit',
+      'DEPOSIT_RECEIVED': 'deposit-received',
+      'IN_REVIEW': 'in-review',
+      'APPROVED': 'approved',
+      'AWAITING_FINAL_PAYMENT': 'awaiting-final',
+      'COMPLETED': 'completed',
+      'CANCELLED': 'cancelled',
+      'DISPUTED': 'disputed'
+    }
+    return statusMap[status] || 'terms-agreement'
+  }
+
+  const fetchTransactions = async (showToast = false) => {
+    try {
+      if (showToast) setRefreshing(true)
+      else setLoading(true)
+
+      const response = await api.getAdminTransactions({ limit: 100 })
+      if (response.success && response.data) {
+        setTransactions(response.data)
+      }
+      if (showToast) toast.success('Transactions refreshed')
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error)
+      toast.error('Failed to load transactions')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [])
 
   const getStepIndex = (step: TransactionStep) => {
     return steps.findIndex(s => s.id === step)
@@ -273,17 +191,38 @@ const AdminActiveClosingsPage = () => {
     const currentIndex = getStepIndex(currentStep)
     const stepIndex = steps.findIndex(s => s.id === stepId)
 
+    if (currentStep === 'cancelled' || currentStep === 'disputed') {
+      return stepIndex <= currentIndex ? 'error' : 'pending'
+    }
     if (stepIndex < currentIndex) return 'completed'
     if (stepIndex === currentIndex) return 'current'
     return 'pending'
   }
 
-  const getStatusBadge = (status: string, step: TransactionStep) => {
-    if (status === 'pending_admin') {
+  const getStatusBadge = (status: string) => {
+    const step = mapStatusToStep(status)
+
+    if (status === 'CANCELLED') {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 flex items-center gap-1">
+          <XCircle className="w-3 h-3" />
+          Cancelled
+        </span>
+      )
+    }
+    if (status === 'DISPUTED') {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          Disputed
+        </span>
+      )
+    }
+    if (status === 'DEPOSIT_RECEIVED' || status === 'IN_REVIEW') {
       return (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center gap-1">
           <AlertCircle className="w-3 h-3" />
-          Needs Action
+          Needs Review
         </span>
       )
     }
@@ -304,23 +243,52 @@ const AdminActiveClosingsPage = () => {
   }
 
   const filteredTransactions = transactions.filter(txn => {
-    const matchesSearch = txn.mcNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         txn.mcName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         txn.buyer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         txn.seller.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch =
+      txn.listing?.mcNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.listing?.legalName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.buyer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.seller?.name?.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || txn.status === statusFilter
-    const matchesStep = stepFilter === 'all' || txn.currentStep === stepFilter
 
-    return matchesSearch && matchesStatus && matchesStep
+    return matchesSearch && matchesStatus
   })
 
-  const pendingAdminCount = transactions.filter(t => t.status === 'pending_admin').length
-  const zelleVerificationCount = transactions.filter(t => t.depositZellePending || t.finalPaymentZellePending).length
+  // Calculate stats
+  const activeCount = transactions.filter(t =>
+    !['COMPLETED', 'CANCELLED', 'DISPUTED'].includes(t.status)
+  ).length
 
-  const openRoundTable = (txn: ActiveTransaction) => {
+  const needsReviewCount = transactions.filter(t =>
+    ['DEPOSIT_RECEIVED', 'IN_REVIEW'].includes(t.status)
+  ).length
+
+  const depositsPaidCount = transactions.filter(t =>
+    t.depositPaidAt !== null
+  ).length
+
+  const totalDeposits = transactions
+    .filter(t => t.depositPaidAt !== null)
+    .reduce((sum, t) => sum + (t.depositAmount || 1000), 0)
+
+  const totalPipeline = transactions
+    .filter(t => !['COMPLETED', 'CANCELLED'].includes(t.status))
+    .reduce((sum, t) => sum + t.agreedPrice, 0)
+
+  const openRoundTable = (txn: TransactionData) => {
     setSelectedTransaction(txn)
     setShowRoundTable(true)
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading transactions...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -332,16 +300,18 @@ const AdminActiveClosingsPage = () => {
           <p className="text-gray-600 mt-1">Manage and oversee all active MC authority transactions</p>
         </div>
         <div className="flex items-center gap-3">
-          {pendingAdminCount > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => fetchTransactions(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          {needsReviewCount > 0 && (
             <div className="px-4 py-2 bg-amber-100 border border-amber-200 rounded-xl flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-amber-600" />
-              <span className="font-medium text-amber-800">{pendingAdminCount} Pending Your Action</span>
-            </div>
-          )}
-          {zelleVerificationCount > 0 && (
-            <div className="px-4 py-2 bg-purple-100 border border-purple-200 rounded-xl flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-purple-600" />
-              <span className="font-medium text-purple-800">{zelleVerificationCount} Zelle Pending</span>
+              <span className="font-medium text-amber-800">{needsReviewCount} Needs Review</span>
             </div>
           )}
         </div>
@@ -355,7 +325,7 @@ const AdminActiveClosingsPage = () => {
               <Handshake className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{transactions.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
               <p className="text-sm text-gray-500">Active Transactions</p>
             </div>
           </div>
@@ -366,8 +336,8 @@ const AdminActiveClosingsPage = () => {
               <AlertCircle className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{pendingAdminCount}</p>
-              <p className="text-sm text-gray-500">Needs Action</p>
+              <p className="text-2xl font-bold text-gray-900">{needsReviewCount}</p>
+              <p className="text-sm text-gray-500">Needs Review</p>
             </div>
           </div>
         </Card>
@@ -377,8 +347,8 @@ const AdminActiveClosingsPage = () => {
               <Banknote className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{zelleVerificationCount}</p>
-              <p className="text-sm text-gray-500">Zelle Pending</p>
+              <p className="text-2xl font-bold text-gray-900">{depositsPaidCount}</p>
+              <p className="text-sm text-gray-500">Deposits Paid</p>
             </div>
           </div>
         </Card>
@@ -389,7 +359,7 @@ const AdminActiveClosingsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                ${transactions.reduce((sum, t) => sum + (t.depositPaid ? t.depositAmount : 0), 0).toLocaleString()}
+                ${totalDeposits.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Deposits Collected</p>
             </div>
@@ -402,7 +372,7 @@ const AdminActiveClosingsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                ${transactions.reduce((sum, t) => sum + t.askingPrice, 0).toLocaleString()}
+                ${totalPipeline.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Total Pipeline</p>
             </div>
@@ -429,20 +399,15 @@ const AdminActiveClosingsPage = () => {
               className="px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="all">All Status</option>
-              <option value="pending_admin">Needs Action</option>
-              <option value="active">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            <select
-              value={stepFilter}
-              onChange={(e) => setStepFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">All Steps</option>
-              <option value="deposit-payment">Deposit Payment</option>
-              <option value="awaiting-admin">Admin Review</option>
-              <option value="bill-of-sale">Bill of Sale</option>
-              <option value="final-payment">Final Payment</option>
+              <option value="TERMS_PENDING">Terms Pending</option>
+              <option value="AWAITING_DEPOSIT">Awaiting Deposit</option>
+              <option value="DEPOSIT_RECEIVED">Deposit Received</option>
+              <option value="IN_REVIEW">In Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="AWAITING_FINAL_PAYMENT">Awaiting Final</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="DISPUTED">Disputed</option>
             </select>
           </div>
         </div>
@@ -450,289 +415,290 @@ const AdminActiveClosingsPage = () => {
 
       {/* Transactions List */}
       <div className="space-y-4">
-        {filteredTransactions.map((txn) => (
-          <Card key={txn.id} className="overflow-hidden">
-            {/* Transaction Header */}
-            <div
-              className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => setExpandedTransaction(expandedTransaction === txn.id ? null : txn.id)}
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* MC Info */}
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-                    <Truck className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{txn.mcNumber}</h3>
-                      {getStatusBadge(txn.status, txn.currentStep)}
-                      {(txn.depositZellePending || txn.finalPaymentZellePending) && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                          Zelle Pending
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">{txn.mcName}</p>
-                  </div>
-                </div>
-
-                {/* Parties Quick View */}
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500">Buyer</p>
-                    <p className="text-sm font-medium text-gray-900">{txn.buyer.name}</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray-400" />
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500">Seller</p>
-                    <p className="text-sm font-medium text-gray-900">{txn.seller.name}</p>
-                  </div>
-                </div>
-
-                {/* Price */}
-                <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">${txn.askingPrice.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">Fee: ${txn.platformFee.toLocaleString()}</p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openRoundTable(txn)
-                    }}
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Round Table
-                  </Button>
-                  <Link to={`/transaction/${txn.id}`} onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="outline">
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                  {expandedTransaction === txn.id ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="mt-4">
-                <div className="flex items-center gap-1">
-                  {steps.map((step, index) => {
-                    const status = getStepStatus(txn.currentStep, step.id)
-                    return (
-                      <div key={step.id} className="flex-1 flex items-center">
-                        <div
-                          className={`flex-1 h-2 rounded-full ${
-                            status === 'completed' ? 'bg-green-500' :
-                            status === 'current' ? 'bg-indigo-500' :
-                            'bg-gray-200'
-                          }`}
-                        />
-                        {index < steps.length - 1 && <div className="w-1" />}
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="flex justify-between mt-1">
-                  {steps.map((step) => {
-                    const status = getStepStatus(txn.currentStep, step.id)
-                    return (
-                      <span
-                        key={step.id}
-                        className={`text-xs ${
-                          status === 'current' ? 'text-indigo-600 font-medium' :
-                          status === 'completed' ? 'text-green-600' :
-                          'text-gray-400'
-                        }`}
-                      >
-                        {step.short}
-                      </span>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Expanded Details */}
-            <AnimatePresence>
-              {expandedTransaction === txn.id && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="border-t border-gray-200"
-                >
-                  <div className="p-4 bg-gray-50">
-                    <div className="grid lg:grid-cols-3 gap-6">
-                      {/* Buyer Info */}
-                      <div className="p-4 bg-white rounded-xl border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <User className="w-4 h-4 text-blue-600" />
-                          Buyer
-                        </h4>
-                        <div className="space-y-2">
-                          <p className="font-medium text-gray-900">{txn.buyer.name}</p>
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Mail className="w-4 h-4" /> {txn.buyer.email}
-                          </p>
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Phone className="w-4 h-4" /> {txn.buyer.phone}
-                          </p>
-                          {txn.buyer.verified && (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                              <CheckCircle className="w-3 h-3" /> Verified
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Seller Info */}
-                      <div className="p-4 bg-white rounded-xl border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-green-600" />
-                          Seller
-                        </h4>
-                        <div className="space-y-2">
-                          <p className="font-medium text-gray-900">{txn.seller.name}</p>
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Mail className="w-4 h-4" /> {txn.seller.email}
-                          </p>
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Phone className="w-4 h-4" /> {txn.seller.phone}
-                          </p>
-                          {txn.seller.verified && (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                              <CheckCircle className="w-3 h-3" /> Verified
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Transaction Status */}
-                      <div className="p-4 bg-white rounded-xl border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-purple-600" />
-                          Status Checklist
-                        </h4>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Terms Accepted</span>
-                            {txn.termsAccepted ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-300" />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Deposit Paid</span>
-                            {txn.depositPaid ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : txn.depositZellePending ? (
-                              <Clock className="w-4 h-4 text-amber-500" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-300" />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Documents Verified</span>
-                            {txn.documentsVerified ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-300" />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Bill of Sale</span>
-                            {txn.billOfSaleApprovedByBuyer && txn.billOfSaleApprovedBySeller ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : txn.billOfSaleGenerated ? (
-                              <Clock className="w-4 h-4 text-amber-500" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-300" />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Final Payment</span>
-                            {txn.finalPaymentPaid ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : txn.finalPaymentZellePending ? (
-                              <Clock className="w-4 h-4 text-amber-500" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-300" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Admin Notes */}
-                    {txn.adminNotes.length > 0 && (
-                      <div className="mt-4 p-4 bg-white rounded-xl border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-2">Admin Notes</h4>
-                        <ul className="space-y-1">
-                          {txn.adminNotes.map((note, i) => (
-                            <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                              <span className="text-gray-400">•</span>
-                              {note}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Quick Actions */}
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      {txn.depositZellePending && (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                          <Check className="w-4 h-4 mr-1" />
-                          Verify Deposit Zelle
-                        </Button>
-                      )}
-                      {txn.finalPaymentZellePending && (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                          <Check className="w-4 h-4 mr-1" />
-                          Verify Final Payment Zelle
-                        </Button>
-                      )}
-                      {txn.currentStep === 'awaiting-admin' && !txn.documentsVerified && (
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                          <ShieldCheck className="w-4 h-4 mr-1" />
-                          Verify Documents
-                        </Button>
-                      )}
-                      {txn.documentsVerified && !txn.billOfSaleGenerated && (
-                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
-                          <ScrollText className="w-4 h-4 mr-1" />
-                          Generate Bill of Sale
-                        </Button>
-                      )}
-                      <Button size="sm" variant="outline">
-                        <MessageSquare className="w-4 h-4 mr-1" />
-                        Message Parties
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Card>
-        ))}
-
         {filteredTransactions.length === 0 && (
           <Card className="p-12 text-center">
             <Handshake className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Transactions Found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
+            <p className="text-gray-500">
+              {transactions.length === 0
+                ? 'No transactions have been created yet'
+                : 'Try adjusting your search or filters'}
+            </p>
           </Card>
         )}
+
+        {filteredTransactions.map((txn) => {
+          const currentStep = mapStatusToStep(txn.status)
+          return (
+            <Card key={txn.id} className="overflow-hidden">
+              {/* Transaction Header */}
+              <div
+                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setExpandedTransaction(expandedTransaction === txn.id ? null : txn.id)}
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  {/* MC Info */}
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-gray-900">
+                          MC-{txn.listing?.mcNumber}
+                        </h3>
+                        {getStatusBadge(txn.status)}
+                      </div>
+                      <p className="text-sm text-gray-600">{txn.listing?.legalName}</p>
+                    </div>
+                  </div>
+
+                  {/* Parties Quick View */}
+                  <div className="flex items-center gap-6">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500">Buyer</p>
+                      <p className="text-sm font-medium text-gray-900">{txn.buyer?.name}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500">Seller</p>
+                      <p className="text-sm font-medium text-gray-900">{txn.seller?.name}</p>
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-gray-900">${txn.agreedPrice.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Fee: ${txn.platformFee.toLocaleString()}</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openRoundTable(txn)
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Details
+                    </Button>
+                    <Link to={`/transaction/${txn.id}`} onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="outline">
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    {expandedTransaction === txn.id ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <div className="flex items-center gap-1">
+                    {steps.map((step, index) => {
+                      const status = getStepStatus(currentStep, step.id)
+                      return (
+                        <div key={step.id} className="flex-1 flex items-center">
+                          <div
+                            className={`flex-1 h-2 rounded-full ${
+                              status === 'completed' ? 'bg-green-500' :
+                              status === 'current' ? 'bg-indigo-500' :
+                              status === 'error' ? 'bg-red-500' :
+                              'bg-gray-200'
+                            }`}
+                          />
+                          {index < steps.length - 1 && <div className="w-1" />}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    {steps.map((step) => {
+                      const status = getStepStatus(currentStep, step.id)
+                      return (
+                        <span
+                          key={step.id}
+                          className={`text-xs ${
+                            status === 'current' ? 'text-indigo-600 font-medium' :
+                            status === 'completed' ? 'text-green-600' :
+                            status === 'error' ? 'text-red-600' :
+                            'text-gray-400'
+                          }`}
+                        >
+                          {step.short}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Details */}
+              <AnimatePresence>
+                {expandedTransaction === txn.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-gray-200"
+                  >
+                    <div className="p-4 bg-gray-50">
+                      <div className="grid lg:grid-cols-3 gap-6">
+                        {/* Buyer Info */}
+                        <div className="p-4 bg-white rounded-xl border border-gray-200">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <User className="w-4 h-4 text-blue-600" />
+                            Buyer
+                          </h4>
+                          <div className="space-y-2">
+                            <p className="font-medium text-gray-900">{txn.buyer?.name}</p>
+                            <p className="text-sm text-gray-600 flex items-center gap-2">
+                              <Mail className="w-4 h-4" /> {txn.buyer?.email}
+                            </p>
+                            {txn.buyer?.phone && (
+                              <p className="text-sm text-gray-600 flex items-center gap-2">
+                                <Phone className="w-4 h-4" /> {txn.buyer?.phone}
+                              </p>
+                            )}
+                            {txn.buyer?.companyName && (
+                              <p className="text-sm text-gray-600">{txn.buyer.companyName}</p>
+                            )}
+                            {txn.buyer?.verified && (
+                              <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                                <CheckCircle className="w-3 h-3" /> Verified
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Seller Info */}
+                        <div className="p-4 bg-white rounded-xl border border-gray-200">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-green-600" />
+                            Seller
+                          </h4>
+                          <div className="space-y-2">
+                            <p className="font-medium text-gray-900">{txn.seller?.name}</p>
+                            <p className="text-sm text-gray-600 flex items-center gap-2">
+                              <Mail className="w-4 h-4" /> {txn.seller?.email}
+                            </p>
+                            {txn.seller?.phone && (
+                              <p className="text-sm text-gray-600 flex items-center gap-2">
+                                <Phone className="w-4 h-4" /> {txn.seller?.phone}
+                              </p>
+                            )}
+                            {txn.seller?.companyName && (
+                              <p className="text-sm text-gray-600">{txn.seller.companyName}</p>
+                            )}
+                            {txn.seller?.verified && (
+                              <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                                <CheckCircle className="w-3 h-3" /> Verified
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Transaction Status */}
+                        <div className="p-4 bg-white rounded-xl border border-gray-200">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-purple-600" />
+                            Status Checklist
+                          </h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Buyer Terms</span>
+                              {txn.buyerAcceptedTerms ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Seller Terms</span>
+                              {txn.sellerAcceptedTerms ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Deposit Paid</span>
+                              {txn.depositPaidAt ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Admin Approved</span>
+                              {txn.adminApproved ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Buyer Approved</span>
+                              {txn.buyerApproved ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Seller Approved</span>
+                              {txn.sellerApproved ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">Final Payment</span>
+                              {txn.finalPaidAt ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-gray-300" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Admin Notes */}
+                      {txn.adminNotes && (
+                        <div className="mt-4 p-4 bg-white rounded-xl border border-gray-200">
+                          <h4 className="font-semibold text-gray-900 mb-2">Admin Notes</h4>
+                          <p className="text-sm text-gray-600">{txn.adminNotes}</p>
+                        </div>
+                      )}
+
+                      {/* Quick Actions */}
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <Link to={`/transaction/${txn.id}`}>
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            Open Transaction Room
+                          </Button>
+                        </Link>
+                        <Button size="sm" variant="outline">
+                          <MessageSquare className="w-4 h-4 mr-1" />
+                          Message Parties
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Round Table Modal */}
@@ -758,9 +724,9 @@ const AdminActiveClosingsPage = () => {
                   <div>
                     <h2 className="text-2xl font-bold flex items-center gap-3">
                       <Crown className="w-7 h-7 text-amber-400" />
-                      Round Table - {selectedTransaction.mcNumber}
+                      Transaction Details - MC-{selectedTransaction.listing?.mcNumber}
                     </h2>
-                    <p className="text-indigo-200 mt-1">{selectedTransaction.mcName}</p>
+                    <p className="text-indigo-200 mt-1">{selectedTransaction.listing?.legalName}</p>
                   </div>
                   <button
                     onClick={() => setShowRoundTable(false)}
@@ -787,31 +753,33 @@ const AdminActiveClosingsPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-blue-600 font-medium uppercase">Buyer</p>
-                          <p className="font-semibold text-gray-900">{selectedTransaction.buyer.name}</p>
+                          <p className="font-semibold text-gray-900">{selectedTransaction.buyer?.name}</p>
                         </div>
-                        {selectedTransaction.buyer.verified && (
+                        {selectedTransaction.buyer?.verified && (
                           <CheckCircle className="w-5 h-5 text-green-500 ml-auto" />
                         )}
                       </div>
                       <div className="space-y-2 text-sm">
                         <p className="flex items-center gap-2 text-gray-600">
-                          <Mail className="w-4 h-4" /> {selectedTransaction.buyer.email}
+                          <Mail className="w-4 h-4" /> {selectedTransaction.buyer?.email}
                         </p>
-                        <p className="flex items-center gap-2 text-gray-600">
-                          <Phone className="w-4 h-4" /> {selectedTransaction.buyer.phone}
-                        </p>
+                        {selectedTransaction.buyer?.phone && (
+                          <p className="flex items-center gap-2 text-gray-600">
+                            <Phone className="w-4 h-4" /> {selectedTransaction.buyer?.phone}
+                          </p>
+                        )}
                       </div>
                       <div className="mt-4 pt-4 border-t border-blue-200">
                         <p className="text-xs text-blue-600 mb-2">Buyer Status</p>
                         <div className="flex flex-wrap gap-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.termsAccepted ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            Terms {selectedTransaction.termsAccepted ? '✓' : '○'}
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.buyerAcceptedTerms ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            Terms {selectedTransaction.buyerAcceptedTerms ? '✓' : '○'}
                           </span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.depositPaid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            Deposit {selectedTransaction.depositPaid ? '✓' : '○'}
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.depositPaidAt ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            Deposit {selectedTransaction.depositPaidAt ? '✓' : '○'}
                           </span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.billOfSaleApprovedByBuyer ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            BoS {selectedTransaction.billOfSaleApprovedByBuyer ? '✓' : '○'}
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.buyerApproved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            Approved {selectedTransaction.buyerApproved ? '✓' : '○'}
                           </span>
                         </div>
                       </div>
@@ -834,13 +802,10 @@ const AdminActiveClosingsPage = () => {
                         <p>Escrow & Compliance</p>
                       </div>
                       <div className="mt-4 pt-4 border-t border-amber-200">
-                        <p className="text-xs text-amber-600 mb-2">Admin Actions</p>
+                        <p className="text-xs text-amber-600 mb-2">Admin Status</p>
                         <div className="flex flex-wrap gap-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.documentsVerified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            Docs {selectedTransaction.documentsVerified ? '✓' : '○'}
-                          </span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.billOfSaleGenerated ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            BoS Gen {selectedTransaction.billOfSaleGenerated ? '✓' : '○'}
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.adminApproved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            Approved {selectedTransaction.adminApproved ? '✓' : '○'}
                           </span>
                         </div>
                       </div>
@@ -854,25 +819,30 @@ const AdminActiveClosingsPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-green-600 font-medium uppercase">Seller</p>
-                          <p className="font-semibold text-gray-900">{selectedTransaction.seller.name}</p>
+                          <p className="font-semibold text-gray-900">{selectedTransaction.seller?.name}</p>
                         </div>
-                        {selectedTransaction.seller.verified && (
+                        {selectedTransaction.seller?.verified && (
                           <CheckCircle className="w-5 h-5 text-green-500 ml-auto" />
                         )}
                       </div>
                       <div className="space-y-2 text-sm">
                         <p className="flex items-center gap-2 text-gray-600">
-                          <Mail className="w-4 h-4" /> {selectedTransaction.seller.email}
+                          <Mail className="w-4 h-4" /> {selectedTransaction.seller?.email}
                         </p>
-                        <p className="flex items-center gap-2 text-gray-600">
-                          <Phone className="w-4 h-4" /> {selectedTransaction.seller.phone}
-                        </p>
+                        {selectedTransaction.seller?.phone && (
+                          <p className="flex items-center gap-2 text-gray-600">
+                            <Phone className="w-4 h-4" /> {selectedTransaction.seller?.phone}
+                          </p>
+                        )}
                       </div>
                       <div className="mt-4 pt-4 border-t border-green-200">
                         <p className="text-xs text-green-600 mb-2">Seller Status</p>
                         <div className="flex flex-wrap gap-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.billOfSaleApprovedBySeller ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            BoS {selectedTransaction.billOfSaleApprovedBySeller ? '✓' : '○'}
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.sellerAcceptedTerms ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            Terms {selectedTransaction.sellerAcceptedTerms ? '✓' : '○'}
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${selectedTransaction.sellerApproved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            Approved {selectedTransaction.sellerApproved ? '✓' : '○'}
                           </span>
                         </div>
                       </div>
@@ -889,12 +859,12 @@ const AdminActiveClosingsPage = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Sale Price</p>
-                      <p className="text-2xl font-bold text-gray-900">${selectedTransaction.askingPrice.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">${selectedTransaction.agreedPrice.toLocaleString()}</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Deposit</p>
-                      <p className="text-2xl font-bold text-green-600">${selectedTransaction.depositAmount.toLocaleString()}</p>
-                      <p className="text-xs text-gray-400">{selectedTransaction.depositPaid ? 'Paid' : 'Pending'}</p>
+                      <p className="text-2xl font-bold text-green-600">${(selectedTransaction.depositAmount || 1000).toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">{selectedTransaction.depositPaidAt ? 'Paid' : 'Pending'}</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Platform Fee (5%)</p>
@@ -903,7 +873,7 @@ const AdminActiveClosingsPage = () => {
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Remaining Balance</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        ${(selectedTransaction.askingPrice - selectedTransaction.depositAmount).toLocaleString()}
+                        ${(selectedTransaction.agreedPrice - (selectedTransaction.depositAmount || 1000)).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -917,13 +887,14 @@ const AdminActiveClosingsPage = () => {
                   </h3>
                   <div className="flex items-center gap-2">
                     {steps.map((step, index) => {
-                      const status = getStepStatus(selectedTransaction.currentStep, step.id)
+                      const status = getStepStatus(mapStatusToStep(selectedTransaction.status), step.id)
                       return (
                         <div key={step.id} className="flex-1 flex flex-col items-center">
                           <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                               status === 'completed' ? 'bg-green-500 text-white' :
                               status === 'current' ? 'bg-indigo-600 text-white' :
+                              status === 'error' ? 'bg-red-500 text-white' :
                               'bg-gray-200 text-gray-500'
                             }`}
                           >
@@ -932,6 +903,7 @@ const AdminActiveClosingsPage = () => {
                           <p className={`text-xs mt-2 text-center ${
                             status === 'current' ? 'text-indigo-600 font-medium' :
                             status === 'completed' ? 'text-green-600' :
+                            status === 'error' ? 'text-red-600' :
                             'text-gray-400'
                           }`}>
                             {step.label}
@@ -949,44 +921,20 @@ const AdminActiveClosingsPage = () => {
                     Admin Actions
                   </h3>
                   <div className="flex flex-wrap gap-3">
-                    {selectedTransaction.depositZellePending && (
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <Check className="w-4 h-4 mr-2" />
-                        Confirm Deposit Zelle Payment
-                      </Button>
-                    )}
-                    {selectedTransaction.finalPaymentZellePending && (
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <Check className="w-4 h-4 mr-2" />
-                        Confirm Final Zelle Payment
-                      </Button>
-                    )}
-                    {!selectedTransaction.documentsVerified && (
-                      <Button className="bg-blue-600 hover:bg-blue-700">
-                        <ShieldCheck className="w-4 h-4 mr-2" />
-                        Verify All Documents
-                      </Button>
-                    )}
-                    {selectedTransaction.documentsVerified && !selectedTransaction.billOfSaleGenerated && (
-                      <Button className="bg-purple-600 hover:bg-purple-700">
-                        <ScrollText className="w-4 h-4 mr-2" />
-                        Generate Bill of Sale
-                      </Button>
-                    )}
-                    <Button variant="outline">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Message All Parties
-                    </Button>
-                    <Button variant="outline">
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Refresh Data
-                    </Button>
                     <Link to={`/transaction/${selectedTransaction.id}`}>
-                      <Button variant="outline">
+                      <Button className="bg-indigo-600 hover:bg-indigo-700">
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Open Full Transaction Room
                       </Button>
                     </Link>
+                    <Button variant="outline">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Message All Parties
+                    </Button>
+                    <Button variant="outline" onClick={() => fetchTransactions(true)}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh Data
+                    </Button>
                   </div>
                 </div>
               </div>

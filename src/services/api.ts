@@ -622,6 +622,19 @@ class ApiService {
     }>(`/buyer/transactions${query ? `?${query}` : ''}`);
   }
 
+  // Get current user's transactions (returns transactions based on user role)
+  async getMyTransactions(params?: { page?: number; limit?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+    }>(`/transactions${query ? `?${query}` : ''}`);
+  }
+
   // Get single transaction by ID
   async getTransaction(transactionId: string) {
     return this.request<{
@@ -653,6 +666,146 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ paymentMethod, reference }),
     });
+  }
+
+  // Verify deposit status by checking Stripe directly
+  // This is a backup when webhooks don't fire (common in local dev)
+  async verifyDepositStatus(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        status: string;
+        depositPaid: boolean;
+        depositPaidAt?: string;
+        amount?: number;
+      };
+      message: string;
+    }>(`/transactions/${transactionId}/verify-deposit-status`, {
+      method: 'POST',
+    });
+  }
+
+  // Admin transactions endpoint
+  async getAdminTransactions(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/admin/transactions${query ? `?${query}` : ''}`);
+  }
+
+  // Buyer approve transaction
+  async buyerApproveTransaction(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/transactions/${transactionId}/buyer/approve`, {
+      method: 'POST',
+    });
+  }
+
+  // Seller approve transaction
+  async sellerApproveTransaction(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/transactions/${transactionId}/seller/approve`, {
+      method: 'POST',
+    });
+  }
+
+  // Admin approve transaction (final approval after buyer/seller approve)
+  async adminApproveTransaction(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/transactions/${transactionId}/admin/approve`, {
+      method: 'POST',
+    });
+  }
+
+  // Admin update transaction status
+  async updateTransactionStatus(transactionId: string, status: string, notes?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/transactions/${transactionId}/admin/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    });
+  }
+
+  // Admin verify deposit payment
+  async adminVerifyDeposit(transactionId: string, paymentId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/transactions/${transactionId}/admin/verify-deposit/${paymentId}`, {
+      method: 'POST',
+    });
+  }
+
+  // Admin verify final payment
+  async adminVerifyFinalPayment(transactionId: string, paymentId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/transactions/${transactionId}/admin/verify-payment/${paymentId}`, {
+      method: 'POST',
+    });
+  }
+
+  // Upload a document (handles FormData for file upload)
+  // This uses the existing /documents endpoint
+  async uploadTransactionDocument(transactionId: string, formData: FormData) {
+    const url = `${API_BASE_URL}/documents`;
+
+    // Add transactionId to formData
+    formData.append('transactionId', transactionId);
+
+    const currentToken = this.token || localStorage.getItem('mcx_token');
+    const headers: HeadersInit = {};
+
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+
+    // Note: Do NOT set Content-Type header for FormData - browser will set it with boundary
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Failed to upload document');
+    }
+
+    return data as {
+      success: boolean;
+      data: any;
+      message: string;
+    };
   }
 }
 

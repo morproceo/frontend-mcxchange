@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -12,12 +12,16 @@ import {
   User,
   FileText,
   Users,
-  XCircle
+  XCircle,
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { TransactionStatus } from '../types'
+import api from '../services/api'
+import toast from 'react-hot-toast'
 
 interface SellerTransaction {
   id: string
@@ -37,52 +41,62 @@ interface SellerTransaction {
 const SellerTransactionsPage = () => {
   const { user: _user } = useAuth()
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
+  const [transactions, setTransactions] = useState<SellerTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock transactions data
-  const transactions: SellerTransaction[] = [
-    {
-      id: 'txn-1',
-      mcNumber: '123456',
-      mcTitle: '7-Year Premium MC Authority',
-      buyerName: 'Mike Davis',
-      offerAmount: 20000,
-      depositPaid: true,
-      status: 'in-review',
-      buyerApproved: false,
-      sellerApproved: false,
-      adminApproved: false,
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-01-18')
-    },
-    {
-      id: 'txn-2',
-      mcNumber: '789012',
-      mcTitle: '5-Year MC with Amazon Relay',
-      buyerName: 'Sarah Johnson',
-      offerAmount: 15000,
-      depositPaid: true,
-      status: 'both-approved',
-      buyerApproved: true,
-      sellerApproved: true,
-      adminApproved: false,
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-17')
-    },
-    {
-      id: 'txn-3',
-      mcNumber: '456789',
-      mcTitle: '3-Year MC Clean Record',
-      buyerName: 'John Williams',
-      offerAmount: 12000,
-      depositPaid: true,
-      status: 'completed',
-      buyerApproved: true,
-      sellerApproved: true,
-      adminApproved: true,
-      createdAt: new Date('2024-01-05'),
-      updatedAt: new Date('2024-01-12')
+  // Map backend status to frontend status
+  const mapBackendStatus = (backendStatus: string): TransactionStatus => {
+    const statusMap: Record<string, TransactionStatus> = {
+      'TERMS_PENDING': 'awaiting-deposit',
+      'AWAITING_DEPOSIT': 'awaiting-deposit',
+      'DEPOSIT_RECEIVED': 'deposit-received',
+      'IN_REVIEW': 'in-review',
+      'APPROVED': 'both-approved',
+      'AWAITING_FINAL_PAYMENT': 'payment-pending',
+      'PAYMENT_RECEIVED': 'payment-received',
+      'COMPLETED': 'completed',
+      'CANCELLED': 'cancelled',
+      'DISPUTED': 'disputed'
     }
-  ]
+    return statusMap[backendStatus] || 'in-review'
+  }
+
+  // Fetch transactions from API
+  const fetchTransactions = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await api.getMyTransactions()
+      if (response.success && response.data) {
+        const mappedTransactions: SellerTransaction[] = response.data.map((txn: any) => ({
+          id: txn.id,
+          mcNumber: txn.listing?.mcNumber || 'Unknown',
+          mcTitle: txn.listing?.title || `MC #${txn.listing?.mcNumber || 'Unknown'}`,
+          buyerName: txn.buyer?.name || 'Unknown Buyer',
+          offerAmount: txn.agreedPrice || txn.offer?.amount || 0,
+          depositPaid: !!txn.depositPaidAt,
+          status: mapBackendStatus(txn.status),
+          buyerApproved: txn.buyerApproved || false,
+          sellerApproved: txn.sellerApproved || false,
+          adminApproved: txn.adminApproved || false,
+          createdAt: new Date(txn.createdAt),
+          updatedAt: new Date(txn.updatedAt)
+        }))
+        setTransactions(mappedTransactions)
+      }
+    } catch (err: any) {
+      console.error('Error fetching transactions:', err)
+      setError(err.message || 'Failed to load transactions')
+      toast.error('Failed to load transactions')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [])
 
   const getStatusConfig = (status: TransactionStatus) => {
     const configs: Record<string, { label: string; color: string; icon: any }> = {
@@ -116,12 +130,47 @@ const SellerTransactionsPage = () => {
     totalValue: transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.offerAmount, 0)
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-500">Loading transactions...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md w-full">
+          <div className="text-center py-8">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Transactions</h3>
+            <p className="text-gray-500 mb-4">{error}</p>
+            <Button onClick={fetchTransactions}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Transactions</h1>
-        <p className="text-gray-500">Track your MC sales and transaction progress</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Transactions</h1>
+          <p className="text-gray-500">Track your MC sales and transaction progress</p>
+        </div>
+        <Button variant="outline" onClick={fetchTransactions}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* Stats */}
