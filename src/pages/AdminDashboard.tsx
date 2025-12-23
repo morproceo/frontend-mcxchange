@@ -516,7 +516,7 @@ const AdminDashboard = () => {
 
                   <div className="text-right ml-4">
                     <div className="text-2xl font-bold text-secondary-600">
-                      ${listing.price.toLocaleString()}
+                      ${(listing.price ?? 0).toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       Submitted {listing.submittedAt}
