@@ -198,6 +198,10 @@ export interface MCListingExtended extends MCListing {
   // Safety
   saferScore: string
 
+  // Raw data from FMCSA API (JSON stringified)
+  fmcsaData?: string
+  cargoTypes?: string
+
   // Unlock/ownership status (set by backend based on authenticated user)
   isUnlocked: boolean
   isSaved: boolean

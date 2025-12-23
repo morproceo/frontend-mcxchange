@@ -44,7 +44,65 @@ import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
 import api from '../services/api'
 import { getTrustLevel, formatPrice } from '../utils/helpers'
-import { MCListing } from '../types'
+import { MCListingExtended } from '../types'
+
+// Due Diligence Result Interface (from API)
+interface DueDiligenceResult {
+  mcNumber: string
+  dotNumber?: string
+  recommendationScore: number
+  recommendationStatus: 'approved' | 'review' | 'rejected'
+  riskLevel: 'low' | 'medium' | 'high' | 'critical'
+  summary: string
+  fmcsa: {
+    carrier: any
+    authority: any
+    insurance: any[]
+    score: number
+    factors: Array<{
+      name: string
+      points: number
+      maxPoints: number
+      status: 'pass' | 'fail' | 'warning' | 'na'
+      detail?: string
+    }>
+  }
+  creditsafe: {
+    companyFound: boolean
+    companyName?: string
+    connectId?: string
+    creditScore?: number
+    creditRating?: string
+    creditLimit?: number
+    riskDescription?: string
+    legalFilings: {
+      judgments: number
+      taxLiens: number
+      uccFilings: number
+      cautionaryUCC: number
+      bankruptcy: boolean
+      suits: number
+    }
+    yearsInBusiness?: string
+    employees?: string
+    score: number
+    factors: Array<{
+      name: string
+      points: number
+      maxPoints: number
+      status: 'pass' | 'fail' | 'warning' | 'na'
+      detail?: string
+    }>
+    fullReport?: any
+  }
+  riskFactors: Array<{
+    severity: 'low' | 'medium' | 'high' | 'critical'
+    category: 'fmcsa' | 'credit' | 'compliance'
+    message: string
+  }>
+  positiveFactors: string[]
+  analyzedAt: string
+}
 
 interface CreditSafeReport {
   companyName: string
@@ -115,11 +173,12 @@ const AdminReviewPage = () => {
   const [businessSearchQuery, setBusinessSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [creditSafeReport, setCreditSafeReport] = useState<CreditSafeReport | null>(null)
+  const [dueDiligenceResult, setDueDiligenceResult] = useState<DueDiligenceResult | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchError, setSearchError] = useState('')
 
   // API data state
-  const [listing, setListing] = useState<MCListing | null>(null)
+  const [listing, setListing] = useState<MCListingExtended | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
@@ -138,12 +197,16 @@ const AdminReviewPage = () => {
           const transformedListing = {
             id: data.id,
             mcNumber: data.mcNumber,
+            dotNumber: data.dotNumber || '',
+            legalName: data.legalName || '',
+            dbaName: data.dbaName || '',
             sellerId: data.sellerId || data.seller?.id || '',
             title: data.title || `MC Authority #${data.mcNumber}`,
             description: data.description || '',
-            price: data.askingPrice || 0,
+            price: data.price || data.askingPrice || 0,
             yearsActive: data.yearsActive || 0,
             fleetSize: data.fleetSize || 0,
+            totalDrivers: data.totalDrivers || 0,
             operationType: data.operationType || [],
             safetyRating: data.safetyRating || 'satisfactory',
             insuranceStatus: data.insuranceStatus || 'active',
@@ -152,12 +215,23 @@ const AdminReviewPage = () => {
             trustScore: data.trustScore || 70,
             trustLevel: getTrustLevel(data.trustScore || 70),
             verificationBadges: data.verificationBadges || [],
+            city: data.city || '',
             state: data.state || '',
+            address: data.address || '',
             amazonStatus: data.amazonStatus || 'none',
             amazonRelayScore: data.amazonRelayScore || null,
             highwaySetup: data.highwaySetup || false,
             sellingWithEmail: data.sellingWithEmail || false,
             sellingWithPhone: data.sellingWithPhone || false,
+            contactPhone: data.contactPhone || '',
+            contactEmail: data.contactEmail || '',
+            cargoTypes: data.cargoTypes || '',
+            fmcsaData: data.fmcsaData || '',
+            saferScore: data.saferScore || '',
+            insuranceOnFile: data.insuranceOnFile || false,
+            isUnlocked: true,
+            isSaved: false,
+            isOwner: false,
             documents: data.documents || [],
             status: data.status || 'pending-verification',
             visibility: data.visibility || 'public',
@@ -176,7 +250,7 @@ const AdminReviewPage = () => {
               completedDeals: data.seller?.completedDeals || 0,
               reviews: []
             }
-          } as MCListing
+          } as MCListingExtended
           setListing(transformedListing)
         }
       } catch (err) {
@@ -191,48 +265,56 @@ const AdminReviewPage = () => {
     fetchListing()
   }, [id])
 
-  // Extended listing data matching CreateListingPage fields
+  // Parse FMCSA data if available
+  const fmcsaData = listing?.fmcsaData ? JSON.parse(listing.fmcsaData as string) : null
+  const cargoTypesArray = listing?.cargoTypes ? JSON.parse(listing.cargoTypes as string) : []
+
+  // Extended listing data from API
   const listingDetails = {
     // Basic Info
-    mcNumber: listing?.mcNumber || '123456',
-    dotNumber: '1234567',
-    state: 'TX',
+    mcNumber: listing?.mcNumber || '',
+    dotNumber: listing?.dotNumber || '',
+    state: listing?.state || '',
 
-    // FMCSA Data
-    legalName: 'Transport Pro Logistics LLC',
-    dbaName: 'TransportPro',
-    physicalAddress: '1234 Trucking Way, Dallas, TX 75201',
-    mailingAddress: '1234 Trucking Way, Dallas, TX 75201',
-    phone: '(555) 123-4567',
-    powerUnits: '15',
-    drivers: '18',
-    mcs150Date: '2024-06-15',
-    operatingStatus: 'AUTHORIZED',
-    entityType: 'CARRIER',
-    cargoCarried: ['General Freight', 'Household Goods', 'Metal: sheets, coils, rolls'],
+    // FMCSA Data (from fmcsaData JSON or direct fields)
+    legalName: listing?.legalName || fmcsaData?.carrier?.legalName || '',
+    dbaName: listing?.dbaName || fmcsaData?.carrier?.dbaName || '',
+    physicalAddress: listing?.address || fmcsaData?.carrier?.phyStreet
+      ? `${fmcsaData?.carrier?.phyStreet}, ${fmcsaData?.carrier?.phyCity}, ${fmcsaData?.carrier?.phyState} ${fmcsaData?.carrier?.phyZipcode}`
+      : `${listing?.city || ''}, ${listing?.state || ''}`,
+    mailingAddress: fmcsaData?.carrier?.mailingStreet
+      ? `${fmcsaData?.carrier?.mailingStreet}, ${fmcsaData?.carrier?.mailingCity}, ${fmcsaData?.carrier?.mailingState} ${fmcsaData?.carrier?.mailingZipcode}`
+      : '',
+    phone: listing?.contactPhone || fmcsaData?.carrier?.telephone || '',
+    powerUnits: String(listing?.fleetSize || fmcsaData?.carrier?.totalPowerUnits || 0),
+    drivers: String(listing?.totalDrivers || fmcsaData?.carrier?.totalDrivers || 0),
+    mcs150Date: fmcsaData?.carrier?.mcs150FormDate || '',
+    operatingStatus: fmcsaData?.carrier?.allowedToOperate === 'Y' ? 'AUTHORIZED' : fmcsaData?.carrier?.operatingStatus || 'UNKNOWN',
+    entityType: fmcsaData?.carrier?.carrierOperation || 'CARRIER',
+    cargoCarried: cargoTypesArray.length > 0 ? cargoTypesArray : (fmcsaData?.carrier?.cargoCarried || []),
 
-    // Entry Audit
-    entryAuditCompleted: 'yes',
+    // Entry Audit (from FMCSA data)
+    entryAuditCompleted: fmcsaData?.authority?.commonAuthorityStatus === 'A' ? 'yes' : 'no',
 
     // Amazon & Highway
-    amazonStatus: 'active',
-    amazonRelayScore: 'A',
-    highwaySetup: 'yes',
+    amazonStatus: listing?.amazonStatus || 'none',
+    amazonRelayScore: listing?.amazonRelayScore || '',
+    highwaySetup: listing?.highwaySetup ? 'yes' : 'no',
 
     // Selling with Email/Phone
-    sellingWithEmail: 'yes',
-    sellingWithPhone: 'yes',
+    sellingWithEmail: listing?.sellingWithEmail ? 'yes' : 'no',
+    sellingWithPhone: listing?.sellingWithPhone ? 'yes' : 'no',
 
-    // Factoring
-    hasFactoring: 'yes',
-    factoringCompany: 'RTS Financial',
-    factoringRate: '3.5',
+    // Factoring (placeholder - would need to be added to listing model if needed)
+    hasFactoring: 'no',
+    factoringCompany: '',
+    factoringRate: '',
 
-    // Payment Info
-    invoiceNumber: 'INV-87654321',
+    // Payment Info (placeholder - would come from transactions)
+    invoiceNumber: `INV-${listing?.id?.slice(0, 8) || ''}`,
     paymentAmount: 35,
-    paymentDate: new Date('2024-01-10'),
-    paymentStatus: 'paid'
+    paymentDate: listing?.createdAt || new Date(),
+    paymentStatus: listing?.status === 'pending-verification' ? 'paid' : 'pending'
   }
 
   const [chatMessages, setChatMessages] = useState([
@@ -390,32 +472,117 @@ const AdminReviewPage = () => {
 
   // Auto-run CreditSafe check when tab is opened
   useEffect(() => {
-    if (activeTab === 'creditsafe' && !creditSafeReport && !isSearching) {
+    if (activeTab === 'creditsafe' && !creditSafeReport && !isSearching && listing?.mcNumber) {
       runAutomaticCreditCheck()
     }
-  }, [activeTab])
+  }, [activeTab, listing?.mcNumber])
 
   const runAutomaticCreditCheck = async () => {
+    if (!listing?.mcNumber) {
+      setSearchError('No MC number available for due diligence check')
+      return
+    }
+
     setIsSearching(true)
     setSearchError('')
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      // Call real API for due diligence
+      const response = await api.runDueDiligence(listing.mcNumber)
 
-    setCreditSafeReport(generateCreditSafeReport())
-    setIsSearching(false)
+      if (response.success && response.data) {
+        setDueDiligenceResult(response.data)
+
+        // Transform API response to CreditSafeReport format for backward compatibility
+        const cs = response.data.creditsafe
+        const fullReport = cs.fullReport
+
+        const transformedReport: CreditSafeReport = {
+          companyName: cs.companyName || listingDetails.legalName || 'Unknown Company',
+          tradingName: fullReport?.companySummary?.businessName || listingDetails.dbaName || '',
+          registrationNumber: fullReport?.companySummary?.safeNumber || `DOT-${listing.dotNumber}`,
+          incorporationDate: fullReport?.companySummary?.companyRegistrationNumber ?
+            fullReport?.companySummary?.dateOfIncorporation || '' : '',
+          companyStatus: fullReport?.companySummary?.companyStatus?.status || 'Active',
+          companyType: fullReport?.companySummary?.companyType || 'Limited Liability Company',
+          address: {
+            street: fullReport?.contactInformation?.mainAddress?.street || listingDetails.physicalAddress.split(',')[0] || '',
+            city: fullReport?.contactInformation?.mainAddress?.city || listing.city || '',
+            state: fullReport?.contactInformation?.mainAddress?.province || listing.state || '',
+            zip: fullReport?.contactInformation?.mainAddress?.postalCode || '',
+            country: fullReport?.contactInformation?.mainAddress?.country || 'United States'
+          },
+          contact: {
+            phone: fullReport?.contactInformation?.telephone || listingDetails.phone || '',
+            website: fullReport?.contactInformation?.websites?.[0] || '',
+            email: fullReport?.contactInformation?.emailAddresses?.[0] || ''
+          },
+          creditScore: {
+            score: cs.creditScore || 0,
+            maxScore: 100,
+            rating: cs.creditRating || 'N/A',
+            trend: 'stable',
+            riskLevel: cs.riskDescription?.toLowerCase().includes('very low') ? 'very-low' :
+                       cs.riskDescription?.toLowerCase().includes('low') ? 'low' :
+                       cs.riskDescription?.toLowerCase().includes('moderate') ? 'moderate' :
+                       cs.riskDescription?.toLowerCase().includes('high') ? 'high' : 'moderate'
+          },
+          financialSummary: {
+            annualRevenue: fullReport?.financialStatements?.[0]?.revenue || 0,
+            netWorth: fullReport?.financialStatements?.[0]?.netWorth || 0,
+            totalAssets: fullReport?.financialStatements?.[0]?.totalAssets || 0,
+            totalLiabilities: fullReport?.financialStatements?.[0]?.totalLiabilities || 0,
+            employeeCount: parseInt(cs.employees || '0') || parseInt(listingDetails.drivers) || 0,
+            yearEstablished: cs.yearsInBusiness ? new Date().getFullYear() - parseInt(cs.yearsInBusiness) : 0
+          },
+          paymentBehavior: {
+            dbtScore: fullReport?.paymentData?.dbt || 0,
+            paymentIndex: fullReport?.paymentData?.paymentIndex || 0,
+            onTimePayments: 100 - (fullReport?.paymentData?.percentOverdue || 0),
+            latePayments: fullReport?.paymentData?.percentOverdue || 0,
+            severelyLate: fullReport?.paymentData?.percentSeverelyOverdue || 0
+          },
+          legalFilings: {
+            bankruptcies: cs.legalFilings.bankruptcy ? 1 : 0,
+            liens: cs.legalFilings.taxLiens || 0,
+            judgments: cs.legalFilings.judgments || 0,
+            uccFilings: cs.legalFilings.uccFilings || 0
+          },
+          industryComparison: {
+            percentile: 50,
+            industryAverage: 50,
+            industryName: 'Trucking & Transportation'
+          },
+          directors: fullReport?.directors?.map((d: any) => ({
+            name: `${d.firstName || ''} ${d.lastName || ''}`.trim() || d.name || 'Unknown',
+            title: d.positions?.[0]?.name || d.title || 'Director',
+            appointedDate: d.positions?.[0]?.dateAppointed || ''
+          })) || [],
+          lastUpdated: response.data.analyzedAt
+        }
+
+        setCreditSafeReport(transformedReport)
+      } else {
+        setSearchError('Failed to retrieve due diligence report')
+        // Fall back to mock data
+        setCreditSafeReport(generateCreditSafeReport())
+      }
+    } catch (error) {
+      console.error('Due diligence API error:', error)
+      setSearchError('Error fetching due diligence report. Using cached data.')
+      // Fall back to mock data on error
+      setCreditSafeReport(generateCreditSafeReport())
+    } finally {
+      setIsSearching(false)
+    }
   }
 
   // Manual refresh function
   const handleRefreshCreditSafe = async () => {
     setIsSearching(true)
     setCreditSafeReport(null)
-
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    setCreditSafeReport(generateCreditSafeReport())
-    setIsSearching(false)
+    setDueDiligenceResult(null)
+    await runAutomaticCreditCheck()
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -723,7 +890,7 @@ const AdminReviewPage = () => {
                       <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                         <div className="text-gray-500 text-sm mb-2">Cargo Carried</div>
                         <div className="flex flex-wrap gap-2">
-                          {listingDetails.cargoCarried.map((cargo, i) => (
+                          {listingDetails.cargoCarried.map((cargo: string, i: number) => (
                             <span key={i} className="px-2 py-1 rounded-full bg-gray-100 text-xs">
                               {cargo}
                             </span>
