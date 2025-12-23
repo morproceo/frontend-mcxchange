@@ -162,8 +162,8 @@ const AdminDashboard = () => {
     {
       icon: Clock,
       label: 'Pending Review',
-      value: statsLoading ? '...' : (dashboardStats?.pendingListings || 0).toString(),
-      change: `${dashboardStats?.activeListings || 0} active listings`,
+      value: statsLoading ? '...' : String(dashboardStats?.pendingListings ?? 0),
+      change: `${dashboardStats?.activeListings ?? 0} active listings`,
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
       link: '/admin/pending'
@@ -171,8 +171,8 @@ const AdminDashboard = () => {
     {
       icon: Package,
       label: 'Total Listings',
-      value: statsLoading ? '...' : (dashboardStats?.totalListings || 0).toString(),
-      change: `${dashboardStats?.activeListings || 0} active`,
+      value: statsLoading ? '...' : String(dashboardStats?.totalListings ?? 0),
+      change: `${dashboardStats?.activeListings ?? 0} active`,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       link: '/admin/listings'
@@ -180,8 +180,8 @@ const AdminDashboard = () => {
     {
       icon: ShoppingCart,
       label: 'Total Offers',
-      value: statsLoading ? '...' : (dashboardStats?.totalOffers || 0).toString(),
-      change: `${dashboardStats?.pendingOffers || 0} pending`,
+      value: statsLoading ? '...' : String(dashboardStats?.totalOffers ?? 0),
+      change: `${dashboardStats?.pendingOffers ?? 0} pending`,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       link: '/admin/offers'
@@ -189,8 +189,8 @@ const AdminDashboard = () => {
     {
       icon: CheckCircle,
       label: 'Transactions',
-      value: statsLoading ? '...' : (dashboardStats?.completedTransactions || 0).toString(),
-      change: `${dashboardStats?.totalTransactions || 0} total`,
+      value: statsLoading ? '...' : String(dashboardStats?.completedTransactions ?? 0),
+      change: `${dashboardStats?.totalTransactions ?? 0} total`,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
       link: '/admin/transactions'
@@ -198,8 +198,8 @@ const AdminDashboard = () => {
     {
       icon: Users,
       label: 'Total Users',
-      value: statsLoading ? '...' : (dashboardStats?.totalUsers || 0).toLocaleString(),
-      change: `${dashboardStats?.totalSellers || 0} sellers, ${dashboardStats?.totalBuyers || 0} buyers`,
+      value: statsLoading ? '...' : String(dashboardStats?.totalUsers ?? 0),
+      change: `${dashboardStats?.totalSellers ?? 0} sellers, ${dashboardStats?.totalBuyers ?? 0} buyers`,
       color: 'text-secondary-600',
       bgColor: 'bg-secondary-50',
       link: '/admin/users'
