@@ -522,10 +522,10 @@ const AdminReviewPage = () => {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
@@ -534,14 +534,16 @@ const AdminReviewPage = () => {
             Back to Dashboard
           </button>
 
-          <div className="flex gap-3">
-            <Button variant="danger" onClick={handleReject}>
-              <XCircle className="w-4 h-4 mr-2" />
-              Reject
+          <div className="flex gap-2 sm:gap-3">
+            <Button variant="danger" onClick={handleReject} className="flex-1 sm:flex-none text-sm sm:text-base">
+              <XCircle className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Reject</span>
+              <span className="sm:hidden">Reject</span>
             </Button>
-            <Button onClick={handleApprove}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Approve
+            <Button onClick={handleApprove} className="flex-1 sm:flex-none text-sm sm:text-base">
+              <CheckCircle className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Approve</span>
+              <span className="sm:hidden">Approve</span>
             </Button>
           </div>
         </div>
@@ -550,47 +552,48 @@ const AdminReviewPage = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Tabs */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-2 overflow-x-auto border border-gray-200">
+            <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-xl p-1.5 sm:p-2 overflow-x-auto border border-gray-200 scrollbar-hide">
               <button
                 onClick={() => setActiveTab('details')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 min-w-[80px] px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'details'
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Listing Details
+                Details
               </button>
               <button
                 onClick={() => setActiveTab('documents')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 min-w-[80px] px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'documents'
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Documents ({Object.keys(documents).length})
+                Docs ({Object.keys(documents).length})
               </button>
               <button
                 onClick={() => setActiveTab('creditsafe')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                className={`flex-1 min-w-[80px] px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center gap-1 sm:gap-2 ${
                   activeTab === 'creditsafe'
                     ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
                     : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <Building2 className="w-4 h-4" />
-                CreditSafe Check
+                <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">CreditSafe</span>
+                <span className="sm:hidden">Credit</span>
               </button>
               <button
                 onClick={() => setActiveTab('chat')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 min-w-[60px] px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'chat'
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Chat with Seller
+                Chat
               </button>
             </div>
 
@@ -603,28 +606,28 @@ const AdminReviewPage = () => {
               >
                 {/* Listing Header */}
                 <Card className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
-                    <div className="flex items-start justify-between">
+                  <div className="bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-4 sm:p-6 border-b border-gray-200">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h1 className="text-3xl font-bold text-gray-900 text-gray-900">MC #{listingDetails.mcNumber}</h1>
-                          <span className="bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full text-xs text-yellow-400 flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">MC #{listingDetails.mcNumber}</h1>
+                          <span className="bg-gray-100 border border-gray-200 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs text-yellow-400 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            Pending Review
+                            Pending
                           </span>
                         </div>
-                        <p className="text-xl text-gray-700">{listing?.title}</p>
+                        <p className="text-base sm:text-xl text-gray-700">{listing?.title}</p>
                       </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-gray-900 text-gray-900 text-emerald-600">
-                          ${listing?.price.toLocaleString()}
+                      <div className="text-left sm:text-right">
+                        <div className="text-2xl sm:text-3xl font-bold text-emerald-600">
+                          ${(listing?.price ?? 0).toLocaleString()}
                         </div>
                         <div className="text-sm text-gray-500 mt-1">Asking Price</div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                     <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center">
                       <Hash className="w-5 h-5 text-primary-400 mx-auto mb-1" />
                       <div className="text-xs text-gray-500">MC Number</div>
@@ -890,14 +893,14 @@ const AdminReviewPage = () => {
                 <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-500/20">
-                      <TruckIcon className="w-6 h-6 text-blue-400" />
+                      <TruckIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">Authority Details</h2>
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900">Authority Details</h2>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4">
                     <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                         <Calendar className="w-4 h-4" />
@@ -1036,52 +1039,52 @@ const AdminReviewPage = () => {
                           {isUploaded ? (
                             // Uploaded document view
                             <div
-                              className={`rounded-xl p-4 flex items-center justify-between transition-colors border ${
+                              className={`rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors border ${
                                 doc.verified
                                   ? 'bg-emerald-500/5 border-trust-high/20 hover:bg-emerald-500/10'
                                   : 'bg-gray-100 border border-gray-200 border-gray-200 hover:bg-gray-100'
                               }`}
                             >
-                              <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                              <div className="flex items-center gap-3 sm:gap-4">
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                   doc.verified ? 'bg-emerald-500/20' : 'bg-primary-500/20'
                                 }`}>
-                                  <IconComponent className={`w-6 h-6 ${doc.verified ? 'text-emerald-600' : 'text-primary-400'}`} />
+                                  <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 ${doc.verified ? 'text-emerald-600' : 'text-primary-400'}`} />
                                 </div>
-                                <div>
-                                  <div className="font-semibold text-gray-900 mb-1">{doc.name}</div>
-                                  <div className="text-sm text-gray-500 flex items-center gap-3">
-                                    <span>{reqDoc.label}</span>
-                                    <span>•</span>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-gray-900 mb-1 text-sm sm:text-base truncate">{doc.name}</div>
+                                  <div className="text-xs sm:text-sm text-gray-500 flex flex-wrap items-center gap-1 sm:gap-3">
+                                    <span className="hidden sm:inline">{reqDoc.label}</span>
+                                    <span className="hidden sm:inline">•</span>
                                     <span>{doc.size}</span>
                                     <span>•</span>
-                                    <span>Uploaded {doc.uploadedAt.toLocaleDateString()}</span>
+                                    <span>{doc.uploadedAt.toLocaleDateString()}</span>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
                                 {doc.verified ? (
-                                  <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-600 text-sm font-medium">
-                                    <CheckCircle className="w-4 h-4" />
+                                  <span className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-emerald-500/20 text-emerald-600 text-xs sm:text-sm font-medium">
+                                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                     Verified
                                   </span>
                                 ) : (
-                                  <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-yellow-400/20 text-yellow-400 text-sm font-medium">
-                                    <Clock className="w-4 h-4" />
-                                    Pending Review
+                                  <span className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-yellow-400/20 text-yellow-400 text-xs sm:text-sm font-medium">
+                                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    Pending
                                   </span>
                                 )}
-                                <Button size="sm" variant="secondary">
-                                  <Download className="w-4 h-4 mr-2" />
-                                  Download
+                                <Button size="sm" variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3">
+                                  <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Download</span>
                                 </Button>
                                 <button
                                   onClick={() => handleRemoveDocument(reqDoc.type)}
-                                  className="p-2 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
+                                  className="p-1.5 sm:p-2 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
                                   title="Remove document"
                                 >
-                                  <XCircle className="w-5 h-5" />
+                                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </button>
                               </div>
                             </div>
@@ -1097,15 +1100,15 @@ const AdminReviewPage = () => {
                                   : 'border-red-400/30 bg-red-500/5 hover:border-red-400/50'
                               }`}
                             >
-                              <div className="p-6 flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                              <div className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                   isDragOver ? 'bg-primary-500/20' : 'bg-red-500/20'
                                 }`}>
-                                  <IconComponent className={`w-6 h-6 ${isDragOver ? 'text-primary-400' : 'text-red-400'}`} />
+                                  <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 ${isDragOver ? 'text-primary-400' : 'text-red-400'}`} />
                                 </div>
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-gray-900">{reqDoc.label}</span>
+                                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                                    <span className="font-semibold text-gray-900 text-sm sm:text-base">{reqDoc.label}</span>
                                     {reqDoc.required && (
                                       <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 font-medium">
                                         Required
@@ -1117,22 +1120,22 @@ const AdminReviewPage = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-sm text-gray-500">
-                                    {isDragOver ? 'Drop file here...' : 'Drag & drop file here or click to upload'}
+                                  <div className="text-xs sm:text-sm text-gray-500">
+                                    {isDragOver ? 'Drop file here...' : 'Drag & drop or tap to upload'}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 text-sm font-medium">
-                                    <AlertTriangle className="w-4 h-4" />
+                                  <span className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-red-500/20 text-red-400 text-xs sm:text-sm font-medium">
+                                    <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
                                     Missing
                                   </span>
                                   <Button
                                     size="sm"
                                     onClick={() => handleFileUpload(reqDoc.type)}
-                                    className={isDragOver ? 'bg-primary-500' : ''}
+                                    className={`text-xs sm:text-sm ${isDragOver ? 'bg-primary-500' : ''}`}
                                   >
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Upload
+                                    <Upload className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">Upload</span>
                                   </Button>
                                 </div>
                               </div>
@@ -1158,8 +1161,8 @@ const AdminReviewPage = () => {
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-gray-500">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div className="text-xs sm:text-sm text-gray-500">
                         <span className="text-emerald-600 font-medium">
                           {Object.values(documents).filter(d => d?.verified).length}
                         </span> verified •
@@ -1170,14 +1173,14 @@ const AdminReviewPage = () => {
                           {Object.values(documents).filter(d => d === null).length}
                         </span> missing
                       </div>
-                      <div className="flex gap-3">
-                        <Button variant="secondary">
-                          <Mail className="w-4 h-4 mr-2" />
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                        <Button variant="secondary" className="text-xs sm:text-sm">
+                          <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                           Request Re-upload
                         </Button>
-                        <Button>
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Verify All Documents
+                        <Button className="text-xs sm:text-sm">
+                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          Verify All
                         </Button>
                       </div>
                     </div>
@@ -1328,11 +1331,11 @@ const AdminReviewPage = () => {
 
                     {/* Financial Summary */}
                     <Card>
-                      <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-primary-400" />
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400" />
                         Financial Summary
                       </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
                         <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                           <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <DollarSign className="w-4 h-4" />
@@ -1392,11 +1395,11 @@ const AdminReviewPage = () => {
 
                     {/* Payment Behavior */}
                     <Card>
-                      <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
-                        <PieChart className="w-5 h-5 text-primary-400" />
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400" />
                         Payment Behavior
                       </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
                         <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center">
                           <div className="text-3xl font-bold text-gray-900 text-gray-900 text-emerald-600 mb-1">
                             {creditSafeReport.paymentBehavior.onTimePayments}%
@@ -1438,7 +1441,7 @@ const AdminReviewPage = () => {
                     </Card>
 
                     {/* Legal & Industry */}
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {/* Legal Filings */}
                       <Card>
                         <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
@@ -1502,7 +1505,7 @@ const AdminReviewPage = () => {
                     </div>
 
                     {/* Company Details & Directors */}
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {/* Company Contact */}
                       <Card>
                         <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
@@ -1576,8 +1579,8 @@ const AdminReviewPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <Card className="h-[600px] flex flex-col">
-                  <h2 className="text-xl font-bold text-gray-900 text-gray-900 mb-4">Chat with {listing.seller.name}</h2>
+                <Card className="h-[400px] sm:h-[600px] flex flex-col">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Chat with {listing.seller.name}</h2>
 
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto space-y-4 mb-4">
@@ -1627,20 +1630,20 @@ const AdminReviewPage = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Seller Card */}
             <Card>
-              <h3 className="text-lg font-bold text-gray-900 text-gray-900 mb-4">Seller Information</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Seller Information</h3>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-900 text-gray-900 text-primary-400">
+              <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl sm:text-2xl font-bold text-primary-400">
                     {listing.seller.name.charAt(0)}
                   </span>
                 </div>
-                <div>
-                  <div className="font-semibold text-gray-900 text-lg">{listing.seller.name}</div>
-                  <div className="text-sm text-gray-500">Member ID: #{listing.seller.id}</div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-gray-900 text-base sm:text-lg truncate">{listing.seller.name}</div>
+                  <div className="text-xs sm:text-sm text-gray-500">ID: #{listing.seller.id}</div>
                 </div>
               </div>
 
@@ -1672,8 +1675,8 @@ const AdminReviewPage = () => {
 
             {/* Review Checklist */}
             <Card>
-              <h3 className="text-lg font-bold text-gray-900 text-gray-900 mb-4">Review Checklist</h3>
-              <div className="space-y-3">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Review Checklist</h3>
+              <div className="space-y-2 sm:space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" className="w-5 h-5 rounded" defaultChecked />
                   <span className="text-sm">MC/DOT number verified</span>
