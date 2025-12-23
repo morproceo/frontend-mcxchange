@@ -195,15 +195,15 @@ const SellerDashboard = () => {
     {
       icon: Package,
       label: 'Active Listings',
-      value: dashboardStats?.listings.active.toString() || '0',
-      change: `${dashboardStats?.listings.pending || 0} pending review`,
+      value: String(dashboardStats?.listings?.active ?? 0),
+      change: `${dashboardStats?.listings?.pending ?? 0} pending review`,
       color: 'text-secondary-600',
       bgColor: 'bg-secondary-50'
     },
     {
       icon: Eye,
       label: 'Total Views',
-      value: dashboardStats?.totalViews.toLocaleString() || '0',
+      value: (dashboardStats?.totalViews ?? 0).toLocaleString(),
       change: 'All time',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
@@ -211,16 +211,16 @@ const SellerDashboard = () => {
     {
       icon: MessageSquare,
       label: 'Pending Offers',
-      value: dashboardStats?.offers.pending.toString() || '0',
-      change: `${dashboardStats?.offers.total || 0} total offers`,
+      value: String(dashboardStats?.offers?.pending ?? 0),
+      change: `${dashboardStats?.offers?.total ?? 0} total offers`,
       color: 'text-amber-600',
       bgColor: 'bg-amber-50'
     },
     {
       icon: DollarSign,
       label: 'Total Earnings',
-      value: formatCurrency(dashboardStats?.totalEarnings || 0),
-      change: `${dashboardStats?.listings.sold || 0} completed sales`,
+      value: formatCurrency(dashboardStats?.totalEarnings ?? 0),
+      change: `${dashboardStats?.listings?.sold ?? 0} completed sales`,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50'
     }
@@ -358,7 +358,7 @@ const SellerDashboard = () => {
 
                       <div className="flex items-center justify-between">
                         <div className="text-secondary-600 font-bold">
-                          ${offer.amount.toLocaleString()}
+                          ${(offer.amount ?? 0).toLocaleString()}
                         </div>
                         <div className="text-xs text-gray-500">{formatRelativeTime(offer.createdAt)}</div>
                       </div>
