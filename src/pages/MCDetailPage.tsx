@@ -42,6 +42,7 @@ import Input from '../components/ui/Input'
 import { formatDistanceToNow } from 'date-fns'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
 import { useListing } from '../hooks/useListing'
+import api from '../services/api'
 
 const MCDetailPage = () => {
   const { id } = useParams()
@@ -56,10 +57,12 @@ const MCDetailPage = () => {
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [premiumRequestSent, setPremiumRequestSent] = useState(false)
   const [premiumMessage, setPremiumMessage] = useState('')
+  const [sendingPremiumRequest, setSendingPremiumRequest] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactMessage, setContactMessage] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [messageSent, setMessageSent] = useState(false)
+  const [sendingInquiry, setSendingInquiry] = useState(false)
 
   // Check if listing is premium from actual listing data
   const isPremiumListing = listing?.isPremium ?? false
@@ -164,11 +167,20 @@ const MCDetailPage = () => {
   }
 
   const handleSubmitPremiumRequest = async () => {
-    // Simulate sending request to admin
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setPremiumRequestSent(true)
-    setShowPremiumModal(false)
-    setPremiumMessage('')
+    if (!listing) return
+    try {
+      setSendingPremiumRequest(true)
+      const message = premiumMessage.trim() || 'Interested in this premium MC authority. Please provide pricing and details.'
+      await api.sendInquiryToAdmin(listing.id, message)
+      setPremiumRequestSent(true)
+      setShowPremiumModal(false)
+      setPremiumMessage('')
+    } catch (err: any) {
+      console.error('Failed to send premium inquiry:', err)
+      alert(err.message || 'Failed to send inquiry. Please try again.')
+    } finally {
+      setSendingPremiumRequest(false)
+    }
   }
 
   const handleContactClick = () => {
@@ -180,12 +192,20 @@ const MCDetailPage = () => {
   }
 
   const handleSubmitContact = async () => {
-    // Simulate sending message to admin
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setMessageSent(true)
-    setShowContactModal(false)
-    setContactMessage('')
-    setContactPhone('')
+    if (!listing) return
+    try {
+      setSendingInquiry(true)
+      await api.sendInquiryToAdmin(listing.id, contactMessage.trim(), contactPhone.trim() || undefined)
+      setMessageSent(true)
+      setShowContactModal(false)
+      setContactMessage('')
+      setContactPhone('')
+    } catch (err: any) {
+      console.error('Failed to send inquiry:', err)
+      alert(err.message || 'Failed to send message. Please try again.')
+    } finally {
+      setSendingInquiry(false)
+    }
   }
 
   // Show loading state
@@ -1258,10 +1278,20 @@ const MCDetailPage = () => {
                     <Button
                       fullWidth
                       onClick={handleSubmitPremiumRequest}
+                      disabled={sendingPremiumRequest}
                       className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                     >
-                      <Send className="w-4 h-4 mr-2" />
-                      Submit Request
+                      {sendingPremiumRequest ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Submit Request
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -1362,10 +1392,19 @@ const MCDetailPage = () => {
                     <Button
                       fullWidth
                       onClick={handleSubmitContact}
-                      disabled={!contactMessage.trim()}
+                      disabled={!contactMessage.trim() || sendingInquiry}
                     >
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Message
+                      {sendingInquiry ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Send Message
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

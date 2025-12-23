@@ -171,8 +171,10 @@ const BuyerSubscriptionPage = () => {
       try {
         setLoading(true)
         const response = await api.getSubscription()
-        setSubscription(response.data.subscription)
-        setCredits(response.data.credits)
+        setSubscription(response.data?.subscription || null)
+        if (response.data?.credits) {
+          setCredits(response.data.credits)
+        }
       } catch (err: any) {
         console.error('Failed to fetch subscription:', err)
         // If 401 error, the token is invalid - don't show error to user
@@ -203,7 +205,7 @@ const BuyerSubscriptionPage = () => {
       const response = await api.createSubscriptionCheckout(planId, billingCycle === 'yearly')
 
       // Redirect to Stripe Checkout
-      if (response.data.url) {
+      if (response.data?.url) {
         window.location.href = response.data.url
       } else {
         throw new Error('No checkout URL received')
@@ -228,7 +230,7 @@ const BuyerSubscriptionPage = () => {
       setSuccessMessage('Subscription cancelled successfully. You will retain access until the end of your billing period.')
       // Refresh subscription data
       const response = await api.getSubscription()
-      setSubscription(response.data.subscription)
+      setSubscription(response.data?.subscription || null)
     } catch (err: any) {
       console.error('Cancel error:', err)
       setError(err.message || 'Failed to cancel subscription')

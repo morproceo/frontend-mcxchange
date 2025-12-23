@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import 'framer-motion'
 import {
   MessageSquare,
@@ -13,107 +13,50 @@ import {
   ChevronDown,
   Hash
 } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Textarea from '../components/ui/Textarea'
-import { MCInquiry } from '../types'
-import { formatDistanceToNow } from 'date-fns'
+import Input from '../components/ui/Input'
+import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
-// Mock data for inquiries
-const mockInquiries: MCInquiry[] = [
-  {
-    id: '1',
-    listingId: '1',
-    mcNumber: '123456',
-    userId: 'user1',
-    userName: 'John Smith',
-    userEmail: 'john.smith@email.com',
-    userPhone: '(555) 123-4567',
-    message: "I'm interested in this MC authority. Can you provide more details about the transfer process and timeline? Also, are there any outstanding violations or pending issues I should know about?",
-    status: 'new',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30 mins ago
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30),
-    responses: []
-  },
-  {
-    id: '2',
-    listingId: '2',
-    mcNumber: '789012',
-    userId: 'user2',
-    userName: 'Sarah Johnson',
-    userEmail: 'sarah.j@trucking.com',
-    userPhone: '(555) 987-6543',
-    message: "What's the asking price for this authority? I'm looking to expand my fleet and this looks like a good fit. Please send me all available documentation.",
-    status: 'in-progress',
-    adminNotes: 'Sent initial pricing info, waiting for documents from seller',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    updatedAt: new Date(Date.now() - 1000 * 60 * 45),
-    responses: [
-      {
-        id: 'r1',
-        inquiryId: '2',
-        adminId: 'admin1',
-        adminName: 'Admin Team',
-        message: "Thank you for your interest! The asking price for MC #789012 is $45,000. I'll send you the documentation package shortly.",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60)
-      }
-    ]
-  },
-  {
-    id: '3',
-    listingId: '3',
-    mcNumber: '345678',
-    userId: 'user3',
-    userName: 'Mike Williams',
-    userEmail: 'mike.w@logistics.com',
-    message: 'Is this MC still available? I can close quickly if all documents are in order.',
-    status: 'responded',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    responses: [
-      {
-        id: 'r2',
-        inquiryId: '3',
-        adminId: 'admin1',
-        adminName: 'Admin Team',
-        message: 'Yes, this MC is still available! All documents are ready for review. Would you like to schedule a call to discuss the details?',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12)
-      }
-    ]
-  },
-  {
-    id: '4',
-    listingId: '4',
-    mcNumber: '567890',
-    userId: 'user4',
-    userName: 'Emily Davis',
-    userEmail: 'emily.d@carriers.com',
-    userPhone: '(555) 456-7890',
-    message: 'Looking for an MC with clean history. Does this one have any issues?',
-    status: 'closed',
-    adminNotes: 'Deal completed - MC transferred successfully',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    responses: [
-      {
-        id: 'r3',
-        inquiryId: '4',
-        adminId: 'admin1',
-        adminName: 'Admin Team',
-        message: 'This MC has a clean history with no violations. Let me send you the full compliance report.',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36)
-      },
-      {
-        id: 'r4',
-        inquiryId: '4',
-        adminId: 'admin1',
-        adminName: 'Admin Team',
-        message: 'Great news! Transfer has been completed. Welcome to your new MC authority!',
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24)
-      }
-    ]
+interface UserSummary {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  role: string
+  status: string
+}
+
+interface Conversation {
+  id: string
+  participantId: string
+  participantName: string
+  participantAvatar: string | null
+  lastMessage: string
+  lastMessageAt: string
+  unreadCount: number
+  listingId?: string
+  listingTitle?: string
+  mcNumber?: string
+  status: 'new' | 'in-progress' | 'responded' | 'closed'
+  userEmail?: string
+  userPhone?: string
+}
+
+interface Message {
+  id: string
+  senderId: string
+  content: string
+  createdAt: string
+  sender?: {
+    id: string
+    name: string
+    avatar?: string | null
   }
-]
+}
 
 const statusConfig = {
   new: { label: 'New', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: AlertCircle },
@@ -123,74 +66,255 @@ const statusConfig = {
 }
 
 const AdminMessagesPage = () => {
-  const [inquiries, setInquiries] = useState<MCInquiry[]>(mockInquiries)
-  const [selectedInquiry, setSelectedInquiry] = useState<MCInquiry | null>(null)
+  const { user } = useAuth()
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  const [showComposeModal, setShowComposeModal] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
+  const [userLoading, setUserLoading] = useState(false)
+  const [userError, setUserError] = useState<string | null>(null)
+  const [userResults, setUserResults] = useState<UserSummary[]>([])
+  const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null)
+  const [composeMessage, setComposeMessage] = useState('')
 
-  const filteredInquiries = inquiries.filter(inquiry => {
-    const matchesStatus = filterStatus === 'all' || inquiry.status === filterStatus
-    const matchesSearch = searchTerm === '' ||
-      inquiry.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inquiry.mcNumber.includes(searchTerm) ||
-      inquiry.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await api.getMessageConversations()
+        const fetched = response.data || []
+
+        const listingIds = Array.from(
+          new Set(fetched.map((conv) => conv.listingId).filter(Boolean))
+        ) as string[]
+
+        const listingMap = new Map<string, { title?: string; mcNumber?: string }>()
+        await Promise.all(
+          listingIds.map(async (listingId) => {
+            try {
+              const listingResponse = await api.getListing(listingId)
+              listingMap.set(listingId, {
+                title: listingResponse.data?.title,
+                mcNumber: listingResponse.data?.mcNumber,
+              })
+            } catch {
+              listingMap.set(listingId, {})
+            }
+          })
+        )
+
+        const mapped: Conversation[] = fetched.map((conv) => ({
+          ...conv,
+          listingTitle: conv.listingId ? listingMap.get(conv.listingId)?.title : undefined,
+          mcNumber: conv.listingId ? listingMap.get(conv.listingId)?.mcNumber : undefined,
+          status: conv.unreadCount > 0 ? 'new' : 'responded',
+        }))
+
+        setConversations(mapped)
+        if (mapped.length > 0 && !selectedConversationId) {
+          setSelectedConversationId(mapped[0].participantId)
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load inquiries')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadConversations()
+  }, [])
+
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!selectedConversationId) return
+      try {
+        const response = await api.getMessageConversation(selectedConversationId)
+        setMessages(response.data || [])
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.participantId === selectedConversationId
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          )
+        )
+
+        const userDetailsResponse = await api.getAdminUserDetails(selectedConversationId)
+        const userDetails = userDetailsResponse?.data || {}
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.participantId === selectedConversationId
+              ? {
+                  ...conv,
+                  userEmail: userDetails?.email,
+                  userPhone: userDetails?.phone,
+                  participantName: userDetails?.name || conv.participantName,
+                }
+              : conv
+          )
+        )
+      } catch (err: any) {
+        setError(err.message || 'Failed to load messages')
+      }
+    }
+
+    loadMessages()
+  }, [selectedConversationId])
+
+  const selectedConversation = conversations.find(
+    (conv) => conv.participantId === selectedConversationId
+  )
+
+  const filteredConversations = conversations.filter((conversation) => {
+    const matchesStatus = filterStatus === 'all' || conversation.status === filterStatus
+    const term = searchTerm.toLowerCase()
+    const matchesSearch =
+      searchTerm === '' ||
+      conversation.participantName.toLowerCase().includes(term) ||
+      (conversation.mcNumber || '').includes(searchTerm) ||
+      (conversation.userEmail || '').toLowerCase().includes(term)
     return matchesStatus && matchesSearch
   })
 
-  const handleSendReply = () => {
-    if (!selectedInquiry || !replyMessage.trim()) return
-
-    const newResponse = {
-      id: `r${Date.now()}`,
-      inquiryId: selectedInquiry.id,
-      adminId: 'admin1',
-      adminName: 'Admin Team',
-      message: replyMessage,
-      createdAt: new Date()
+  const handleSendReply = async () => {
+    if (!selectedConversation || !replyMessage.trim()) return
+    try {
+      setSending(true)
+      const response = await api.sendMessage(
+        selectedConversation.participantId,
+        replyMessage.trim(),
+        selectedConversation.listingId
+      )
+      const newMessage = response.data as Message
+      setMessages((prev) => [...prev, newMessage])
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.participantId === selectedConversation.participantId
+            ? {
+                ...conv,
+                lastMessage: newMessage.content,
+                lastMessageAt: newMessage.createdAt,
+                status: 'responded',
+              }
+            : conv
+        )
+      )
+      setReplyMessage('')
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reply')
+    } finally {
+      setSending(false)
     }
-
-    setInquiries(prev => prev.map(inq =>
-      inq.id === selectedInquiry.id
-        ? {
-            ...inq,
-            responses: [...inq.responses, newResponse],
-            status: 'responded' as const,
-            updatedAt: new Date()
-          }
-        : inq
-    ))
-
-    setSelectedInquiry(prev => prev ? {
-      ...prev,
-      responses: [...prev.responses, newResponse],
-      status: 'responded',
-      updatedAt: new Date()
-    } : null)
-
-    setReplyMessage('')
   }
 
-  const handleStatusChange = (inquiryId: string, newStatus: MCInquiry['status']) => {
-    setInquiries(prev => prev.map(inq =>
-      inq.id === inquiryId
-        ? { ...inq, status: newStatus, updatedAt: new Date() }
-        : inq
-    ))
+  const handleOpenCompose = async () => {
+    setShowComposeModal(true)
+  }
 
-    if (selectedInquiry?.id === inquiryId) {
-      setSelectedInquiry(prev => prev ? { ...prev, status: newStatus, updatedAt: new Date() } : null)
+  const handleSendNewMessage = async () => {
+    if (!selectedUser || !composeMessage.trim()) return
+    try {
+      setSending(true)
+      const response = await api.sendMessage(
+        selectedUser.id,
+        composeMessage.trim()
+      )
+      const newMessage = response.data as Message
+
+      setConversations((prev) => {
+        const existing = prev.find((conv) => conv.participantId === selectedUser.id)
+        if (existing) {
+          return prev.map((conv) =>
+            conv.participantId === selectedUser.id
+              ? {
+                  ...conv,
+                  lastMessage: newMessage.content,
+                  lastMessageAt: newMessage.createdAt,
+                  status: 'responded',
+                }
+              : conv
+          )
+        }
+        return [
+          {
+            id: selectedUser.id,
+            participantId: selectedUser.id,
+            participantName: selectedUser.name,
+            participantAvatar: null,
+            lastMessage: newMessage.content,
+            lastMessageAt: newMessage.createdAt,
+            unreadCount: 0,
+            status: 'responded',
+            userEmail: selectedUser.email,
+            userPhone: selectedUser.phone,
+          },
+          ...prev,
+        ]
+      })
+
+      setSelectedConversationId(selectedUser.id)
+      setShowComposeModal(false)
+      setComposeMessage('')
+      setSelectedUser(null)
+      setUserSearch('')
+    } catch (err: any) {
+      setError(err.message || 'Failed to send message')
+    } finally {
+      setSending(false)
     }
+  }
+
+  useEffect(() => {
+    if (!showComposeModal) return
+
+    const term = userSearch.trim()
+    if (term.length < 2) {
+      setUserResults([])
+      setSelectedUser(null)
+      setUserError(null)
+      return
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        setUserLoading(true)
+        setUserError(null)
+        const response = await api.getAdminUsers({ search: term, limit: 20 }) as any
+        const users = response.users || response.data || []
+        setUserResults(users)
+      } catch (err: any) {
+        setUserError(err.message || 'Failed to search users')
+      } finally {
+        setUserLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeout)
+  }, [showComposeModal, userSearch])
+
+  const handleStatusChange = (conversationId: string, newStatus: Conversation['status']) => {
+    setConversations(prev => prev.map(conv =>
+      conv.participantId === conversationId
+        ? { ...conv, status: newStatus }
+        : conv
+    ))
 
     setShowStatusDropdown(null)
   }
 
   const stats = {
-    total: inquiries.length,
-    new: inquiries.filter(i => i.status === 'new').length,
-    inProgress: inquiries.filter(i => i.status === 'in-progress').length,
-    responded: inquiries.filter(i => i.status === 'responded').length
+    total: conversations.length,
+    new: conversations.filter(i => i.status === 'new').length,
+    inProgress: conversations.filter(i => i.status === 'in-progress').length,
+    responded: conversations.filter(i => i.status === 'responded').length
   }
 
   return (
@@ -201,6 +325,10 @@ const AdminMessagesPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">MC Inquiries</h1>
           <p className="text-gray-500">Manage all messages from potential buyers</p>
         </div>
+        <Button onClick={handleOpenCompose}>
+          <Send className="w-4 h-4 mr-2" />
+          Send Message
+        </Button>
       </div>
 
       {/* Stats */}
@@ -287,45 +415,57 @@ const AdminMessagesPage = () => {
 
           {/* Inquiry List */}
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
-            {filteredInquiries.length === 0 ? (
+            {loading ? (
+              <Card className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Loading inquiries...</p>
+              </Card>
+            ) : error ? (
+              <Card className="p-8 text-center">
+                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">{error}</p>
+              </Card>
+            ) : filteredConversations.length === 0 ? (
               <Card className="p-8 text-center">
                 <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No inquiries found</p>
               </Card>
             ) : (
-              filteredInquiries.map((inquiry) => {
+              filteredConversations.map((conversation) => {
                 // StatusIcon available for future use
-void statusConfig[inquiry.status].icon
+void statusConfig[conversation.status].icon
                 return (
                   <Card
-                    key={inquiry.id}
+                    key={conversation.participantId}
                     hover
                     className={`p-4 cursor-pointer transition-all ${
-                      selectedInquiry?.id === inquiry.id ? 'ring-2 ring-indigo-500 bg-indigo-50/50' : ''
+                      selectedConversationId === conversation.participantId ? 'ring-2 ring-indigo-500 bg-indigo-50/50' : ''
                     }`}
-                    onClick={() => setSelectedInquiry(inquiry)}
+                    onClick={() => setSelectedConversationId(conversation.participantId)}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                          <span className="text-xs font-bold text-white">{inquiry.userName.charAt(0)}</span>
+                          <span className="text-xs font-bold text-white">{conversation.participantName.charAt(0)}</span>
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900 text-sm">{inquiry.userName}</div>
-                          <div className="text-xs text-gray-500">MC #{inquiry.mcNumber}</div>
+                          <div className="font-medium text-gray-900 text-sm">{conversation.participantName}</div>
+                          <div className="text-xs text-gray-500">
+                            {conversation.mcNumber ? `MC #${conversation.mcNumber}` : 'MC Inquiry'}
+                          </div>
                         </div>
                       </div>
-                      <div className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusConfig[inquiry.status].color}`}>
-                        {statusConfig[inquiry.status].label}
+                      <div className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusConfig[conversation.status].color}`}>
+                        {statusConfig[conversation.status].label}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">{inquiry.message}</p>
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">{conversation.lastMessage}</p>
                     <div className="flex items-center justify-between text-xs text-gray-400">
-                      <span>{formatDistanceToNow(inquiry.createdAt, { addSuffix: true })}</span>
-                      {inquiry.responses.length > 0 && (
+                      <span>{formatDistanceToNow(new Date(conversation.lastMessageAt), { addSuffix: true })}</span>
+                      {conversation.unreadCount > 0 && (
                         <span className="flex items-center gap-1">
                           <MessageSquare className="w-3 h-3" />
-                          {inquiry.responses.length}
+                          {conversation.unreadCount}
                         </span>
                       )}
                     </div>
@@ -338,23 +478,23 @@ void statusConfig[inquiry.status].icon
 
         {/* Inquiry Detail */}
         <div className="lg:col-span-2">
-          {selectedInquiry ? (
+          {selectedConversation ? (
             <Card className="h-full flex flex-col">
               {/* Header */}
               <div className="p-6 border-b border-gray-100">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-lg font-bold text-white">{selectedInquiry.userName.charAt(0)}</span>
+                      <span className="text-lg font-bold text-white">{selectedConversation.participantName.charAt(0)}</span>
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">{selectedInquiry.userName}</h2>
+                      <h2 className="text-xl font-bold text-gray-900">{selectedConversation.participantName}</h2>
                       <div className="flex items-center gap-3 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Hash className="w-3 h-3" />
-                          MC {selectedInquiry.mcNumber}
+                          {selectedConversation.mcNumber ? `MC ${selectedConversation.mcNumber}` : 'MC Inquiry'}
                         </span>
-                        <span>{formatDistanceToNow(selectedInquiry.createdAt, { addSuffix: true })}</span>
+                        <span>{formatDistanceToNow(new Date(selectedConversation.lastMessageAt), { addSuffix: true })}</span>
                       </div>
                     </div>
                   </div>
@@ -362,19 +502,19 @@ void statusConfig[inquiry.status].icon
                   {/* Status Dropdown */}
                   <div className="relative">
                     <button
-                      onClick={() => setShowStatusDropdown(showStatusDropdown === selectedInquiry.id ? null : selectedInquiry.id)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border flex items-center gap-2 ${statusConfig[selectedInquiry.status].color}`}
+                      onClick={() => setShowStatusDropdown(showStatusDropdown === selectedConversation.participantId ? null : selectedConversation.participantId)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border flex items-center gap-2 ${statusConfig[selectedConversation.status].color}`}
                     >
-                      {statusConfig[selectedInquiry.status].label}
+                      {statusConfig[selectedConversation.status].label}
                       <ChevronDown className="w-4 h-4" />
                     </button>
 
-                    {showStatusDropdown === selectedInquiry.id && (
+                    {showStatusDropdown === selectedConversation.participantId && (
                       <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10">
                         {(['new', 'in-progress', 'responded', 'closed'] as const).map((status) => (
                           <button
                             key={status}
-                            onClick={() => handleStatusChange(selectedInquiry.id, status)}
+                            onClick={() => handleStatusChange(selectedConversation.participantId, status)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
                           >
                             <div className={`w-2 h-2 rounded-full ${
@@ -392,68 +532,64 @@ void statusConfig[inquiry.status].icon
 
                 {/* Contact Info */}
                 <div className="flex flex-wrap gap-4">
-                  <a
-                    href={`mailto:${selectedInquiry.userEmail}`}
-                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    {selectedInquiry.userEmail}
-                  </a>
-                  {selectedInquiry.userPhone && (
+                  {selectedConversation.userEmail && (
                     <a
-                      href={`tel:${selectedInquiry.userPhone}`}
+                      href={`mailto:${selectedConversation.userEmail}`}
+                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
+                    >
+                      <Mail className="w-4 h-4" />
+                      {selectedConversation.userEmail}
+                    </a>
+                  )}
+                  {selectedConversation.userPhone && (
+                    <a
+                      href={`tel:${selectedConversation.userPhone}`}
                       className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                     >
                       <Phone className="w-4 h-4" />
-                      {selectedInquiry.userPhone}
+                      {selectedConversation.userPhone}
                     </a>
                   )}
-                  <a
-                    href={`/mc/${selectedInquiry.listingId}`}
-                    target="_blank"
-                    className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    View Listing
-                  </a>
+                  {selectedConversation.listingId && (
+                    <a
+                      href={`/mc/${selectedConversation.listingId}`}
+                      target="_blank"
+                      className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Listing
+                    </a>
+                  )}
                 </div>
               </div>
 
               {/* Messages */}
               <div className="flex-1 p-6 overflow-y-auto space-y-4 max-h-[400px]">
-                {/* Original Inquiry */}
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-white">{selectedInquiry.userName.charAt(0)}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-gray-100 rounded-2xl rounded-tl-none p-4">
-                      <p className="text-gray-800">{selectedInquiry.message}</p>
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1 ml-2">
-                      {formatDistanceToNow(selectedInquiry.createdAt, { addSuffix: true })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Responses */}
-                {selectedInquiry.responses.map((response) => (
-                  <div key={response.id} className="flex gap-3 justify-end">
-                    <div className="flex-1 flex justify-end">
-                      <div className="max-w-[80%]">
-                        <div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none p-4">
-                          <p>{response.message}</p>
+                {messages.map((msg) => {
+                  const isAdmin = msg.senderId === user?.id
+                  return (
+                    <div key={msg.id} className={`flex gap-3 ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                      {!isAdmin && (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-white">{selectedConversation.participantName.charAt(0)}</span>
                         </div>
-                        <div className="text-xs text-gray-400 mt-1 mr-2 text-right">
-                          {response.adminName} • {formatDistanceToNow(response.createdAt, { addSuffix: true })}
+                      )}
+                      <div className={`${isAdmin ? 'max-w-[80%]' : 'flex-1'}`}>
+                        <div className={`${isAdmin ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-none' : 'bg-gray-100 rounded-2xl rounded-tl-none'} p-4`}>
+                          <p>{msg.content}</p>
+                        </div>
+                        <div className={`text-xs text-gray-400 mt-1 ${isAdmin ? 'text-right mr-2' : 'ml-2'}`}>
+                          {isAdmin ? 'Admin' : selectedConversation.participantName} • {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
                         </div>
                       </div>
+                      {isAdmin && (
+                        <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-white">A</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-white">A</span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Reply Input */}
@@ -468,7 +604,7 @@ void statusConfig[inquiry.status].icon
                   />
                   <Button
                     onClick={handleSendReply}
-                    disabled={!replyMessage.trim()}
+                    disabled={!replyMessage.trim() || sending}
                     className="self-end"
                   >
                     <Send className="w-4 h-4 mr-2" />
@@ -488,6 +624,97 @@ void statusConfig[inquiry.status].icon
           )}
         </div>
       </div>
+
+      {showComposeModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowComposeModal(false)}
+        >
+          <div
+            className="w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-6 border-b border-indigo-500/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">New Message</h3>
+                    <p className="text-sm text-gray-500">Start a conversation with any user</p>
+                  </div>
+                  <button
+                    onClick={() => setShowComposeModal(false)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <span className="text-gray-500 text-lg">×</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Input
+                    placeholder="Search users by name or email..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    icon={<Search className="w-4 h-4" />}
+                  />
+                </div>
+
+                <div className="max-h-52 overflow-y-auto rounded-lg border border-gray-200">
+                  {userSearch.trim().length < 2 ? (
+                    <div className="p-4 text-sm text-gray-500">Type at least 2 characters to search</div>
+                  ) : userLoading ? (
+                    <div className="p-4 text-sm text-gray-500">Searching users...</div>
+                  ) : userError ? (
+                    <div className="p-4 text-sm text-red-500">{userError}</div>
+                  ) : userResults.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-500">No users found</div>
+                  ) : (
+                    userResults.map((userItem) => (
+                      <button
+                        key={userItem.id}
+                        onClick={() => setSelectedUser(userItem)}
+                        className={`w-full px-4 py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
+                          selectedUser?.id === userItem.id ? 'bg-indigo-50' : ''
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-gray-900">{userItem.name}</div>
+                        <div className="text-xs text-gray-500">{userItem.email}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                <Textarea
+                  placeholder={selectedUser ? `Message ${selectedUser.name}...` : 'Select a user to start messaging'}
+                  value={composeMessage}
+                  onChange={(e) => setComposeMessage(e.target.value)}
+                  rows={4}
+                  disabled={!selectedUser}
+                />
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    fullWidth
+                    variant="secondary"
+                    onClick={() => setShowComposeModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    fullWidth
+                    onClick={handleSendNewMessage}
+                    disabled={!selectedUser || !composeMessage.trim() || sending}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Message
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

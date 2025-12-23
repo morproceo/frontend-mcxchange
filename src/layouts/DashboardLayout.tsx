@@ -52,7 +52,7 @@ interface MenuCategory {
   items: MenuItem[]
 }
 
-type MenuStructure = MenuItem[] | MenuCategory[]
+type MenuStructure = (MenuItem | MenuCategory)[]
 
 const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const { user, logout } = useAuth()
@@ -141,6 +141,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             icon: Search,
             items: [
               { icon: Search, label: 'AI Due Diligence', path: '/admin/ai-due-diligence' },
+              { icon: CreditCard, label: 'Credit Reports', path: '/admin/creditsafe' },
             ]
           },
           // Management category

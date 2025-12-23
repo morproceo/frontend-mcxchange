@@ -2274,8 +2274,8 @@ For questions, contact us at escrow@domilea.com`
                           <p className="text-gray-600 mb-2">
                             This agreement confirms the sale of MC Authority #{transaction.listing.mcNumber} from
                             {' '}<span className="font-medium">{transaction.seller.name}</span> to
-                            {' '}<span className="font-medium">{transaction.buyer.name}</span> for the {userRole === 'seller' ? 'asking price' : 'agreed price'} of
-                            {' '}<span className="font-medium">${userRole === 'seller' ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
+                            {' '}<span className="font-medium">{transaction.buyer.name}</span> for the {isSeller ? 'asking price' : 'agreed price'} of
+                            {' '}<span className="font-medium">${isSeller ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
                           </p>
                           <p className="text-gray-500 text-xs">Generated: {new Date().toLocaleDateString()}</p>
                         </div>
@@ -2809,8 +2809,8 @@ For questions, contact us at escrow@domilea.com`
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500">{userRole === 'seller' ? 'Your Asking Price' : userRole === 'buyer' ? 'Purchase Price' : 'Listing Price'}</p>
-                        <p className="text-lg font-bold text-gray-900">${userRole === 'seller' ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">{isSeller ? 'Your Asking Price' : isBuyer ? 'Purchase Price' : 'Listing Price'}</p>
+                        <p className="text-lg font-bold text-gray-900">${isSeller ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</p>
                       </div>
                       <div className={`rounded-lg p-3 ${transaction.depositPaid ? 'bg-green-50' : 'bg-yellow-50'}`}>
                         <p className="text-xs text-gray-500">Deposit</p>

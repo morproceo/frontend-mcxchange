@@ -19,6 +19,39 @@ import api from '../services/api'
 import { MCListing } from '../types'
 import { getTrustLevel } from '../utils/helpers'
 
+interface SellerOffer {
+  id: string
+  listingId: string
+  amount: number
+  status: string
+  message?: string
+  createdAt: string
+  listing?: {
+    mcNumber: string
+    title: string
+  }
+  buyer?: {
+    id: string
+    name: string
+  }
+}
+
+interface DashboardStats {
+  listings: {
+    total: number
+    active: number
+    pending: number
+    sold: number
+  }
+  offers: {
+    total: number
+    pending: number
+    accepted: number
+  }
+  totalViews: number
+  totalEarnings: number
+}
+
 const SellerDashboard = () => {
   const { user } = useAuth()
 
@@ -27,24 +60,27 @@ const SellerDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Stats and offers state
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [recentOffers, setRecentOffers] = useState<SellerOffer[]>([])
+  const [offersLoading, setOffersLoading] = useState(true)
+
   // Fetch seller's listings from API
   useEffect(() => {
     const fetchMyListings = async () => {
       try {
         setLoading(true)
         setError(null)
-        // TODO: Add endpoint to get seller's own listings
-        // For now, fetch all and filter by sellerId (will be empty until listings exist)
-        const response = await api.getListings()
+        // Use the seller listings endpoint
+        const response = await api.getSellerListings({ limit: 2 })
 
-        const transformedListings: MCListing[] = (response.listings || [])
-          .filter((listing: any) => listing.sellerId === user?.id)
+        const transformedListings: MCListing[] = (response.data || [])
           .map((listing: any) => ({
             id: listing.id,
             mcNumber: listing.mcNumber,
             title: listing.title || `MC Authority #${listing.mcNumber}`,
             description: listing.description || '',
-            price: listing.askingPrice || 0,
+            price: listing.askingPrice || listing.price || 0,
             yearsActive: listing.yearsActive || 0,
             fleetSize: listing.fleetSize || 0,
             operationType: listing.operationType || [],
@@ -56,16 +92,15 @@ const SellerDashboard = () => {
             trustLevel: getTrustLevel(listing.trustScore || 70),
             createdAt: new Date(listing.createdAt),
             seller: {
-              id: listing.seller?.id || listing.sellerId,
-              name: listing.seller?.name || 'Unknown Seller',
-              email: listing.seller?.email || '',
-              verified: listing.seller?.isVerified || false,
-              trustScore: listing.seller?.trustScore || 70,
-              memberSince: new Date(listing.seller?.createdAt || Date.now()),
-              completedDeals: listing.seller?.completedDeals || 0
+              id: user?.id || listing.sellerId,
+              name: user?.name || 'Unknown Seller',
+              email: user?.email || '',
+              verified: user?.verified || false,
+              trustScore: user?.trustScore || 70,
+              memberSince: new Date(user?.createdAt || Date.now()),
+              completedDeals: 0
             }
           }))
-          .slice(0, 2)
 
         setMyListings(transformedListings)
       } catch (err) {
@@ -78,67 +113,100 @@ const SellerDashboard = () => {
     }
 
     fetchMyListings()
-  }, [user?.id])
+  }, [user?.id, user?.name, user?.email, user?.verified, user?.trustScore, user?.createdAt])
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const response = await api.getSellerDashboard()
+        if (response.success && response.data) {
+          setDashboardStats(response.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err)
+      }
+    }
+
+    fetchDashboardStats()
+  }, [])
+
+  // Fetch seller's offers
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        setOffersLoading(true)
+        const response = await api.getSellerOffers({ limit: 5 })
+        if (response.success && response.data) {
+          setRecentOffers(response.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch offers:', err)
+      } finally {
+        setOffersLoading(false)
+      }
+    }
+
+    fetchOffers()
+  }, [])
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`
+    }
+    return `$${amount.toLocaleString()}`
+  }
+
+  // Format relative time
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) return `${diffMins} minutes ago`
+    if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffDays === 1) return '1 day ago'
+    return `${diffDays} days ago`
+  }
 
   const stats = [
     {
       icon: Package,
       label: 'Active Listings',
-      value: '3',
-      change: '+1 this month',
+      value: dashboardStats?.listings.active.toString() || '0',
+      change: `${dashboardStats?.listings.pending || 0} pending review`,
       color: 'text-secondary-600',
       bgColor: 'bg-secondary-50'
     },
     {
       icon: Eye,
       label: 'Total Views',
-      value: '1,234',
-      change: '+156 this week',
+      value: dashboardStats?.totalViews.toLocaleString() || '0',
+      change: 'All time',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     },
     {
       icon: MessageSquare,
-      label: 'New Offers',
-      value: '5',
-      change: '2 pending review',
+      label: 'Pending Offers',
+      value: dashboardStats?.offers.pending.toString() || '0',
+      change: `${dashboardStats?.offers.total || 0} total offers`,
       color: 'text-amber-600',
       bgColor: 'bg-amber-50'
     },
     {
       icon: DollarSign,
-      label: 'Total Revenue',
-      value: '$145K',
-      change: 'Last 12 months',
+      label: 'Total Earnings',
+      value: formatCurrency(dashboardStats?.totalEarnings || 0),
+      change: `${dashboardStats?.listings.sold || 0} completed sales`,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50'
-    }
-  ]
-
-  const recentOffers = [
-    {
-      id: '1',
-      mcNumber: '123456',
-      buyer: 'John Buyer',
-      amount: 42000,
-      status: 'pending',
-      date: '2 hours ago'
-    },
-    {
-      id: '2',
-      mcNumber: '789012',
-      buyer: 'Sarah Smith',
-      amount: 58000,
-      status: 'accepted',
-      date: '1 day ago'
-    },
-    {
-      id: '3',
-      mcNumber: '345678',
-      buyer: 'Mike Johnson',
-      amount: 70000,
-      status: 'pending',
-      date: '3 days ago'
     }
   ]
 
@@ -238,46 +306,63 @@ const SellerDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900">Recent Offers</h2>
 
             <Card>
-              <div className="space-y-4">
-                {recentOffers.map((offer) => (
-                  <div
-                    key={offer.id}
-                    className="rounded-xl p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-gray-900">MC #{offer.mcNumber}</div>
-                        <div className="text-sm text-gray-500">{offer.buyer}</div>
+              {offersLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 text-gray-400 mx-auto animate-spin" />
+                  <p className="text-gray-500 mt-2">Loading offers...</p>
+                </div>
+              ) : recentOffers.length > 0 ? (
+                <div className="space-y-4">
+                  {recentOffers.map((offer) => (
+                    <div
+                      key={offer.id}
+                      className="rounded-xl p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="font-semibold text-gray-900">MC #{offer.listing?.mcNumber || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{offer.buyer?.name || 'Unknown Buyer'}</div>
+                        </div>
+                        {offer.status === 'PENDING' ? (
+                          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Pending
+                          </span>
+                        ) : offer.status === 'ACCEPTED' ? (
+                          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Accepted
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-gray-50 border border-gray-200 text-gray-700 flex items-center gap-1">
+                            {offer.status}
+                          </span>
+                        )}
                       </div>
-                      {offer.status === 'pending' ? (
-                        <span className="px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Pending
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-lg text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          Accepted
-                        </span>
+
+                      <div className="flex items-center justify-between">
+                        <div className="text-secondary-600 font-bold">
+                          ${offer.amount.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">{formatRelativeTime(offer.createdAt)}</div>
+                      </div>
+
+                      {offer.status === 'PENDING' && (
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" fullWidth>Accept</Button>
+                          <Button size="sm" fullWidth variant="outline">Decline</Button>
+                        </div>
                       )}
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="text-secondary-600 font-bold">
-                        ${offer.amount.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-gray-500">{offer.date}</div>
-                    </div>
-
-                    {offer.status === 'pending' && (
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" fullWidth>Accept</Button>
-                        <Button size="sm" fullWidth variant="outline">Decline</Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No offers yet</p>
+                  <p className="text-sm text-gray-400">Offers from buyers will appear here</p>
+                </div>
+              )}
 
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <Link to="/seller/offers" className="text-secondary-600 hover:text-secondary-700 text-sm font-medium">

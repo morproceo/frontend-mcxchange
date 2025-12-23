@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
   Shield,
@@ -9,469 +9,1020 @@ import {
   TruckIcon,
   Calendar,
   ShieldCheck,
-  FileText
+  FileText,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Building2,
+  CreditCard,
+  Users,
+  MapPin,
+  Phone,
+  DollarSign,
+  Scale,
+  AlertOctagon,
+  FileWarning,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  BadgeCheck,
+  BadgeAlert,
+  Sparkles,
+  RefreshCw,
+  ExternalLink,
+  Activity,
+  Briefcase,
+  CircleDollarSign,
+  Star,
+  Zap,
+  Eye,
 } from 'lucide-react'
 import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import api from '../services/api'
+import toast from 'react-hot-toast'
 
-const AdminAIDueDiligence = () => {
-  const [mcNumber, setMcNumber] = useState('')
-  const [searchResult, setSearchResult] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
+// Type for analysis result
+type AnalysisResult = {
+  mcNumber: string
+  dotNumber?: string
+  recommendationScore: number
+  recommendationStatus: 'approved' | 'review' | 'rejected'
+  riskLevel: 'low' | 'medium' | 'high' | 'critical'
+  summary: string
+  fmcsa: {
+    carrier: any
+    authority: any
+    insurance: any[]
+    score: number
+    factors: Array<{
+      name: string
+      points: number
+      maxPoints: number
+      status: 'pass' | 'fail' | 'warning' | 'na'
+      detail?: string
+    }>
+  }
+  creditsafe: {
+    companyFound: boolean
+    companyName?: string
+    connectId?: string
+    creditScore?: number
+    creditRating?: string
+    creditLimit?: number
+    riskDescription?: string
+    legalFilings: {
+      judgments: number
+      taxLiens: number
+      uccFilings: number
+      cautionaryUCC: number
+      bankruptcy: boolean
+      suits: number
+    }
+    yearsInBusiness?: string
+    employees?: string
+    score: number
+    factors: Array<{
+      name: string
+      points: number
+      maxPoints: number
+      status: 'pass' | 'fail' | 'warning' | 'na'
+      detail?: string
+    }>
+    fullReport?: any
+  }
+  riskFactors: Array<{
+    severity: 'low' | 'medium' | 'high' | 'critical'
+    category: 'fmcsa' | 'credit' | 'compliance'
+    message: string
+  }>
+  positiveFactors: string[]
+  analyzedAt: string
+}
 
-  const handleSearch = () => {
-    if (!mcNumber) return
+// Expandable Section Component
+const ExpandableSection = ({
+  title,
+  icon: Icon,
+  children,
+  defaultOpen = false,
+  badge,
+  badgeColor = 'bg-primary-500/20 text-primary-600',
+}: {
+  title: string
+  icon: any
+  children: React.ReactNode
+  defaultOpen?: boolean
+  badge?: string | number
+  badgeColor?: string
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
-    setIsLoading(true)
+  return (
+    <div className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-200">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="w-5 h-5 text-primary-600" />
+          <span className="font-semibold text-lg text-gray-900">{title}</span>
+          {badge !== undefined && (
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeColor}`}>
+              {badge}
+            </span>
+          )}
+        </div>
+        {isOpen ? (
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-gray-500" />
+        )}
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-6 pb-6 pt-2">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
 
-    // Simulate API call
-    setTimeout(() => {
-      setSearchResult({
-        mcNumber: mcNumber,
-        dotNumber: `DOT-${mcNumber}`,
-        legalName: 'Sample Freight Solutions LLC',
-        operatingAddress: '123 Transport Way, Dallas, TX 75201',
-        yearsActive: 5,
-        fleetSize: 12,
-        safetyRating: 'satisfactory',
-        insuranceStatus: 'active',
-        operationType: ['Interstate', 'Long Haul'],
-
-        // AI Assessment
-        aiScore: 92,
-        aiStatus: 'approved',
-
-        // Compliance Checks
-        amazonSetup: {
-          status: 'good',
-          message: 'Good Standing',
-          lastChecked: '2024-01-10'
-        },
-        carrier411: {
-          status: 'clear',
-          message: 'No Issues Found',
-          lastChecked: '2024-01-10'
-        },
-        uccLiens: {
-          status: 'clear',
-          message: 'No Active Liens',
-          lastChecked: '2024-01-09'
-        },
-        highwayRMIS: {
-          status: 'good',
-          message: 'Good Standing',
-          lastChecked: '2024-01-10'
-        },
-
-        // Additional Details
-        documentation: {
-          insurance: 'Complete & Current',
-          authority: 'Valid',
-          safetyReport: 'Available',
-          uccFiling: 'Complete'
-        },
-
-        // Financial Info
-        estimatedRevenue: '$2.4M',
-        creditScore: 'Good',
-
-        // Safety Metrics
-        crashes: 0,
-        inspections: 24,
-        violations: 2,
-
-        // Owner Info
-        ownerName: 'John Smith',
-        memberSince: '2019',
-        completedDeals: 3
-      })
-      setIsLoading(false)
-    }, 1500)
+// Score Gauge Component
+const ScoreGauge = ({
+  score,
+  status,
+  size = 'large',
+}: {
+  score: number
+  status: 'approved' | 'review' | 'rejected'
+  size?: 'large' | 'small'
+}) => {
+  const getColor = () => {
+    if (status === 'approved') return '#10b981'
+    if (status === 'review') return '#f59e0b'
+    return '#ef4444'
   }
 
-  const getStatusColor = (status: string) => {
+  const dimensions = size === 'large' ? { width: 200, radius: 85 } : { width: 120, radius: 50 }
+  const strokeWidth = size === 'large' ? 14 : 8
+  const circumference = 2 * Math.PI * dimensions.radius
+  const offset = circumference * (1 - score / 100)
+
+  return (
+    <div className="relative" style={{ width: dimensions.width, height: dimensions.width }}>
+      <svg className="w-full h-full transform -rotate-90">
+        <circle
+          cx={dimensions.width / 2}
+          cy={dimensions.width / 2}
+          r={dimensions.radius}
+          stroke="#e5e7eb"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <motion.circle
+          cx={dimensions.width / 2}
+          cy={dimensions.width / 2}
+          r={dimensions.radius}
+          stroke={getColor()}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.5, ease: 'easeOut' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            className={`font-bold ${size === 'large' ? 'text-5xl' : 'text-2xl'}`}
+            style={{ color: getColor() }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          >
+            {score}
+          </motion.div>
+          <div className={`text-gray-500 ${size === 'large' ? 'text-sm' : 'text-xs'}`}>
+            out of 100
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Factor Progress Bar
+const FactorBar = ({
+  name,
+  points,
+  maxPoints,
+  status,
+  detail,
+}: {
+  name: string
+  points: number
+  maxPoints: number
+  status: 'pass' | 'fail' | 'warning' | 'na'
+  detail?: string
+}) => {
+  const percentage = (points / maxPoints) * 100
+
+  const getStatusColor = () => {
     switch (status) {
-      case 'good':
-      case 'clear':
-      case 'approved':
-        return 'text-trust-high'
+      case 'pass':
+        return 'bg-emerald-500'
+      case 'fail':
+        return 'bg-red-500'
       case 'warning':
-        return 'text-yellow-400'
-      case 'error':
-        return 'text-red-400'
+        return 'bg-amber-500'
       default:
-        return 'text-white/60'
+        return 'bg-gray-500'
     }
   }
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = () => {
     switch (status) {
-      case 'good':
-      case 'clear':
-      case 'approved':
-        return <CheckCircle className="w-5 h-5 text-trust-high" />
+      case 'pass':
+        return <CheckCircle className="w-4 h-4 text-emerald-600" />
+      case 'fail':
+        return <XCircle className="w-4 h-4 text-red-600" />
       case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-yellow-400" />
-      case 'error':
-        return <XCircle className="w-5 h-5 text-red-400" />
+        return <AlertTriangle className="w-4 h-4 text-amber-600" />
       default:
-        return <Shield className="w-5 h-5 text-white/60" />
+        return <Clock className="w-4 h-4 text-gray-500" />
     }
   }
 
   return (
-    <div className="p-8">
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {getStatusIcon()}
+          <span className="text-sm font-medium text-gray-800">{name}</span>
+        </div>
+        <span className="text-xs text-gray-500">
+          {points}/{maxPoints} pts
+        </span>
+      </div>
+      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full ${getStatusColor()} rounded-full`}
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      </div>
+      {detail && <p className="text-xs text-gray-500">{detail}</p>}
+    </div>
+  )
+}
+
+const AdminAIDueDiligence = () => {
+  const [mcNumber, setMcNumber] = useState('')
+  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSearch = async () => {
+    if (!mcNumber.trim()) {
+      toast.error('Please enter an MC number')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+    setResult(null)
+
+    try {
+      const response = await api.runDueDiligence(mcNumber)
+      if (response.success && response.data) {
+        setResult(response.data)
+        toast.success('Analysis complete!')
+      } else {
+        throw new Error('Invalid response from server')
+      }
+    } catch (err: any) {
+      console.error('Due diligence error:', err)
+      setError(err.message || 'Failed to run analysis')
+      toast.error(err.message || 'Failed to run analysis')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getStatusBadge = (status: 'approved' | 'review' | 'rejected') => {
+    switch (status) {
+      case 'approved':
+        return (
+          <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 text-emerald-400">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-semibold">APPROVED</span>
+          </span>
+        )
+      case 'review':
+        return (
+          <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-400">
+            <Eye className="w-5 h-5" />
+            <span className="font-semibold">NEEDS REVIEW</span>
+          </span>
+        )
+      case 'rejected':
+        return (
+          <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/20 text-red-400">
+            <XCircle className="w-5 h-5" />
+            <span className="font-semibold">REJECTED</span>
+          </span>
+        )
+    }
+  }
+
+  const getRiskBadge = (level: 'low' | 'medium' | 'high' | 'critical') => {
+    const colors = {
+      low: 'bg-emerald-500/20 text-emerald-400',
+      medium: 'bg-amber-500/20 text-amber-400',
+      high: 'bg-orange-500/20 text-orange-400',
+      critical: 'bg-red-500/20 text-red-400',
+    }
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${colors[level]}`}>
+        {level} Risk
+      </span>
+    )
+  }
+
+  const formatCurrency = (value: number | undefined) => {
+    if (!value) return 'N/A'
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+    }).format(value)
+  }
+
+  return (
+    <div className="p-8 min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-1">AI Due Diligence</h2>
-          <p className="text-white/60">Enter an MC number to perform comprehensive due diligence</p>
-        </div>
-
-        {/* Search Section */}
-        <GlassCard className="mb-8">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Input
-                label="MC Number"
-                placeholder="Enter MC number (e.g., 123456)"
-                value={mcNumber}
-                onChange={(e) => setMcNumber(e.target.value)}
-                icon={<Search className="w-4 h-4" />}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-end">
-              <Button onClick={handleSearch} disabled={isLoading || !mcNumber}>
-                {isLoading ? 'Analyzing...' : 'Run Analysis'}
-              </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">AI Due Diligence</h2>
+              <p className="text-gray-600">
+                Comprehensive analysis combining FMCSA & Creditsafe data
+              </p>
             </div>
           </div>
-        </GlassCard>
+        </motion.div>
+
+        {/* Search Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <GlassCard className="mb-8">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Input
+                  label="MC Number"
+                  placeholder="Enter MC number (e.g., 123456)"
+                  value={mcNumber}
+                  onChange={(e) => setMcNumber(e.target.value)}
+                  icon={<Search className="w-4 h-4" />}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleSearch}
+                  disabled={isLoading || !mcNumber.trim()}
+                  className="w-full sm:w-auto"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Run AI Analysis
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Loading Animation */}
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-6 p-6 bg-gray-100 rounded-xl border border-gray-200"
+              >
+                <div className="flex items-center justify-center gap-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Running comprehensive analysis...</p>
+                    <p className="text-sm text-gray-600">
+                      Checking FMCSA database and Creditsafe reports
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <TruckIcon className="w-4 h-4" />
+                    <span>FMCSA Data...</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Credit Report...</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Shield className="w-4 h-4" />
+                    <span>Safety Check...</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Scale className="w-4 h-4" />
+                    <span>Legal Filings...</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Error Display */}
+            {error && !isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3"
+              >
+                <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                <p className="text-red-400">{error}</p>
+              </motion.div>
+            )}
+          </GlassCard>
+        </motion.div>
 
         {/* Results */}
-        {searchResult && (
+        {result && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.5 }}
             className="space-y-6"
           >
-            {/* AI Assessment Overview */}
-            <GlassCard>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold">AI Assessment Overview</h3>
-                <div className="flex items-center gap-2 glass-subtle px-4 py-2 rounded-full">
-                  {getStatusIcon(searchResult.aiStatus)}
-                  <span className={`font-semibold ${getStatusColor(searchResult.aiStatus)}`}>
-                    {searchResult.aiStatus.toUpperCase()}
-                  </span>
+            {/* Overall Assessment */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="flex flex-col lg:flex-row">
+                {/* Score Section */}
+                <div className="flex-1 p-6 lg:p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50">
+                  <ScoreGauge score={result.recommendationScore} status={result.recommendationStatus} />
+                  <div className="mt-4 text-center">
+                    {getStatusBadge(result.recommendationStatus)}
+                    <div className="mt-2">{getRiskBadge(result.riskLevel)}</div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Score Meter */}
-                <div className="flex items-center justify-center">
-                  <div className="relative w-40 h-40">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
-                        stroke="rgba(255,255,255,0.1)"
-                        strokeWidth="12"
-                        fill="none"
-                      />
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
-                        stroke="#10b981"
-                        strokeWidth="12"
-                        fill="none"
-                        strokeDasharray={`${2 * Math.PI * 70}`}
-                        strokeDashoffset={`${2 * Math.PI * 70 * (1 - searchResult.aiScore / 100)}`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-4xl font-bold text-trust-high">{searchResult.aiScore}%</div>
-                        <div className="text-sm text-white/60">AI Score</div>
+                {/* Details Section */}
+                <div className="flex-1 p-6 lg:p-8">
+                  <h3 className="text-xl font-bold mb-4 text-gray-900">AI Assessment Summary</h3>
+                  <p className="text-gray-600 mb-6">{result.summary}</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                      <div className="text-sm text-gray-500 mb-1">FMCSA Score</div>
+                      <div className="text-2xl font-bold text-primary-600">
+                        {result.fmcsa.score}/100
+                      </div>
+                    </div>
+                    <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                      <div className="text-sm text-gray-500 mb-1">Credit Score</div>
+                      <div className="text-2xl font-bold text-purple-600">
+                        {result.creditsafe.score}/100
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Quick Stats */}
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Documentation</span>
-                    <span className="font-semibold text-trust-high">Complete</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Compliance</span>
-                    <span className="font-semibold text-trust-high">Excellent</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Risk Level</span>
-                    <span className="font-semibold text-trust-high">Low</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Credit Score</span>
-                    <span className="font-semibold text-trust-high">{searchResult.creditScore}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Est. Revenue</span>
-                    <span className="font-semibold">{searchResult.estimatedRevenue}</span>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Basic Information */}
-            <GlassCard>
-              <h3 className="text-xl font-bold mb-4">Basic Information</h3>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">MC Number</div>
-                    <div className="font-semibold text-lg">MC #{searchResult.mcNumber}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">DOT Number</div>
-                    <div className="font-semibold">{searchResult.dotNumber}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">Legal Name</div>
-                    <div className="font-semibold">{searchResult.legalName}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">Operating Address</div>
-                    <div className="font-semibold text-sm">{searchResult.operatingAddress}</div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">Owner</div>
-                    <div className="font-semibold">{searchResult.ownerName}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">Member Since</div>
-                    <div className="font-semibold">{searchResult.memberSince}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/60 mb-1">Completed Deals</div>
-                    <div className="font-semibold">{searchResult.completedDeals}</div>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Compliance & Status Checks */}
-            <GlassCard>
-              <h3 className="text-xl font-bold mb-4">Compliance & Status Checks</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-trust-high/20 flex items-center justify-center">
-                        {getStatusIcon(searchResult.amazonSetup.status)}
+                  {/* Positive Factors */}
+                  {result.positiveFactors.length > 0 && (
+                    <div className="mt-4">
+                      <div className="text-sm text-gray-500 mb-2">Key Strengths</div>
+                      <div className="flex flex-wrap gap-2">
+                        {result.positiveFactors.slice(0, 4).map((factor, i) => (
+                          <span
+                            key={i}
+                            className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          >
+                            <CheckCircle className="w-3 h-3 inline mr-1" />
+                            {factor}
+                          </span>
+                        ))}
                       </div>
-                      <div>
-                        <div className="font-semibold">Amazon Setup</div>
-                        <div className={`text-sm ${getStatusColor(searchResult.amazonSetup.status)}`}>
-                          {searchResult.amazonSetup.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Risk Factors Alert */}
+            {result.riskFactors.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 border-l-4 border-l-amber-500 p-6">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    Risk Factors Identified ({result.riskFactors.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {result.riskFactors.map((risk, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-3 p-3 rounded-lg ${
+                          risk.severity === 'critical'
+                            ? 'bg-red-50 border border-red-200'
+                            : risk.severity === 'high'
+                            ? 'bg-orange-50 border border-orange-200'
+                            : risk.severity === 'medium'
+                            ? 'bg-amber-50 border border-amber-200'
+                            : 'bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        <AlertOctagon
+                          className={`w-5 h-5 flex-shrink-0 ${
+                            risk.severity === 'critical'
+                              ? 'text-red-600'
+                              : risk.severity === 'high'
+                              ? 'text-orange-600'
+                              : risk.severity === 'medium'
+                              ? 'text-amber-600'
+                              : 'text-gray-500'
+                          }`}
+                        />
+                        <div>
+                          <span
+                            className={`text-xs font-medium uppercase ${
+                              risk.severity === 'critical'
+                                ? 'text-red-700'
+                                : risk.severity === 'high'
+                                ? 'text-orange-700'
+                                : risk.severity === 'medium'
+                                ? 'text-amber-700'
+                                : 'text-gray-600'
+                            }`}
+                          >
+                            {risk.severity} • {risk.category}
+                          </span>
+                          <p className="text-gray-800 mt-1">{risk.message}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* FMCSA Data Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <ExpandableSection
+                title="FMCSA Data"
+                icon={TruckIcon}
+                defaultOpen={true}
+                badge={`${result.fmcsa.score}/100`}
+                badgeColor={
+                  result.fmcsa.score >= 70
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : result.fmcsa.score >= 50
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-red-100 text-red-700'
+                }
+              >
+                {result.fmcsa.carrier ? (
+                  <div className="space-y-6">
+                    {/* Carrier Info */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">Legal Name</div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            {result.fmcsa.carrier.legalName}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">MC Number</div>
+                            <div className="font-semibold text-gray-900">MC-{result.mcNumber}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">DOT Number</div>
+                            <div className="font-semibold text-gray-900">{result.dotNumber || 'N/A'}</div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500 mb-1">Address</div>
+                          <div className="font-medium text-gray-800">
+                            {result.fmcsa.carrier.physicalAddress}, {result.fmcsa.carrier.hqCity},{' '}
+                            {result.fmcsa.carrier.hqState}
+                          </div>
+                        </div>
+                        {result.fmcsa.carrier.phone && (
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">Phone</div>
+                            <div className="font-medium text-gray-800">{result.fmcsa.carrier.phone}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-gray-100 rounded-lg p-4 text-center border border-gray-200">
+                            <TruckIcon className="w-6 h-6 mx-auto mb-2 text-primary-600" />
+                            <div className="text-2xl font-bold text-gray-900">
+                              {result.fmcsa.carrier.totalPowerUnits}
+                            </div>
+                            <div className="text-xs text-gray-500">Power Units</div>
+                          </div>
+                          <div className="bg-gray-100 rounded-lg p-4 text-center border border-gray-200">
+                            <Users className="w-6 h-6 mx-auto mb-2 text-purple-600" />
+                            <div className="text-2xl font-bold text-gray-900">
+                              {result.fmcsa.carrier.totalDrivers}
+                            </div>
+                            <div className="text-xs text-gray-500">Drivers</div>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-gray-600">Operating Status</span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                result.fmcsa.carrier.allowedToOperate === 'Y'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  : 'bg-red-100 text-red-700 border border-red-200'
+                              }`}
+                            >
+                              {result.fmcsa.carrier.allowedToOperate === 'Y'
+                                ? 'AUTHORIZED'
+                                : 'NOT AUTHORIZED'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Safety Rating</span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                result.fmcsa.carrier.safetyRating === 'Satisfactory'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  : result.fmcsa.carrier.safetyRating === 'Conditional'
+                                  ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+                              }`}
+                            >
+                              {result.fmcsa.carrier.safetyRating || 'NOT RATED'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                          <div className="text-sm text-gray-600 mb-2">Insurance on File</div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-gray-500">BIPD:</span>{' '}
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(result.fmcsa.carrier.bipdOnFile)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Cargo:</span>{' '}
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(result.fmcsa.carrier.cargoOnFile)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-white/40 mt-2">
-                    Last checked: {searchResult.amazonSetup.lastChecked}
-                  </div>
-                </div>
 
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-trust-high/20 flex items-center justify-center">
-                        {getStatusIcon(searchResult.carrier411.status)}
+                    {/* Scoring Factors */}
+                    <div>
+                      <h4 className="font-semibold mb-4 text-gray-900">Scoring Breakdown</h4>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {result.fmcsa.factors.map((factor, i) => (
+                          <FactorBar key={i} {...factor} />
+                        ))}
                       </div>
+                    </div>
+
+                    {/* Authority Info */}
+                    {result.fmcsa.authority && (
                       <div>
-                        <div className="font-semibold">Carrier 411</div>
-                        <div className={`text-sm ${getStatusColor(searchResult.carrier411.status)}`}>
-                          {searchResult.carrier411.message}
+                        <h4 className="font-semibold mb-4 text-gray-900">Authority Status</h4>
+                        <div className="grid sm:grid-cols-3 gap-4">
+                          <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                            <div className="text-sm text-gray-500 mb-1">Common Authority</div>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                result.fmcsa.authority.commonAuthorityStatus === 'ACTIVE'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}
+                            >
+                              {result.fmcsa.authority.commonAuthorityStatus}
+                            </span>
+                          </div>
+                          <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                            <div className="text-sm text-gray-500 mb-1">Contract Authority</div>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                result.fmcsa.authority.contractAuthorityStatus === 'ACTIVE'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}
+                            >
+                              {result.fmcsa.authority.contractAuthorityStatus}
+                            </span>
+                          </div>
+                          <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                            <div className="text-sm text-gray-500 mb-1">Broker Authority</div>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                result.fmcsa.authority.brokerAuthorityStatus === 'ACTIVE'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}
+                            >
+                              {result.fmcsa.authority.brokerAuthorityStatus}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <XCircle className="w-12 h-12 mx-auto mb-3 text-red-500" />
+                    <p className="text-lg font-semibold text-red-600">MC Number Not Found</p>
+                    <p className="text-sm text-gray-500">
+                      This MC number was not found in the FMCSA database
+                    </p>
+                  </div>
+                )}
+              </ExpandableSection>
+            </motion.div>
+
+            {/* Credit Data Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <ExpandableSection
+                title="Creditsafe Report"
+                icon={CreditCard}
+                defaultOpen={true}
+                badge={result.creditsafe.companyFound ? `${result.creditsafe.score}/100` : 'N/A'}
+                badgeColor={
+                  result.creditsafe.score >= 70
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : result.creditsafe.score >= 50
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-red-100 text-red-700'
+                }
+              >
+                {result.creditsafe.companyFound ? (
+                  <div className="space-y-6">
+                    {/* Credit Overview */}
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="bg-gray-100 rounded-xl p-6 text-center border border-gray-200">
+                        <div className="text-4xl font-bold text-purple-600 mb-1">
+                          {result.creditsafe.creditScore || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">Credit Score</div>
+                        <div
+                          className={`mt-2 text-xs px-2 py-1 rounded-full inline-block ${
+                            result.creditsafe.creditRating === 'A'
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                              : result.creditsafe.creditRating === 'B'
+                              ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                              : result.creditsafe.creditRating === 'C'
+                              ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                              : 'bg-red-100 text-red-700 border border-red-200'
+                          }`}
+                        >
+                          Rating: {result.creditsafe.creditRating || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="bg-gray-100 rounded-xl p-6 text-center border border-gray-200">
+                        <div className="text-2xl font-bold text-emerald-600 mb-1">
+                          {formatCurrency(result.creditsafe.creditLimit)}
+                        </div>
+                        <div className="text-sm text-gray-500">Credit Limit</div>
+                      </div>
+                      <div className="bg-gray-100 rounded-xl p-6 text-center border border-gray-200">
+                        <div className="text-lg font-semibold text-gray-800 mb-1">
+                          {result.creditsafe.riskDescription || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">Risk Level</div>
+                      </div>
+                    </div>
+
+                    {/* Company Info */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                        <div className="text-sm text-gray-500 mb-1">Company Name</div>
+                        <div className="font-semibold text-gray-900">{result.creditsafe.companyName}</div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                          <div className="text-sm text-gray-500 mb-1">Years in Business</div>
+                          <div className="font-semibold text-gray-900">
+                            {result.creditsafe.yearsInBusiness || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                          <div className="text-sm text-gray-500 mb-1">Employees</div>
+                          <div className="font-semibold text-gray-900">{result.creditsafe.employees || 'N/A'}</div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-white/40 mt-2">
-                    Last checked: {searchResult.carrier411.lastChecked}
-                  </div>
-                </div>
 
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-trust-high/20 flex items-center justify-center">
-                        {getStatusIcon(searchResult.uccLiens.status)}
-                      </div>
-                      <div>
-                        <div className="font-semibold">UCC Liens</div>
-                        <div className={`text-sm ${getStatusColor(searchResult.uccLiens.status)}`}>
-                          {searchResult.uccLiens.message}
+                    {/* Legal Filings */}
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2 text-gray-900">
+                        <Scale className="w-5 h-5 text-amber-600" />
+                        Legal Filings Summary
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div
+                          className={`rounded-lg p-4 text-center border ${
+                            result.creditsafe.legalFilings.judgments > 0
+                              ? 'bg-red-50 border-red-200'
+                              : 'bg-gray-100 border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`text-2xl font-bold ${
+                              result.creditsafe.legalFilings.judgments > 0
+                                ? 'text-red-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {result.creditsafe.legalFilings.judgments}
+                          </div>
+                          <div className="text-xs text-gray-500">Judgments</div>
+                        </div>
+                        <div
+                          className={`rounded-lg p-4 text-center border ${
+                            result.creditsafe.legalFilings.taxLiens > 0
+                              ? 'bg-orange-50 border-orange-200'
+                              : 'bg-gray-100 border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`text-2xl font-bold ${
+                              result.creditsafe.legalFilings.taxLiens > 0
+                                ? 'text-orange-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {result.creditsafe.legalFilings.taxLiens}
+                          </div>
+                          <div className="text-xs text-gray-500">Tax Liens</div>
+                        </div>
+                        <div
+                          className={`rounded-lg p-4 text-center border ${
+                            result.creditsafe.legalFilings.uccFilings > 0
+                              ? 'bg-blue-50 border-blue-200'
+                              : 'bg-gray-100 border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`text-2xl font-bold ${
+                              result.creditsafe.legalFilings.uccFilings > 0
+                                ? 'text-blue-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {result.creditsafe.legalFilings.uccFilings}
+                          </div>
+                          <div className="text-xs text-gray-500">UCC Filings</div>
+                        </div>
+                        <div
+                          className={`rounded-lg p-4 text-center border ${
+                            result.creditsafe.legalFilings.cautionaryUCC > 0
+                              ? 'bg-amber-50 border-amber-200'
+                              : 'bg-gray-100 border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`text-2xl font-bold ${
+                              result.creditsafe.legalFilings.cautionaryUCC > 0
+                                ? 'text-amber-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {result.creditsafe.legalFilings.cautionaryUCC}
+                          </div>
+                          <div className="text-xs text-gray-500">Cautionary UCC</div>
+                        </div>
+                        <div
+                          className={`rounded-lg p-4 text-center border ${
+                            result.creditsafe.legalFilings.suits > 0
+                              ? 'bg-purple-50 border-purple-200'
+                              : 'bg-gray-100 border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`text-2xl font-bold ${
+                              result.creditsafe.legalFilings.suits > 0
+                                ? 'text-purple-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {result.creditsafe.legalFilings.suits}
+                          </div>
+                          <div className="text-xs text-gray-500">Suits</div>
+                        </div>
+                        <div
+                          className={`rounded-lg p-4 text-center border ${
+                            result.creditsafe.legalFilings.bankruptcy
+                              ? 'bg-red-50 border-red-200'
+                              : 'bg-gray-100 border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className={`text-2xl font-bold ${
+                              result.creditsafe.legalFilings.bankruptcy
+                                ? 'text-red-600'
+                                : 'text-emerald-600'
+                            }`}
+                          >
+                            {result.creditsafe.legalFilings.bankruptcy ? 'YES' : 'NO'}
+                          </div>
+                          <div className="text-xs text-gray-500">Bankruptcy</div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-white/40 mt-2">
-                    Last checked: {searchResult.uccLiens.lastChecked}
-                  </div>
-                </div>
 
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-trust-high/20 flex items-center justify-center">
-                        {getStatusIcon(searchResult.highwayRMIS.status)}
-                      </div>
-                      <div>
-                        <div className="font-semibold">Highway & RMIS</div>
-                        <div className={`text-sm ${getStatusColor(searchResult.highwayRMIS.status)}`}>
-                          {searchResult.highwayRMIS.message}
-                        </div>
+                    {/* Scoring Factors */}
+                    <div>
+                      <h4 className="font-semibold mb-4 text-gray-900">Scoring Breakdown</h4>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {result.creditsafe.factors.map((factor, i) => (
+                          <FactorBar key={i} {...factor} />
+                        ))}
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-white/40 mt-2">
-                    Last checked: {searchResult.highwayRMIS.lastChecked}
+                ) : (
+                  <div className="text-center py-8">
+                    <Building2 className="w-12 h-12 mx-auto mb-3 text-amber-500" />
+                    <p className="text-lg font-semibold text-amber-600">Company Not Found</p>
+                    <p className="text-sm text-gray-500">
+                      Unable to locate this company in Creditsafe database
+                    </p>
                   </div>
-                </div>
-              </div>
-            </GlassCard>
+                )}
+              </ExpandableSection>
+            </motion.div>
 
-            {/* Operational Details */}
-            <GlassCard>
-              <h3 className="text-xl font-bold mb-4">Operational Details</h3>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>Years Active</span>
-                  </div>
-                  <div className="text-2xl font-bold">{searchResult.yearsActive}</div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
-                    <TruckIcon className="w-4 h-4" />
-                    <span>Fleet Size</span>
-                  </div>
-                  <div className="text-2xl font-bold">{searchResult.fleetSize}</div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Safety Rating</span>
-                  </div>
-                  <div className="text-lg font-bold capitalize">{searchResult.safetyRating}</div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
-                    <Shield className="w-4 h-4" />
-                    <span>Insurance</span>
-                  </div>
-                  <div className="text-lg font-bold capitalize">{searchResult.insuranceStatus}</div>
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <div className="text-sm text-white/60 mb-2">Operation Types</div>
-                <div className="flex flex-wrap gap-2">
-                  {searchResult.operationType.map((type: string) => (
-                    <span key={type} className="glass-subtle px-3 py-1.5 rounded-full text-sm">
-                      {type}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Safety Metrics */}
-            <GlassCard>
-              <h3 className="text-xl font-bold mb-4">Safety Metrics</h3>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="glass-subtle rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-trust-high mb-1">{searchResult.crashes}</div>
-                  <div className="text-sm text-white/60">Crashes (24 mo)</div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold mb-1">{searchResult.inspections}</div>
-                  <div className="text-sm text-white/60">Inspections</div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-yellow-400 mb-1">{searchResult.violations}</div>
-                  <div className="text-sm text-white/60">Violations</div>
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Documentation Status */}
-            <GlassCard>
-              <h3 className="text-xl font-bold mb-4">Documentation Status</h3>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary-400" />
-                      <span className="font-semibold">Insurance Certificate</span>
-                    </div>
-                    <span className="text-sm text-trust-high">{searchResult.documentation.insurance}</span>
-                  </div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary-400" />
-                      <span className="font-semibold">Authority Certificate</span>
-                    </div>
-                    <span className="text-sm text-trust-high">{searchResult.documentation.authority}</span>
-                  </div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary-400" />
-                      <span className="font-semibold">Safety Report</span>
-                    </div>
-                    <span className="text-sm text-trust-high">{searchResult.documentation.safetyReport}</span>
-                  </div>
-                </div>
-
-                <div className="glass-subtle rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-primary-400" />
-                      <span className="font-semibold">UCC Filing</span>
-                    </div>
-                    <span className="text-sm text-trust-high">{searchResult.documentation.uccFiling}</span>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
+            {/* Analysis Timestamp */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="text-center py-4"
+            >
+              <p className="text-sm text-gray-500">
+                <Sparkles className="w-4 h-4 inline mr-1" />
+                Analysis completed at {new Date(result.analyzedAt).toLocaleString()}
+              </p>
+            </motion.div>
           </motion.div>
         )}
       </div>

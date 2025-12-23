@@ -30,6 +30,7 @@ import BuyerSubscriptionPage from './pages/BuyerSubscriptionPage'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminReviewPage from './pages/AdminReviewPage'
 import AdminAIDueDiligence from './pages/AdminAIDueDiligence'
+import AdminCreditsafePage from './pages/AdminCreditsafePage'
 import AdminInvoiceGenerator from './pages/AdminInvoiceGenerator'
 import AdminPaymentTracking from './pages/AdminPaymentTracking'
 import AdminAllListingsPage from './pages/AdminAllListingsPage'
@@ -124,6 +125,7 @@ function App() {
             <Route path="messages" element={<AdminMessagesPage />} />
             <Route path="review/:id" element={<AdminReviewPage />} />
             <Route path="ai-due-diligence" element={<AdminAIDueDiligence />} />
+            <Route path="creditsafe" element={<AdminCreditsafePage />} />
             <Route path="invoices" element={<AdminInvoiceGenerator />} />
             <Route path="payments" element={<AdminPaymentTracking />} />
             <Route path="pending" element={<AdminPendingReviewPage />} />

@@ -64,6 +64,42 @@ interface Transaction {
   payments?: Payment[]
 }
 
+interface UnlockedListing {
+  id: string
+  mcNumber: string
+  dotNumber?: string
+  legalName?: string
+  state?: string
+  amazonScore?: string
+  sellingWithEmail?: boolean
+  sellingWithPhone?: boolean
+  unlockedAt: Date
+  listing: {
+    id: string
+    price: number
+  }
+}
+
+interface BuyerOffer {
+  id: string
+  listingId: string
+  amount: number
+  status: string
+  message?: string
+  counterAmount?: number
+  createdAt: string
+  expiresAt?: string
+  listing?: {
+    id: string
+    mcNumber: string
+    title: string
+  }
+  seller?: {
+    id: string
+    name: string
+  }
+}
+
 const BuyerDashboard = () => {
   const { user } = useAuth()
   const [savedListings] = useState<Set<string>>(new Set())
@@ -146,15 +182,70 @@ const BuyerDashboard = () => {
     fetchTransactions()
   }, [])
 
-  // Unlocked listings - will be empty until user unlocks some via API
-  const unlockedListings: any[] = []
+  // Unlocked listings state
+  const [unlockedListings, setUnlockedListings] = useState<UnlockedListing[]>([])
+  const [unlockedLoading, setUnlockedLoading] = useState(true)
+
+  // Fetch unlocked listings
+  useEffect(() => {
+    const fetchUnlockedListings = async () => {
+      try {
+        setUnlockedLoading(true)
+        const response = await api.getUnlockedListings({ limit: 100 })
+        if (response.success && response.data) {
+          const transformedListings: UnlockedListing[] = response.data.map((item: any) => ({
+            id: item.id,
+            mcNumber: item.mcNumber || item.listing?.mcNumber,
+            dotNumber: item.dotNumber || item.listing?.dotNumber,
+            legalName: item.legalName || item.listing?.legalName,
+            state: item.state || item.listing?.state,
+            amazonScore: item.amazonScore || item.listing?.amazonStatus,
+            sellingWithEmail: item.sellingWithEmail || item.listing?.sellingWithEmail,
+            sellingWithPhone: item.sellingWithPhone || item.listing?.sellingWithPhone,
+            unlockedAt: new Date(item.unlockedAt || item.createdAt),
+            listing: {
+              id: item.listing?.id || item.listingId,
+              price: item.listing?.askingPrice || item.listing?.price || 0,
+            }
+          }))
+          setUnlockedListings(transformedListings)
+        }
+      } catch (err) {
+        console.error('Failed to fetch unlocked listings:', err)
+      } finally {
+        setUnlockedLoading(false)
+      }
+    }
+
+    fetchUnlockedListings()
+  }, [])
+
+  // My offers state
+  const [myOffers, setMyOffers] = useState<BuyerOffer[]>([])
+  const [offersLoading, setOffersLoading] = useState(true)
+
+  // Fetch buyer offers
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        setOffersLoading(true)
+        const response = await api.getBuyerOffers()
+        if (response.success && response.data) {
+          setMyOffers(response.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch offers:', err)
+      } finally {
+        setOffersLoading(false)
+      }
+    }
+
+    fetchOffers()
+  }, [])
 
   // Marketplace state
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-
-  // My offers - will be fetched from API in future
-  const myOffers: any[] = []
 
   const [filters, setFilters] = useState<FilterOptions>({
     priceMin: undefined,
@@ -419,31 +510,44 @@ const BuyerDashboard = () => {
                   </Link>
                 </div>
 
-                {myOffers.length > 0 ? (
+                {offersLoading ? (
+                  <Card>
+                    <div className="text-center py-12">
+                      <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-500">Loading your offers...</p>
+                    </div>
+                  </Card>
+                ) : myOffers.length > 0 ? (
                   <div className="space-y-4">
                     {myOffers.map((offer) => (
                       <Card key={offer.id}>
                         <div className="flex items-start justify-between mb-4">
                           <div>
                             <Link
-                              to={`/mc/${offer.listing.id}`}
+                              to={`/mc/${offer.listing?.id || offer.listingId}`}
                               className="text-xl font-bold text-gray-900 hover:text-secondary-600 transition-colors"
                             >
-                              MC #{getPartialMCNumber(offer.listing.mcNumber)}
+                              MC #{getPartialMCNumber(offer.listing?.mcNumber || '')}
                             </Link>
-                            <p className="text-gray-500 text-sm">{offer.listing.title}</p>
+                            <p className="text-gray-500 text-sm">{offer.listing?.title || 'Untitled Listing'}</p>
                           </div>
 
-                          {offer.status === 'pending' && (
+                          {offer.status === 'PENDING' && (
                             <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               Pending
                             </span>
                           )}
-                          {offer.status === 'countered' && (
+                          {offer.status === 'COUNTERED' && (
                             <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-50 border border-purple-200 text-purple-700 flex items-center gap-1">
                               <TrendingUp className="w-3 h-3" />
                               Countered
+                            </span>
+                          )}
+                          {offer.status === 'ACCEPTED' && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Accepted
                             </span>
                           )}
                         </div>
@@ -456,7 +560,7 @@ const BuyerDashboard = () => {
                             </div>
                           </div>
 
-                          {offer.status === 'countered' && offer.counterAmount && (
+                          {offer.status === 'COUNTERED' && offer.counterAmount && (
                             <div>
                               <div className="text-sm text-gray-500 mb-1">Counter Offer</div>
                               <div className="text-xl font-bold text-purple-600">
@@ -467,11 +571,11 @@ const BuyerDashboard = () => {
                         </div>
 
                         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                          <span>Submitted {offer.createdAt}</span>
-                          <span>Expires in {offer.expiresAt}</span>
+                          <span>Submitted {new Date(offer.createdAt).toLocaleDateString()}</span>
+                          {offer.expiresAt && <span>Expires {new Date(offer.expiresAt).toLocaleDateString()}</span>}
                         </div>
 
-                        {offer.status === 'countered' && (
+                        {offer.status === 'COUNTERED' && (
                           <div className="flex gap-2">
                             <Button size="sm" fullWidth>Accept Counter</Button>
                             <Button size="sm" fullWidth variant="secondary">
@@ -863,7 +967,14 @@ const BuyerDashboard = () => {
               </div>
             </div>
 
-            {unlockedListings.length > 0 ? (
+            {unlockedLoading ? (
+              <Card>
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-500">Loading unlocked MCs...</p>
+                </div>
+              </Card>
+            ) : unlockedListings.length > 0 ? (
               <div className="space-y-4">
                 {unlockedListings.map((item) => (
                   <Card key={item.id} className="overflow-hidden">

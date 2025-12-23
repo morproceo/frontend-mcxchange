@@ -135,9 +135,10 @@ const AdminReviewPage = () => {
         // Admin endpoint returns data directly
         if (response.data || response.success) {
           const data = response.data
-          const transformedListing: MCListing = {
+          const transformedListing = {
             id: data.id,
             mcNumber: data.mcNumber,
+            sellerId: data.sellerId || data.seller?.id || '',
             title: data.title || `MC Authority #${data.mcNumber}`,
             description: data.description || '',
             price: data.askingPrice || 0,
@@ -147,20 +148,35 @@ const AdminReviewPage = () => {
             safetyRating: data.safetyRating || 'satisfactory',
             insuranceStatus: data.insuranceStatus || 'active',
             verified: data.verified || false,
-            premium: data.isPremium || false,
+            isPremium: data.isPremium || false,
             trustScore: data.trustScore || 70,
             trustLevel: getTrustLevel(data.trustScore || 70),
+            verificationBadges: data.verificationBadges || [],
+            state: data.state || '',
+            amazonStatus: data.amazonStatus || 'none',
+            amazonRelayScore: data.amazonRelayScore || null,
+            highwaySetup: data.highwaySetup || false,
+            sellingWithEmail: data.sellingWithEmail || false,
+            sellingWithPhone: data.sellingWithPhone || false,
+            documents: data.documents || [],
+            status: data.status || 'pending-verification',
+            visibility: data.visibility || 'public',
+            views: data.views || 0,
+            saves: data.saves || 0,
             createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt || data.createdAt),
             seller: {
               id: data.seller?.id || data.sellerId,
               name: data.seller?.name || 'Unknown Seller',
               email: data.seller?.email || '',
+              role: 'seller' as const,
               verified: data.seller?.isVerified || false,
               trustScore: data.seller?.trustScore || 70,
               memberSince: new Date(data.seller?.createdAt || Date.now()),
-              completedDeals: data.seller?.completedDeals || 0
+              completedDeals: data.seller?.completedDeals || 0,
+              reviews: []
             }
-          }
+          } as MCListing
           setListing(transformedListing)
         }
       } catch (err) {

@@ -322,6 +322,69 @@ class ApiService {
     return this.request<{ status: string; timestamp: string }>('/health');
   }
 
+  // Messaging endpoints
+  async getMessageConversations() {
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        participantId: string;
+        participantName: string;
+        participantAvatar: string | null;
+        lastMessage: string;
+        lastMessageAt: string;
+        unreadCount: number;
+        listingId?: string;
+      }>;
+    }>('/messages/conversations');
+  }
+
+  async getMessageConversation(partnerId: string, params?: { page?: number; limit?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString();
+
+    return this.request<{
+      success: boolean;
+      data: any[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/messages/conversations/${partnerId}${query ? `?${query}` : ''}`);
+  }
+
+  async markConversationAsRead(partnerId: string) {
+    return this.request<{ success: boolean; message: string }>(`/messages/conversations/${partnerId}/read`, {
+      method: 'PUT',
+    });
+  }
+
+  async sendMessage(receiverId: string, content: string, listingId?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiverId, content, listingId }),
+    });
+  }
+
+  async sendInquiryToAdmin(listingId: string | undefined, content: string, contactPhone?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/messages/inquiries', {
+      method: 'POST',
+      body: JSON.stringify({ listingId, content, contactPhone }),
+    });
+  }
+
   // Buyer subscription endpoints
   async getSubscription() {
     return this.request<ApiResponse<SubscriptionResponse>>('/buyer/subscription');
@@ -941,6 +1004,248 @@ class ApiService {
       data: any;
       message: string;
     };
+  }
+
+  // ============================================
+  // Creditsafe API Endpoints (Admin Only)
+  // ============================================
+
+  /**
+   * Check Creditsafe service health and authentication status
+   */
+  async creditsafeHealthCheck() {
+    return this.request<{
+      success: boolean;
+      data: {
+        configured: boolean;
+        authenticated: boolean;
+        error?: string;
+      };
+    }>('/admin/creditsafe/health');
+  }
+
+  /**
+   * Get Creditsafe subscription access details
+   */
+  async creditsafeGetAccess() {
+    return this.request<{
+      success: boolean;
+      data: {
+        countries?: Array<{
+          code: string;
+          name: string;
+          companyReport?: boolean;
+          directorReport?: boolean;
+          monitoring?: boolean;
+        }>;
+      };
+    }>('/admin/creditsafe/access');
+  }
+
+  /**
+   * Search companies in Creditsafe database
+   */
+  async creditsafeSearchCompanies(params: {
+    countries: string;
+    name?: string;
+    regNo?: string;
+    vatNo?: string;
+    postCode?: string;
+    city?: string;
+    state?: string;
+    exact?: boolean;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('countries', params.countries);
+    if (params.name) searchParams.set('name', params.name);
+    if (params.regNo) searchParams.set('regNo', params.regNo);
+    if (params.vatNo) searchParams.set('vatNo', params.vatNo);
+    if (params.postCode) searchParams.set('postCode', params.postCode);
+    if (params.city) searchParams.set('city', params.city);
+    if (params.state) searchParams.set('state', params.state);
+    if (params.exact !== undefined) searchParams.set('exact', params.exact.toString());
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+
+    return this.request<{
+      success: boolean;
+      data: {
+        companies: Array<{
+          id: string;
+          connectId?: string;
+          name: string;
+          regNo?: string;
+          vatNo?: string;
+          address?: {
+            simpleValue?: string;
+            street?: string;
+            city?: string;
+            postCode?: string;
+            province?: string;
+            country?: string;
+          };
+          status?: string;
+          type?: string;
+          safeNumber?: string;
+        }>;
+        totalResults: number;
+      };
+    }>(`/admin/creditsafe/companies?${searchParams.toString()}`);
+  }
+
+  /**
+   * Get full credit report for a company
+   */
+  async creditsafeGetCreditReport(connectId: string, options?: {
+    language?: string;
+    includeIndicators?: boolean;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (options?.language) searchParams.set('language', options.language);
+    if (options?.includeIndicators) searchParams.set('includeIndicators', 'true');
+    const query = searchParams.toString();
+
+    return this.request<{
+      success: boolean;
+      data: any; // Full credit report object
+    }>(`/admin/creditsafe/companies/${encodeURIComponent(connectId)}${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Get company assessment with summary (convenient for display)
+   */
+  async creditsafeGetAssessment(connectId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        company: any;
+        summary: {
+          businessName: string;
+          registrationNumber: string | null;
+          status: string;
+          country: string;
+          address: string;
+          telephone: string | null;
+          website: string | null;
+          principalActivity: string | null;
+          creditRating: string | null;
+          creditRatingDescription: string | null;
+          creditLimit: number | null;
+          creditLimitCurrency: string | null;
+          numberOfEmployees: string | number | null;
+          dbt: number | null;
+          industryDBT: number | null;
+          ccjCount: number;
+          ccjTotalAmount: number | null;
+          ccjCurrency: string | null;
+          directorsCount: number;
+          latestFinancialsDate: string | null;
+          revenue: number | null;
+          profitBeforeTax: number | null;
+          totalAssets: number | null;
+          totalLiabilities: number | null;
+          shareholdersEquity: number | null;
+        };
+      };
+    }>(`/admin/creditsafe/companies/${encodeURIComponent(connectId)}/assessment`);
+  }
+
+  /**
+   * Quick company lookup
+   */
+  async creditsafeLookup(params: {
+    country: string;
+    name?: string;
+    regNo?: string;
+    state?: string;
+    city?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: {
+        searchResults: Array<{
+          id: string;
+          connectId?: string;
+          name: string;
+          regNo?: string;
+          address?: {
+            simpleValue?: string;
+          };
+          status?: string;
+        }>;
+        totalResults: number;
+      };
+    }>('/admin/creditsafe/lookup', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  // ===== AI Due Diligence =====
+
+  // Run comprehensive due diligence analysis on an MC number
+  async runDueDiligence(mcNumber: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        mcNumber: string;
+        dotNumber?: string;
+        recommendationScore: number;
+        recommendationStatus: 'approved' | 'review' | 'rejected';
+        riskLevel: 'low' | 'medium' | 'high' | 'critical';
+        summary: string;
+        fmcsa: {
+          carrier: any;
+          authority: any;
+          insurance: any[];
+          score: number;
+          factors: Array<{
+            name: string;
+            points: number;
+            maxPoints: number;
+            status: 'pass' | 'fail' | 'warning' | 'na';
+            detail?: string;
+          }>;
+        };
+        creditsafe: {
+          companyFound: boolean;
+          companyName?: string;
+          connectId?: string;
+          creditScore?: number;
+          creditRating?: string;
+          creditLimit?: number;
+          riskDescription?: string;
+          legalFilings: {
+            judgments: number;
+            taxLiens: number;
+            uccFilings: number;
+            cautionaryUCC: number;
+            bankruptcy: boolean;
+            suits: number;
+          };
+          yearsInBusiness?: string;
+          employees?: string;
+          score: number;
+          factors: Array<{
+            name: string;
+            points: number;
+            maxPoints: number;
+            status: 'pass' | 'fail' | 'warning' | 'na';
+            detail?: string;
+          }>;
+          fullReport?: any;
+        };
+        riskFactors: Array<{
+          severity: 'low' | 'medium' | 'high' | 'critical';
+          category: 'fmcsa' | 'credit' | 'compliance';
+          message: string;
+        }>;
+        positiveFactors: string[];
+        analyzedAt: string;
+      };
+    }>(`/admin/due-diligence/analyze/${encodeURIComponent(mcNumber)}`);
   }
 
   // Upload a document (handles FormData for file upload)
