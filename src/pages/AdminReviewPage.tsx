@@ -1419,81 +1419,139 @@ const AdminReviewPage = () => {
                       </div>
                     </Card>
 
-                    {/* Credit Score Overview */}
+                    {/* Credit Score Overview - Uses dueDiligenceResult when available */}
                     <Card>
                       <div className="flex items-start justify-between mb-6">
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900 text-gray-900 mb-1">{creditSafeReport.companyName}</h3>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                            {dueDiligenceResult?.creditsafe?.companyName || creditSafeReport.companyName}
+                          </h3>
                           <p className="text-gray-500">{creditSafeReport.tradingName}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="bg-gray-100 border border-gray-200 px-2 py-1 rounded text-xs text-emerald-600">
-                              {creditSafeReport.companyStatus}
-                            </span>
-                            <span className="bg-gray-100 border border-gray-200 px-2 py-1 rounded text-xs">
-                              {creditSafeReport.companyType}
-                            </span>
+                            {dueDiligenceResult?.creditsafe?.companyFound ? (
+                              <span className="bg-emerald-100 border border-emerald-200 px-2 py-1 rounded text-xs text-emerald-600">
+                                Company Found in CreditSafe
+                              </span>
+                            ) : (
+                              <span className="bg-yellow-100 border border-yellow-200 px-2 py-1 rounded text-xs text-yellow-600">
+                                Using FMCSA Data
+                              </span>
+                            )}
+                            {dueDiligenceResult && (
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                dueDiligenceResult.recommendationStatus === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                                dueDiligenceResult.recommendationStatus === 'review' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {dueDiligenceResult.recommendationStatus.toUpperCase()}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-xs text-gray-400 mb-1">Last Updated</div>
+                          <div className="text-xs text-gray-400 mb-1">Analyzed</div>
                           <div className="text-sm text-gray-500">
-                            {new Date(creditSafeReport.lastUpdated).toLocaleDateString()}
+                            {dueDiligenceResult?.analyzedAt
+                              ? new Date(dueDiligenceResult.analyzedAt).toLocaleString()
+                              : new Date(creditSafeReport.lastUpdated).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
 
-                      {/* Credit Score Card */}
-                      <div className={`rounded-xl p-6 border ${getRiskLevelBg(creditSafeReport.creditScore.riskLevel)}`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm text-gray-500 mb-2">Business Health Score</div>
-                            <div className="flex items-baseline gap-3">
-                              <span className={`text-5xl font-bold text-gray-900 ${getScoreColor(creditSafeReport.creditScore.score)}`}>
-                                {creditSafeReport.creditScore.score}
-                              </span>
-                              <span className="text-xl text-gray-400">/ {creditSafeReport.creditScore.maxScore}</span>
+                      {/* Credit Score Card - Using API Data */}
+                      {dueDiligenceResult ? (
+                        <div className={`rounded-xl p-6 border ${
+                          dueDiligenceResult.riskLevel === 'low' ? 'border-emerald-200 bg-emerald-50' :
+                          dueDiligenceResult.riskLevel === 'medium' ? 'border-yellow-200 bg-yellow-50' :
+                          dueDiligenceResult.riskLevel === 'high' ? 'border-orange-200 bg-orange-50' :
+                          'border-red-200 bg-red-50'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm text-gray-500 mb-2">CreditSafe Score</div>
+                              <div className="flex items-baseline gap-3">
+                                <span className={`text-5xl font-bold ${getScoreColor(dueDiligenceResult.creditsafe.creditScore || 0)}`}>
+                                  {dueDiligenceResult.creditsafe.creditScore || 'N/A'}
+                                </span>
+                                <span className="text-xl text-gray-400">/ 100</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className={`text-lg font-semibold ${getScoreColor(dueDiligenceResult.creditsafe.creditScore || 0)}`}>
+                                  Rating: {dueDiligenceResult.creditsafe.creditRating || 'N/A'}
+                                </span>
+                              </div>
+                              {dueDiligenceResult.creditsafe.riskDescription && (
+                                <div className="text-sm text-gray-600 mt-2">
+                                  {dueDiligenceResult.creditsafe.riskDescription}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className={`text-lg font-semibold text-gray-900 ${getScoreColor(creditSafeReport.creditScore.score)}`}>
-                                Rating: {creditSafeReport.creditScore.rating}
-                              </span>
-                              {creditSafeReport.creditScore.trend === 'up' && (
-                                <TrendingUp className="w-5 h-5 text-emerald-600" />
-                              )}
-                              {creditSafeReport.creditScore.trend === 'down' && (
-                                <TrendingDown className="w-5 h-5 text-red-400" />
-                              )}
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500 mb-2">Overall Risk</div>
+                              <div className={`text-2xl font-bold capitalize ${
+                                dueDiligenceResult.riskLevel === 'low' ? 'text-emerald-600' :
+                                dueDiligenceResult.riskLevel === 'medium' ? 'text-yellow-600' :
+                                dueDiligenceResult.riskLevel === 'high' ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {dueDiligenceResult.riskLevel}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-2">
+                                Score: {dueDiligenceResult.recommendationScore}/100
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm text-gray-500 mb-2">Risk Level</div>
-                            <div className={`text-2xl font-bold text-gray-900 text-gray-900 capitalize ${getRiskLevelColor(creditSafeReport.creditScore.riskLevel)}`}>
-                              {creditSafeReport.creditScore.riskLevel.replace('-', ' ')}
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Score Bar */}
-                        <div className="mt-6">
-                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${creditSafeReport.creditScore.score}%` }}
-                              transition={{ duration: 1, ease: 'easeOut' }}
-                              className={`h-full rounded-full ${
-                                creditSafeReport.creditScore.score >= 80 ? 'bg-emerald-500' :
-                                creditSafeReport.creditScore.score >= 60 ? 'bg-green-400' :
-                                creditSafeReport.creditScore.score >= 40 ? 'bg-yellow-400' :
-                                creditSafeReport.creditScore.score >= 20 ? 'bg-orange-400' : 'bg-red-400'
-                              }`}
-                            />
+                          {/* Score Bar */}
+                          <div className="mt-6">
+                            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${dueDiligenceResult.creditsafe.creditScore || 0}%` }}
+                                transition={{ duration: 1, ease: 'easeOut' }}
+                                className={`h-full rounded-full ${
+                                  (dueDiligenceResult.creditsafe.creditScore || 0) >= 80 ? 'bg-emerald-500' :
+                                  (dueDiligenceResult.creditsafe.creditScore || 0) >= 60 ? 'bg-green-400' :
+                                  (dueDiligenceResult.creditsafe.creditScore || 0) >= 40 ? 'bg-yellow-400' :
+                                  (dueDiligenceResult.creditsafe.creditScore || 0) >= 20 ? 'bg-orange-400' : 'bg-red-400'
+                                }`}
+                              />
+                            </div>
+                            <div className="flex justify-between mt-2 text-xs text-gray-400">
+                              <span>Very High Risk</span>
+                              <span>Very Low Risk</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between mt-2 text-xs text-gray-400">
-                            <span>Very High Risk</span>
-                            <span>Very Low Risk</span>
+
+                          {/* Summary */}
+                          {dueDiligenceResult.summary && (
+                            <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                              <div className="text-sm font-medium text-gray-700 mb-1">Analysis Summary</div>
+                              <div className="text-sm text-gray-600">{dueDiligenceResult.summary}</div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className={`rounded-xl p-6 border ${getRiskLevelBg(creditSafeReport.creditScore.riskLevel)}`}>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm text-gray-500 mb-2">Business Health Score</div>
+                              <div className="flex items-baseline gap-3">
+                                <span className={`text-5xl font-bold text-gray-900 ${getScoreColor(creditSafeReport.creditScore.score)}`}>
+                                  {creditSafeReport.creditScore.score}
+                                </span>
+                                <span className="text-xl text-gray-400">/ {creditSafeReport.creditScore.maxScore}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500 mb-2">Risk Level</div>
+                              <div className={`text-2xl font-bold text-gray-900 capitalize ${getRiskLevelColor(creditSafeReport.creditScore.riskLevel)}`}>
+                                {creditSafeReport.creditScore.riskLevel.replace('-', ' ')}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </Card>
 
                     {/* Financial Summary */}
@@ -1607,67 +1665,111 @@ const AdminReviewPage = () => {
                       </div>
                     </Card>
 
-                    {/* Legal & Industry */}
+                    {/* Legal & Risk Factors */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                      {/* Legal Filings */}
+                      {/* Legal Filings - Uses API Data */}
                       <Card>
-                        <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5 text-primary-400" />
                           Legal Filings
                         </h3>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
                             <span className="text-gray-700">Bankruptcies</span>
-                            <span className={`font-bold text-gray-900 ${creditSafeReport.legalFilings.bankruptcies === 0 ? 'text-emerald-600' : 'text-red-400'}`}>
-                              {creditSafeReport.legalFilings.bankruptcies}
+                            <span className={`font-bold ${
+                              (dueDiligenceResult?.creditsafe?.legalFilings?.bankruptcy ? 1 : 0) === 0 ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                              {dueDiligenceResult?.creditsafe?.legalFilings?.bankruptcy ? 'Yes' : 'No'}
                             </span>
                           </div>
                           <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
-                            <span className="text-gray-700">Liens</span>
-                            <span className={`font-bold text-gray-900 ${creditSafeReport.legalFilings.liens === 0 ? 'text-emerald-600' : 'text-yellow-400'}`}>
-                              {creditSafeReport.legalFilings.liens}
+                            <span className="text-gray-700">Tax Liens</span>
+                            <span className={`font-bold ${
+                              (dueDiligenceResult?.creditsafe?.legalFilings?.taxLiens || 0) === 0 ? 'text-emerald-600' : 'text-yellow-500'
+                            }`}>
+                              {dueDiligenceResult?.creditsafe?.legalFilings?.taxLiens ?? creditSafeReport.legalFilings.liens}
                             </span>
                           </div>
                           <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
                             <span className="text-gray-700">Judgments</span>
-                            <span className={`font-bold text-gray-900 ${creditSafeReport.legalFilings.judgments === 0 ? 'text-emerald-600' : 'text-red-400'}`}>
-                              {creditSafeReport.legalFilings.judgments}
+                            <span className={`font-bold ${
+                              (dueDiligenceResult?.creditsafe?.legalFilings?.judgments || 0) === 0 ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                              {dueDiligenceResult?.creditsafe?.legalFilings?.judgments ?? creditSafeReport.legalFilings.judgments}
                             </span>
                           </div>
                           <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
                             <span className="text-gray-700">UCC Filings</span>
-                            <span className="font-bold text-gray-900">{creditSafeReport.legalFilings.uccFilings}</span>
+                            <span className="font-bold text-gray-900">
+                              {dueDiligenceResult?.creditsafe?.legalFilings?.uccFilings ?? creditSafeReport.legalFilings.uccFilings}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
+                            <span className="text-gray-700">Cautionary UCC</span>
+                            <span className={`font-bold ${
+                              (dueDiligenceResult?.creditsafe?.legalFilings?.cautionaryUCC || 0) === 0 ? 'text-emerald-600' : 'text-orange-500'
+                            }`}>
+                              {dueDiligenceResult?.creditsafe?.legalFilings?.cautionaryUCC ?? 0}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
+                            <span className="text-gray-700">Suits</span>
+                            <span className={`font-bold ${
+                              (dueDiligenceResult?.creditsafe?.legalFilings?.suits || 0) === 0 ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                              {dueDiligenceResult?.creditsafe?.legalFilings?.suits ?? 0}
+                            </span>
                           </div>
                         </div>
                       </Card>
 
-                      {/* Industry Comparison */}
+                      {/* Risk Factors from API */}
                       <Card>
-                        <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <BarChart3 className="w-5 h-5 text-primary-400" />
-                          Industry Comparison
+                          Risk Analysis
                         </h3>
-                        <div className="text-center mb-4">
-                          <div className="text-sm text-gray-500 mb-2">
-                            {creditSafeReport.industryComparison.industryName}
+                        {dueDiligenceResult?.riskFactors && dueDiligenceResult.riskFactors.length > 0 ? (
+                          <div className="space-y-3">
+                            {dueDiligenceResult.riskFactors.map((factor, index) => (
+                              <div key={index} className={`rounded-lg p-3 border ${
+                                factor.severity === 'critical' ? 'bg-red-50 border-red-200' :
+                                factor.severity === 'high' ? 'bg-orange-50 border-orange-200' :
+                                factor.severity === 'medium' ? 'bg-yellow-50 border-yellow-200' :
+                                'bg-blue-50 border-blue-200'
+                              }`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                    factor.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                                    factor.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                                    factor.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {factor.severity.toUpperCase()}
+                                  </span>
+                                  <span className="text-xs text-gray-500">{factor.category}</span>
+                                </div>
+                                <div className="text-sm text-gray-700">{factor.message}</div>
+                              </div>
+                            ))}
                           </div>
-                          <div className="text-4xl font-bold text-gray-900 text-primary-400">
-                            Top {100 - creditSafeReport.industryComparison.percentile}%
+                        ) : dueDiligenceResult?.positiveFactors && dueDiligenceResult.positiveFactors.length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="text-emerald-600 font-medium mb-3">No Risk Factors Found</div>
+                            {dueDiligenceResult.positiveFactors.map((factor, index) => (
+                              <div key={index} className="flex items-center gap-2 text-sm text-gray-600">
+                                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                                <span>{factor}</span>
+                              </div>
+                            ))}
                           </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            Better than {creditSafeReport.industryComparison.percentile}% of peers
+                        ) : (
+                          <div className="text-center py-4">
+                            <div className="text-gray-500">
+                              {dueDiligenceResult ? 'No significant risk factors detected' : 'Run CreditSafe check to see risk analysis'}
+                            </div>
                           </div>
-                        </div>
-                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-gray-500">This Company</span>
-                            <span className="font-bold text-gray-900 text-primary-400">{creditSafeReport.creditScore.score}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-500">Industry Average</span>
-                            <span className="font-bold text-gray-900">{creditSafeReport.industryComparison.industryAverage}</span>
-                          </div>
-                        </div>
+                        )}
                       </Card>
                     </div>
 
