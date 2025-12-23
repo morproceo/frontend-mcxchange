@@ -111,6 +111,30 @@ const AdminAllListingsPage = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [sortField, setSortField] = useState<'mcNumber' | 'price' | 'createdAt' | 'views'>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [showCreateUserWithListingModal, setShowCreateUserWithListingModal] = useState(false)
+  const [createUserLoading, setCreateUserLoading] = useState(false)
+  const [createUserError, setCreateUserError] = useState<string | null>(null)
+
+  // New User + Listing form state
+  const [newUserWithListing, setNewUserWithListing] = useState({
+    // User fields
+    email: '',
+    name: '',
+    password: '',
+    phone: '',
+    companyName: '',
+    createStripeAccount: true,
+    // Listing fields
+    mcNumber: '',
+    dotNumber: '',
+    legalName: '',
+    dbaName: '',
+    title: '',
+    description: '',
+    askingPrice: '',
+    state: '',
+    status: 'PENDING_REVIEW'
+  })
 
   // Loading and error states
   const [loading, setLoading] = useState(true)
@@ -425,6 +449,76 @@ const AdminAllListingsPage = () => {
     })
   }
 
+  // Handle creating user with listing
+  const handleCreateUserWithListing = async () => {
+    try {
+      setCreateUserLoading(true)
+      setCreateUserError(null)
+
+      const response = await api.createAdminUserWithListing({
+        user: {
+          email: newUserWithListing.email,
+          name: newUserWithListing.name,
+          password: newUserWithListing.password,
+          phone: newUserWithListing.phone || undefined,
+          companyName: newUserWithListing.companyName || undefined,
+        },
+        listing: {
+          mcNumber: newUserWithListing.mcNumber,
+          dotNumber: newUserWithListing.dotNumber || undefined,
+          legalName: newUserWithListing.legalName || undefined,
+          dbaName: newUserWithListing.dbaName || undefined,
+          title: newUserWithListing.title,
+          description: newUserWithListing.description || undefined,
+          askingPrice: parseInt(newUserWithListing.askingPrice) || 0,
+          state: newUserWithListing.state || undefined,
+          status: newUserWithListing.status,
+        },
+        createStripeAccount: newUserWithListing.createStripeAccount,
+      })
+
+      if (response.success) {
+        // Close modal and refresh listings
+        setShowCreateUserWithListingModal(false)
+        setNewUserWithListing({
+          email: '',
+          name: '',
+          password: '',
+          phone: '',
+          companyName: '',
+          createStripeAccount: true,
+          mcNumber: '',
+          dotNumber: '',
+          legalName: '',
+          dbaName: '',
+          title: '',
+          description: '',
+          askingPrice: '',
+          state: '',
+          status: 'PENDING_REVIEW'
+        })
+        fetchListings()
+
+        // Show Stripe onboarding URL if available
+        if (response.data.stripeAccount?.onboardingUrl) {
+          const openStripe = window.confirm(
+            `User and listing created successfully!\n\nThe seller needs to complete Stripe onboarding.\n\nOpen Stripe onboarding link?`
+          )
+          if (openStripe) {
+            window.open(response.data.stripeAccount.onboardingUrl, '_blank')
+          }
+        }
+      } else {
+        setCreateUserError('Failed to create user and listing')
+      }
+    } catch (err: any) {
+      console.error('Failed to create user with listing:', err)
+      setCreateUserError(err.message || 'Failed to create user and listing')
+    } finally {
+      setCreateUserLoading(false)
+    }
+  }
+
   const SortIcon = ({ field }: { field: typeof sortField }) => {
     if (sortField !== field) return <ChevronDown className="w-4 h-4 text-gray-400" />
     return sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
@@ -449,6 +543,10 @@ const AdminAllListingsPage = () => {
           <Button onClick={() => setShowAddModal(true)} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="w-4 h-4 mr-2" />
             Add Listing
+          </Button>
+          <Button onClick={() => setShowCreateUserWithListingModal(true)} className="bg-emerald-600 hover:bg-emerald-700">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Create User + Listing
           </Button>
         </div>
       </div>
@@ -1331,6 +1429,249 @@ const AdminAllListingsPage = () => {
                     Create Listing
                   </Button>
                   <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create User + Listing Modal */}
+      <AnimatePresence>
+        {showCreateUserWithListingModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowCreateUserWithListingModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <UserPlus className="w-6 h-6" />
+                      Create User + Listing
+                    </h2>
+                    <p className="text-emerald-200 mt-1">Create a new seller account with a listing and Stripe Connected Account</p>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateUserWithListingModal(false)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Error Message */}
+                {createUserError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    {createUserError}
+                  </div>
+                )}
+
+                {/* User Information */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <User className="w-5 h-5 text-emerald-600" />
+                    User Account
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                      <Input
+                        placeholder="John Smith"
+                        value={newUserWithListing.name}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <Input
+                        type="email"
+                        placeholder="john@example.com"
+                        value={newUserWithListing.email}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, email: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                      <Input
+                        type="password"
+                        placeholder="Min 8 characters"
+                        value={newUserWithListing.password}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, password: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <Input
+                        placeholder="(555) 123-4567"
+                        value={newUserWithListing.phone}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, phone: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                      <Input
+                        placeholder="Smith Trucking LLC"
+                        value={newUserWithListing.companyName}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, companyName: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Listing Information */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Package className="w-5 h-5 text-emerald-600" />
+                    Listing Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">MC Number *</label>
+                      <Input
+                        placeholder="123456"
+                        value={newUserWithListing.mcNumber}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, mcNumber: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">DOT Number</label>
+                      <Input
+                        placeholder="1234567"
+                        value={newUserWithListing.dotNumber}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, dotNumber: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Legal Name</label>
+                      <Input
+                        placeholder="Company Legal Name LLC"
+                        value={newUserWithListing.legalName}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, legalName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">DBA Name</label>
+                      <Input
+                        placeholder="Doing Business As"
+                        value={newUserWithListing.dbaName}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, dbaName: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Listing Title *</label>
+                      <Input
+                        placeholder="Clean MC Authority - 5 Years Active"
+                        value={newUserWithListing.title}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Asking Price ($) *</label>
+                      <Input
+                        type="number"
+                        placeholder="45000"
+                        value={newUserWithListing.askingPrice}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, askingPrice: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <Input
+                        placeholder="TX"
+                        value={newUserWithListing.state}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, state: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <Textarea
+                        placeholder="Describe the MC authority..."
+                        value={newUserWithListing.description}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, description: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <select
+                        value={newUserWithListing.status}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, status: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="PENDING_REVIEW">Pending Review</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="DRAFT">Draft</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stripe Account */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Banknote className="w-5 h-5 text-emerald-600" />
+                    Payment Setup
+                  </h3>
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={newUserWithListing.createStripeAccount}
+                      onChange={(e) => setNewUserWithListing({ ...newUserWithListing, createStripeAccount: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-5 h-5"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-900">Create Stripe Connected Account</p>
+                      <p className="text-sm text-gray-500">Enable the seller to receive payouts. They will need to complete Stripe onboarding.</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <Button
+                    onClick={handleCreateUserWithListing}
+                    disabled={
+                      createUserLoading ||
+                      !newUserWithListing.email ||
+                      !newUserWithListing.name ||
+                      !newUserWithListing.password ||
+                      newUserWithListing.password.length < 8 ||
+                      !newUserWithListing.mcNumber ||
+                      !newUserWithListing.title ||
+                      !newUserWithListing.askingPrice
+                    }
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {createUserLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Create User + Listing
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowCreateUserWithListingModal(false)}>
                     Cancel
                   </Button>
                 </div>

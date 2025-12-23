@@ -80,6 +80,67 @@ type AnalysisResult = {
       bankruptcy: boolean
       suits: number
     }
+    negativeInformation?: {
+      possibleOfac?: boolean
+      uccFilings?: Array<{
+        filedDate?: string
+        filingType?: string
+        filingNumber?: string
+        jurisdiction?: string
+        filingOffice?: string
+        debtorName?: string
+        debtorAddress?: {
+          simpleValue?: string
+          street?: string
+          city?: string
+          postalCode?: string
+          province?: string
+        }
+        relatedDocumentNumber?: string
+        status?: string
+        securedParty?: {
+          name?: string
+          address?: string
+        }
+        collateralDescription?: string
+      }>
+      legalFilingSummary?: {
+        bankruptcy?: boolean
+        taxLienFilings?: number
+        judgmentFilings?: number
+        uccFilings?: number
+        cautionaryUccFilings?: number
+        suits?: number
+        sum?: {
+          currency?: string
+          value?: number
+        }
+      }
+      legalFilingGroupSummary?: {
+        bankruptcy?: boolean
+        taxLienFilings?: number
+        judgmentFilings?: number
+        uccFilings?: number
+        cautionaryUccFilings?: number
+        suits?: number
+        sum?: {
+          currency?: string
+          value?: number
+        }
+      }
+      legalFilingBranchSummary?: {
+        bankruptcy?: boolean
+        taxLienFilings?: number
+        judgmentFilings?: number
+        uccFilings?: number
+        cautionaryUccFilings?: number
+        suits?: number
+        sum?: {
+          currency?: string
+          value?: number
+        }
+      }
+    }
     yearsInBusiness?: string
     employees?: string
     score: number
@@ -988,6 +1049,248 @@ const AdminAIDueDiligence = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* OFAC Check */}
+                    {result.creditsafe.negativeInformation?.possibleOfac !== undefined && (
+                      <div className="mt-4">
+                        <div
+                          className={`rounded-lg p-4 border flex items-center gap-3 ${
+                            result.creditsafe.negativeInformation.possibleOfac
+                              ? 'bg-red-50 border-red-200'
+                              : 'bg-emerald-50 border-emerald-200'
+                          }`}
+                        >
+                          {result.creditsafe.negativeInformation.possibleOfac ? (
+                            <AlertTriangle className="w-6 h-6 text-red-600" />
+                          ) : (
+                            <CheckCircle className="w-6 h-6 text-emerald-600" />
+                          )}
+                          <div>
+                            <div className="font-semibold text-gray-900">OFAC Check</div>
+                            <div className={`text-sm ${result.creditsafe.negativeInformation.possibleOfac ? 'text-red-600' : 'text-emerald-600'}`}>
+                              {result.creditsafe.negativeInformation.possibleOfac ? 'Possible OFAC Match - Review Required' : 'No OFAC Matches Found'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* UCC Filing Details */}
+                    {result.creditsafe.negativeInformation?.uccFilings && result.creditsafe.negativeInformation.uccFilings.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                          <FileWarning className="w-5 h-5 text-blue-600" />
+                          UCC Filing Details ({result.creditsafe.negativeInformation.uccFilings.length})
+                        </h4>
+                        <div className="space-y-4">
+                          {result.creditsafe.negativeInformation.uccFilings.map((ucc, index) => (
+                            <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="font-semibold text-gray-900">UCC Filing #{index + 1}</span>
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  ucc.status === 'AMENDED' ? 'bg-blue-100 text-blue-700' :
+                                  ucc.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
+                                  ucc.status === 'TERMINATED' ? 'bg-gray-100 text-gray-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {ucc.status || 'Unknown'}
+                                </span>
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <div className="text-gray-500">Filed Date</div>
+                                  <div className="font-medium text-gray-900">
+                                    {ucc.filedDate ? new Date(ucc.filedDate).toLocaleDateString() : 'N/A'}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500">Filing Type</div>
+                                  <div className="font-medium text-gray-900">{ucc.filingType || 'N/A'}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500">Filing Number</div>
+                                  <div className="font-medium text-gray-900">{ucc.filingNumber || 'N/A'}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500">Jurisdiction</div>
+                                  <div className="font-medium text-gray-900">{ucc.jurisdiction || 'N/A'}</div>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <div className="text-gray-500">Filing Office</div>
+                                  <div className="font-medium text-gray-900">{ucc.filingOffice || 'N/A'}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500">Debtor Name</div>
+                                  <div className="font-medium text-gray-900">{ucc.debtorName || 'N/A'}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500">Debtor Address</div>
+                                  <div className="font-medium text-gray-900">
+                                    {ucc.debtorAddress?.simpleValue ||
+                                     (ucc.debtorAddress ? `${ucc.debtorAddress.street || ''}, ${ucc.debtorAddress.city || ''}, ${ucc.debtorAddress.province || ''} ${ucc.debtorAddress.postalCode || ''}` : 'N/A')}
+                                  </div>
+                                </div>
+                                {ucc.relatedDocumentNumber && (
+                                  <div>
+                                    <div className="text-gray-500">Related Document</div>
+                                    <div className="font-medium text-gray-900">{ucc.relatedDocumentNumber}</div>
+                                  </div>
+                                )}
+                                {ucc.securedParty?.name && (
+                                  <div>
+                                    <div className="text-gray-500">Secured Party</div>
+                                    <div className="font-medium text-gray-900">{ucc.securedParty.name}</div>
+                                  </div>
+                                )}
+                                {ucc.collateralDescription && (
+                                  <div className="md:col-span-2">
+                                    <div className="text-gray-500">Collateral</div>
+                                    <div className="font-medium text-gray-900">{ucc.collateralDescription}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Legal Filing Summaries */}
+                    {(result.creditsafe.negativeInformation?.legalFilingSummary ||
+                      result.creditsafe.negativeInformation?.legalFilingGroupSummary ||
+                      result.creditsafe.negativeInformation?.legalFilingBranchSummary) && (
+                      <div className="mt-6">
+                        <h4 className="font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                          <Scale className="w-5 h-5 text-purple-600" />
+                          Legal Filing Summaries
+                        </h4>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          {result.creditsafe.negativeInformation?.legalFilingSummary && (
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <div className="font-semibold text-gray-900 mb-3 text-sm">Filing Summary</div>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Bankruptcy</span>
+                                  <span className={`font-medium ${result.creditsafe.negativeInformation.legalFilingSummary.bankruptcy ? 'text-red-600' : 'text-gray-900'}`}>
+                                    {result.creditsafe.negativeInformation.legalFilingSummary.bankruptcy ? 'Yes' : 'No'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Tax Liens</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingSummary.taxLienFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Judgments</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingSummary.judgmentFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">UCC Filings</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingSummary.uccFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Cautionary UCC</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingSummary.cautionaryUccFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Suits</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingSummary.suits ?? 0}</span>
+                                </div>
+                                {result.creditsafe.negativeInformation.legalFilingSummary.sum && (
+                                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                                    <span className="text-gray-500">Total Value</span>
+                                    <span className="font-medium text-gray-900">
+                                      {result.creditsafe.negativeInformation.legalFilingSummary.sum.currency} ${(result.creditsafe.negativeInformation.legalFilingSummary.sum.value || 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {result.creditsafe.negativeInformation?.legalFilingGroupSummary && (
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <div className="font-semibold text-gray-900 mb-3 text-sm">Group Summary</div>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Bankruptcy</span>
+                                  <span className={`font-medium ${result.creditsafe.negativeInformation.legalFilingGroupSummary.bankruptcy ? 'text-red-600' : 'text-gray-900'}`}>
+                                    {result.creditsafe.negativeInformation.legalFilingGroupSummary.bankruptcy ? 'Yes' : 'No'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Tax Liens</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingGroupSummary.taxLienFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Judgments</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingGroupSummary.judgmentFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">UCC Filings</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingGroupSummary.uccFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Cautionary UCC</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingGroupSummary.cautionaryUccFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Suits</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingGroupSummary.suits ?? 0}</span>
+                                </div>
+                                {result.creditsafe.negativeInformation.legalFilingGroupSummary.sum && (
+                                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                                    <span className="text-gray-500">Total Value</span>
+                                    <span className="font-medium text-gray-900">
+                                      {result.creditsafe.negativeInformation.legalFilingGroupSummary.sum.currency} ${(result.creditsafe.negativeInformation.legalFilingGroupSummary.sum.value || 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {result.creditsafe.negativeInformation?.legalFilingBranchSummary && (
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <div className="font-semibold text-gray-900 mb-3 text-sm">Branch Summary</div>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Bankruptcy</span>
+                                  <span className={`font-medium ${result.creditsafe.negativeInformation.legalFilingBranchSummary.bankruptcy ? 'text-red-600' : 'text-gray-900'}`}>
+                                    {result.creditsafe.negativeInformation.legalFilingBranchSummary.bankruptcy ? 'Yes' : 'No'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Tax Liens</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingBranchSummary.taxLienFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Judgments</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingBranchSummary.judgmentFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">UCC Filings</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingBranchSummary.uccFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Cautionary UCC</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingBranchSummary.cautionaryUccFilings ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Suits</span>
+                                  <span className="font-medium text-gray-900">{result.creditsafe.negativeInformation.legalFilingBranchSummary.suits ?? 0}</span>
+                                </div>
+                                {result.creditsafe.negativeInformation.legalFilingBranchSummary.sum && (
+                                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                                    <span className="text-gray-500">Total Value</span>
+                                    <span className="font-medium text-gray-900">
+                                      {result.creditsafe.negativeInformation.legalFilingBranchSummary.sum.currency} ${(result.creditsafe.negativeInformation.legalFilingBranchSummary.sum.value || 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Scoring Factors */}
                     <div>

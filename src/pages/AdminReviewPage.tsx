@@ -38,7 +38,7 @@ import {
   Upload,
   LucideIcon
 } from 'lucide-react'
-import GlassCard from '../components/ui/GlassCard'
+import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
@@ -421,7 +421,7 @@ const AdminReviewPage = () => {
   const getRiskLevelColor = (riskLevel: string) => {
     switch (riskLevel) {
       case 'very-low':
-        return 'text-trust-high'
+        return 'text-emerald-600'
       case 'low':
         return 'text-green-400'
       case 'moderate':
@@ -431,14 +431,14 @@ const AdminReviewPage = () => {
       case 'very-high':
         return 'text-red-400'
       default:
-        return 'text-white/60'
+        return 'text-gray-500'
     }
   }
 
   const getRiskLevelBg = (riskLevel: string) => {
     switch (riskLevel) {
       case 'very-low':
-        return 'bg-trust-high/20 border-trust-high/30'
+        return 'bg-emerald-500/20 border-trust-high/30'
       case 'low':
         return 'bg-green-400/20 border-green-400/30'
       case 'moderate':
@@ -448,12 +448,12 @@ const AdminReviewPage = () => {
       case 'very-high':
         return 'bg-red-400/20 border-red-400/30'
       default:
-        return 'bg-white/10 border-white/20'
+        return 'bg-gray-100 border-gray-300'
     }
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-trust-high'
+    if (score >= 80) return 'text-emerald-600'
     if (score >= 60) return 'text-green-400'
     if (score >= 40) return 'text-yellow-400'
     if (score >= 20) return 'text-orange-400'
@@ -464,12 +464,12 @@ const AdminReviewPage = () => {
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <GlassCard>
+          <Card>
             <div className="text-center py-12">
-              <RefreshCw className="w-12 h-12 text-white/40 mx-auto mb-4 animate-spin" />
-              <h2 className="text-2xl font-bold mb-4">Loading Listing...</h2>
+              <RefreshCw className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+              <h2 className="text-2xl font-bold text-gray-900 text-gray-900 mb-4">Loading Listing...</h2>
             </div>
-          </GlassCard>
+          </Card>
         </div>
       </div>
     )
@@ -479,14 +479,14 @@ const AdminReviewPage = () => {
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <GlassCard>
+          <Card>
             <div className="text-center py-12">
-              <h2 className="text-2xl font-bold mb-4">{fetchError || 'Listing Not Found'}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 text-gray-900 mb-4">{fetchError || 'Listing Not Found'}</h2>
               <Button onClick={() => navigate('/admin/dashboard')}>
                 Back to Dashboard
               </Button>
             </div>
-          </GlassCard>
+          </Card>
         </div>
       </div>
     )
@@ -528,7 +528,7 @@ const AdminReviewPage = () => {
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
@@ -550,13 +550,13 @@ const AdminReviewPage = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Tabs */}
-            <div className="flex items-center gap-2 glass rounded-xl p-2 overflow-x-auto">
+            <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-2 overflow-x-auto border border-gray-200">
               <button
                 onClick={() => setActiveTab('details')}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                   activeTab === 'details'
-                    ? 'bg-primary-500 text-white'
-                    : 'text-white/80 hover:bg-white/10'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Listing Details
@@ -565,8 +565,8 @@ const AdminReviewPage = () => {
                 onClick={() => setActiveTab('documents')}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                   activeTab === 'documents'
-                    ? 'bg-primary-500 text-white'
-                    : 'text-white/80 hover:bg-white/10'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Documents ({Object.keys(documents).length})
@@ -576,7 +576,7 @@ const AdminReviewPage = () => {
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
                   activeTab === 'creditsafe'
                     ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-                    : 'text-white/80 hover:bg-white/10'
+                    : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <Building2 className="w-4 h-4" />
@@ -586,8 +586,8 @@ const AdminReviewPage = () => {
                 onClick={() => setActiveTab('chat')}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                   activeTab === 'chat'
-                    ? 'bg-primary-500 text-white'
-                    : 'text-white/80 hover:bg-white/10'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Chat with Seller
@@ -602,126 +602,126 @@ const AdminReviewPage = () => {
                 className="space-y-6"
               >
                 {/* Listing Header */}
-                <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                <Card className="overflow-hidden">
+                  <div className="bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <h1 className="text-3xl font-bold">MC #{listingDetails.mcNumber}</h1>
-                          <span className="glass-subtle px-3 py-1.5 rounded-full text-xs text-yellow-400 flex items-center gap-1">
+                          <h1 className="text-3xl font-bold text-gray-900 text-gray-900">MC #{listingDetails.mcNumber}</h1>
+                          <span className="bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full text-xs text-yellow-400 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Pending Review
                           </span>
                         </div>
-                        <p className="text-xl text-white/80">{listing?.title}</p>
+                        <p className="text-xl text-gray-700">{listing?.title}</p>
                       </div>
                       <div className="text-right">
-                        <div className="text-3xl font-bold text-trust-high">
+                        <div className="text-3xl font-bold text-gray-900 text-gray-900 text-emerald-600">
                           ${listing?.price.toLocaleString()}
                         </div>
-                        <div className="text-sm text-white/60 mt-1">Asking Price</div>
+                        <div className="text-sm text-gray-500 mt-1">Asking Price</div>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="glass-subtle rounded-lg p-3 text-center">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center">
                       <Hash className="w-5 h-5 text-primary-400 mx-auto mb-1" />
-                      <div className="text-xs text-white/60">MC Number</div>
-                      <div className="font-bold">{listingDetails.mcNumber}</div>
+                      <div className="text-xs text-gray-500">MC Number</div>
+                      <div className="font-bold text-gray-900">{listingDetails.mcNumber}</div>
                     </div>
-                    <div className="glass-subtle rounded-lg p-3 text-center">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center">
                       <Hash className="w-5 h-5 text-purple-400 mx-auto mb-1" />
-                      <div className="text-xs text-white/60">DOT Number</div>
-                      <div className="font-bold">{listingDetails.dotNumber}</div>
+                      <div className="text-xs text-gray-500">DOT Number</div>
+                      <div className="font-bold text-gray-900">{listingDetails.dotNumber}</div>
                     </div>
-                    <div className="glass-subtle rounded-lg p-3 text-center">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center">
                       <MapPin className="w-5 h-5 text-pink-400 mx-auto mb-1" />
-                      <div className="text-xs text-white/60">State</div>
-                      <div className="font-bold">{listingDetails.state}</div>
+                      <div className="text-xs text-gray-500">State</div>
+                      <div className="font-bold text-gray-900">{listingDetails.state}</div>
                     </div>
-                    <div className="glass-subtle rounded-lg p-3 text-center">
-                      <Shield className="w-5 h-5 text-trust-high mx-auto mb-1" />
-                      <div className="text-xs text-white/60">Status</div>
-                      <div className="font-bold text-trust-high">{listingDetails.operatingStatus}</div>
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center">
+                      <Shield className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                      <div className="text-xs text-gray-500">Status</div>
+                      <div className="font-bold text-gray-900 text-emerald-600">{listingDetails.operatingStatus}</div>
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* FMCSA Information */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-cyan-500/20">
                       <Building2 className="w-6 h-6 text-cyan-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">FMCSA Information</h2>
-                      <p className="text-sm text-white/60">Data from official FMCSA records</p>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">FMCSA Information</h2>
+                      <p className="text-sm text-gray-500">Data from official FMCSA records</p>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                           <Building2 className="w-4 h-4" />
                           Legal Name
                         </div>
-                        <div className="font-semibold">{listingDetails.legalName}</div>
+                        <div className="font-semibold text-gray-900">{listingDetails.legalName}</div>
                       </div>
                       {listingDetails.dbaName && (
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                             DBA Name
                           </div>
-                          <div className="font-semibold">{listingDetails.dbaName}</div>
+                          <div className="font-semibold text-gray-900">{listingDetails.dbaName}</div>
                         </div>
                       )}
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                           <MapPin className="w-4 h-4" />
                           Physical Address
                         </div>
-                        <div className="font-semibold">{listingDetails.physicalAddress}</div>
+                        <div className="font-semibold text-gray-900">{listingDetails.physicalAddress}</div>
                       </div>
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                           <Phone className="w-4 h-4" />
                           Phone
                         </div>
-                        <div className="font-semibold">{listingDetails.phone}</div>
+                        <div className="font-semibold text-gray-900">{listingDetails.phone}</div>
                       </div>
                     </div>
 
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                             <TruckIcon className="w-4 h-4" />
                             Power Units
                           </div>
-                          <div className="text-2xl font-bold">{listingDetails.powerUnits}</div>
+                          <div className="text-2xl font-bold text-gray-900 text-gray-900">{listingDetails.powerUnits}</div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                             <Users className="w-4 h-4" />
                             Drivers
                           </div>
-                          <div className="text-2xl font-bold">{listingDetails.drivers}</div>
+                          <div className="text-2xl font-bold text-gray-900 text-gray-900">{listingDetails.drivers}</div>
                         </div>
                       </div>
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                           <Calendar className="w-4 h-4" />
                           MCS-150 Date
                         </div>
-                        <div className="font-semibold">{listingDetails.mcs150Date}</div>
+                        <div className="font-semibold text-gray-900">{listingDetails.mcs150Date}</div>
                       </div>
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="text-white/60 text-sm mb-2">Cargo Carried</div>
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="text-gray-500 text-sm mb-2">Cargo Carried</div>
                         <div className="flex flex-wrap gap-2">
                           {listingDetails.cargoCarried.map((cargo, i) => (
-                            <span key={i} className="px-2 py-1 rounded-full bg-white/10 text-xs">
+                            <span key={i} className="px-2 py-1 rounded-full bg-gray-100 text-xs">
                               {cargo}
                             </span>
                           ))}
@@ -729,255 +729,255 @@ const AdminReviewPage = () => {
                       </div>
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* Entry Audit Status */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/20 to-yellow-500/20">
                       <ClipboardCheck className="w-6 h-6 text-orange-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Entry Audit Status</h2>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">Entry Audit Status</h2>
                     </div>
                   </div>
 
-                  <div className={`rounded-xl p-4 border ${listingDetails.entryAuditCompleted === 'yes' ? 'bg-trust-high/10 border-trust-high/30' : 'bg-yellow-400/10 border-yellow-400/30'}`}>
+                  <div className={`rounded-xl p-4 border ${listingDetails.entryAuditCompleted === 'yes' ? 'bg-emerald-500/10 border-trust-high/30' : 'bg-yellow-400/10 border-yellow-400/30'}`}>
                     <div className="flex items-center gap-3">
                       {listingDetails.entryAuditCompleted === 'yes' ? (
                         <>
-                          <CheckCircle className="w-6 h-6 text-trust-high" />
+                          <CheckCircle className="w-6 h-6 text-emerald-600" />
                           <div>
-                            <div className="font-bold text-trust-high">Entry Audit Completed</div>
-                            <div className="text-sm text-white/60">This authority has passed the entry audit</div>
+                            <div className="font-bold text-gray-900 text-emerald-600">Entry Audit Completed</div>
+                            <div className="text-sm text-gray-500">This authority has passed the entry audit</div>
                           </div>
                         </>
                       ) : (
                         <>
                           <AlertTriangle className="w-6 h-6 text-yellow-400" />
                           <div>
-                            <div className="font-bold text-yellow-400">Entry Audit Pending</div>
-                            <div className="text-sm text-white/60">Entry audit has not been completed yet</div>
+                            <div className="font-bold text-gray-900 text-yellow-400">Entry Audit Pending</div>
+                            <div className="text-sm text-gray-500">Entry audit has not been completed yet</div>
                           </div>
                         </>
                       )}
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* Platform Integrations */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/20 to-red-500/20">
                       <Zap className="w-6 h-6 text-orange-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Platform Integrations</h2>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">Platform Integrations</h2>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="glass-subtle rounded-xl p-4">
+                    <div className="bg-gray-100 border border-gray-200 rounded-xl p-4">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-2xl">📦</span>
-                        <span className="font-semibold">Amazon Relay</span>
+                        <span className="font-semibold text-gray-900">Amazon Relay</span>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-white/60">Status</span>
-                          <span className={`font-bold ${listingDetails.amazonStatus === 'active' ? 'text-trust-high' : 'text-yellow-400'}`}>
+                          <span className="text-gray-500">Status</span>
+                          <span className={`font-bold text-gray-900 ${listingDetails.amazonStatus === 'active' ? 'text-emerald-600' : 'text-yellow-400'}`}>
                             {listingDetails.amazonStatus === 'active' ? '✅ Active' : listingDetails.amazonStatus}
                           </span>
                         </div>
                         {listingDetails.amazonStatus === 'active' && (
                           <div className="flex justify-between">
-                            <span className="text-white/60">Relay Score</span>
-                            <span className="font-bold text-trust-high">{listingDetails.amazonRelayScore}</span>
+                            <span className="text-gray-500">Relay Score</span>
+                            <span className="font-bold text-gray-900 text-emerald-600">{listingDetails.amazonRelayScore}</span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="glass-subtle rounded-xl p-4">
+                    <div className="bg-gray-100 border border-gray-200 rounded-xl p-4">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-2xl">🛣️</span>
-                        <span className="font-semibold">Highway Setup</span>
+                        <span className="font-semibold text-gray-900">Highway Setup</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">Status</span>
-                        <span className={`font-bold ${listingDetails.highwaySetup === 'yes' ? 'text-trust-high' : 'text-yellow-400'}`}>
+                        <span className="text-gray-500">Status</span>
+                        <span className={`font-bold text-gray-900 ${listingDetails.highwaySetup === 'yes' ? 'text-emerald-600' : 'text-yellow-400'}`}>
                           {listingDetails.highwaySetup === 'yes' ? '✅ Setup Complete' : 'Not Setup'}
                         </span>
                       </div>
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* What's Included in Sale */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20">
                       <Package className="w-6 h-6 text-purple-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">What's Included in Sale</h2>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">What's Included in Sale</h2>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithEmail === 'yes' ? 'bg-trust-high/10 border-trust-high/30' : 'bg-white/5 border-white/10'}`}>
-                      <Mail className={`w-6 h-6 ${listingDetails.sellingWithEmail === 'yes' ? 'text-trust-high' : 'text-white/40'}`} />
+                    <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithEmail === 'yes' ? 'bg-emerald-500/10 border-trust-high/30' : 'bg-gray-50 border-gray-200'}`}>
+                      <Mail className={`w-6 h-6 ${listingDetails.sellingWithEmail === 'yes' ? 'text-emerald-600' : 'text-gray-400'}`} />
                       <div>
-                        <div className="font-semibold">Business Email</div>
-                        <div className="text-sm text-white/60">
+                        <div className="font-semibold text-gray-900">Business Email</div>
+                        <div className="text-sm text-gray-500">
                           {listingDetails.sellingWithEmail === 'yes' ? 'Included with sale' : 'Not included'}
                         </div>
                       </div>
-                      {listingDetails.sellingWithEmail === 'yes' && <CheckCircle className="w-5 h-5 text-trust-high ml-auto" />}
+                      {listingDetails.sellingWithEmail === 'yes' && <CheckCircle className="w-5 h-5 text-emerald-600 ml-auto" />}
                     </div>
 
-                    <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithPhone === 'yes' ? 'bg-trust-high/10 border-trust-high/30' : 'bg-white/5 border-white/10'}`}>
-                      <Phone className={`w-6 h-6 ${listingDetails.sellingWithPhone === 'yes' ? 'text-trust-high' : 'text-white/40'}`} />
+                    <div className={`rounded-xl p-4 border flex items-center gap-4 ${listingDetails.sellingWithPhone === 'yes' ? 'bg-emerald-500/10 border-trust-high/30' : 'bg-gray-50 border-gray-200'}`}>
+                      <Phone className={`w-6 h-6 ${listingDetails.sellingWithPhone === 'yes' ? 'text-emerald-600' : 'text-gray-400'}`} />
                       <div>
-                        <div className="font-semibold">Business Phone</div>
-                        <div className="text-sm text-white/60">
+                        <div className="font-semibold text-gray-900">Business Phone</div>
+                        <div className="text-sm text-gray-500">
                           {listingDetails.sellingWithPhone === 'yes' ? 'Included with sale' : 'Not included'}
                         </div>
                       </div>
-                      {listingDetails.sellingWithPhone === 'yes' && <CheckCircle className="w-5 h-5 text-trust-high ml-auto" />}
+                      {listingDetails.sellingWithPhone === 'yes' && <CheckCircle className="w-5 h-5 text-emerald-600 ml-auto" />}
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* Factoring Information */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20">
                       <Percent className="w-6 h-6 text-cyan-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Factoring Information</h2>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">Factoring Information</h2>
                     </div>
                   </div>
 
                   {listingDetails.hasFactoring === 'yes' ? (
                     <div className="grid md:grid-cols-3 gap-4">
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="text-white/60 text-sm mb-1">Has Factoring</div>
-                        <div className="font-bold text-trust-high flex items-center gap-2">
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="text-gray-500 text-sm mb-1">Has Factoring</div>
+                        <div className="font-bold text-gray-900 text-emerald-600 flex items-center gap-2">
                           <CheckCircle className="w-4 h-4" />
                           Yes
                         </div>
                       </div>
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="text-white/60 text-sm mb-1">Factoring Company</div>
-                        <div className="font-bold">{listingDetails.factoringCompany}</div>
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="text-gray-500 text-sm mb-1">Factoring Company</div>
+                        <div className="font-bold text-gray-900">{listingDetails.factoringCompany}</div>
                       </div>
-                      <div className="glass-subtle rounded-lg p-4">
-                        <div className="text-white/60 text-sm mb-1">Factoring Rate</div>
-                        <div className="font-bold">{listingDetails.factoringRate}%</div>
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                        <div className="text-gray-500 text-sm mb-1">Factoring Rate</div>
+                        <div className="font-bold text-gray-900">{listingDetails.factoringRate}%</div>
                       </div>
                     </div>
                   ) : (
-                    <div className="glass-subtle rounded-lg p-4 text-center">
-                      <XCircle className="w-8 h-8 text-white/40 mx-auto mb-2" />
-                      <div className="text-white/60">No factoring agreement</div>
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center">
+                      <XCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <div className="text-gray-500">No factoring agreement</div>
                     </div>
                   )}
-                </GlassCard>
+                </Card>
 
                 {/* Authority Details */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-500/20">
                       <TruckIcon className="w-6 h-6 text-blue-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Authority Details</h2>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">Authority Details</h2>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="glass-subtle rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                         <Calendar className="w-4 h-4" />
                         <span>Years Active</span>
                       </div>
-                      <div className="text-2xl font-bold">{listing?.yearsActive} years</div>
+                      <div className="text-2xl font-bold text-gray-900 text-gray-900">{listing?.yearsActive} years</div>
                     </div>
 
-                    <div className="glass-subtle rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                         <TruckIcon className="w-4 h-4" />
                         <span>Fleet Size</span>
                       </div>
-                      <div className="text-2xl font-bold">{listing?.fleetSize} trucks</div>
+                      <div className="text-2xl font-bold text-gray-900 text-gray-900">{listing?.fleetSize} trucks</div>
                     </div>
 
-                    <div className="glass-subtle rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                         <ShieldCheck className="w-4 h-4" />
                         <span>Safety Rating</span>
                       </div>
-                      <div className="text-lg font-bold capitalize text-trust-high">
+                      <div className="text-lg font-bold text-gray-900 text-gray-900 capitalize text-emerald-600">
                         {listing?.safetyRating.replace('-', ' ')}
                       </div>
                     </div>
 
-                    <div className="glass-subtle rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                         <Shield className="w-4 h-4" />
                         <span>Insurance</span>
                       </div>
-                      <div className="text-lg font-bold capitalize text-trust-high">{listing?.insuranceStatus}</div>
+                      <div className="text-lg font-bold text-gray-900 text-gray-900 capitalize text-emerald-600">{listing?.insuranceStatus}</div>
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-white/60 text-sm mb-2">Operation Types</div>
+                    <div className="text-gray-500 text-sm mb-2">Operation Types</div>
                     <div className="flex flex-wrap gap-2">
                       {listing?.operationType.map((type) => (
                         <span
                           key={type}
-                          className="glass-subtle px-3 py-1.5 rounded-full text-sm"
+                          className="bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full text-sm"
                         >
                           {type}
                         </span>
                       ))}
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* Payment Information */}
-                <GlassCard>
+                <Card>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20">
                       <Receipt className="w-6 h-6 text-green-400" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Payment Information</h2>
-                      <p className="text-sm text-white/60">Listing activation fee</p>
+                      <h2 className="text-xl font-bold text-gray-900 text-gray-900">Payment Information</h2>
+                      <p className="text-sm text-gray-500">Listing activation fee</p>
                     </div>
                   </div>
 
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <div className="flex justify-between items-center mb-4">
                       <div>
-                        <div className="text-white/60 text-sm">Invoice Number</div>
-                        <div className="font-bold">{listingDetails.invoiceNumber}</div>
+                        <div className="text-gray-500 text-sm">Invoice Number</div>
+                        <div className="font-bold text-gray-900">{listingDetails.invoiceNumber}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-white/60 text-sm">Payment Date</div>
-                        <div className="font-semibold">{listingDetails.paymentDate.toLocaleDateString()}</div>
+                        <div className="text-gray-500 text-sm">Payment Date</div>
+                        <div className="font-semibold text-gray-900">{listingDetails.paymentDate.toLocaleDateString()}</div>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                       <div>
-                        <div className="text-white/60 text-sm">Amount Paid</div>
-                        <div className="text-2xl font-bold text-trust-high">${listingDetails.paymentAmount}.00</div>
+                        <div className="text-gray-500 text-sm">Amount Paid</div>
+                        <div className="text-2xl font-bold text-gray-900 text-gray-900 text-emerald-600">${listingDetails.paymentAmount}.00</div>
                       </div>
-                      <div className={`px-4 py-2 rounded-full ${listingDetails.paymentStatus === 'paid' ? 'bg-trust-high/20 text-trust-high' : 'bg-yellow-400/20 text-yellow-400'}`}>
-                        <div className="flex items-center gap-2 font-semibold">
+                      <div className={`px-4 py-2 rounded-full ${listingDetails.paymentStatus === 'paid' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-yellow-400/20 text-yellow-400'}`}>
+                        <div className="flex items-center gap-2 font-semibold text-gray-900">
                           {listingDetails.paymentStatus === 'paid' ? (
                             <>
                               <CheckCircle className="w-4 h-4" />
@@ -993,13 +993,13 @@ const AdminReviewPage = () => {
                       </div>
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
 
                 {/* Description */}
-                <GlassCard>
-                  <h2 className="text-xl font-bold mb-4">Listing Description</h2>
-                  <p className="text-white/80 leading-relaxed">{listing?.description}</p>
-                </GlassCard>
+                <Card>
+                  <h2 className="text-xl font-bold text-gray-900 text-gray-900 mb-4">Listing Description</h2>
+                  <p className="text-gray-700 leading-relaxed">{listing?.description}</p>
+                </Card>
               </motion.div>
             )}
 
@@ -1009,15 +1009,15 @@ const AdminReviewPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <GlassCard className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-red-500/10 -m-6 mb-6 p-6 border-b border-white/10">
+                <Card className="overflow-hidden">
+                  <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-red-500/10 -m-6 mb-6 p-6 border-b border-gray-200">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/25">
                         <FileText className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold">Required Documents</h2>
-                        <p className="text-white/60">
+                        <h2 className="text-2xl font-bold text-gray-900 text-gray-900">Required Documents</h2>
+                        <p className="text-gray-500">
                           {Object.values(documents).filter(d => d !== null).length} of {requiredDocuments.length} documents uploaded
                         </p>
                       </div>
@@ -1038,19 +1038,19 @@ const AdminReviewPage = () => {
                             <div
                               className={`rounded-xl p-4 flex items-center justify-between transition-colors border ${
                                 doc.verified
-                                  ? 'bg-trust-high/5 border-trust-high/20 hover:bg-trust-high/10'
-                                  : 'glass-subtle border-white/10 hover:bg-white/10'
+                                  ? 'bg-emerald-500/5 border-trust-high/20 hover:bg-emerald-500/10'
+                                  : 'bg-gray-100 border border-gray-200 border-gray-200 hover:bg-gray-100'
                               }`}
                             >
                               <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                                  doc.verified ? 'bg-trust-high/20' : 'bg-primary-500/20'
+                                  doc.verified ? 'bg-emerald-500/20' : 'bg-primary-500/20'
                                 }`}>
-                                  <IconComponent className={`w-6 h-6 ${doc.verified ? 'text-trust-high' : 'text-primary-400'}`} />
+                                  <IconComponent className={`w-6 h-6 ${doc.verified ? 'text-emerald-600' : 'text-primary-400'}`} />
                                 </div>
                                 <div>
-                                  <div className="font-semibold mb-1">{doc.name}</div>
-                                  <div className="text-sm text-white/60 flex items-center gap-3">
+                                  <div className="font-semibold text-gray-900 mb-1">{doc.name}</div>
+                                  <div className="text-sm text-gray-500 flex items-center gap-3">
                                     <span>{reqDoc.label}</span>
                                     <span>•</span>
                                     <span>{doc.size}</span>
@@ -1062,7 +1062,7 @@ const AdminReviewPage = () => {
 
                               <div className="flex items-center gap-3">
                                 {doc.verified ? (
-                                  <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-trust-high/20 text-trust-high text-sm font-medium">
+                                  <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-600 text-sm font-medium">
                                     <CheckCircle className="w-4 h-4" />
                                     Verified
                                   </span>
@@ -1078,7 +1078,7 @@ const AdminReviewPage = () => {
                                 </Button>
                                 <button
                                   onClick={() => handleRemoveDocument(reqDoc.type)}
-                                  className="p-2 rounded-lg hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors"
+                                  className="p-2 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
                                   title="Remove document"
                                 >
                                   <XCircle className="w-5 h-5" />
@@ -1105,19 +1105,19 @@ const AdminReviewPage = () => {
                                 </div>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold">{reqDoc.label}</span>
+                                    <span className="font-semibold text-gray-900">{reqDoc.label}</span>
                                     {reqDoc.required && (
                                       <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 font-medium">
                                         Required
                                       </span>
                                     )}
                                     {!reqDoc.required && (
-                                      <span className="px-2 py-0.5 rounded text-xs bg-white/10 text-white/60 font-medium">
+                                      <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-500 font-medium">
                                         Optional
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-sm text-white/60">
+                                  <div className="text-sm text-gray-500">
                                     {isDragOver ? 'Drop file here...' : 'Drag & drop file here or click to upload'}
                                   </div>
                                 </div>
@@ -1144,14 +1144,14 @@ const AdminReviewPage = () => {
                   </div>
 
                   {/* Summary and Actions */}
-                  <div className="mt-6 pt-6 border-t border-white/10">
+                  <div className="mt-6 pt-6 border-t border-gray-200">
                     {/* Missing documents warning */}
                     {Object.values(documents).some(d => d === null) && (
                       <div className="mb-4 p-4 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-start gap-3">
                         <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold text-yellow-400 mb-1">Missing Documents</p>
-                          <p className="text-sm text-white/70">
+                          <p className="font-semibold text-gray-900 text-yellow-400 mb-1">Missing Documents</p>
+                          <p className="text-sm text-gray-600">
                             Some required documents are missing. You can upload them on behalf of the seller or request them to re-upload.
                           </p>
                         </div>
@@ -1159,8 +1159,8 @@ const AdminReviewPage = () => {
                     )}
 
                     <div className="flex justify-between items-center">
-                      <div className="text-sm text-white/60">
-                        <span className="text-trust-high font-medium">
+                      <div className="text-sm text-gray-500">
+                        <span className="text-emerald-600 font-medium">
                           {Object.values(documents).filter(d => d?.verified).length}
                         </span> verified •
                         <span className="text-yellow-400 font-medium ml-1">
@@ -1182,7 +1182,7 @@ const AdminReviewPage = () => {
                       </div>
                     </div>
                   </div>
-                </GlassCard>
+                </Card>
               </motion.div>
             )}
 
@@ -1195,40 +1195,40 @@ const AdminReviewPage = () => {
               >
                 {/* Loading State */}
                 {isSearching && !creditSafeReport && (
-                  <GlassCard className="py-16">
+                  <Card className="py-16">
                     <div className="text-center">
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                         className="w-16 h-16 rounded-full border-4 border-primary-500/30 border-t-primary-500 mx-auto mb-6"
                       />
-                      <h3 className="text-xl font-bold mb-2">Running CreditSafe Check...</h3>
-                      <p className="text-white/60 mb-4">Analyzing business health for {listingDetails.legalName}</p>
-                      <div className="flex items-center justify-center gap-2 text-sm text-white/40">
+                      <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-2">Running CreditSafe Check...</h3>
+                      <p className="text-gray-500 mb-4">Analyzing business health for {listingDetails.legalName}</p>
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
                         <Building2 className="w-4 h-4" />
                         <span>DOT #{listingDetails.dotNumber}</span>
                         <span>•</span>
                         <span>MC #{listingDetails.mcNumber}</span>
                       </div>
                     </div>
-                  </GlassCard>
+                  </Card>
                 )}
 
                 {/* CreditSafe Report */}
                 {creditSafeReport && (
                   <>
                     {/* Header with Refresh */}
-                    <GlassCard className="overflow-hidden">
-                      <div className="bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-teal-500/10 -m-6 mb-0 p-6 border-b border-white/10">
+                    <Card className="overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-teal-500/10 -m-6 mb-0 p-6 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
                               <Building2 className="w-7 h-7 text-white" />
                             </div>
                             <div>
-                              <h2 className="text-2xl font-bold">CreditSafe Business Report</h2>
-                              <div className="flex items-center gap-2 text-sm text-white/60">
-                                <CheckCircle className="w-4 h-4 text-trust-high" />
+                              <h2 className="text-2xl font-bold text-gray-900 text-gray-900">CreditSafe Business Report</h2>
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
                                 <span>Auto-check completed</span>
                                 <span>•</span>
                                 <span>DOT #{listingDetails.dotNumber}</span>
@@ -1247,26 +1247,26 @@ const AdminReviewPage = () => {
                           </Button>
                         </div>
                       </div>
-                    </GlassCard>
+                    </Card>
 
                     {/* Credit Score Overview */}
-                    <GlassCard>
+                    <Card>
                       <div className="flex items-start justify-between mb-6">
                         <div>
-                          <h3 className="text-2xl font-bold mb-1">{creditSafeReport.companyName}</h3>
-                          <p className="text-white/60">{creditSafeReport.tradingName}</p>
+                          <h3 className="text-2xl font-bold text-gray-900 text-gray-900 mb-1">{creditSafeReport.companyName}</h3>
+                          <p className="text-gray-500">{creditSafeReport.tradingName}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="glass-subtle px-2 py-1 rounded text-xs text-trust-high">
+                            <span className="bg-gray-100 border border-gray-200 px-2 py-1 rounded text-xs text-emerald-600">
                               {creditSafeReport.companyStatus}
                             </span>
-                            <span className="glass-subtle px-2 py-1 rounded text-xs">
+                            <span className="bg-gray-100 border border-gray-200 px-2 py-1 rounded text-xs">
                               {creditSafeReport.companyType}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-xs text-white/40 mb-1">Last Updated</div>
-                          <div className="text-sm text-white/60">
+                          <div className="text-xs text-gray-400 mb-1">Last Updated</div>
+                          <div className="text-sm text-gray-500">
                             {new Date(creditSafeReport.lastUpdated).toLocaleDateString()}
                           </div>
                         </div>
@@ -1276,19 +1276,19 @@ const AdminReviewPage = () => {
                       <div className={`rounded-xl p-6 border ${getRiskLevelBg(creditSafeReport.creditScore.riskLevel)}`}>
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm text-white/60 mb-2">Business Health Score</div>
+                            <div className="text-sm text-gray-500 mb-2">Business Health Score</div>
                             <div className="flex items-baseline gap-3">
-                              <span className={`text-5xl font-bold ${getScoreColor(creditSafeReport.creditScore.score)}`}>
+                              <span className={`text-5xl font-bold text-gray-900 ${getScoreColor(creditSafeReport.creditScore.score)}`}>
                                 {creditSafeReport.creditScore.score}
                               </span>
-                              <span className="text-xl text-white/40">/ {creditSafeReport.creditScore.maxScore}</span>
+                              <span className="text-xl text-gray-400">/ {creditSafeReport.creditScore.maxScore}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
-                              <span className={`text-lg font-semibold ${getScoreColor(creditSafeReport.creditScore.score)}`}>
+                              <span className={`text-lg font-semibold text-gray-900 ${getScoreColor(creditSafeReport.creditScore.score)}`}>
                                 Rating: {creditSafeReport.creditScore.rating}
                               </span>
                               {creditSafeReport.creditScore.trend === 'up' && (
-                                <TrendingUp className="w-5 h-5 text-trust-high" />
+                                <TrendingUp className="w-5 h-5 text-emerald-600" />
                               )}
                               {creditSafeReport.creditScore.trend === 'down' && (
                                 <TrendingDown className="w-5 h-5 text-red-400" />
@@ -1296,8 +1296,8 @@ const AdminReviewPage = () => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm text-white/60 mb-2">Risk Level</div>
-                            <div className={`text-2xl font-bold capitalize ${getRiskLevelColor(creditSafeReport.creditScore.riskLevel)}`}>
+                            <div className="text-sm text-gray-500 mb-2">Risk Level</div>
+                            <div className={`text-2xl font-bold text-gray-900 text-gray-900 capitalize ${getRiskLevelColor(creditSafeReport.creditScore.riskLevel)}`}>
                               {creditSafeReport.creditScore.riskLevel.replace('-', ' ')}
                             </div>
                           </div>
@@ -1305,264 +1305,264 @@ const AdminReviewPage = () => {
 
                         {/* Score Bar */}
                         <div className="mt-6">
-                          <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${creditSafeReport.creditScore.score}%` }}
                               transition={{ duration: 1, ease: 'easeOut' }}
                               className={`h-full rounded-full ${
-                                creditSafeReport.creditScore.score >= 80 ? 'bg-trust-high' :
+                                creditSafeReport.creditScore.score >= 80 ? 'bg-emerald-500' :
                                 creditSafeReport.creditScore.score >= 60 ? 'bg-green-400' :
                                 creditSafeReport.creditScore.score >= 40 ? 'bg-yellow-400' :
                                 creditSafeReport.creditScore.score >= 20 ? 'bg-orange-400' : 'bg-red-400'
                               }`}
                             />
                           </div>
-                          <div className="flex justify-between mt-2 text-xs text-white/40">
+                          <div className="flex justify-between mt-2 text-xs text-gray-400">
                             <span>Very High Risk</span>
                             <span>Very Low Risk</span>
                           </div>
                         </div>
                       </div>
-                    </GlassCard>
+                    </Card>
 
                     {/* Financial Summary */}
-                    <GlassCard>
-                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Card>
+                      <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
                         <BarChart3 className="w-5 h-5 text-primary-400" />
                         Financial Summary
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <DollarSign className="w-4 h-4" />
                             <span>Annual Revenue</span>
                           </div>
-                          <div className="text-xl font-bold text-trust-high">
+                          <div className="text-xl font-bold text-gray-900 text-gray-900 text-emerald-600">
                             {formatPrice(creditSafeReport.financialSummary.annualRevenue)}
                           </div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <TrendingUp className="w-4 h-4" />
                             <span>Net Worth</span>
                           </div>
-                          <div className="text-xl font-bold">
+                          <div className="text-xl font-bold text-gray-900 text-gray-900">
                             {formatPrice(creditSafeReport.financialSummary.netWorth)}
                           </div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <Activity className="w-4 h-4" />
                             <span>Total Assets</span>
                           </div>
-                          <div className="text-xl font-bold">
+                          <div className="text-xl font-bold text-gray-900 text-gray-900">
                             {formatPrice(creditSafeReport.financialSummary.totalAssets)}
                           </div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <TrendingDown className="w-4 h-4" />
                             <span>Total Liabilities</span>
                           </div>
-                          <div className="text-xl font-bold text-orange-400">
+                          <div className="text-xl font-bold text-gray-900 text-gray-900 text-orange-400">
                             {formatPrice(creditSafeReport.financialSummary.totalLiabilities)}
                           </div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <Users className="w-4 h-4" />
                             <span>Employees</span>
                           </div>
-                          <div className="text-xl font-bold">
+                          <div className="text-xl font-bold text-gray-900 text-gray-900">
                             {creditSafeReport.financialSummary.employeeCount}
                           </div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                             <Calendar className="w-4 h-4" />
                             <span>Year Established</span>
                           </div>
-                          <div className="text-xl font-bold">
+                          <div className="text-xl font-bold text-gray-900 text-gray-900">
                             {creditSafeReport.financialSummary.yearEstablished}
                           </div>
                         </div>
                       </div>
-                    </GlassCard>
+                    </Card>
 
                     {/* Payment Behavior */}
-                    <GlassCard>
-                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Card>
+                      <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
                         <PieChart className="w-5 h-5 text-primary-400" />
                         Payment Behavior
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="glass-subtle rounded-lg p-4 text-center">
-                          <div className="text-3xl font-bold text-trust-high mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center">
+                          <div className="text-3xl font-bold text-gray-900 text-gray-900 text-emerald-600 mb-1">
                             {creditSafeReport.paymentBehavior.onTimePayments}%
                           </div>
-                          <div className="text-xs text-white/60">On-Time Payments</div>
+                          <div className="text-xs text-gray-500">On-Time Payments</div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4 text-center">
-                          <div className="text-3xl font-bold text-yellow-400 mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center">
+                          <div className="text-3xl font-bold text-gray-900 text-gray-900 text-yellow-400 mb-1">
                             {creditSafeReport.paymentBehavior.latePayments}%
                           </div>
-                          <div className="text-xs text-white/60">Late Payments</div>
+                          <div className="text-xs text-gray-500">Late Payments</div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4 text-center">
-                          <div className="text-3xl font-bold text-red-400 mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center">
+                          <div className="text-3xl font-bold text-gray-900 text-gray-900 text-red-400 mb-1">
                             {creditSafeReport.paymentBehavior.severelyLate}%
                           </div>
-                          <div className="text-xs text-white/60">Severely Late</div>
+                          <div className="text-xs text-gray-500">Severely Late</div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4 text-center">
-                          <div className="text-3xl font-bold mb-1">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center">
+                          <div className="text-3xl font-bold text-gray-900 text-gray-900 mb-1">
                             {creditSafeReport.paymentBehavior.dbtScore}
                           </div>
-                          <div className="text-xs text-white/60">Days Beyond Terms</div>
+                          <div className="text-xs text-gray-500">Days Beyond Terms</div>
                         </div>
                       </div>
 
-                      <div className="glass-subtle rounded-lg p-4">
+                      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-white/60">Payment Index</span>
-                          <span className="font-bold">{creditSafeReport.paymentBehavior.paymentIndex}/100</span>
+                          <span className="text-gray-500">Payment Index</span>
+                          <span className="font-bold text-gray-900">{creditSafeReport.paymentBehavior.paymentIndex}/100</span>
                         </div>
-                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary-500 rounded-full"
                             style={{ width: `${creditSafeReport.paymentBehavior.paymentIndex}%` }}
                           />
                         </div>
                       </div>
-                    </GlassCard>
+                    </Card>
 
                     {/* Legal & Industry */}
                     <div className="grid md:grid-cols-2 gap-6">
                       {/* Legal Filings */}
-                      <GlassCard>
-                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                      <Card>
+                        <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5 text-primary-400" />
                           Legal Filings
                         </h3>
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between glass-subtle rounded-lg p-3">
-                            <span className="text-white/80">Bankruptcies</span>
-                            <span className={`font-bold ${creditSafeReport.legalFilings.bankruptcies === 0 ? 'text-trust-high' : 'text-red-400'}`}>
+                          <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
+                            <span className="text-gray-700">Bankruptcies</span>
+                            <span className={`font-bold text-gray-900 ${creditSafeReport.legalFilings.bankruptcies === 0 ? 'text-emerald-600' : 'text-red-400'}`}>
                               {creditSafeReport.legalFilings.bankruptcies}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between glass-subtle rounded-lg p-3">
-                            <span className="text-white/80">Liens</span>
-                            <span className={`font-bold ${creditSafeReport.legalFilings.liens === 0 ? 'text-trust-high' : 'text-yellow-400'}`}>
+                          <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
+                            <span className="text-gray-700">Liens</span>
+                            <span className={`font-bold text-gray-900 ${creditSafeReport.legalFilings.liens === 0 ? 'text-emerald-600' : 'text-yellow-400'}`}>
                               {creditSafeReport.legalFilings.liens}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between glass-subtle rounded-lg p-3">
-                            <span className="text-white/80">Judgments</span>
-                            <span className={`font-bold ${creditSafeReport.legalFilings.judgments === 0 ? 'text-trust-high' : 'text-red-400'}`}>
+                          <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
+                            <span className="text-gray-700">Judgments</span>
+                            <span className={`font-bold text-gray-900 ${creditSafeReport.legalFilings.judgments === 0 ? 'text-emerald-600' : 'text-red-400'}`}>
                               {creditSafeReport.legalFilings.judgments}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between glass-subtle rounded-lg p-3">
-                            <span className="text-white/80">UCC Filings</span>
-                            <span className="font-bold">{creditSafeReport.legalFilings.uccFilings}</span>
+                          <div className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-3">
+                            <span className="text-gray-700">UCC Filings</span>
+                            <span className="font-bold text-gray-900">{creditSafeReport.legalFilings.uccFilings}</span>
                           </div>
                         </div>
-                      </GlassCard>
+                      </Card>
 
                       {/* Industry Comparison */}
-                      <GlassCard>
-                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                      <Card>
+                        <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
                           <BarChart3 className="w-5 h-5 text-primary-400" />
                           Industry Comparison
                         </h3>
                         <div className="text-center mb-4">
-                          <div className="text-sm text-white/60 mb-2">
+                          <div className="text-sm text-gray-500 mb-2">
                             {creditSafeReport.industryComparison.industryName}
                           </div>
-                          <div className="text-4xl font-bold text-primary-400">
+                          <div className="text-4xl font-bold text-gray-900 text-primary-400">
                             Top {100 - creditSafeReport.industryComparison.percentile}%
                           </div>
-                          <div className="text-sm text-white/60 mt-1">
+                          <div className="text-sm text-gray-500 mt-1">
                             Better than {creditSafeReport.industryComparison.percentile}% of peers
                           </div>
                         </div>
-                        <div className="glass-subtle rounded-lg p-4">
+                        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-white/60">This Company</span>
-                            <span className="font-bold text-primary-400">{creditSafeReport.creditScore.score}</span>
+                            <span className="text-gray-500">This Company</span>
+                            <span className="font-bold text-gray-900 text-primary-400">{creditSafeReport.creditScore.score}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-white/60">Industry Average</span>
-                            <span className="font-bold">{creditSafeReport.industryComparison.industryAverage}</span>
+                            <span className="text-gray-500">Industry Average</span>
+                            <span className="font-bold text-gray-900">{creditSafeReport.industryComparison.industryAverage}</span>
                           </div>
                         </div>
-                      </GlassCard>
+                      </Card>
                     </div>
 
                     {/* Company Details & Directors */}
                     <div className="grid md:grid-cols-2 gap-6">
                       {/* Company Contact */}
-                      <GlassCard>
-                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                      <Card>
+                        <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
                           <Building2 className="w-5 h-5 text-primary-400" />
                           Company Details
                         </h3>
                         <div className="space-y-3">
                           <div className="flex items-start gap-3">
-                            <MapPin className="w-4 h-4 text-white/40 mt-1 flex-shrink-0" />
-                            <div className="text-white/80">
+                            <MapPin className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                            <div className="text-gray-700">
                               {creditSafeReport.address.street}<br />
                               {creditSafeReport.address.city}, {creditSafeReport.address.state} {creditSafeReport.address.zip}
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <Phone className="w-4 h-4 text-white/40" />
-                            <span className="text-white/80">{creditSafeReport.contact.phone}</span>
+                            <Phone className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">{creditSafeReport.contact.phone}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <Globe className="w-4 h-4 text-white/40" />
+                            <Globe className="w-4 h-4 text-gray-400" />
                             <a href={`https://${creditSafeReport.contact.website}`} target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:underline flex items-center gap-1">
                               {creditSafeReport.contact.website}
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </div>
                           <div className="flex items-center gap-3">
-                            <Mail className="w-4 h-4 text-white/40" />
-                            <span className="text-white/80">{creditSafeReport.contact.email}</span>
+                            <Mail className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">{creditSafeReport.contact.email}</span>
                           </div>
-                          <div className="pt-3 border-t border-white/10 space-y-2 text-sm">
+                          <div className="pt-3 border-t border-gray-200 space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-white/60">Registration #</span>
+                              <span className="text-gray-500">Registration #</span>
                               <span>{creditSafeReport.registrationNumber}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-white/60">Incorporated</span>
+                              <span className="text-gray-500">Incorporated</span>
                               <span>{new Date(creditSafeReport.incorporationDate).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>
-                      </GlassCard>
+                      </Card>
 
                       {/* Directors */}
-                      <GlassCard>
-                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                      <Card>
+                        <h3 className="text-xl font-bold text-gray-900 text-gray-900 mb-4 flex items-center gap-2">
                           <Users className="w-5 h-5 text-primary-400" />
                           Directors & Officers
                         </h3>
                         <div className="space-y-3">
                           {creditSafeReport.directors.map((director, index) => (
-                            <div key={index} className="glass-subtle rounded-lg p-3">
-                              <div className="font-semibold">{director.name}</div>
-                              <div className="text-sm text-white/60">{director.title}</div>
-                              <div className="text-xs text-white/40 mt-1">
+                            <div key={index} className="bg-gray-100 border border-gray-200 rounded-lg p-3">
+                              <div className="font-semibold text-gray-900">{director.name}</div>
+                              <div className="text-sm text-gray-500">{director.title}</div>
+                              <div className="text-xs text-gray-400 mt-1">
                                 Appointed: {new Date(director.appointedDate).toLocaleDateString()}
                               </div>
                             </div>
                           ))}
                         </div>
-                      </GlassCard>
+                      </Card>
                     </div>
                   </>
                 )}
@@ -1576,8 +1576,8 @@ const AdminReviewPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <GlassCard className="h-[600px] flex flex-col">
-                  <h2 className="text-xl font-bold mb-4">Chat with {listing.seller.name}</h2>
+                <Card className="h-[600px] flex flex-col">
+                  <h2 className="text-xl font-bold text-gray-900 text-gray-900 mb-4">Chat with {listing.seller.name}</h2>
 
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto space-y-4 mb-4">
@@ -1590,10 +1590,10 @@ const AdminReviewPage = () => {
                           className={`max-w-[70%] rounded-lg p-4 ${
                             msg.from === 'admin'
                               ? 'bg-primary-500 text-white'
-                              : 'glass-subtle text-white/90'
+                              : 'bg-gray-100 border border-gray-200 text-gray-800'
                           }`}
                         >
-                          <div className="font-semibold text-sm mb-1">{msg.sender}</div>
+                          <div className="font-semibold text-gray-900 text-sm mb-1">{msg.sender}</div>
                           <div className="text-sm mb-2">{msg.message}</div>
                           <div className="text-xs opacity-70">
                             {msg.timestamp.toLocaleTimeString()}
@@ -1621,7 +1621,7 @@ const AdminReviewPage = () => {
                       <Send className="w-4 h-4" />
                     </Button>
                   </div>
-                </GlassCard>
+                </Card>
               </motion.div>
             )}
           </div>
@@ -1629,18 +1629,18 @@ const AdminReviewPage = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Seller Card */}
-            <GlassCard>
-              <h3 className="text-lg font-bold mb-4">Seller Information</h3>
+            <Card>
+              <h3 className="text-lg font-bold text-gray-900 text-gray-900 mb-4">Seller Information</h3>
 
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-primary-400">
+                  <span className="text-2xl font-bold text-gray-900 text-gray-900 text-primary-400">
                     {listing.seller.name.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <div className="font-semibold text-lg">{listing.seller.name}</div>
-                  <div className="text-sm text-white/60">Member ID: #{listing.seller.id}</div>
+                  <div className="font-semibold text-gray-900 text-lg">{listing.seller.name}</div>
+                  <div className="text-sm text-gray-500">Member ID: #{listing.seller.id}</div>
                 </div>
               </div>
 
@@ -1651,28 +1651,28 @@ const AdminReviewPage = () => {
               />
 
               <div className="mt-4 space-y-3 text-sm">
-                <div className="flex items-center gap-2 text-white/60">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Mail className="w-4 h-4" />
                   <span>{listing.seller.email}</span>
                 </div>
-                <div className="flex items-center gap-2 text-white/60">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Calendar className="w-4 h-4" />
                   <span>Member since {listing.seller.memberSince.getFullYear()}</span>
                 </div>
-                <div className="flex justify-between pt-3 border-t border-white/10">
-                  <span className="text-white/60">Completed Deals</span>
-                  <span className="font-semibold">{listing.seller.completedDeals}</span>
+                <div className="flex justify-between pt-3 border-t border-gray-200">
+                  <span className="text-gray-500">Completed Deals</span>
+                  <span className="font-semibold text-gray-900">{listing.seller.completedDeals}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Total Listings</span>
-                  <span className="font-semibold">3</span>
+                  <span className="text-gray-500">Total Listings</span>
+                  <span className="font-semibold text-gray-900">3</span>
                 </div>
               </div>
-            </GlassCard>
+            </Card>
 
             {/* Review Checklist */}
-            <GlassCard>
-              <h3 className="text-lg font-bold mb-4">Review Checklist</h3>
+            <Card>
+              <h3 className="text-lg font-bold text-gray-900 text-gray-900 mb-4">Review Checklist</h3>
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" className="w-5 h-5 rounded" defaultChecked />
@@ -1719,7 +1719,7 @@ const AdminReviewPage = () => {
                   <span className="text-sm">CreditSafe check completed</span>
                 </label>
               </div>
-            </GlassCard>
+            </Card>
 
             {/* Action Buttons */}
             <div className="space-y-3">

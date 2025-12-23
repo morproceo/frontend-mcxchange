@@ -204,6 +204,14 @@ class ApiService {
     });
   }
 
+  async getAdminPendingListings(params?: { page?: number; limit?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString();
+    return this.request<any>(`/admin/listings/pending${query ? `?${query}` : ''}`);
+  }
+
   async getAdminListings(params?: {
     page?: number;
     limit?: number;
@@ -275,6 +283,94 @@ class ApiService {
   }) {
     return this.request<any>(`/admin/listings/${listingId}`, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin Create User
+  async createAdminUser(data: {
+    email: string;
+    name: string;
+    password: string;
+    role: 'BUYER' | 'SELLER' | 'ADMIN';
+    phone?: string;
+    companyName?: string;
+    createStripeAccount?: boolean;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: {
+        user: any;
+        stripeAccount?: {
+          accountId: string;
+          onboardingUrl: string;
+        };
+      };
+      message: string;
+    }>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin Create Listing
+  async createAdminListing(data: {
+    sellerId: string;
+    mcNumber: string;
+    dotNumber?: string;
+    legalName?: string;
+    dbaName?: string;
+    title: string;
+    description?: string;
+    askingPrice: number;
+    state?: string;
+    status?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/admin/listings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin Create User with Listing
+  async createAdminUserWithListing(data: {
+    user: {
+      email: string;
+      name: string;
+      password: string;
+      phone?: string;
+      companyName?: string;
+    };
+    listing: {
+      mcNumber: string;
+      dotNumber?: string;
+      legalName?: string;
+      dbaName?: string;
+      title: string;
+      description?: string;
+      askingPrice: number;
+      state?: string;
+      status?: string;
+    };
+    createStripeAccount?: boolean;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: {
+        user: any;
+        listing: any;
+        stripeAccount?: {
+          accountId: string;
+          onboardingUrl: string;
+        };
+      };
+      message: string;
+    }>('/admin/users/with-listing', {
+      method: 'POST',
       body: JSON.stringify(data),
     });
   }

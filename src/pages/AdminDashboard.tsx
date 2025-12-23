@@ -47,6 +47,26 @@ interface PendingListing {
   }
 }
 
+// Dashboard stats interface
+interface DashboardStats {
+  pendingListings: number
+  activeListings: number
+  totalListings: number
+  totalUsers: number
+  activeUsers: number
+  totalSellers: number
+  totalBuyers: number
+  pendingOffers: number
+  totalOffers: number
+  totalTransactions: number
+  completedTransactions: number
+  totalRevenue: number
+  monthlyRevenue: number
+  approvedToday?: number
+  premiumRequests?: number
+  reportedItems?: number
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'pending' | 'premium' | 'reported' | 'users'>('pending')
@@ -55,6 +75,27 @@ const AdminDashboard = () => {
   const [pendingListings, setPendingListings] = useState<PendingListing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  // Fetch dashboard stats from API
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setStatsLoading(true)
+        const response = await api.getAdminDashboard()
+        if (response.success && response.data) {
+          setDashboardStats(response.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err)
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+
+    fetchDashboardStats()
+  }, [])
 
   // Fetch pending listings from API
   useEffect(() => {
@@ -62,30 +103,30 @@ const AdminDashboard = () => {
       try {
         setLoading(true)
         setError(null)
-        // Fetch listings - in production, would use admin endpoint with status filter
-        const response = await api.getListings()
+        // Fetch pending listings from admin endpoint
+        const response = await api.getAdminPendingListings()
 
-        // Transform and filter for pending listings
-        const transformed: PendingListing[] = (response.listings || [])
+        // Transform listings
+        const transformed: PendingListing[] = (response.data || [])
           .slice(0, 3) // Limit to 3 for dashboard
           .map((listing: any) => ({
             id: listing.id,
             mcNumber: listing.mcNumber,
             title: listing.title || `MC Authority #${listing.mcNumber}`,
             description: listing.description || '',
-            price: listing.askingPrice || 0,
+            price: listing.price || listing.askingPrice || 0,
             yearsActive: listing.yearsActive || 0,
             fleetSize: listing.fleetSize || 0,
             safetyRating: listing.safetyRating || 'satisfactory',
             insuranceStatus: listing.insuranceStatus || 'active',
             status: 'pending-verification' as const,
-            submittedAt: '2 hours ago',
+            submittedAt: listing.createdAt ? formatTimeAgo(listing.createdAt) : 'Recently',
             seller: {
               id: listing.seller?.id || listing.sellerId,
               name: listing.seller?.name || 'Unknown Seller',
               email: listing.seller?.email || '',
               trustScore: listing.seller?.trustScore || 70,
-              verified: listing.seller?.isVerified || false
+              verified: listing.seller?.verified || false
             }
           }))
 
@@ -102,48 +143,63 @@ const AdminDashboard = () => {
     fetchPendingListings()
   }, [])
 
+  // Helper to format time ago
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) return `${diffMins} minutes ago`
+    if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffDays === 1) return '1 day ago'
+    return `${diffDays} days ago`
+  }
+
   const stats = [
     {
       icon: Clock,
       label: 'Pending Review',
-      value: '8',
-      change: '3 urgent',
+      value: statsLoading ? '...' : (dashboardStats?.pendingListings || 0).toString(),
+      change: `${dashboardStats?.activeListings || 0} active listings`,
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
       link: '/admin/pending'
     },
     {
-      icon: Crown,
-      label: 'Premium Requests',
-      value: '4',
-      change: '2 new today',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      link: '/admin/premium-requests'
+      icon: Package,
+      label: 'Total Listings',
+      value: statsLoading ? '...' : (dashboardStats?.totalListings || 0).toString(),
+      change: `${dashboardStats?.activeListings || 0} active`,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      link: '/admin/listings'
     },
     {
-      icon: AlertTriangle,
-      label: 'Reported',
-      value: '2',
-      change: 'Needs attention',
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      link: '/admin/reported'
+      icon: ShoppingCart,
+      label: 'Total Offers',
+      value: statsLoading ? '...' : (dashboardStats?.totalOffers || 0).toString(),
+      change: `${dashboardStats?.pendingOffers || 0} pending`,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      link: '/admin/offers'
     },
     {
       icon: CheckCircle,
-      label: 'Approved Today',
-      value: '15',
-      change: '+23% vs yesterday',
+      label: 'Transactions',
+      value: statsLoading ? '...' : (dashboardStats?.completedTransactions || 0).toString(),
+      change: `${dashboardStats?.totalTransactions || 0} total`,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
-      link: null
+      link: '/admin/transactions'
     },
     {
       icon: Users,
-      label: 'Active Users',
-      value: '1,234',
-      change: '+56 this week',
+      label: 'Total Users',
+      value: statsLoading ? '...' : (dashboardStats?.totalUsers || 0).toLocaleString(),
+      change: `${dashboardStats?.totalSellers || 0} sellers, ${dashboardStats?.totalBuyers || 0} buyers`,
       color: 'text-secondary-600',
       bgColor: 'bg-secondary-50',
       link: '/admin/users'
