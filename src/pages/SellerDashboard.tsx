@@ -78,6 +78,7 @@ const SellerDashboard = () => {
           .map((listing: any) => ({
             id: listing.id,
             mcNumber: listing.mcNumber,
+            sellerId: listing.sellerId || user?.id || '',
             title: listing.title || `MC Authority #${listing.mcNumber}`,
             description: listing.description || '',
             price: listing.askingPrice || listing.price || 0,
@@ -87,18 +88,33 @@ const SellerDashboard = () => {
             safetyRating: listing.safetyRating || 'satisfactory',
             insuranceStatus: listing.insuranceStatus || 'active',
             verified: listing.verified || false,
-            premium: listing.isPremium || false,
+            isPremium: listing.isPremium || false,
             trustScore: listing.trustScore || 70,
             trustLevel: getTrustLevel(listing.trustScore || 70),
+            verificationBadges: listing.verificationBadges || [],
+            state: listing.state || '',
+            amazonStatus: listing.amazonStatus || 'none',
+            amazonRelayScore: listing.amazonRelayScore || null,
+            highwaySetup: listing.highwaySetup || false,
+            sellingWithEmail: listing.sellingWithEmail || false,
+            sellingWithPhone: listing.sellingWithPhone || false,
+            documents: listing.documents || [],
+            status: listing.status || 'active',
+            visibility: listing.visibility || 'public',
+            views: listing.views || 0,
+            saves: listing.saves || 0,
             createdAt: new Date(listing.createdAt),
+            updatedAt: new Date(listing.updatedAt || listing.createdAt),
             seller: {
               id: user?.id || listing.sellerId,
               name: user?.name || 'Unknown Seller',
               email: user?.email || '',
+              role: 'seller' as const,
               verified: user?.verified || false,
               trustScore: user?.trustScore || 70,
-              memberSince: new Date(user?.createdAt || Date.now()),
-              completedDeals: 0
+              memberSince: user?.memberSince || new Date(),
+              completedDeals: user?.completedDeals || 0,
+              reviews: []
             }
           }))
 
@@ -113,7 +129,7 @@ const SellerDashboard = () => {
     }
 
     fetchMyListings()
-  }, [user?.id, user?.name, user?.email, user?.verified, user?.trustScore, user?.createdAt])
+  }, [user?.id, user?.name, user?.email, user?.verified, user?.trustScore, user?.memberSince])
 
   // Fetch dashboard stats
   useEffect(() => {
