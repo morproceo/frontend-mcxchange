@@ -543,7 +543,7 @@ const AdminTelegramPage = () => {
                 <div className="text-xs text-gray-700 space-y-1">
                   {customMessage && <div className="italic">{customMessage}</div>}
                   <div className="font-semibold">🚛 {selectedListing.title}</div>
-                  <div>📋 MC# {selectedListing.mcNumber}</div>
+                  <div>📋 MC# ***{selectedListing.mcNumber.slice(-3)}</div>
                   <div>💰 Listing Price: ${selectedListing.askingPrice.toLocaleString()}</div>
                   {selectedListing.state && <div>📍 {selectedListing.state}</div>}
                   <div className="text-blue-600">🔗 View Listing</div>
