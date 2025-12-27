@@ -1583,6 +1583,17 @@ class ApiService {
   // ===========================
 
   /**
+   * Get consultation fee (public - no auth required)
+   */
+  async getConsultationFee(): Promise<{ fee: number; currency: string; description: string }> {
+    const response = await this.request<{
+      success: boolean;
+      data: { fee: number; currency: string; description: string };
+    }>('/consultations/fee');
+    return response.data;
+  }
+
+  /**
    * Create consultation checkout session (public - no auth required)
    */
   async createConsultationCheckout(data: {

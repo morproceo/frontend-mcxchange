@@ -935,6 +935,16 @@ const AdminSettingsPage = () => {
                         onChange={(e) => updatePlatformFee('maxDeposit', parseFloat(e.target.value) || 0)}
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Consultation Fee ($)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={pricingConfig.platformFees.consultationFee || 100}
+                        onChange={(e) => updatePlatformFee('consultationFee', parseFloat(e.target.value) || 0)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Fee for Talk to Rep consultations</p>
+                    </div>
                   </div>
                 </Card>
 

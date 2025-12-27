@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -25,6 +25,7 @@ interface TalkToMariaModalProps {
 const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
   const [step, setStep] = useState<'form' | 'processing' | 'success'>('form')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [consultationFee, setConsultationFee] = useState<number>(100) // Default
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,6 +34,15 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
     preferredTime: '',
     message: ''
   })
+
+  // Fetch consultation fee when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      api.getConsultationFee()
+        .then(data => setConsultationFee(data.fee))
+        .catch(err => console.error('Failed to fetch consultation fee:', err))
+    }
+  }, [isOpen])
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,7 +219,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                           <div className="font-bold text-lg text-gray-900">Consultation Fee</div>
                           <div className="text-sm text-gray-500">60-minute expert consultation</div>
                         </div>
-                        <div className="text-3xl font-bold text-secondary-600">$100</div>
+                        <div className="text-3xl font-bold text-secondary-600">${consultationFee.toFixed(2)}</div>
                       </div>
                     </div>
 
@@ -224,7 +234,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                             Processing...
                           </>
                         ) : (
-                          'Pay $100 & Book Consultation'
+                          `Pay $${consultationFee.toFixed(2)} & Book Consultation`
                         )}
                       </Button>
                     </div>
@@ -269,7 +279,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                         </div>
                         <div className="pt-2 mt-2 border-t border-gray-200 flex justify-between">
                           <span className="text-gray-500">Payment:</span>
-                          <span className="text-green-600 font-semibold">$100.00 Paid</span>
+                          <span className="text-green-600 font-semibold">${consultationFee.toFixed(2)} Paid</span>
                         </div>
                       </div>
                     </div>
