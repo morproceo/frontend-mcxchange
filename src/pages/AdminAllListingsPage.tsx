@@ -58,6 +58,8 @@ interface Listing {
   legalName: string
   dbaName: string
   price: number
+  askingPrice: number
+  listingPrice: number | null
   status: 'active' | 'pending' | 'sold' | 'rejected' | 'draft'
   seller: {
     id: string
@@ -219,6 +221,8 @@ const AdminAllListingsPage = () => {
         legalName: item.legalName || '',
         dbaName: item.dbaName || '',
         price: item.askingPrice || 0,
+        askingPrice: item.askingPrice || 0,
+        listingPrice: item.listingPrice || null,
         status: mapStatus(item.status),
         seller: {
           id: item.seller?.id || item.sellerId || '',
@@ -380,6 +384,8 @@ const AdminAllListingsPage = () => {
       legalName: newListing.legalName,
       dbaName: newListing.dbaName,
       price: parseInt(newListing.price) || 0,
+      askingPrice: parseInt(newListing.price) || 0,
+      listingPrice: null,
       status: 'draft',
       seller: users.find(u => u.id === newListing.assignedTo) ? {
         id: newListing.assignedTo,
@@ -647,8 +653,11 @@ const AdminAllListingsPage = () => {
                     onClick={() => handleSort('price')}
                   >
                     <div className="flex items-center gap-1">
-                      Price <SortIcon field="price" />
+                      Asking <SortIcon field="price" />
                     </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Listing Price
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Status
@@ -712,8 +721,17 @@ const AdminAllListingsPage = () => {
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-semibold text-gray-900">
-                        {listing.isPremium ? 'Contact' : `$${listing.price.toLocaleString()}`}
+                        {listing.isPremium ? 'Contact' : `$${listing.askingPrice.toLocaleString()}`}
                       </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      {listing.listingPrice ? (
+                        <p className="font-semibold text-emerald-600">
+                          ${listing.listingPrice.toLocaleString()}
+                        </p>
+                      ) : (
+                        <p className="text-gray-400 text-sm">Not set</p>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(listing.status)}`}>
