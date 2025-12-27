@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -30,13 +30,41 @@ import {
   Target,
   ShieldCheck,
   ScrollText,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  X,
+  Truck
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+
+// Types for create transaction modal
+interface AvailableBuyer {
+  id: string
+  name: string
+  email: string
+  verified: boolean
+  trustScore: number
+}
+
+interface AvailableListing {
+  id: string
+  mcNumber: string
+  dotNumber: string
+  legalName: string
+  title: string
+  askingPrice: number | null
+  listingPrice: number | null
+  sellerId: string
+  seller: {
+    id: string
+    name: string
+    email: string
+  }
+}
 
 // Transaction status mapping from backend to frontend workflow steps
 type TransactionStep =
@@ -126,6 +154,7 @@ interface TransactionData {
 }
 
 const AdminActiveClosingsPage = () => {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null)
@@ -135,6 +164,21 @@ const AdminActiveClosingsPage = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null)
+
+  // Create Transaction Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [buyerSearch, setBuyerSearch] = useState('')
+  const [listingSearch, setListingSearch] = useState('')
+  const [availableBuyers, setAvailableBuyers] = useState<AvailableBuyer[]>([])
+  const [availableListings, setAvailableListings] = useState<AvailableListing[]>([])
+  const [selectedBuyer, setSelectedBuyer] = useState<AvailableBuyer | null>(null)
+  const [selectedListing, setSelectedListing] = useState<AvailableListing | null>(null)
+  const [agreedPrice, setAgreedPrice] = useState('')
+  const [depositAmount, setDepositAmount] = useState('')
+  const [createNotes, setCreateNotes] = useState('')
+  const [buyersLoading, setBuyersLoading] = useState(false)
+  const [listingsLoading, setListingsLoading] = useState(false)
 
   const steps = [
     { id: 'terms-agreement', label: 'Terms', short: '1' },
@@ -202,6 +246,124 @@ const AdminActiveClosingsPage = () => {
   useEffect(() => {
     fetchTransactions()
   }, [])
+
+  // Fetch available buyers for create transaction modal
+  const fetchBuyers = async (search?: string) => {
+    setBuyersLoading(true)
+    try {
+      const response = await api.getAvailableBuyers(search)
+      if (response.success && response.data) {
+        setAvailableBuyers(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch buyers:', error)
+    } finally {
+      setBuyersLoading(false)
+    }
+  }
+
+  // Fetch available listings for create transaction modal
+  const fetchListings = async (search?: string) => {
+    setListingsLoading(true)
+    try {
+      const response = await api.getAvailableListings(search)
+      if (response.success && response.data) {
+        setAvailableListings(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch listings:', error)
+    } finally {
+      setListingsLoading(false)
+    }
+  }
+
+  // Load initial data when modal opens
+  useEffect(() => {
+    if (showCreateModal) {
+      fetchBuyers()
+      fetchListings()
+    }
+  }, [showCreateModal])
+
+  // Search buyers with debounce
+  useEffect(() => {
+    if (showCreateModal) {
+      const timer = setTimeout(() => {
+        fetchBuyers(buyerSearch || undefined)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [buyerSearch, showCreateModal])
+
+  // Search listings with debounce
+  useEffect(() => {
+    if (showCreateModal) {
+      const timer = setTimeout(() => {
+        fetchListings(listingSearch || undefined)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [listingSearch, showCreateModal])
+
+  // Pre-fill price when listing is selected
+  useEffect(() => {
+    if (selectedListing && !agreedPrice) {
+      const price = selectedListing.listingPrice || selectedListing.askingPrice
+      if (price) {
+        setAgreedPrice(price.toString())
+      }
+    }
+  }, [selectedListing])
+
+  // Reset create modal state
+  const resetCreateModal = () => {
+    setSelectedBuyer(null)
+    setSelectedListing(null)
+    setAgreedPrice('')
+    setDepositAmount('')
+    setCreateNotes('')
+    setBuyerSearch('')
+    setListingSearch('')
+  }
+
+  // Create transaction
+  const handleCreateTransaction = async () => {
+    if (!selectedBuyer || !selectedListing || !agreedPrice) {
+      toast.error('Please select a buyer, listing, and enter the agreed price')
+      return
+    }
+
+    const priceNum = parseFloat(agreedPrice)
+    if (isNaN(priceNum) || priceNum <= 0) {
+      toast.error('Please enter a valid agreed price')
+      return
+    }
+
+    setCreateLoading(true)
+    try {
+      const response = await api.adminCreateTransaction({
+        listingId: selectedListing.id,
+        buyerId: selectedBuyer.id,
+        agreedPrice: priceNum,
+        depositAmount: depositAmount ? parseFloat(depositAmount) : undefined,
+        notes: createNotes || undefined,
+      })
+
+      if (response.success && response.data) {
+        toast.success('Transaction created successfully!')
+        setShowCreateModal(false)
+        resetCreateModal()
+        fetchTransactions()
+        // Navigate to the transaction room
+        navigate(`/transaction/${response.data.id}`)
+      }
+    } catch (error: any) {
+      console.error('Failed to create transaction:', error)
+      toast.error(error.message || 'Failed to create transaction')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
 
   const getStepIndex = (step: TransactionStep) => {
     return steps.findIndex(s => s.id === step)
@@ -335,6 +497,13 @@ const AdminActiveClosingsPage = () => {
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Transaction
           </Button>
           {needsReviewCount > 0 && (
             <div className="px-4 py-2 bg-amber-100 border border-amber-200 rounded-xl flex items-center gap-2">
@@ -1079,6 +1248,272 @@ const AdminActiveClosingsPage = () => {
                     </Button>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Transaction Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowCreateModal(false)
+              resetCreateModal()
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Create Transaction</h2>
+                  <p className="text-sm text-gray-600 mt-1">Manually create a transaction between a buyer and seller</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    resetCreateModal()
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+                {/* Step 1: Select Listing */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Truck className="w-4 h-4 inline mr-2" />
+                    Select MC Listing
+                  </label>
+                  {selectedListing ? (
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-indigo-900">MC-{selectedListing.mcNumber}</div>
+                        <div className="text-sm text-gray-600">{selectedListing.legalName}</div>
+                        <div className="text-xs text-gray-500">Seller: {selectedListing.seller.name}</div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedListing(null)}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Input
+                        placeholder="Search by MC#, name..."
+                        value={listingSearch}
+                        onChange={(e) => setListingSearch(e.target.value)}
+                        icon={<Search className="w-4 h-4" />}
+                      />
+                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl">
+                        {listingsLoading ? (
+                          <div className="p-4 text-center text-gray-500">
+                            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                          </div>
+                        ) : availableListings.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">No listings found</div>
+                        ) : (
+                          availableListings.map((listing) => (
+                            <div
+                              key={listing.id}
+                              onClick={() => setSelectedListing(listing)}
+                              className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium">MC-{listing.mcNumber}</div>
+                                  <div className="text-sm text-gray-600">{listing.legalName}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium text-green-600">
+                                    ${(listing.listingPrice || listing.askingPrice || 0).toLocaleString()}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{listing.seller.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2: Select Buyer */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <User className="w-4 h-4 inline mr-2" />
+                    Select Buyer
+                  </label>
+                  {selectedBuyer ? (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-green-900">{selectedBuyer.name}</div>
+                        <div className="text-sm text-gray-600">{selectedBuyer.email}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {selectedBuyer.verified && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Verified</span>
+                          )}
+                          <span className="text-xs text-gray-500">Trust Score: {selectedBuyer.trustScore}</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedBuyer(null)}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={buyerSearch}
+                        onChange={(e) => setBuyerSearch(e.target.value)}
+                        icon={<Search className="w-4 h-4" />}
+                      />
+                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl">
+                        {buyersLoading ? (
+                          <div className="p-4 text-center text-gray-500">
+                            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                          </div>
+                        ) : availableBuyers.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">No buyers found</div>
+                        ) : (
+                          availableBuyers.map((buyer) => (
+                            <div
+                              key={buyer.id}
+                              onClick={() => setSelectedBuyer(buyer)}
+                              className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium">{buyer.name}</div>
+                                  <div className="text-sm text-gray-600">{buyer.email}</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {buyer.verified && (
+                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 3: Transaction Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <DollarSign className="w-4 h-4 inline mr-2" />
+                      Agreed Price *
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="Enter agreed price"
+                      value={agreedPrice}
+                      onChange={(e) => setAgreedPrice(e.target.value)}
+                      icon={<DollarSign className="w-4 h-4" />}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Banknote className="w-4 h-4 inline mr-2" />
+                      Deposit Amount (optional)
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="Auto-calculated if empty"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      icon={<DollarSign className="w-4 h-4" />}
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <FileText className="w-4 h-4 inline mr-2" />
+                    Admin Notes (optional)
+                  </label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    rows={3}
+                    placeholder="Add any notes about this transaction..."
+                    value={createNotes}
+                    onChange={(e) => setCreateNotes(e.target.value)}
+                  />
+                </div>
+
+                {/* Summary */}
+                {selectedListing && selectedBuyer && agreedPrice && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Transaction Summary</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Listing:</span>
+                        <span className="ml-2 font-medium">MC-{selectedListing.mcNumber}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Seller:</span>
+                        <span className="ml-2 font-medium">{selectedListing.seller.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Buyer:</span>
+                        <span className="ml-2 font-medium">{selectedBuyer.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Agreed Price:</span>
+                        <span className="ml-2 font-medium text-green-600">${parseFloat(agreedPrice).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    resetCreateModal()
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateTransaction}
+                  loading={createLoading}
+                  disabled={!selectedBuyer || !selectedListing || !agreedPrice}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Transaction
+                </Button>
               </div>
             </motion.div>
           </motion.div>

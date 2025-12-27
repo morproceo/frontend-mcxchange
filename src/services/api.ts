@@ -934,6 +934,85 @@ class ApiService {
     });
   }
 
+  // Admin get available buyers for transaction creation
+  async getAvailableBuyers(search?: string) {
+    const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        name: string;
+        email: string;
+        verified: boolean;
+        trustScore: number;
+      }>;
+    }>(`/transactions/admin/available-buyers${queryParams}`);
+  }
+
+  // Admin get available listings for transaction creation
+  async getAvailableListings(search?: string) {
+    const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        mcNumber: string;
+        dotNumber: string;
+        legalName: string;
+        title: string;
+        askingPrice: number | null;
+        listingPrice: number | null;
+        sellerId: string;
+        seller: {
+          id: string;
+          name: string;
+          email: string;
+        };
+      }>;
+    }>(`/transactions/admin/available-listings${queryParams}`);
+  }
+
+  // Admin create transaction manually
+  async adminCreateTransaction(params: {
+    listingId: string;
+    buyerId: string;
+    agreedPrice: number;
+    depositAmount?: number;
+    notes?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: {
+        id: string;
+        listingId: string;
+        buyerId: string;
+        sellerId: string;
+        agreedPrice: number;
+        depositAmount: number;
+        status: string;
+        listing?: {
+          id: string;
+          mcNumber: string;
+          title: string;
+        };
+        buyer?: {
+          id: string;
+          name: string;
+          email: string;
+        };
+        seller?: {
+          id: string;
+          name: string;
+          email: string;
+        };
+      };
+      message: string;
+    }>('/transactions/admin/create', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
   // Record final payment (buyer submits payment with proof)
   async recordFinalPayment(
     transactionId: string,
