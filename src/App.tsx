@@ -10,6 +10,7 @@ import AdminRegisterPage from './pages/AdminRegisterPage'
 import SellerVerificationPage from './pages/SellerVerificationPage'
 import MarketplacePage from './pages/MarketplacePage'
 import MCDetailPage from './pages/MCDetailPage'
+import ConsultationSuccessPage from './pages/ConsultationSuccessPage'
 import ServicesPage from './pages/services/ServicesPage'
 import FuelProgramPage from './pages/services/FuelProgramPage'
 import SafetyServicesPage from './pages/services/SafetyServicesPage'
@@ -37,6 +38,7 @@ import AdminAllListingsPage from './pages/AdminAllListingsPage'
 import AdminListingDetailPage from './pages/AdminListingDetailPage'
 import AdminPendingReviewPage from './pages/AdminPendingReviewPage'
 import AdminPremiumRequestsPage from './pages/AdminPremiumRequestsPage'
+import AdminConsultationsPage from './pages/AdminConsultationsPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 import AdminTransactionsPage from './pages/AdminTransactionsPage'
 import AdminMessagesPage from './pages/AdminMessagesPage'
@@ -66,6 +68,7 @@ function App() {
             <Route path="seller-verification" element={<SellerVerificationPage />} />
             <Route path="marketplace" element={<MarketplacePage />} />
             <Route path="mc/:id" element={<MCDetailPage />} />
+            <Route path="consultation/success" element={<ConsultationSuccessPage />} />
             {/* Services Routes */}
             <Route path="services" element={<ServicesPage />} />
             <Route path="services/fuel-program" element={<FuelProgramPage />} />
@@ -130,6 +133,7 @@ function App() {
             <Route path="payments" element={<AdminPaymentTracking />} />
             <Route path="pending" element={<AdminPendingReviewPage />} />
             <Route path="premium-requests" element={<AdminPremiumRequestsPage />} />
+            <Route path="consultations" element={<AdminConsultationsPage />} />
             <Route path="reported" element={<div className="p-8"><h1 className="text-2xl font-bold">Reported Items</h1></div>} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />

@@ -1577,6 +1577,122 @@ class ApiService {
       message: string;
     };
   }
+
+  // ===========================
+  // CONSULTATION METHODS
+  // ===========================
+
+  /**
+   * Create consultation checkout session (public - no auth required)
+   */
+  async createConsultationCheckout(data: {
+    name: string;
+    email: string;
+    phone: string;
+    preferredDate: string;
+    preferredTime: string;
+    message?: string;
+  }): Promise<{ checkoutUrl: string; consultationId: string }> {
+    const response = await this.request<{
+      success: boolean;
+      checkoutUrl: string;
+      consultationId: string;
+    }>('/consultations/checkout', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return {
+      checkoutUrl: response.checkoutUrl,
+      consultationId: response.consultationId,
+    };
+  }
+
+  /**
+   * Get all consultations (admin only)
+   */
+  async getAdminConsultations(options?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }): Promise<{
+    consultations: any[];
+    pagination: { total: number; pages: number; page: number; limit: number };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.append('page', options.page.toString());
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.status) params.append('status', options.status);
+    if (options?.search) params.append('search', options.search);
+
+    const response = await this.request<{
+      success: boolean;
+      data: any[];
+      pagination: { total: number; pages: number; page: number; limit: number };
+    }>(`/consultations?${params.toString()}`);
+
+    return {
+      consultations: response.data,
+      pagination: response.pagination,
+    };
+  }
+
+  /**
+   * Get consultation statistics (admin only)
+   */
+  async getConsultationStats(): Promise<{
+    total: number;
+    pending: number;
+    paid: number;
+    scheduled: number;
+    completed: number;
+    totalRevenue: number;
+  }> {
+    const response = await this.request<{
+      success: boolean;
+      data: {
+        total: number;
+        pending: number;
+        paid: number;
+        scheduled: number;
+        completed: number;
+        totalRevenue: number;
+      };
+    }>('/consultations/stats');
+    return response.data;
+  }
+
+  /**
+   * Update consultation status (admin only)
+   */
+  async updateConsultationStatus(
+    id: string,
+    status: string,
+    notes?: string
+  ): Promise<any> {
+    const response = await this.request<{ success: boolean; data: any }>(
+      `/consultations/${id}/status`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ status, notes }),
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Refund consultation (admin only)
+   */
+  async refundConsultation(id: string): Promise<any> {
+    const response = await this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/consultations/${id}/refund`, {
+      method: 'POST',
+    });
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

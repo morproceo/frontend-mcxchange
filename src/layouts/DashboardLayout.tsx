@@ -133,6 +133,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               { icon: AlertTriangle, label: 'Pending Review', path: '/admin/pending' },
               { icon: Shield, label: 'Reported Items', path: '/admin/reported' },
               { icon: Crown, label: 'Premium Requests', path: '/admin/premium-requests' },
+              { icon: MessageSquare, label: 'Consultations', path: '/admin/consultations' },
             ]
           },
           // Tools category
