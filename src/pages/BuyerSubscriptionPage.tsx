@@ -16,75 +16,49 @@ import {
   XCircle,
   Calendar,
   AlertCircle,
-  Loader2
+  Loader2,
+  Package,
+  ShoppingBag
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
+import type { SubscriptionPlanConfig, CreditPack } from '../types'
 
-const plans = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 19.99,
-    credits: 4,
+// Plan display configuration (styling only - prices come from API)
+const planStyles = {
+  starter: {
     icon: Coins,
     color: 'from-blue-500 to-cyan-500',
     bgColor: 'from-blue-50 to-cyan-50',
     borderColor: 'border-blue-200',
     popular: false,
-    features: [
-      '4 MC unlock credits',
-      'Basic support',
-      'Access to marketplace',
-      'Save favorites',
-      'Email notifications'
-    ]
   },
-  {
-    id: 'professional',
-    name: 'Professional',
-    price: 39.99,
-    credits: 10,
+  professional: {
     icon: Zap,
     color: 'from-purple-500 to-indigo-500',
     bgColor: 'from-purple-50 to-indigo-50',
     borderColor: 'border-purple-200',
     popular: true,
-    features: [
-      '10 MC unlock credits',
-      'Priority support',
-      'Access to marketplace',
-      'Save unlimited favorites',
-      'Email & SMS notifications',
-      'Early access to new listings',
-      'Price drop alerts'
-    ]
   },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 79.99,
-    credits: 25,
+  enterprise: {
     icon: Crown,
     color: 'from-yellow-500 to-orange-500',
     bgColor: 'from-yellow-50 to-orange-50',
     borderColor: 'border-yellow-200',
     popular: false,
-    features: [
-      '25 MC unlock credits',
-      'Dedicated account manager',
-      'Access to marketplace',
-      'Unlimited favorites',
-      'Priority notifications',
-      'Early access to new listings',
-      'Price drop alerts',
-      'Bulk unlock discounts',
-      'API access'
-    ]
-  }
-]
+  },
+}
+
+interface DisplayPlan extends SubscriptionPlanConfig {
+  id: string
+  icon: typeof Coins
+  color: string
+  bgColor: string
+  borderColor: string
+  popular: boolean
+}
 
 interface Subscription {
   id: string
@@ -110,10 +84,74 @@ const BuyerSubscriptionPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [plans, setPlans] = useState<DisplayPlan[]>([])
+  const [creditPacks, setCreditPacks] = useState<CreditPack[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null)
+
+  // Fetch plans and credit packs from API
+  useEffect(() => {
+    const fetchPricingData = async () => {
+      try {
+        setPlansLoading(true)
+        const [pricingResponse, packsResponse] = await Promise.all([
+          api.getPricingConfig(),
+          api.getCreditPacks(),
+        ])
+
+        if (pricingResponse.data) {
+          const { subscriptionPlans } = pricingResponse.data
+          // Transform API plans into display plans
+          const displayPlans: DisplayPlan[] = (['starter', 'professional', 'enterprise'] as const).map(key => ({
+            id: key,
+            ...subscriptionPlans[key],
+            ...planStyles[key],
+          }))
+          setPlans(displayPlans)
+        }
+
+        if (packsResponse.data) {
+          setCreditPacks(packsResponse.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch pricing data:', err)
+      } finally {
+        setPlansLoading(false)
+      }
+    }
+
+    fetchPricingData()
+  }, [])
 
   // Check URL params for success/cancel and verify subscription
   useEffect(() => {
     const verifyAndFulfill = async () => {
+      // Handle credit pack success
+      if (searchParams.get('credit_pack_success') === 'true' && user) {
+        const packId = searchParams.get('pack')
+        setSuccessMessage(`Credit pack purchased successfully! Your credits have been added.`)
+        // Refresh subscription data to show updated credits
+        try {
+          const subResponse = await api.getSubscription()
+          if (subResponse.data) {
+            setSubscription(subResponse.data.subscription)
+            setCredits(subResponse.data.credits)
+          }
+        } catch (err) {
+          console.error('Failed to refresh credits:', err)
+        }
+        window.history.replaceState({}, '', '/buyer/subscription')
+        return
+      }
+
+      // Handle credit pack cancelled
+      if (searchParams.get('credit_pack_cancelled') === 'true') {
+        setError('Credit pack purchase was cancelled.')
+        window.history.replaceState({}, '', '/buyer/subscription')
+        return
+      }
+
+      // Handle subscription success
       if (searchParams.get('success') === 'true' && user) {
         try {
           // Call verify endpoint to ensure subscription is fulfilled and credits are added
@@ -151,6 +189,7 @@ const BuyerSubscriptionPage = () => {
 
     if (searchParams.get('canceled') === 'true') {
       setError('Subscription checkout was canceled.')
+      window.history.replaceState({}, '', '/buyer/subscription')
     }
   }, [searchParams, user])
 
@@ -265,14 +304,44 @@ const BuyerSubscriptionPage = () => {
     }
   }
 
-  const getYearlyPrice = (monthlyPrice: number) => {
-    return (monthlyPrice * 12 * 0.8).toFixed(2)
+  // Purchase a credit pack
+  const handlePurchaseCreditPack = async (packId: string) => {
+    if (!user) {
+      navigate('/login?redirect=/buyer/subscription')
+      return
+    }
+
+    setPurchasingPackId(packId)
+    setError(null)
+
+    try {
+      const response = await api.purchaseCreditPack(packId)
+      if (response.data?.checkoutUrl) {
+        window.location.href = response.data.checkoutUrl
+      } else {
+        throw new Error('No checkout URL received')
+      }
+    } catch (err: any) {
+      console.error('Credit pack purchase error:', err)
+      setError(err.message || 'Failed to start checkout')
+      setPurchasingPackId(null)
+    }
+  }
+
+  // Get yearly price - use dynamic pricing from plan data
+  const getYearlyPrice = (plan: DisplayPlan) => {
+    return plan.priceYearly.toFixed(2)
+  }
+
+  // Get monthly equivalent when billed yearly
+  const getMonthlyEquivalent = (plan: DisplayPlan) => {
+    return (plan.priceYearly / 12).toFixed(2)
   }
 
   const currentCredits = credits.available
 
-  // Show loading state while auth is initializing or fetching subscription
-  if (authLoading || loading) {
+  // Show loading state while auth is initializing or fetching subscription/plans
+  if (authLoading || loading || plansLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -470,7 +539,8 @@ const BuyerSubscriptionPage = () => {
             const Icon = plan.icon
             const isSelected = selectedPlan === plan.id
             const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === plan.id
-            const price = billingCycle === 'monthly' ? plan.price : Number(getYearlyPrice(plan.price))
+            const displayPrice = billingCycle === 'monthly' ? plan.priceMonthly : Number(getMonthlyEquivalent(plan))
+            const yearlyTotal = plan.priceYearly
 
             return (
               <motion.div
@@ -509,12 +579,12 @@ const BuyerSubscriptionPage = () => {
                     </div>
 
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-gray-900">${billingCycle === 'monthly' ? plan.price : (price / 12).toFixed(2)}</span>
+                      <span className="text-4xl font-bold text-gray-900">${displayPrice.toFixed(2)}</span>
                       <span className="text-gray-500">/month</span>
                     </div>
                     {billingCycle === 'yearly' && (
                       <p className="text-sm text-gray-500 mt-1">
-                        Billed ${price} annually
+                        Billed ${yearlyTotal.toFixed(2)} annually
                       </p>
                     )}
                   </div>
@@ -576,7 +646,14 @@ const BuyerSubscriptionPage = () => {
         </div>
 
         {/* Checkout Section */}
-        {selectedPlan && (!hasActiveSubscription || subscription.plan.toLowerCase() !== selectedPlan) && (
+        {selectedPlan && (!hasActiveSubscription || subscription.plan.toLowerCase() !== selectedPlan) && (() => {
+          const selectedPlanData = plans.find(p => p.id === selectedPlan)
+          if (!selectedPlanData) return null
+          const totalPrice = billingCycle === 'monthly' ? selectedPlanData.priceMonthly : selectedPlanData.priceYearly
+          const monthlyEquivalent = billingCycle === 'yearly' ? selectedPlanData.priceMonthly * 12 : 0
+          const savings = monthlyEquivalent - selectedPlanData.priceYearly
+
+          return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -587,7 +664,7 @@ const BuyerSubscriptionPage = () => {
                   {hasActiveSubscription ? 'Upgrade Your Subscription' : 'Complete Your Subscription'}
                 </h2>
                 <p className="text-gray-600">
-                  {plans.find(p => p.id === selectedPlan)?.name} Plan - {plans.find(p => p.id === selectedPlan)?.credits} credits/month
+                  {selectedPlanData.name} Plan - {selectedPlanData.credits} credits/month
                 </p>
               </div>
 
@@ -595,30 +672,24 @@ const BuyerSubscriptionPage = () => {
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-600">
-                    {plans.find(p => p.id === selectedPlan)?.name} ({billingCycle})
+                    {selectedPlanData.name} ({billingCycle})
                   </span>
                   <span className="font-semibold text-gray-900">
-                    ${billingCycle === 'monthly'
-                      ? plans.find(p => p.id === selectedPlan)?.price
-                      : getYearlyPrice(plans.find(p => p.id === selectedPlan)?.price || 0)
-                    }
+                    ${totalPrice.toFixed(2)}
                   </span>
                 </div>
-                {billingCycle === 'yearly' && (
+                {billingCycle === 'yearly' && savings > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
-                    <span>Annual discount (20%)</span>
+                    <span>Annual savings</span>
                     <span>
-                      -${((plans.find(p => p.id === selectedPlan)?.price || 0) * 12 * 0.2).toFixed(2)}
+                      -${savings.toFixed(2)}
                     </span>
                   </div>
                 )}
                 <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between">
                   <span className="font-bold text-gray-900">Total</span>
                   <span className="text-xl font-bold text-gray-900">
-                    ${billingCycle === 'monthly'
-                      ? plans.find(p => p.id === selectedPlan)?.price
-                      : getYearlyPrice(plans.find(p => p.id === selectedPlan)?.price || 0)
-                    }
+                    ${totalPrice.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -649,6 +720,60 @@ const BuyerSubscriptionPage = () => {
                 You can cancel your subscription at any time.
               </p>
             </Card>
+          </motion.div>
+          )
+        })()}
+
+        {/* Credit Packs Section - One-Time Purchases */}
+        {creditPacks.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-16"
+          >
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 mb-4">
+                <Package className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-green-700">One-Time Purchase</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Credit Packs</h2>
+              <p className="text-gray-600">Need more credits without a subscription? Buy a credit pack.</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {creditPacks.map((pack, index) => (
+                <motion.div
+                  key={pack.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                >
+                  <Card className="text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mx-auto mb-4 mt-2">
+                      <Coins className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900 mb-1">{pack.credits}</div>
+                    <div className="text-sm text-gray-500 mb-4">Credits</div>
+                    <div className="text-2xl font-bold text-green-600 mb-1">${pack.price.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500 mb-6">
+                      ${(pack.price / pack.credits).toFixed(2)} per credit
+                    </div>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      onClick={() => handlePurchaseCreditPack(pack.id)}
+                      loading={purchasingPackId === pack.id}
+                      disabled={purchasingPackId !== null}
+                      className="border-green-300 text-green-700 hover:bg-green-50"
+                    >
+                      <ShoppingBag className="w-4 h-4 mr-2" />
+                      Buy Now
+                    </Button>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         )}
 
