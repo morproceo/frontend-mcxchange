@@ -144,6 +144,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               { icon: Search, label: 'AI Due Diligence', path: '/admin/ai-due-diligence' },
               { icon: CreditCard, label: 'Credit Reports', path: '/admin/creditsafe' },
               { icon: Send, label: 'Telegram Channel', path: '/admin/telegram' },
+              { icon: Users, label: 'Facebook Groups', path: '/admin/facebook' },
             ]
           },
           // Management category

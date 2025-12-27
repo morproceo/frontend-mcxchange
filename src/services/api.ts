@@ -1810,6 +1810,134 @@ class ApiService {
     });
     return response;
   }
+
+  // ===========================
+  // Facebook Channel Methods
+  // ===========================
+
+  /**
+   * Get Facebook configuration (admin only)
+   */
+  async getFacebookConfig(): Promise<{
+    accessTokenSet: boolean;
+    group1Id: string;
+    group1Name: string;
+    group2Id: string;
+    group2Name: string;
+    isConfigured: boolean;
+    group1Configured: boolean;
+    group2Configured: boolean;
+  }> {
+    const response = await this.request<{
+      success: boolean;
+      data: {
+        accessTokenSet: boolean;
+        group1Id: string;
+        group1Name: string;
+        group2Id: string;
+        group2Name: string;
+        isConfigured: boolean;
+        group1Configured: boolean;
+        group2Configured: boolean;
+      };
+    }>('/admin/facebook/config');
+    return response.data;
+  }
+
+  /**
+   * Update Facebook configuration (admin only)
+   */
+  async updateFacebookConfig(config: {
+    accessToken?: string;
+    group1Id?: string;
+    group1Name?: string;
+    group2Id?: string;
+    group2Name?: string;
+  }): Promise<void> {
+    await this.request('/admin/facebook/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  /**
+   * Test Facebook connection (admin only)
+   */
+  async testFacebookConnection(): Promise<{ success: boolean; message: string; userName?: string }> {
+    const response = await this.request<{
+      success: boolean;
+      message: string;
+      userName?: string;
+    }>('/admin/facebook/test', {
+      method: 'POST',
+    });
+    return response;
+  }
+
+  /**
+   * Get listings for Facebook sharing (admin only)
+   */
+  async getFacebookListings(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    listings: any[];
+    pagination: { total: number; pages: number; page: number; limit: number };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.append('page', options.page.toString());
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.search) params.append('search', options.search);
+
+    const response = await this.request<{
+      success: boolean;
+      data: any[];
+      pagination: { total: number; pages: number; page: number; limit: number };
+    }>(`/admin/facebook/listings?${params.toString()}`);
+
+    return {
+      listings: response.data,
+      pagination: response.pagination,
+    };
+  }
+
+  /**
+   * Share listing to Facebook group(s) (admin only)
+   */
+  async shareListingToFacebook(
+    listingId: string,
+    options: {
+      customMessage?: string;
+      postToGroup1?: boolean;
+      postToGroup2?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    results: {
+      group1?: { success: boolean; postId?: string; error?: string };
+      group2?: { success: boolean; postId?: string; error?: string };
+    };
+  }> {
+    const response = await this.request<{
+      success: boolean;
+      message: string;
+      results: {
+        group1?: { success: boolean; postId?: string; error?: string };
+        group2?: { success: boolean; postId?: string; error?: string };
+      };
+    }>('/admin/facebook/share-listing', {
+      method: 'POST',
+      body: JSON.stringify({
+        listingId,
+        customMessage: options.customMessage,
+        postToGroup1: options.postToGroup1,
+        postToGroup2: options.postToGroup2,
+      }),
+    });
+    return response;
+  }
 }
 
 export const api = new ApiService();

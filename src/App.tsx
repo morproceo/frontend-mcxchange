@@ -40,6 +40,7 @@ import AdminPendingReviewPage from './pages/AdminPendingReviewPage'
 import AdminPremiumRequestsPage from './pages/AdminPremiumRequestsPage'
 import AdminConsultationsPage from './pages/AdminConsultationsPage'
 import AdminTelegramPage from './pages/AdminTelegramPage'
+import AdminFacebookPage from './pages/AdminFacebookPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 import AdminTransactionsPage from './pages/AdminTransactionsPage'
 import AdminMessagesPage from './pages/AdminMessagesPage'
@@ -131,6 +132,7 @@ function App() {
             <Route path="ai-due-diligence" element={<AdminAIDueDiligence />} />
             <Route path="creditsafe" element={<AdminCreditsafePage />} />
             <Route path="telegram" element={<AdminTelegramPage />} />
+            <Route path="facebook" element={<AdminFacebookPage />} />
             <Route path="invoices" element={<AdminInvoiceGenerator />} />
             <Route path="payments" element={<AdminPaymentTracking />} />
             <Route path="pending" element={<AdminPendingReviewPage />} />
