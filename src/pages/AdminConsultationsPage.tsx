@@ -12,7 +12,6 @@ import {
   Phone,
   User,
   ArrowLeft,
-  Filter,
   Search,
   RefreshCw,
   AlertCircle,
@@ -265,7 +264,6 @@ const AdminConsultationsPage = () => {
               label="Status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              icon={<Filter className="w-4 h-4" />}
             >
               <option value="all">All Statuses</option>
               <option value="PENDING_PAYMENT">Pending Payment</option>
