@@ -16,8 +16,7 @@ import {
   Calendar,
   Truck,
   Share2,
-  AlertCircle,
-  Users
+  AlertCircle
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -39,14 +38,10 @@ interface Listing {
 }
 
 interface FacebookConfig {
-  accessTokenSet: boolean
-  group1Id: string
-  group1Name: string
-  group2Id: string
-  group2Name: string
+  pageAccessTokenSet: boolean
+  pageId: string
+  pageName: string
   isConfigured: boolean
-  group1Configured: boolean
-  group2Configured: boolean
 }
 
 const AdminFacebookPage = () => {
@@ -60,11 +55,9 @@ const AdminFacebookPage = () => {
 
   // Config state
   const [config, setConfig] = useState<FacebookConfig | null>(null)
-  const [accessToken, setAccessToken] = useState('')
-  const [group1Id, setGroup1Id] = useState('')
-  const [group1Name, setGroup1Name] = useState('')
-  const [group2Id, setGroup2Id] = useState('')
-  const [group2Name, setGroup2Name] = useState('')
+  const [pageAccessToken, setPageAccessToken] = useState('')
+  const [pageId, setPageId] = useState('')
+  const [pageName, setPageName] = useState('')
   const [savingConfig, setSavingConfig] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
 
@@ -72,8 +65,6 @@ const AdminFacebookPage = () => {
   const [showShareModal, setShowShareModal] = useState(false)
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [customMessage, setCustomMessage] = useState('')
-  const [postToGroup1, setPostToGroup1] = useState(true)
-  const [postToGroup2, setPostToGroup2] = useState(true)
   const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
@@ -88,11 +79,9 @@ const AdminFacebookPage = () => {
   const loadConfig = async () => {
     try {
       const data = await api.getFacebookConfig()
-      setConfig(data)
-      setGroup1Id(data.group1Id || '')
-      setGroup1Name(data.group1Name || 'Group 1')
-      setGroup2Id(data.group2Id || '')
-      setGroup2Name(data.group2Name || 'Group 2')
+      setConfig(data as FacebookConfig)
+      setPageId(data.pageId || '')
+      setPageName(data.pageName || '')
     } catch (error) {
       console.error('Failed to load Facebook config:', error)
     }
@@ -125,14 +114,12 @@ const AdminFacebookPage = () => {
     setSavingConfig(true)
     try {
       await api.updateFacebookConfig({
-        accessToken: accessToken || undefined,
-        group1Id: group1Id || undefined,
-        group1Name: group1Name || undefined,
-        group2Id: group2Id || undefined,
-        group2Name: group2Name || undefined,
+        pageAccessToken: pageAccessToken || undefined,
+        pageId: pageId || undefined,
+        pageName: pageName || undefined,
       })
       toast.success('Facebook configuration saved')
-      setAccessToken('')
+      setPageAccessToken('')
       loadConfig()
     } catch (error: any) {
       toast.error(error.message || 'Failed to save configuration')
@@ -146,7 +133,7 @@ const AdminFacebookPage = () => {
     try {
       const result = await api.testFacebookConnection()
       if (result.success) {
-        toast.success(`Connected as: ${result.userName}`)
+        toast.success(`Connected to: ${result.pageName || result.userName}`)
       } else {
         toast.error(result.message)
       }
@@ -160,42 +147,23 @@ const AdminFacebookPage = () => {
   const openShareModal = (listing: Listing) => {
     setSelectedListing(listing)
     setCustomMessage('')
-    setPostToGroup1(config?.group1Configured || false)
-    setPostToGroup2(config?.group2Configured || false)
     setShowShareModal(true)
   }
 
   const handleShare = async () => {
     if (!selectedListing) return
 
-    if (!postToGroup1 && !postToGroup2) {
-      toast.error('Please select at least one group')
-      return
-    }
-
     setSharing(true)
     try {
       const result = await api.shareListingToFacebook(selectedListing.id, {
         customMessage: customMessage || undefined,
-        postToGroup1,
-        postToGroup2,
       })
 
       if (result.success) {
-        toast.success('Listing shared to Facebook!')
+        toast.success('Listing shared to Facebook Page!')
         setShowShareModal(false)
       } else {
-        // Show partial success/failure
-        if (result.results.group1?.error) {
-          toast.error(`Group 1: ${result.results.group1.error}`)
-        }
-        if (result.results.group2?.error) {
-          toast.error(`Group 2: ${result.results.group2.error}`)
-        }
-        if (result.results.group1?.success || result.results.group2?.success) {
-          toast.success('Posted to some groups successfully')
-          setShowShareModal(false)
-        }
+        toast.error(result.message)
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to share listing')
@@ -214,8 +182,8 @@ const AdminFacebookPage = () => {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Facebook Groups</h1>
-            <p className="text-gray-500">Share listings to your Facebook groups</p>
+            <h1 className="text-2xl font-bold text-gray-900">Facebook Page</h1>
+            <p className="text-gray-500">Share listings to your Facebook Page</p>
           </div>
         </div>
 
@@ -256,90 +224,59 @@ const AdminFacebookPage = () => {
       {/* Settings Tab */}
       {activeTab === 'settings' && (
         <Card className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Facebook Configuration</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Facebook Page Configuration</h2>
 
           <div className="space-y-6 max-w-xl">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-medium text-blue-900 mb-2">How to set up:</h3>
               <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
-                <li>Create a Facebook App at developers.facebook.com</li>
-                <li>Get a Page Access Token with publish_to_groups permission</li>
-                <li>Get your Facebook Group IDs</li>
-                <li>Enter the configuration below</li>
+                <li>Go to <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noopener noreferrer" className="underline">Graph API Explorer</a></li>
+                <li>Select your app, then "Get Page Access Token"</li>
+                <li>Select your Facebook Page</li>
+                <li>Add permission: <strong>pages_manage_posts</strong></li>
+                <li>Click "Generate Access Token"</li>
+                <li>Copy the token and Page ID below</li>
               </ol>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Access Token {config?.accessTokenSet && <span className="text-green-600">(Set)</span>}
+                Page Access Token {config?.pageAccessTokenSet && <span className="text-green-600">(Set)</span>}
               </label>
               <Input
                 type="password"
-                placeholder={config?.accessTokenSet ? '••••••••••••••••' : 'Enter your access token'}
-                value={accessToken}
-                onChange={(e) => setAccessToken(e.target.value)}
+                placeholder={config?.pageAccessTokenSet ? '••••••••••••••••' : 'Enter your Page Access Token'}
+                value={pageAccessToken}
+                onChange={(e) => setPageAccessToken(e.target.value)}
               />
               <p className="text-xs text-gray-500 mt-1">
                 Leave blank to keep existing token
               </p>
             </div>
 
-            <div className="border-t pt-4">
-              <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Group 1
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group ID
-                  </label>
-                  <Input
-                    placeholder="123456789"
-                    value={group1Id}
-                    onChange={(e) => setGroup1Id(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group Name
-                  </label>
-                  <Input
-                    placeholder="My Trucking Group"
-                    value={group1Name}
-                    onChange={(e) => setGroup1Name(e.target.value)}
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Page ID
+              </label>
+              <Input
+                placeholder="123456789012345"
+                value={pageId}
+                onChange={(e) => setPageId(e.target.value)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Your Facebook Page ID (numeric)
+              </p>
             </div>
 
-            <div className="border-t pt-4">
-              <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Group 2
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group ID
-                  </label>
-                  <Input
-                    placeholder="987654321"
-                    value={group2Id}
-                    onChange={(e) => setGroup2Id(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group Name
-                  </label>
-                  <Input
-                    placeholder="MC Authority Sales"
-                    value={group2Name}
-                    onChange={(e) => setGroup2Name(e.target.value)}
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Page Name (for display)
+              </label>
+              <Input
+                placeholder="Domilea MC Exchange"
+                value={pageName}
+                onChange={(e) => setPageName(e.target.value)}
+              />
             </div>
 
             <div className="flex gap-3">
@@ -354,7 +291,7 @@ const AdminFacebookPage = () => {
                 )}
               </Button>
 
-              {config?.accessTokenSet && (
+              {config?.pageAccessTokenSet && (
                 <Button
                   variant="secondary"
                   onClick={handleTestConnection}
@@ -388,22 +325,18 @@ const AdminFacebookPage = () => {
               <div>
                 <h3 className="font-medium text-yellow-800">Facebook not configured</h3>
                 <p className="text-sm text-yellow-700">
-                  Please configure your Facebook settings in the Settings tab to share listings.
+                  Please configure your Facebook Page in the Settings tab to share listings.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Group Status */}
+          {/* Page Status */}
           {config?.isConfigured && (
             <div className="flex gap-4 mb-6">
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${config.group1Configured ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                <Users className="w-4 h-4" />
-                {config.group1Name}: {config.group1Configured ? 'Ready' : 'Not Set'}
-              </div>
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${config.group2Configured ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                <Users className="w-4 h-4" />
-                {config.group2Name}: {config.group2Configured ? 'Ready' : 'Not Set'}
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-50 text-blue-700">
+                <Facebook className="w-4 h-4" />
+                Posting to: {config.pageName || 'Facebook Page'}
               </div>
             </div>
           )}
@@ -578,7 +511,7 @@ const AdminFacebookPage = () => {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-gray-900">Share to Facebook</h2>
-                    <p className="text-sm text-gray-500">Post to your Facebook groups</p>
+                    <p className="text-sm text-gray-500">Post to {config?.pageName || 'your Page'}</p>
                   </div>
                 </div>
                 <button
@@ -604,37 +537,6 @@ const AdminFacebookPage = () => {
                     </div>
                     <p className="text-sm text-gray-700 truncate">{selectedListing.title}</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Group Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Post to Groups</label>
-                <div className="space-y-2">
-                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${postToGroup1 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'} ${!config?.group1Configured ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={postToGroup1}
-                      onChange={(e) => setPostToGroup1(e.target.checked)}
-                      disabled={!config?.group1Configured}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">{config?.group1Name || 'Group 1'}</span>
-                    {!config?.group1Configured && <span className="text-xs text-gray-400">(Not configured)</span>}
-                  </label>
-                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${postToGroup2 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'} ${!config?.group2Configured ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={postToGroup2}
-                      onChange={(e) => setPostToGroup2(e.target.checked)}
-                      disabled={!config?.group2Configured}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">{config?.group2Name || 'Group 2'}</span>
-                    {!config?.group2Configured && <span className="text-xs text-gray-400">(Not configured)</span>}
-                  </label>
                 </div>
               </div>
 
@@ -669,7 +571,7 @@ const AdminFacebookPage = () => {
               <Button variant="ghost" size="sm" onClick={() => setShowShareModal(false)}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleShare} disabled={sharing || (!postToGroup1 && !postToGroup2)}>
+              <Button size="sm" onClick={handleShare} disabled={sharing}>
                 {sharing ? (
                   <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Sharing...</>
                 ) : (
