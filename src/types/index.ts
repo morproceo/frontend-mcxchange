@@ -470,7 +470,7 @@ export interface PlatformFeesConfig {
   depositPercentage: number
   minDeposit: number
   maxDeposit: number
-  consultationFee: number
+  consultationFee?: number
 }
 
 export interface PricingConfig {
