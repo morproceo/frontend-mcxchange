@@ -1704,6 +1704,112 @@ class ApiService {
     });
     return response.data;
   }
+
+  // ===========================
+  // TELEGRAM METHODS
+  // ===========================
+
+  /**
+   * Get Telegram configuration (admin only)
+   */
+  async getTelegramConfig(): Promise<{
+    botTokenSet: boolean;
+    channelId: string;
+    isConfigured: boolean;
+  }> {
+    const response = await this.request<{
+      success: boolean;
+      data: { botTokenSet: boolean; channelId: string; isConfigured: boolean };
+    }>('/admin/telegram/config');
+    return response.data;
+  }
+
+  /**
+   * Update Telegram configuration (admin only)
+   */
+  async updateTelegramConfig(config: {
+    botToken?: string;
+    channelId?: string;
+  }): Promise<void> {
+    await this.request('/admin/telegram/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  /**
+   * Test Telegram connection (admin only)
+   */
+  async testTelegramConnection(): Promise<{ success: boolean; message: string; botName?: string }> {
+    const response = await this.request<{
+      success: boolean;
+      message: string;
+      botName?: string;
+    }>('/admin/telegram/test', {
+      method: 'POST',
+    });
+    return response;
+  }
+
+  /**
+   * Get listings for Telegram sharing (admin only)
+   */
+  async getTelegramListings(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    listings: any[];
+    pagination: { total: number; pages: number; page: number; limit: number };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.append('page', options.page.toString());
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.search) params.append('search', options.search);
+
+    const response = await this.request<{
+      success: boolean;
+      data: any[];
+      pagination: { total: number; pages: number; page: number; limit: number };
+    }>(`/admin/telegram/listings?${params.toString()}`);
+
+    return {
+      listings: response.data,
+      pagination: response.pagination,
+    };
+  }
+
+  /**
+   * Share listing to Telegram (admin only)
+   */
+  async shareListingToTelegram(
+    listingId: string,
+    customMessage?: string
+  ): Promise<{ success: boolean; message: string; messageId?: number }> {
+    const response = await this.request<{
+      success: boolean;
+      message: string;
+      messageId?: number;
+    }>('/admin/telegram/share-listing', {
+      method: 'POST',
+      body: JSON.stringify({ listingId, customMessage }),
+    });
+    return response;
+  }
+
+  /**
+   * Send custom message to Telegram (admin only)
+   */
+  async sendTelegramMessage(message: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{
+      success: boolean;
+      message: string;
+    }>('/admin/telegram/send', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+    return response;
+  }
 }
 
 export const api = new ApiService();

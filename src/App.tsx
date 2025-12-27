@@ -39,6 +39,7 @@ import AdminListingDetailPage from './pages/AdminListingDetailPage'
 import AdminPendingReviewPage from './pages/AdminPendingReviewPage'
 import AdminPremiumRequestsPage from './pages/AdminPremiumRequestsPage'
 import AdminConsultationsPage from './pages/AdminConsultationsPage'
+import AdminTelegramPage from './pages/AdminTelegramPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 import AdminTransactionsPage from './pages/AdminTransactionsPage'
 import AdminMessagesPage from './pages/AdminMessagesPage'
@@ -129,6 +130,7 @@ function App() {
             <Route path="review/:id" element={<AdminReviewPage />} />
             <Route path="ai-due-diligence" element={<AdminAIDueDiligence />} />
             <Route path="creditsafe" element={<AdminCreditsafePage />} />
+            <Route path="telegram" element={<AdminTelegramPage />} />
             <Route path="invoices" element={<AdminInvoiceGenerator />} />
             <Route path="payments" element={<AdminPaymentTracking />} />
             <Route path="pending" element={<AdminPendingReviewPage />} />
