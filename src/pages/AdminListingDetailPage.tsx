@@ -40,7 +40,9 @@ interface Listing {
   dbaName: string | null
   title: string
   description: string | null
-  price: string
+  askingPrice: string
+  listingPrice: string | null
+  price?: string
   status: string
   visibility: string
   isPremium: boolean
@@ -113,7 +115,8 @@ const AdminListingDetailPage = () => {
     dbaName: '',
     title: '',
     description: '',
-    price: '',
+    askingPrice: '',
+    listingPrice: '',
     city: '',
     state: '',
     address: '',
@@ -174,7 +177,8 @@ const AdminListingDetailPage = () => {
         dbaName: data.dbaName || '',
         title: data.title || '',
         description: data.description || '',
-        price: data.price ? parseFloat(data.price).toString() : '',
+        askingPrice: data.askingPrice ? parseFloat(data.askingPrice).toString() : (data.price ? parseFloat(data.price).toString() : ''),
+        listingPrice: data.listingPrice ? parseFloat(data.listingPrice).toString() : '',
         city: data.city || '',
         state: data.state || '',
         address: data.address || '',
@@ -224,7 +228,8 @@ const AdminListingDetailPage = () => {
         dbaName: formData.dbaName || null,
         title: formData.title,
         description: formData.description || null,
-        price: parseFloat(formData.price) || 0,
+        askingPrice: parseFloat(formData.askingPrice) || 0,
+        listingPrice: formData.listingPrice ? parseFloat(formData.listingPrice) : null,
         city: formData.city,
         state: formData.state,
         address: formData.address || null,
@@ -734,10 +739,22 @@ const AdminListingDetailPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Asking Price ($) *</label>
                   <Input
                     type="number"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
+                    value={formData.askingPrice}
+                    onChange={(e) => handleInputChange('askingPrice', e.target.value)}
                     required
+                    placeholder="Seller's requested price"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Price requested by seller</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Listing Price ($)</label>
+                  <Input
+                    type="number"
+                    value={formData.listingPrice}
+                    onChange={(e) => handleInputChange('listingPrice', e.target.value)}
+                    placeholder="Published price (optional)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Price shown to buyers (defaults to asking price if empty)</p>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input

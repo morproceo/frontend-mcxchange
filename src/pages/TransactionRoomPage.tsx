@@ -1508,7 +1508,7 @@ For questions, contact us at escrow@domilea.com`
               {userRole === 'seller' ? 'Your Asking Price' : userRole === 'buyer' ? 'Your Price' : 'Transaction Value'}
             </p>
             <p className="text-2xl font-bold">
-              ${userRole === 'seller' ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}
+              ${userRole === 'seller' ? (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString() : transaction.agreedPrice.toLocaleString()}
             </p>
           </div>
           <div>
@@ -2275,7 +2275,7 @@ For questions, contact us at escrow@domilea.com`
                             This agreement confirms the sale of MC Authority #{transaction.listing.mcNumber} from
                             {' '}<span className="font-medium">{transaction.seller.name}</span> to
                             {' '}<span className="font-medium">{transaction.buyer.name}</span> for the {isSeller ? 'asking price' : 'agreed price'} of
-                            {' '}<span className="font-medium">${isSeller ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
+                            {' '}<span className="font-medium">${isSeller ? (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
                           </p>
                           <p className="text-gray-500 text-xs">Generated: {new Date().toLocaleDateString()}</p>
                         </div>
@@ -2620,7 +2620,7 @@ For questions, contact us at escrow@domilea.com`
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                       <div className="bg-green-50 rounded-xl p-4">
                         <p className="text-sm text-green-600 mb-1">Your Asking Price</p>
-                        <p className="text-xl font-bold text-green-700">${transaction.listing.price.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-green-700">${(transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString()}</p>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-4">
                         <p className="text-sm text-blue-600 mb-1">Buyer Deposit</p>
@@ -2636,7 +2636,7 @@ For questions, contact us at escrow@domilea.com`
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-gray-50 rounded-xl p-4">
                         <p className="text-sm text-gray-500 mb-1">Seller's Asking Price</p>
-                        <p className="text-xl font-bold text-gray-700">${transaction.listing.price.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-gray-700">${(transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString()}</p>
                       </div>
                       <div className="bg-green-50 rounded-xl p-4">
                         <p className="text-sm text-green-600 mb-1">Listing Price (Buyer Pays)</p>
@@ -2648,7 +2648,7 @@ For questions, contact us at escrow@domilea.com`
                       </div>
                       <div className="bg-amber-50 rounded-xl p-4">
                         <p className="text-sm text-amber-600 mb-1">Broker Margin</p>
-                        <p className="text-xl font-bold text-amber-700">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</p>
+                        <p className="text-xl font-bold text-amber-700">${(transaction.agreedPrice - (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0)).toLocaleString()}</p>
                       </div>
                     </div>
                   )}
@@ -2810,7 +2810,7 @@ For questions, contact us at escrow@domilea.com`
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <p className="text-xs text-gray-500">{isSeller ? 'Your Asking Price' : isBuyer ? 'Purchase Price' : 'Listing Price'}</p>
-                        <p className="text-lg font-bold text-gray-900">${isSeller ? transaction.listing.price.toLocaleString() : transaction.agreedPrice.toLocaleString()}</p>
+                        <p className="text-lg font-bold text-gray-900">${isSeller ? (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString() : transaction.agreedPrice.toLocaleString()}</p>
                       </div>
                       <div className={`rounded-lg p-3 ${transaction.depositPaid ? 'bg-green-50' : 'bg-yellow-50'}`}>
                         <p className="text-xs text-gray-500">Deposit</p>
@@ -2829,7 +2829,7 @@ For questions, contact us at escrow@domilea.com`
                       {userRole === 'admin' && (
                         <div className="bg-amber-50 rounded-lg p-3">
                           <p className="text-xs text-gray-500">Broker Margin</p>
-                          <p className="text-lg font-bold text-amber-600">${(transaction.agreedPrice - transaction.listing.price).toLocaleString()}</p>
+                          <p className="text-lg font-bold text-amber-600">${(transaction.agreedPrice - (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0)).toLocaleString()}</p>
                         </div>
                       )}
                     </div>

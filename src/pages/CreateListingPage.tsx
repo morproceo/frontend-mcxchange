@@ -158,7 +158,7 @@ const CreateListingPage = () => {
             dbaName: parsedFormData.dbaName || undefined,
             title: parsedFormData.title,
             description: parsedFormData.description || undefined,
-            price: parseFloat(parsedFormData.price) || 0,
+            askingPrice: parseFloat(parsedFormData.price) || 0,
             city: city,
             state: parsedFormData.state,
             address: parsedFormData.physicalAddress || undefined,

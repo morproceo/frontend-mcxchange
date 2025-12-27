@@ -316,8 +316,9 @@ const BuyerDashboard = () => {
         if (!matchesSearch) return false
       }
 
-      if (filters.priceMin && listing.price < filters.priceMin) return false
-      if (filters.priceMax && listing.price > filters.priceMax) return false
+      const listingPrice = listing.listingPrice ?? listing.askingPrice ?? listing.price ?? 0
+      if (filters.priceMin && listingPrice < filters.priceMin) return false
+      if (filters.priceMax && listingPrice > filters.priceMax) return false
       if (filters.yearsActiveMin && listing.yearsActive < filters.yearsActiveMin) return false
       if (filters.trustLevel && filters.trustLevel.length > 0) {
         if (!filters.trustLevel.includes(listing.trustLevel)) return false
@@ -329,10 +330,10 @@ const BuyerDashboard = () => {
 
     switch (filters.sortBy) {
       case 'price-asc':
-        results.sort((a, b) => a.price - b.price)
+        results.sort((a, b) => (a.listingPrice ?? a.askingPrice ?? a.price ?? 0) - (b.listingPrice ?? b.askingPrice ?? b.price ?? 0))
         break
       case 'price-desc':
-        results.sort((a, b) => b.price - a.price)
+        results.sort((a, b) => (b.listingPrice ?? b.askingPrice ?? b.price ?? 0) - (a.listingPrice ?? a.askingPrice ?? a.price ?? 0))
         break
       case 'trust-score':
         results.sort((a, b) => b.trustScore - a.trustScore)
@@ -635,7 +636,7 @@ const BuyerDashboard = () => {
                                 showScore={false}
                               />
                               <div className="text-secondary-600 font-bold">
-                                ${listing.price.toLocaleString()}
+                                ${(listing.listingPrice ?? listing.askingPrice ?? listing.price ?? 0).toLocaleString()}
                               </div>
                             </div>
 

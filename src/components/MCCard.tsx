@@ -86,7 +86,7 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         {/* Price */}
         <div className="mb-4">
           <div className="text-2xl font-bold text-gray-900">
-            ${listing.price.toLocaleString()}
+            ${(listing.listingPrice || listing.askingPrice || listing.price || 0).toLocaleString()}
           </div>
         </div>
 

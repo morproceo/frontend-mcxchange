@@ -289,9 +289,9 @@ const MCDetailPage = () => {
 
                   <div className="text-right">
                     <div className="text-3xl font-bold text-emerald-600">
-                      ${listing.price.toLocaleString()}
+                      ${(listing.listingPrice || listing.askingPrice || listing.price || 0).toLocaleString()}
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">Asking Price</div>
+                    <div className="text-sm text-gray-500 mt-1">Listed Price</div>
                   </div>
                 </div>
               </div>

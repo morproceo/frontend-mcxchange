@@ -121,7 +121,9 @@ const MarketplacePage = () => {
           seller: listing.seller || { id: listing.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
           title: listing.title,
           description: listing.description || '',
-          price: parseFloat(listing.price) || 0,
+          price: parseFloat(listing.listingPrice || listing.askingPrice || listing.price) || 0,
+          askingPrice: parseFloat(listing.askingPrice || listing.price) || 0,
+          listingPrice: listing.listingPrice ? parseFloat(listing.listingPrice) : undefined,
           trustScore: listing.seller?.trustScore || 50,
           trustLevel: (listing.seller?.trustScore || 50) >= 80 ? 'high' : (listing.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
           verified: listing.seller?.verified || false,
@@ -207,8 +209,9 @@ const MarketplacePage = () => {
       }
 
       // Price range
-      if (filters.priceMin && listing.price < filters.priceMin) return false
-      if (filters.priceMax && listing.price > filters.priceMax) return false
+      const displayPrice = listing.listingPrice ?? listing.askingPrice ?? listing.price ?? 0
+      if (filters.priceMin && displayPrice < filters.priceMin) return false
+      if (filters.priceMax && displayPrice > filters.priceMax) return false
 
       // Years active
       if (filters.yearsActiveMin && listing.yearsActive < filters.yearsActiveMin) return false
@@ -247,10 +250,10 @@ const MarketplacePage = () => {
     // Sort
     switch (filters.sortBy) {
       case 'price-asc':
-        results.sort((a, b) => a.price - b.price)
+        results.sort((a, b) => (a.listingPrice ?? a.askingPrice ?? a.price ?? 0) - (b.listingPrice ?? b.askingPrice ?? b.price ?? 0))
         break
       case 'price-desc':
-        results.sort((a, b) => b.price - a.price)
+        results.sort((a, b) => (b.listingPrice ?? b.askingPrice ?? b.price ?? 0) - (a.listingPrice ?? a.askingPrice ?? a.price ?? 0))
         break
       case 'trust-score':
         results.sort((a, b) => b.trustScore - a.trustScore)

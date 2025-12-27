@@ -36,7 +36,9 @@ interface PendingListing {
   dotNumber?: string
   title: string
   description?: string
-  price: number
+  askingPrice: number      // Seller's requested price
+  listingPrice?: number    // Admin-set published price
+  price?: number           // Legacy field
   isPremium: boolean
   seller: {
     id: string
@@ -70,6 +72,7 @@ const AdminPendingReviewPage = () => {
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
   const [approvalNotes, setApprovalNotes] = useState('')
+  const [listingPrice, setListingPrice] = useState('')
   const [processing, setProcessing] = useState(false)
 
   // Fetch pending listings from API
@@ -108,10 +111,13 @@ const AdminPendingReviewPage = () => {
 
     setProcessing(true)
     try {
-      await api.approveListing(selectedListing.id, approvalNotes || undefined)
+      // Parse listing price - if empty, use asking price
+      const priceToSet = listingPrice ? parseFloat(listingPrice) : undefined
+      await api.approveListing(selectedListing.id, approvalNotes || undefined, priceToSet)
       setPendingListings(prev => prev.filter(l => l.id !== selectedListing.id))
       setShowApproveModal(false)
       setApprovalNotes('')
+      setListingPrice('')
       setSelectedListing(null)
     } catch (err: any) {
       console.error('Failed to approve listing:', err)
@@ -382,9 +388,9 @@ const AdminPendingReviewPage = () => {
 
                   <div className="lg:text-right lg:ml-6 lg:min-w-[160px]">
                     <div className="text-2xl font-bold text-indigo-600">
-                      {formatPrice(listing.price)}
+                      {formatPrice(listing.askingPrice || listing.price || 0)}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">Listing Price</div>
+                    <div className="text-xs text-gray-500 mt-1">Seller's Asking Price</div>
                     <div className="text-xs text-gray-400 mt-2">
                       Submitted {formatDate(listing.createdAt)}
                     </div>
@@ -477,8 +483,27 @@ const AdminPendingReviewPage = () => {
                 <div className="font-semibold text-gray-900">MC #{selectedListing.mcNumber}</div>
                 <div className="text-gray-700 text-sm mt-1">{selectedListing.title}</div>
                 <div className="text-indigo-600 font-bold mt-2">
-                  {formatPrice(selectedListing.price)}
+                  Seller's Asking Price: {formatPrice(selectedListing.askingPrice || selectedListing.price || 0)}
                 </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Listing Price (What buyers will see)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="number"
+                    placeholder={`${selectedListing.askingPrice || selectedListing.price || 0}`}
+                    value={listingPrice}
+                    onChange={(e) => setListingPrice(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave empty to use seller's asking price
+                </p>
               </div>
 
               <Textarea

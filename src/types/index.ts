@@ -130,7 +130,9 @@ export interface MCListing {
   seller: User
   title: string
   description: string
-  price: number
+  askingPrice?: number     // Seller's requested price
+  listingPrice?: number    // Admin-set published price (shown to buyers)
+  price?: number           // Legacy field - use listingPrice || askingPrice
 
   // Trust & Verification
   trustScore: number

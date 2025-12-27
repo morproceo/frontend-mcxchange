@@ -230,10 +230,10 @@ class ApiService {
     return this.request<any>(`/admin/listings${query ? `?${query}` : ''}`);
   }
 
-  async approveListing(listingId: string, notes?: string) {
+  async approveListing(listingId: string, notes?: string, listingPrice?: number) {
     return this.request<any>(`/admin/listings/${listingId}/approve`, {
       method: 'POST',
-      body: JSON.stringify({ notes }),
+      body: JSON.stringify({ notes, listingPrice }),
     });
   }
 
@@ -573,7 +573,7 @@ class ApiService {
     dbaName?: string;
     title: string;
     description?: string;
-    price: number;
+    askingPrice: number;
     city: string;
     state: string;
     address?: string;

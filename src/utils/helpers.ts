@@ -169,3 +169,11 @@ export function slugify(text: string): string {
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+/**
+ * Get the display price for a listing
+ * Priority: listingPrice (admin set) > askingPrice (seller set) > price (legacy)
+ */
+export function getListingPrice(listing: { listingPrice?: number; askingPrice?: number; price?: number }): number {
+  return listing.listingPrice ?? listing.askingPrice ?? listing.price ?? 0
+}

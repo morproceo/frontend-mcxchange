@@ -56,7 +56,9 @@ export function useListing(listingId: string | undefined): UseListingResult {
       },
       title: data.title,
       description: data.description || '',
-      price: parseFloat(data.price) || 0,
+      askingPrice: parseFloat(data.askingPrice) || 0,
+      listingPrice: data.listingPrice ? parseFloat(data.listingPrice) : undefined,
+      price: parseFloat(data.listingPrice || data.askingPrice || data.price) || 0,
 
       // Trust & Verification
       trustScore,
