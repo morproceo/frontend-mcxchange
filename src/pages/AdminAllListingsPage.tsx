@@ -41,8 +41,10 @@ import {
   RefreshCw,
   Loader2,
   Copy,
-  SearchIcon
+  Zap,
+  BadgeCheck
 } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -132,7 +134,7 @@ const AdminAllListingsPage = () => {
     return password
   }
 
-  // New User + Listing form state
+  // New User + Listing form state - matches seller listing form
   const [newUserWithListing, setNewUserWithListing] = useState({
     // User fields
     email: '',
@@ -141,28 +143,49 @@ const AdminAllListingsPage = () => {
     phone: '',
     companyName: '',
     createStripeAccount: true,
-    // Listing fields
+    // Basic Info
     mcNumber: '',
     dotNumber: '',
-    legalName: '',
-    dbaName: '',
+    state: '',
+    city: '',
     title: '',
     description: '',
     askingPrice: '',
-    state: '',
-    city: '',
+    // FMCSA Data (auto-filled)
+    legalName: '',
+    dbaName: '',
     physicalAddress: '',
     mailingAddress: '',
+    carrierPhone: '',
+    powerUnits: '',
+    drivers: '',
+    mcs150Date: '',
+    operatingStatus: '',
+    entityType: '',
+    cargoCarried: [] as string[],
+    // Authority Details
     yearsActive: '',
-    totalDrivers: '',
-    totalPowerUnits: '',
+    fleetSize: '',
+    safetyRating: 'satisfactory',
+    insuranceStatus: 'active',
+    // Amazon & Highway
+    amazonStatus: '',
+    amazonRelayScore: '',
+    highwaySetup: '',
+    // Selling with Email/Phone
+    sellingWithEmail: '',
+    sellingWithPhone: '',
+    // Factoring
+    hasFactoring: '',
+    factoringCompany: '',
+    // Status
     status: 'PENDING_REVIEW'
   })
 
-  // MC Lookup function
+  // MC Lookup function - matches CreateListingPage logic
   const handleMcLookup = async () => {
-    if (!newUserWithListing.mcNumber) {
-      setMcLookupError('Please enter an MC number')
+    if (!newUserWithListing.mcNumber && !newUserWithListing.dotNumber) {
+      setMcLookupError('Please enter an MC or DOT number')
       return
     }
 
@@ -171,62 +194,86 @@ const AdminAllListingsPage = () => {
     setMcLookupSuccess(false)
 
     try {
-      const response = await api.fmcsaLookupByMC(newUserWithListing.mcNumber)
-
-      if (response.success && response.data) {
-        const carrier = response.data.carrier || response.data
-
-        // Extract data from FMCSA response
-        const legalName = carrier.legalName || carrier.legal_name || ''
-        const dbaName = carrier.dbaName || carrier.dba_name || ''
-        const dotNumber = carrier.dotNumber || carrier.dot_number || carrier.usdotNumber || ''
-        const phyState = carrier.phyState || carrier.phy_state || carrier.physicalState || ''
-        const phyCity = carrier.phyCity || carrier.phy_city || carrier.physicalCity || ''
-        const phyStreet = carrier.phyStreet || carrier.phy_street || ''
-        const phyZip = carrier.phyZipcode || carrier.phy_zipcode || ''
-        const mailingAddress = carrier.mailingStreet || carrier.mailing_street || ''
-        const mailingCity = carrier.mailingCity || carrier.mailing_city || ''
-        const mailingState = carrier.mailingState || carrier.mailing_state || ''
-        const mailingZip = carrier.mailingZipcode || carrier.mailing_zipcode || ''
-        const totalDrivers = carrier.totalDrivers || carrier.total_drivers || carrier.driverTotal || ''
-        const totalPowerUnits = carrier.totalPowerUnits || carrier.total_power_units || carrier.powerUnits || ''
-
-        // Calculate years active from addDate
-        let yearsActive = ''
-        const addDate = carrier.addDate || carrier.add_date || carrier.mcs150FormDate
-        if (addDate) {
-          const startDate = new Date(addDate)
-          const now = new Date()
-          yearsActive = String(Math.floor((now.getTime() - startDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)))
-        }
-
-        // Build physical address string
-        const physicalAddress = [phyStreet, phyCity, phyState, phyZip].filter(Boolean).join(', ')
-        const fullMailingAddress = [mailingAddress, mailingCity, mailingState, mailingZip].filter(Boolean).join(', ')
-
-        // Auto-generate title
-        const title = `${legalName || 'MC Authority'} - ${yearsActive ? `${yearsActive} Years Active` : 'Active Authority'}`
-
-        setNewUserWithListing(prev => ({
-          ...prev,
-          dotNumber: String(dotNumber),
-          legalName,
-          dbaName,
-          title,
-          state: phyState,
-          city: phyCity,
-          physicalAddress,
-          mailingAddress: fullMailingAddress,
-          yearsActive,
-          totalDrivers: String(totalDrivers),
-          totalPowerUnits: String(totalPowerUnits),
-          companyName: legalName || dbaName,
-        }))
-
-        setMcLookupSuccess(true)
-      } else {
-        setMcLookupError('MC number not found in FMCSA database')
+      let response
+      if (newUserWithListing.mcNumber) {
+        response = await api.fmcsaLookupByMC(newUserWithListing.mcNumber)
+      } else if (newUserWithListing.dotNumber) {
+        response = await api.fmcsaLookupByDOT(newUserWithListing.dotNumber)
       }
+
+      if (!response || !response.data) {
+        setMcLookupError('No carrier found with that number. Please check and try again.')
+        setMcLookupLoading(false)
+        return
+      }
+
+      const carrier = response.data
+      if (!carrier || !carrier.dotNumber) {
+        setMcLookupError('No carrier data found. Please verify the number and try again.')
+        setMcLookupLoading(false)
+        return
+      }
+
+      // Map the API response to form fields (same as CreateListingPage)
+      const fullAddress = [carrier.physicalAddress, carrier.hqCity, carrier.hqState].filter(Boolean).join(', ')
+
+      // Determine safety rating status
+      let safetyRatingValue = 'not-rated'
+      if (carrier.safetyRating) {
+        const rating = carrier.safetyRating.toLowerCase()
+        if (rating.includes('satisfactory')) safetyRatingValue = 'satisfactory'
+        else if (rating.includes('conditional')) safetyRatingValue = 'conditional'
+        else if (rating.includes('unsatisfactory')) safetyRatingValue = 'unsatisfactory'
+      }
+
+      // Determine operating status
+      const operatingStatus = carrier.allowedToOperate === 'Y' ? 'AUTHORIZED' : 'NOT AUTHORIZED'
+
+      // Determine insurance status
+      const insuranceStatus = carrier.insuranceOnFile ? 'active' : 'expired'
+
+      // Calculate years active from MCS-150 date
+      let yearsActive = ''
+      if (carrier.mcs150Date) {
+        try {
+          const mcsDate = new Date(carrier.mcs150Date)
+          const now = new Date()
+          const years = Math.floor((now.getTime() - mcsDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          if (years > 0) yearsActive = String(years)
+        } catch (e) {
+          // Ignore date parsing errors
+        }
+      }
+
+      // Auto-generate title
+      const mcNum = newUserWithListing.mcNumber || carrier.dotNumber
+      const generatedTitle = `${carrier.legalName} - MC #${mcNum}`
+
+      setNewUserWithListing(prev => ({
+        ...prev,
+        dotNumber: String(carrier.dotNumber || prev.dotNumber),
+        legalName: carrier.legalName || '',
+        dbaName: carrier.dbaName || '',
+        physicalAddress: fullAddress,
+        mailingAddress: fullAddress,
+        carrierPhone: carrier.phone || '',
+        powerUnits: String(carrier.totalPowerUnits || 0),
+        drivers: String(carrier.totalDrivers || 0),
+        mcs150Date: carrier.mcs150Date || '',
+        operatingStatus: operatingStatus,
+        entityType: carrier.carrierOperation || 'CARRIER',
+        state: carrier.hqState || prev.state,
+        city: carrier.hqCity || '',
+        cargoCarried: carrier.cargoTypes || [],
+        fleetSize: String(carrier.totalPowerUnits || 0),
+        safetyRating: safetyRatingValue,
+        insuranceStatus: insuranceStatus,
+        yearsActive: yearsActive || prev.yearsActive,
+        title: generatedTitle,
+        companyName: carrier.legalName || carrier.dbaName || '',
+      }))
+
+      setMcLookupSuccess(true)
     } catch (err: any) {
       console.error('MC Lookup failed:', err)
       setMcLookupError(err.message || 'Failed to lookup MC number')
@@ -594,18 +641,33 @@ const AdminAllListingsPage = () => {
           createStripeAccount: true,
           mcNumber: '',
           dotNumber: '',
-          legalName: '',
-          dbaName: '',
+          state: '',
+          city: '',
           title: '',
           description: '',
           askingPrice: '',
-          state: '',
-          city: '',
+          legalName: '',
+          dbaName: '',
           physicalAddress: '',
           mailingAddress: '',
+          carrierPhone: '',
+          powerUnits: '',
+          drivers: '',
+          mcs150Date: '',
+          operatingStatus: '',
+          entityType: '',
+          cargoCarried: [],
           yearsActive: '',
-          totalDrivers: '',
-          totalPowerUnits: '',
+          fleetSize: '',
+          safetyRating: 'satisfactory',
+          insuranceStatus: 'active',
+          amazonStatus: '',
+          amazonRelayScore: '',
+          highwaySetup: '',
+          sellingWithEmail: '',
+          sellingWithPhone: '',
+          hasFactoring: '',
+          factoringCompany: '',
           status: 'PENDING_REVIEW'
         })
         fetchListings()
@@ -1597,7 +1659,7 @@ const AdminAllListingsPage = () => {
                 </div>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
                 {/* Error Messages */}
                 {createUserError && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
@@ -1606,17 +1668,22 @@ const AdminAllListingsPage = () => {
                   </div>
                 )}
 
-                {/* MC Lookup Section - FIRST */}
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <SearchIcon className="w-5 h-5 text-emerald-600" />
-                    Step 1: MC Lookup
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3">Enter MC number to auto-populate carrier information from FMCSA</p>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
+                {/* MC/DOT Lookup Section */}
+                <div className="bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 -mx-6 px-6 py-5 border-b border-gray-100">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                      <Search className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">FMCSA Lookup</h3>
+                      <p className="text-sm text-gray-500">Enter MC or DOT to auto-fill carrier information</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">MC Number</label>
                       <Input
-                        placeholder="Enter MC Number (e.g., 123456)"
+                        placeholder="Enter MC number..."
                         value={newUserWithListing.mcNumber}
                         onChange={(e) => {
                           setNewUserWithListing({ ...newUserWithListing, mcNumber: e.target.value })
@@ -1625,44 +1692,81 @@ const AdminAllListingsPage = () => {
                         }}
                       />
                     </div>
-                    <Button
-                      onClick={handleMcLookup}
-                      disabled={mcLookupLoading || !newUserWithListing.mcNumber}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      {mcLookupLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Looking up...
-                        </>
-                      ) : (
-                        <>
-                          <SearchIcon className="w-4 h-4 mr-2" />
-                          Lookup MC
-                        </>
-                      )}
-                    </Button>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">DOT Number</label>
+                      <Input
+                        placeholder="Enter DOT number..."
+                        value={newUserWithListing.dotNumber}
+                        onChange={(e) => {
+                          setNewUserWithListing({ ...newUserWithListing, dotNumber: e.target.value })
+                          setMcLookupSuccess(false)
+                          setMcLookupError(null)
+                        }}
+                      />
+                    </div>
                   </div>
+                  <Button
+                    onClick={handleMcLookup}
+                    disabled={mcLookupLoading || (!newUserWithListing.mcNumber && !newUserWithListing.dotNumber)}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+                  >
+                    {mcLookupLoading ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                        Searching FMCSA Database...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5 mr-2" />
+                        Auto-Fill from FMCSA
+                      </>
+                    )}
+                  </Button>
                   {mcLookupError && (
-                    <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+                    <p className="text-sm text-red-600 mt-3 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
                       {mcLookupError}
                     </p>
                   )}
                   {mcLookupSuccess && (
-                    <p className="text-sm text-emerald-600 mt-2 flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      Carrier information found and populated!
-                    </p>
+                    <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <BadgeCheck className="w-6 h-6 text-emerald-600" />
+                        <span className="font-bold text-emerald-700">FMCSA Data Retrieved!</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2 p-2 bg-white rounded-lg">
+                          <Building2 className="w-4 h-4 text-emerald-500" />
+                          <span className="text-gray-700">{newUserWithListing.legalName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-white rounded-lg">
+                          <MapPin className="w-4 h-4 text-emerald-500" />
+                          <span className="text-gray-700">{newUserWithListing.city}, {newUserWithListing.state}</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-white rounded-lg">
+                          <Truck className="w-4 h-4 text-emerald-500" />
+                          <span className="text-gray-700">{newUserWithListing.powerUnits} Units • {newUserWithListing.drivers} Drivers</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-white rounded-lg">
+                          <Calendar className="w-4 h-4 text-emerald-500" />
+                          <span className="text-gray-700">{newUserWithListing.yearsActive} Years Active</span>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* User Information */}
+                {/* User Account Section */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <User className="w-5 h-5 text-emerald-600" />
-                    Step 2: User Account
-                  </h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">User Account</h3>
+                      <p className="text-xs text-gray-500">Create seller account credentials</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
@@ -1689,20 +1793,20 @@ const AdminAllListingsPage = () => {
                             type="text"
                             value={newUserWithListing.password}
                             readOnly
-                            className="bg-gray-50 font-mono pr-20"
+                            className="bg-gray-50 font-mono"
                           />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(newUserWithListing.password)
-                              alert('Password copied to clipboard!')
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-200 rounded text-gray-500"
-                            title="Copy password"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
                         </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(newUserWithListing.password)
+                            toast.success('Password copied!')
+                          }}
+                          title="Copy password"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
@@ -1712,10 +1816,10 @@ const AdminAllListingsPage = () => {
                           <RefreshCw className="w-4 h-4" />
                         </Button>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Share this password with the user. They can change it after logging in.</p>
+                      <p className="text-xs text-gray-500 mt-1">Share this password with the user</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">User Phone</label>
                       <Input
                         placeholder="(555) 123-4567"
                         value={newUserWithListing.phone}
@@ -1725,100 +1829,276 @@ const AdminAllListingsPage = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                       <Input
-                        placeholder="Auto-filled from MC lookup"
+                        placeholder="Auto-filled from FMCSA"
                         value={newUserWithListing.companyName}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, companyName: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Listing Information - Auto-populated from FMCSA */}
+                {/* Company & Authority Details */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Package className="w-5 h-5 text-emerald-600" />
-                    Step 3: Listing Details
-                    {mcLookupSuccess && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Auto-populated</span>}
-                  </h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">Company Details</h3>
+                      <p className="text-xs text-gray-500">Legal business information</p>
+                    </div>
+                    {mcLookupSuccess && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Auto-filled</span>}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">MC Number *</label>
-                      <Input
-                        value={newUserWithListing.mcNumber}
-                        readOnly
-                        className="bg-gray-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">DOT Number</label>
-                      <Input
-                        placeholder="Auto-filled from lookup"
-                        value={newUserWithListing.dotNumber}
-                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, dotNumber: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
-                      />
-                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Legal Name</label>
                       <Input
-                        placeholder="Auto-filled from lookup"
+                        placeholder="Company Legal Name LLC"
                         value={newUserWithListing.legalName}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, legalName: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">DBA Name</label>
                       <Input
-                        placeholder="Auto-filled from lookup"
+                        placeholder="Doing Business As"
                         value={newUserWithListing.dbaName}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, dbaName: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Listing Title *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Physical Address</label>
                       <Input
-                        placeholder="Auto-generated or enter custom title"
-                        value={newUserWithListing.title}
-                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, title: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        placeholder="123 Main St, City, State ZIP"
+                        value={newUserWithListing.physicalAddress}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, physicalAddress: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                       <Input
-                        placeholder="Auto-filled from lookup"
+                        placeholder="City"
                         value={newUserWithListing.city}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, city: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                       <Input
-                        placeholder="Auto-filled from lookup"
+                        placeholder="TX"
                         value={newUserWithListing.state}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, state: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Years Active</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Carrier Phone</label>
                       <Input
-                        placeholder="Auto-calculated"
-                        value={newUserWithListing.yearsActive}
-                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, yearsActive: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        placeholder="(555) 123-4567"
+                        value={newUserWithListing.carrierPhone}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, carrierPhone: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type</label>
+                      <Input
+                        placeholder="CARRIER"
+                        value={newUserWithListing.entityType}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, entityType: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fleet & Operations */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                      <Truck className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">Fleet & Operations</h3>
+                      <p className="text-xs text-gray-500">Authority and operational details</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Power Units</label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={newUserWithListing.powerUnits}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, powerUnits: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Total Drivers</label>
                       <Input
-                        placeholder="Auto-filled from lookup"
-                        value={newUserWithListing.totalDrivers}
-                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, totalDrivers: e.target.value })}
-                        className={mcLookupSuccess ? 'bg-emerald-50' : ''}
+                        type="number"
+                        placeholder="0"
+                        value={newUserWithListing.drivers}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, drivers: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Years Active</label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={newUserWithListing.yearsActive}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, yearsActive: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Operating Status</label>
+                      <Input
+                        placeholder="AUTHORIZED"
+                        value={newUserWithListing.operatingStatus}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, operatingStatus: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Safety Rating</label>
+                      <select
+                        value={newUserWithListing.safetyRating}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, safetyRating: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="satisfactory">Satisfactory</option>
+                        <option value="conditional">Conditional</option>
+                        <option value="unsatisfactory">Unsatisfactory</option>
+                        <option value="not-rated">Not Rated</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Status</label>
+                      <select
+                        value={newUserWithListing.insuranceStatus}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, insuranceStatus: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform & Extras */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-cyan-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">Platform & Extras</h3>
+                      <p className="text-xs text-gray-500">Amazon, Highway, and more</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Status</label>
+                      <select
+                        value={newUserWithListing.amazonStatus}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, amazonStatus: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">Select...</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="not-registered">Not Registered</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Relay Score</label>
+                      <Input
+                        placeholder="e.g., 750"
+                        value={newUserWithListing.amazonRelayScore}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, amazonRelayScore: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Highway Setup</label>
+                      <select
+                        value={newUserWithListing.highwaySetup}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, highwaySetup: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Has Factoring</label>
+                      <select
+                        value={newUserWithListing.hasFactoring}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, hasFactoring: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Selling with Email?</label>
+                      <select
+                        value={newUserWithListing.sellingWithEmail}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, sellingWithEmail: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Selling with Phone?</label>
+                      <select
+                        value={newUserWithListing.sellingWithPhone}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, sellingWithPhone: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Listing Details */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <Package className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">Listing Details</h3>
+                      <p className="text-xs text-gray-500">Pricing and visibility</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Listing Title *</label>
+                      <Input
+                        placeholder="Auto-generated or custom title"
+                        value={newUserWithListing.title}
+                        onChange={(e) => setNewUserWithListing({ ...newUserWithListing, title: e.target.value })}
+                        className={mcLookupSuccess ? 'bg-emerald-50 border-emerald-200' : ''}
                       />
                     </div>
                     <div>
@@ -1845,7 +2125,7 @@ const AdminAllListingsPage = () => {
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                       <Textarea
-                        placeholder="Describe the MC authority..."
+                        placeholder="Describe the MC authority, operational history, and key selling points..."
                         value={newUserWithListing.description}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, description: e.target.value })}
                         rows={3}
