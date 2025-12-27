@@ -605,6 +605,13 @@ const AdminAllListingsPage = () => {
       setCreateUserLoading(true)
       setCreateUserError(null)
 
+      const askingPriceValue = parseFloat(newUserWithListing.askingPrice)
+      if (isNaN(askingPriceValue) || askingPriceValue <= 0) {
+        setCreateUserError('Please enter a valid asking price')
+        setCreateUserLoading(false)
+        return
+      }
+
       const response = await api.createAdminUserWithListing({
         user: {
           email: newUserWithListing.email,
@@ -620,8 +627,20 @@ const AdminAllListingsPage = () => {
           dbaName: newUserWithListing.dbaName || undefined,
           title: newUserWithListing.title,
           description: newUserWithListing.description || undefined,
-          askingPrice: parseInt(newUserWithListing.askingPrice) || 0,
+          askingPrice: askingPriceValue,
+          city: newUserWithListing.city || undefined,
           state: newUserWithListing.state || undefined,
+          address: newUserWithListing.physicalAddress || undefined,
+          yearsActive: newUserWithListing.yearsActive ? parseInt(newUserWithListing.yearsActive) : undefined,
+          fleetSize: newUserWithListing.powerUnits ? parseInt(newUserWithListing.powerUnits) : undefined,
+          totalDrivers: newUserWithListing.drivers ? parseInt(newUserWithListing.drivers) : undefined,
+          safetyRating: newUserWithListing.safetyRating || undefined,
+          insuranceOnFile: newUserWithListing.insuranceStatus === 'active',
+          amazonStatus: newUserWithListing.amazonStatus?.toUpperCase() || undefined,
+          amazonRelayScore: newUserWithListing.amazonRelayScore || undefined,
+          highwaySetup: newUserWithListing.highwaySetup === 'yes',
+          sellingWithEmail: newUserWithListing.sellingWithEmail === 'yes',
+          sellingWithPhone: newUserWithListing.sellingWithPhone === 'yes',
           status: newUserWithListing.status,
         },
         createStripeAccount: newUserWithListing.createStripeAccount,
