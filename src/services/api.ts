@@ -172,8 +172,9 @@ class ApiService {
     if (params?.status) searchParams.set('status', params.status);
 
     const query = searchParams.toString();
-    return this.request<{
-      users: any[];
+    const response = await this.request<{
+      success: boolean;
+      data: any[];
       pagination: {
         page: number;
         limit: number;
@@ -181,6 +182,12 @@ class ApiService {
         totalPages: number;
       };
     }>(`/admin/users${query ? `?${query}` : ''}`);
+
+    // Transform response to match frontend expectations
+    return {
+      users: response.data || [],
+      pagination: response.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 }
+    };
   }
 
   async getAdminUserDetails(userId: string) {
