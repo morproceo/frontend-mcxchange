@@ -264,15 +264,16 @@ const AdminConsultationsPage = () => {
               label="Status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="PENDING_PAYMENT">Pending Payment</option>
-              <option value="PAID">Paid</option>
-              <option value="SCHEDULED">Scheduled</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-              <option value="REFUNDED">Refunded</option>
-            </Select>
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'PENDING_PAYMENT', label: 'Pending Payment' },
+                { value: 'PAID', label: 'Paid' },
+                { value: 'SCHEDULED', label: 'Scheduled' },
+                { value: 'COMPLETED', label: 'Completed' },
+                { value: 'CANCELLED', label: 'Cancelled' },
+                { value: 'REFUNDED', label: 'Refunded' },
+              ]}
+            />
           </div>
           <Button onClick={handleSearch}>
             <Search className="w-4 h-4 mr-2" />
