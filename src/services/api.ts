@@ -6,6 +6,8 @@ import type {
   SubscriptionResponse,
   CheckoutSessionResponse,
   UserResponse,
+  SubscriptionPlanConfig,
+  CreditPack,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -1342,6 +1344,95 @@ class ApiService {
         analyzedAt: string;
       };
     }>(`/admin/due-diligence/analyze/${encodeURIComponent(mcNumber)}`);
+  }
+
+  // ============================================
+  // Pricing Configuration (Admin Only)
+  // ============================================
+
+  /**
+   * Get pricing configuration (subscription plans, fees, credit packs)
+   */
+  async getPricingConfig() {
+    return this.request<{
+      success: boolean;
+      data: {
+        subscriptionPlans: {
+          starter: SubscriptionPlanConfig;
+          professional: SubscriptionPlanConfig;
+          enterprise: SubscriptionPlanConfig;
+        };
+        platformFees: {
+          listingFee: number;
+          premiumListingFee: number;
+          transactionFeePercentage: number;
+          depositPercentage: number;
+          minDeposit: number;
+          maxDeposit: number;
+        };
+        creditPacks: CreditPack[];
+      };
+    }>('/admin/pricing');
+  }
+
+  /**
+   * Update pricing configuration
+   */
+  async updatePricingConfig(config: Partial<{
+    subscriptionPlans: Partial<{
+      starter: Partial<SubscriptionPlanConfig>;
+      professional: Partial<SubscriptionPlanConfig>;
+      enterprise: Partial<SubscriptionPlanConfig>;
+    }>;
+    platformFees: Partial<{
+      listingFee: number;
+      premiumListingFee: number;
+      transactionFeePercentage: number;
+      depositPercentage: number;
+      minDeposit: number;
+      maxDeposit: number;
+    }>;
+    creditPacks: CreditPack[];
+  }>) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/admin/pricing', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  // ============================================
+  // Credit Packs (Public/Buyer)
+  // ============================================
+
+  /**
+   * Get available credit packs
+   */
+  async getCreditPacks() {
+    return this.request<{
+      success: boolean;
+      data: CreditPack[];
+    }>('/credits/packs');
+  }
+
+  /**
+   * Purchase a credit pack (creates Stripe checkout session)
+   */
+  async purchaseCreditPack(packId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        checkoutUrl: string;
+        packId: string;
+        credits: number;
+        price: number;
+      };
+    }>(`/credits/packs/${packId}/checkout`, {
+      method: 'POST',
+    });
   }
 
   // Upload a document (handles FormData for file upload)

@@ -441,3 +441,43 @@ export interface CreditTransaction {
   relatedListingId?: string
   createdAt: Date
 }
+
+// ============================================
+// Pricing Configuration Types
+// ============================================
+
+export interface SubscriptionPlanConfig {
+  name: string
+  credits: number
+  priceMonthly: number
+  priceYearly: number
+  stripePriceIdMonthly: string
+  stripePriceIdYearly: string
+  features: string[]
+}
+
+export interface CreditPack {
+  id: string
+  credits: number
+  price: number
+  stripePriceId: string
+}
+
+export interface PlatformFeesConfig {
+  listingFee: number
+  premiumListingFee: number
+  transactionFeePercentage: number
+  depositPercentage: number
+  minDeposit: number
+  maxDeposit: number
+}
+
+export interface PricingConfig {
+  subscriptionPlans: {
+    starter: SubscriptionPlanConfig
+    professional: SubscriptionPlanConfig
+    enterprise: SubscriptionPlanConfig
+  }
+  platformFees: PlatformFeesConfig
+  creditPacks: CreditPack[]
+}

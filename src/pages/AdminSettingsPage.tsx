@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Settings,
@@ -15,16 +15,133 @@ import {
   ExternalLink,
   Shield,
   Bell,
-  Globe
+  Globe,
+  Tag,
+  Plus,
+  Trash2,
+  Copy,
+  Save
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import { api } from '../services/api'
+import type { PricingConfig, SubscriptionPlanConfig, CreditPack } from '../types'
 
 const AdminSettingsPage = () => {
-  const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'notifications' | 'security'>('general')
+  const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'notifications' | 'security' | 'pricing'>('general')
   const [stripeConnected, setStripeConnected] = useState(true)
   const [transactionFilter, setTransactionFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Pricing state
+  const [pricingLoading, setPricingLoading] = useState(false)
+  const [pricingSaving, setPricingSaving] = useState(false)
+  const [pricingError, setPricingError] = useState<string | null>(null)
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null)
+
+  // Load pricing config when pricing tab is active
+  useEffect(() => {
+    if (activeTab === 'pricing' && !pricingConfig) {
+      loadPricingConfig()
+    }
+  }, [activeTab])
+
+  const loadPricingConfig = async () => {
+    setPricingLoading(true)
+    setPricingError(null)
+    try {
+      const response = await api.getPricingConfig()
+      if (response.success && response.data) {
+        setPricingConfig(response.data)
+      }
+    } catch (err: any) {
+      setPricingError(err.message || 'Failed to load pricing configuration')
+    } finally {
+      setPricingLoading(false)
+    }
+  }
+
+  const savePricingConfig = async () => {
+    if (!pricingConfig) return
+    setPricingSaving(true)
+    setPricingError(null)
+    try {
+      await api.updatePricingConfig(pricingConfig)
+      alert('Pricing configuration saved successfully!')
+    } catch (err: any) {
+      setPricingError(err.message || 'Failed to save pricing configuration')
+    } finally {
+      setPricingSaving(false)
+    }
+  }
+
+  const updateSubscriptionPlan = (
+    planKey: 'starter' | 'professional' | 'enterprise',
+    field: keyof SubscriptionPlanConfig,
+    value: string | number | string[]
+  ) => {
+    if (!pricingConfig) return
+    setPricingConfig({
+      ...pricingConfig,
+      subscriptionPlans: {
+        ...pricingConfig.subscriptionPlans,
+        [planKey]: {
+          ...pricingConfig.subscriptionPlans[planKey],
+          [field]: value,
+        },
+      },
+    })
+  }
+
+  const updatePlatformFee = (field: keyof PricingConfig['platformFees'], value: number) => {
+    if (!pricingConfig) return
+    setPricingConfig({
+      ...pricingConfig,
+      platformFees: {
+        ...pricingConfig.platformFees,
+        [field]: value,
+      },
+    })
+  }
+
+  const updateCreditPack = (index: number, field: keyof CreditPack, value: string | number) => {
+    if (!pricingConfig) return
+    const updatedPacks = [...pricingConfig.creditPacks]
+    updatedPacks[index] = { ...updatedPacks[index], [field]: value }
+    setPricingConfig({
+      ...pricingConfig,
+      creditPacks: updatedPacks,
+    })
+  }
+
+  const addCreditPack = () => {
+    if (!pricingConfig) return
+    const newPack: CreditPack = {
+      id: `pack_${Date.now()}`,
+      credits: 5,
+      price: 19.99,
+      stripePriceId: '',
+    }
+    setPricingConfig({
+      ...pricingConfig,
+      creditPacks: [...pricingConfig.creditPacks, newPack],
+    })
+  }
+
+  const removeCreditPack = (index: number) => {
+    if (!pricingConfig) return
+    const updatedPacks = pricingConfig.creditPacks.filter((_, i) => i !== index)
+    setPricingConfig({
+      ...pricingConfig,
+      creditPacks: updatedPacks,
+    })
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    alert('Copied to clipboard!')
+  }
 
   // Mock Stripe account data
   const stripeAccount = {
@@ -184,6 +301,17 @@ const AdminSettingsPage = () => {
           >
             <Shield className="w-4 h-4" />
             Security
+          </button>
+          <button
+            onClick={() => setActiveTab('pricing')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'pricing'
+                ? 'bg-primary-500 text-gray-900'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Tag className="w-4 h-4" />
+            Pricing
           </button>
         </div>
 
@@ -635,6 +763,283 @@ const AdminSettingsPage = () => {
                 </div>
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* Pricing Tab */}
+        {activeTab === 'pricing' && (
+          <div className="space-y-6">
+            {pricingError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {pricingError}
+              </div>
+            )}
+
+            {pricingLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
+              </div>
+            ) : pricingConfig ? (
+              <>
+                {/* Subscription Plans */}
+                <Card>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold">Subscription Plans</h2>
+                    <Button onClick={savePricingConfig} disabled={pricingSaving}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {pricingSaving ? 'Saving...' : 'Save All Changes'}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {(['starter', 'professional', 'enterprise'] as const).map((planKey) => {
+                      const plan = pricingConfig.subscriptionPlans[planKey]
+                      return (
+                        <div key={planKey} className="p-4 bg-gray-50 rounded-lg">
+                          <h3 className="text-lg font-semibold mb-4 capitalize">{plan.name} Plan</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Credits per Month</label>
+                              <Input
+                                type="number"
+                                value={plan.credits}
+                                onChange={(e) => updateSubscriptionPlan(planKey, 'credits', parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Monthly Price ($)</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={plan.priceMonthly}
+                                onChange={(e) => updateSubscriptionPlan(planKey, 'priceMonthly', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Yearly Price ($)</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={plan.priceYearly}
+                                onChange={(e) => updateSubscriptionPlan(planKey, 'priceYearly', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Stripe Monthly Price ID</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  value={plan.stripePriceIdMonthly}
+                                  onChange={(e) => updateSubscriptionPlan(planKey, 'stripePriceIdMonthly', e.target.value)}
+                                  placeholder="price_xxx..."
+                                  className="flex-1"
+                                />
+                                {plan.stripePriceIdMonthly && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(plan.stripePriceIdMonthly)}
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Stripe Yearly Price ID</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  value={plan.stripePriceIdYearly}
+                                  onChange={(e) => updateSubscriptionPlan(planKey, 'stripePriceIdYearly', e.target.value)}
+                                  placeholder="price_xxx..."
+                                  className="flex-1"
+                                />
+                                {plan.stripePriceIdYearly && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(plan.stripePriceIdYearly)}
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Card>
+
+                {/* Platform Fees */}
+                <Card>
+                  <h2 className="text-xl font-bold mb-6">Platform Fees</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Listing Fee ($)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={pricingConfig.platformFees.listingFee}
+                        onChange={(e) => updatePlatformFee('listingFee', parseFloat(e.target.value) || 0)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Fee to list an MC authority</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Premium Listing Fee ($)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={pricingConfig.platformFees.premiumListingFee}
+                        onChange={(e) => updatePlatformFee('premiumListingFee', parseFloat(e.target.value) || 0)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Fee for premium listing placement</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Transaction Fee (%)</label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={pricingConfig.platformFees.transactionFeePercentage}
+                        onChange={(e) => updatePlatformFee('transactionFeePercentage', parseFloat(e.target.value) || 0)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Percentage of sale price</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Deposit (%)</label>
+                      <Input
+                        type="number"
+                        step="1"
+                        value={pricingConfig.platformFees.depositPercentage}
+                        onChange={(e) => updatePlatformFee('depositPercentage', parseFloat(e.target.value) || 0)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Deposit percentage of agreed price</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Min Deposit ($)</label>
+                      <Input
+                        type="number"
+                        value={pricingConfig.platformFees.minDeposit}
+                        onChange={(e) => updatePlatformFee('minDeposit', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Max Deposit ($)</label>
+                      <Input
+                        type="number"
+                        value={pricingConfig.platformFees.maxDeposit}
+                        onChange={(e) => updatePlatformFee('maxDeposit', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Credit Packs */}
+                <Card>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-xl font-bold">Credit Packs</h2>
+                      <p className="text-sm text-gray-500">One-time credit purchases for buyers</p>
+                    </div>
+                    <Button variant="secondary" onClick={addCreditPack}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Pack
+                    </Button>
+                  </div>
+
+                  {pricingConfig.creditPacks.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No credit packs configured. Click "Add Pack" to create one.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pricingConfig.creditPacks.map((pack, index) => (
+                        <div key={pack.id} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-medium">Pack {index + 1}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeCreditPack(index)}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Credits</label>
+                              <Input
+                                type="number"
+                                value={pack.credits}
+                                onChange={(e) => updateCreditPack(index, 'credits', parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Price ($)</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={pack.price}
+                                onChange={(e) => updateCreditPack(index, 'price', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium mb-1">Stripe Price ID</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  value={pack.stripePriceId}
+                                  onChange={(e) => updateCreditPack(index, 'stripePriceId', e.target.value)}
+                                  placeholder="price_xxx..."
+                                  className="flex-1"
+                                />
+                                {pack.stripePriceId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(pack.stripePriceId)}
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+
+                {/* Stripe Dashboard Link */}
+                <Card>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold">Stripe Dashboard</h2>
+                      <p className="text-sm text-gray-500">Create and manage prices in Stripe, then paste Price IDs here</p>
+                    </div>
+                    <a
+                      href="https://dashboard.stripe.com/products"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#635BFF] text-white rounded-lg hover:bg-[#5851DB] transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open Stripe Dashboard
+                    </a>
+                  </div>
+                </Card>
+              </>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                Failed to load pricing configuration. Please try again.
+              </div>
+            )}
           </div>
         )}
       </div>
