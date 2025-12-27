@@ -33,7 +33,8 @@ import {
   RefreshCw,
   Plus,
   X,
-  Truck
+  Truck,
+  Trash2
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -179,6 +180,10 @@ const AdminActiveClosingsPage = () => {
   const [createNotes, setCreateNotes] = useState('')
   const [buyersLoading, setBuyersLoading] = useState(false)
   const [listingsLoading, setListingsLoading] = useState(false)
+
+  // Delete Transaction State
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const steps = [
     { id: 'terms-agreement', label: 'Terms', short: '1' },
@@ -362,6 +367,22 @@ const AdminActiveClosingsPage = () => {
       toast.error(error.message || 'Failed to create transaction')
     } finally {
       setCreateLoading(false)
+    }
+  }
+
+  // Delete transaction
+  const handleDeleteTransaction = async (transactionId: string) => {
+    setDeleting(true)
+    try {
+      await api.adminDeleteTransaction(transactionId)
+      toast.success('Transaction deleted successfully')
+      setDeleteConfirm(null)
+      fetchTransactions()
+    } catch (error: any) {
+      console.error('Failed to delete transaction:', error)
+      toast.error(error.message || 'Failed to delete transaction')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -687,6 +708,17 @@ const AdminActiveClosingsPage = () => {
                         <ExternalLink className="w-4 h-4" />
                       </Button>
                     </Link>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteConfirm(txn.id)
+                      }}
+                      className="text-red-600 hover:bg-red-50 border-red-200"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                     {expandedTransaction === txn.id ? (
                       <ChevronUp className="w-5 h-5 text-gray-400" />
                     ) : (
@@ -1514,6 +1546,54 @@ const AdminActiveClosingsPage = () => {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Transaction
                 </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Transaction?</h3>
+                <p className="text-gray-600 mb-6">
+                  This action cannot be undone. All transaction data, messages, and payment records will be permanently deleted.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteConfirm(null)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleDeleteTransaction(deleteConfirm)}
+                    loading={deleting}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Transaction
+                  </Button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

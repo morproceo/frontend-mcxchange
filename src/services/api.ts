@@ -1013,6 +1013,16 @@ class ApiService {
     });
   }
 
+  // Admin delete transaction
+  async adminDeleteTransaction(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/transactions/${transactionId}/admin`, {
+      method: 'DELETE',
+    });
+  }
+
   // Record final payment (buyer submits payment with proof)
   async recordFinalPayment(
     transactionId: string,
