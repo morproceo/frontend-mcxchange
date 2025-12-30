@@ -89,24 +89,34 @@ const BuyerSubscriptionPage = () => {
   const [plansLoading, setPlansLoading] = useState(true)
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null)
 
-  // Fetch plans and credit packs from API
+  // Fetch plans and credit packs from API (using public endpoints)
   useEffect(() => {
     const fetchPricingData = async () => {
       try {
         setPlansLoading(true)
-        const [pricingResponse, packsResponse] = await Promise.all([
-          api.getPricingConfig(),
-          api.getCreditPacks(),
+        const [plansResponse, packsResponse] = await Promise.all([
+          api.getSubscriptionPlans(),  // Public endpoint: /credits/plans
+          api.getCreditPacks(),         // Public endpoint: /credits/packs
         ])
 
-        if (pricingResponse.data) {
-          const { subscriptionPlans } = pricingResponse.data
-          // Transform API plans into display plans
-          const displayPlans: DisplayPlan[] = (['starter', 'professional', 'enterprise'] as const).map(key => ({
-            id: key,
-            ...subscriptionPlans[key],
-            ...planStyles[key],
-          }))
+        if (plansResponse.data && plansResponse.data.length > 0) {
+          // Transform API plans array into display plans
+          // API returns id as 'STARTER', 'PROFESSIONAL', 'ENTERPRISE' (uppercase)
+          const displayPlans: DisplayPlan[] = plansResponse.data.map(plan => {
+            const planKey = plan.id.toLowerCase() as keyof typeof planStyles
+            const styles = planStyles[planKey] || planStyles.starter
+            return {
+              id: planKey, // Use lowercase for frontend consistency
+              name: plan.name,
+              credits: plan.credits,
+              priceMonthly: plan.priceMonthly,
+              priceYearly: plan.priceYearly,
+              stripePriceIdMonthly: plan.stripePriceIdMonthly,
+              stripePriceIdYearly: plan.stripePriceIdYearly,
+              features: plan.features,
+              ...styles,
+            }
+          })
           setPlans(displayPlans)
         }
 

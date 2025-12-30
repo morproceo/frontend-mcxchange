@@ -1513,8 +1513,29 @@ class ApiService {
   }
 
   // ============================================
-  // Credit Packs (Public/Buyer)
+  // Subscription Plans & Credit Packs (Public)
   // ============================================
+
+  /**
+   * Get available subscription plans (public endpoint)
+   */
+  async getSubscriptionPlans() {
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        name: string;
+        credits: number;
+        priceMonthly: number;
+        priceYearly: number;
+        pricePerCreditMonthly: number;
+        pricePerCreditYearly: number;
+        stripePriceIdMonthly: string;
+        stripePriceIdYearly: string;
+        features: string[];
+      }>;
+    }>('/credits/plans');
+  }
 
   /**
    * Get available credit packs
