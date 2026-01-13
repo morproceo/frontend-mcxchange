@@ -98,7 +98,7 @@ class ApiService {
     };
   }
 
-  async register(data: { email: string; password: string; name: string; role: string }) {
+  async register(data: { email: string; password: string; name: string; role: string; phone?: string }) {
     const response = await this.request<ApiResponse<AuthRegisterResponse>>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -132,6 +132,59 @@ class ApiService {
   async getCurrentUser() {
     const response = await this.request<{ success: boolean; data: any }>('/auth/me');
     return { user: response.data };
+  }
+
+  // User Profile
+  async getProfile() {
+    return this.request<{
+      success: boolean;
+      data: {
+        id: string;
+        name: string;
+        email: string;
+        phone?: string;
+        companyName?: string;
+        companyAddress?: string;
+        city?: string;
+        state?: string;
+        zipCode?: string;
+        ein?: string;
+        avatar?: string;
+        role: string;
+        verified: boolean;
+        createdAt: string;
+      };
+    }>('/users/me');
+  }
+
+  async updateProfile(data: {
+    name?: string;
+    phone?: string;
+    companyName?: string;
+    companyAddress?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    ein?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   }
 
   // Email verification

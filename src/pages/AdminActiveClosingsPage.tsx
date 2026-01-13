@@ -577,7 +577,7 @@ const AdminActiveClosingsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                ${totalDeposits.toLocaleString()}
+                ${totalDeposits.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-sm text-gray-500">Deposits Collected</p>
             </div>
@@ -590,7 +590,7 @@ const AdminActiveClosingsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                ${totalPipeline.toLocaleString()}
+                ${totalPipeline.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-sm text-gray-500">Total Pipeline</p>
             </div>
@@ -1102,7 +1102,7 @@ const AdminActiveClosingsPage = () => {
                       <p className="text-xs text-amber-500">MC Exchange earnings</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-gray-50 rounded-xl text-center">
                       <p className="text-sm text-gray-500">Deposit</p>
                       <p className="text-2xl font-bold text-green-600">${(selectedTransaction.depositAmount || 1000).toLocaleString()}</p>
@@ -1114,11 +1114,6 @@ const AdminActiveClosingsPage = () => {
                         ${(selectedTransaction.agreedPrice - (selectedTransaction.depositAmount || 1000)).toLocaleString()}
                       </p>
                       <p className="text-xs text-gray-400">Due from buyer</p>
-                    </div>
-                    <div className="p-4 bg-indigo-50 rounded-xl text-center border border-indigo-200">
-                      <p className="text-sm text-indigo-600">Platform Fee (5%)</p>
-                      <p className="text-2xl font-bold text-indigo-600">${selectedTransaction.platformFee.toLocaleString()}</p>
-                      <p className="text-xs text-indigo-400">Processing fee</p>
                     </div>
                   </div>
                 </div>

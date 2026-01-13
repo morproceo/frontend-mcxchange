@@ -5,10 +5,13 @@ import api from '../services/api'
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<User>
-  register: (email: string, password: string, name: string, role: UserRole) => Promise<User>
+  register: (email: string, password: string, name: string, role: UserRole, phone?: string) => Promise<User>
   logout: () => void
   isAuthenticated: boolean
   isLoading: boolean
+  isProfileComplete: boolean
+  profileCompletionPercent: number
+  checkProfileComplete: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -60,6 +63,39 @@ const transformUser = (apiUser: any): User => {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isProfileComplete, setIsProfileComplete] = useState(true)
+  const [profileCompletionPercent, setProfileCompletionPercent] = useState(100)
+
+  // Calculate profile completion based on profile data
+  const calculateProfileCompletion = (profileData: any): { complete: boolean; percent: number } => {
+    const fields = ['name', 'phone', 'companyName', 'city', 'state']
+    const filled = fields.filter(f => profileData[f]?.toString().trim()).length
+    const percent = Math.round((filled / fields.length) * 100)
+    return { complete: percent >= 100, percent }
+  }
+
+  // Check if user profile is complete
+  const checkProfileComplete = async () => {
+    if (!user) {
+      setIsProfileComplete(true)
+      setProfileCompletionPercent(100)
+      return
+    }
+
+    try {
+      const response = await api.getProfile()
+      if (response.success && response.data) {
+        const { complete, percent } = calculateProfileCompletion(response.data)
+        setIsProfileComplete(complete)
+        setProfileCompletionPercent(percent)
+      }
+    } catch (error) {
+      console.error('Failed to check profile completion:', error)
+      // Default to complete on error to not block the user
+      setIsProfileComplete(true)
+      setProfileCompletionPercent(100)
+    }
+  }
 
   useEffect(() => {
     // Check for stored token and validate session
@@ -73,6 +109,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             const transformedUser = transformUser(response.user)
             setUser(transformedUser)
             localStorage.setItem('mcx_user', JSON.stringify(transformedUser))
+
+            // Check profile completion for non-admin users
+            if (transformedUser.role !== 'admin') {
+              try {
+                const profileResponse = await api.getProfile()
+                if (profileResponse.success && profileResponse.data) {
+                  const { complete, percent } = calculateProfileCompletion(profileResponse.data)
+                  setIsProfileComplete(complete)
+                  setProfileCompletionPercent(percent)
+                }
+              } catch (e) {
+                // Silent fail for profile check
+              }
+            }
           } else {
             // No user returned, clear everything
             api.setToken(null)
@@ -109,6 +159,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(transformedUser)
       localStorage.setItem('mcx_user', JSON.stringify(transformedUser))
 
+      // Check profile completion for non-admin users
+      if (transformedUser.role !== 'admin') {
+        try {
+          const profileResponse = await api.getProfile()
+          if (profileResponse.success && profileResponse.data) {
+            const { complete, percent } = calculateProfileCompletion(profileResponse.data)
+            setIsProfileComplete(complete)
+            setProfileCompletionPercent(percent)
+          }
+        } catch (e) {
+          // Silent fail for profile check
+        }
+      }
+
       return transformedUser
     } catch (error: any) {
       console.error('Login failed:', error)
@@ -118,19 +182,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }
 
-  const register = async (email: string, password: string, name: string, role: UserRole): Promise<User> => {
+  const register = async (email: string, password: string, name: string, role: UserRole, phone?: string): Promise<User> => {
     setIsLoading(true)
     try {
       const response = await api.register({
         email,
         password,
         name,
-        role: toBackendRole(role)
+        role: toBackendRole(role),
+        phone
       })
 
       const transformedUser = transformUser(response.user)
       setUser(transformedUser)
       localStorage.setItem('mcx_user', JSON.stringify(transformedUser))
+
+      // New users have incomplete profiles (only name and phone are filled)
+      if (transformedUser.role !== 'admin') {
+        // If phone is provided, 2 out of 5 fields are filled (40%)
+        // Otherwise, 1 out of 5 (20%)
+        const percent = phone ? 40 : 20
+        setIsProfileComplete(false)
+        setProfileCompletionPercent(percent)
+      }
 
       return transformedUser
     } catch (error: any) {
@@ -148,6 +222,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error('Logout error:', error)
     } finally {
       setUser(null)
+      setIsProfileComplete(true)
+      setProfileCompletionPercent(100)
       localStorage.removeItem('mcx_user')
     }
   }
@@ -160,7 +236,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         register,
         logout,
         isAuthenticated: !!user,
-        isLoading
+        isLoading,
+        isProfileComplete,
+        profileCompletionPercent,
+        checkProfileComplete
       }}
     >
       {children}

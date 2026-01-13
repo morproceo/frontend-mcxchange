@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User as UserIcon, AlertCircle } from 'lucide-react'
+import { Mail, Lock, User as UserIcon, AlertCircle, Phone } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
@@ -58,11 +58,33 @@ const RegisterPage = () => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<UserRole>(initialRole)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+
+  // Format phone number as user types
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '')
+
+    // Format as (XXX) XXX-XXXX
+    if (digits.length <= 3) {
+      return digits
+    } else if (digits.length <= 6) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+    } else {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+    }
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value)
+    setPhone(formatted)
+  }
 
   // Validate email on blur
   const handleEmailBlur = () => {
@@ -103,11 +125,16 @@ const RegisterPage = () => {
       return
     }
 
+    if (!termsAccepted) {
+      setError('You must accept the Terms of Service and Privacy Policy')
+      return
+    }
+
     setLoading(true)
 
     try {
       // Register returns the user with their role
-      const user = await register(email, password, name, role)
+      const user = await register(email, password, name, role, phone)
 
       // If there's a redirect URL, use it (after validating it's a local path)
       if (redirectUrl && redirectUrl.startsWith('/')) {
@@ -201,6 +228,16 @@ const RegisterPage = () => {
             </div>
 
             <Input
+              label="Phone Number"
+              type="tel"
+              placeholder="(555) 555-5555"
+              value={phone}
+              onChange={handlePhoneChange}
+              icon={<Phone className="w-4 h-4" />}
+              required
+            />
+
+            <Input
               label="Password"
               type="password"
               placeholder="••••••••"
@@ -220,20 +257,29 @@ const RegisterPage = () => {
               required
             />
 
-            <div className="text-xs text-gray-500">
-              <label className="flex items-start gap-2 cursor-pointer">
+            <div className="text-sm text-gray-600">
+              <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                  required
                 />
                 <span>
                   I agree to the{' '}
-                  <Link to="/terms" className="text-secondary-600 hover:text-secondary-700 font-medium">
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    className="text-secondary-600 hover:text-secondary-700 font-medium underline"
+                  >
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-secondary-600 hover:text-secondary-700 font-medium">
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    className="text-secondary-600 hover:text-secondary-700 font-medium underline"
+                  >
                     Privacy Policy
                   </Link>
                 </span>

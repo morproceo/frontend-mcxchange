@@ -42,7 +42,8 @@ import {
   Loader2,
   Copy,
   Zap,
-  BadgeCheck
+  BadgeCheck,
+  Send
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Card from '../components/ui/Card'
@@ -123,6 +124,15 @@ const AdminAllListingsPage = () => {
   const [mcLookupLoading, setMcLookupLoading] = useState(false)
   const [mcLookupError, setMcLookupError] = useState<string | null>(null)
   const [mcLookupSuccess, setMcLookupSuccess] = useState(false)
+  const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null)
+
+  // Telegram share state
+  const [showTelegramModal, setShowTelegramModal] = useState(false)
+  const [telegramListing, setTelegramListing] = useState<Listing | null>(null)
+  const [telegramMessage, setTelegramMessage] = useState('')
+  const [telegramSharing, setTelegramSharing] = useState(false)
+  const [telegramInspections, setTelegramInspections] = useState<number | null>(null)
+  const [telegramInspectionsLoading, setTelegramInspectionsLoading] = useState(false)
 
   // Generate random password
   const generatePassword = () => {
@@ -416,6 +426,63 @@ const AdminAllListingsPage = () => {
   useEffect(() => {
     fetchListings()
   }, [activeFilter])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenActionDropdown(null)
+    if (openActionDropdown) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [openActionDropdown])
+
+  // Open Telegram modal and fetch inspections
+  const openTelegramModal = async (listing: Listing) => {
+    setTelegramListing(listing)
+    setShowTelegramModal(true)
+    setTelegramInspections(null)
+    setTelegramInspectionsLoading(true)
+
+    try {
+      // Fetch SMS data using MC number
+      const response = await api.fmcsaLookupByMC(listing.mcNumber)
+      if (response.success && response.data) {
+        // Calculate total inspections from driver + vehicle + hazmat
+        const total = (response.data.driverInsp || 0) +
+                      (response.data.vehicleInsp || 0) +
+                      (response.data.hazmatInsp || 0)
+        setTelegramInspections(total)
+      } else {
+        setTelegramInspections(0)
+      }
+    } catch (error) {
+      console.error('Failed to fetch inspection data:', error)
+      setTelegramInspections(0)
+    } finally {
+      setTelegramInspectionsLoading(false)
+    }
+  }
+
+  // Handle Telegram share
+  const handleTelegramShare = async () => {
+    if (!telegramListing) return
+    setTelegramSharing(true)
+    try {
+      const result = await api.shareListingToTelegram(telegramListing.id, telegramMessage || undefined)
+      if (result.success) {
+        toast.success('Listing shared to Telegram!')
+        setShowTelegramModal(false)
+        setTelegramMessage('')
+        setTelegramListing(null)
+      } else {
+        toast.error(result.message || 'Failed to share')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to share to Telegram')
+    } finally {
+      setTelegramSharing(false)
+    }
+  }
 
   // New listing form state
   const [newListing, setNewListing] = useState({
@@ -934,29 +1001,60 @@ const AdminAllListingsPage = () => {
                       {new Date(listing.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => navigate(`/admin/listing/${listing.id}`)}
+                          onClick={() => setOpenActionDropdown(openActionDropdown === listing.id ? null : listing.id)}
                           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="View & Edit"
                         >
-                          <Edit className="w-4 h-4 text-gray-600" />
+                          <MoreVertical className="w-4 h-4 text-gray-600" />
                         </button>
-                        <button
-                          onClick={() => window.open(`/mc/${listing.id}`, '_blank')}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="View Public Page"
-                        >
-                          <ExternalLink className="w-4 h-4 text-gray-600" />
-                        </button>
-                        {listing.status === 'pending' && (
-                          <button
-                            onClick={() => navigate(`/admin/review/${listing.id}`)}
-                            className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="Review"
-                          >
-                            <CheckCircle className="w-4 h-4 text-blue-600" />
-                          </button>
+                        {openActionDropdown === listing.id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                            <button
+                              onClick={() => {
+                                navigate(`/admin/listing/${listing.id}`)
+                                setOpenActionDropdown(null)
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Edit className="w-4 h-4" />
+                              View & Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                window.open(`/mc/${listing.id}`, '_blank')
+                                setOpenActionDropdown(null)
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              View Public Page
+                            </button>
+                            {listing.status === 'active' && (
+                              <button
+                                onClick={() => {
+                                  openTelegramModal(listing)
+                                  setOpenActionDropdown(null)
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                              >
+                                <Send className="w-4 h-4" />
+                                Share to Telegram
+                              </button>
+                            )}
+                            {listing.status === 'pending' && (
+                              <button
+                                onClick={() => {
+                                  navigate(`/admin/review/${listing.id}`)
+                                  setOpenActionDropdown(null)
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Review Listing
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -2205,6 +2303,122 @@ const AdminAllListingsPage = () => {
                     Cancel
                   </Button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Telegram Share Modal */}
+      <AnimatePresence>
+        {showTelegramModal && telegramListing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowTelegramModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Send className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">Share to Telegram</h2>
+                      <p className="text-sm text-gray-500">Post this listing to your channel</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowTelegramModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Listing Preview */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">
+                      MC# {telegramListing.mcNumber}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      ${(telegramListing.listingPrice || telegramListing.askingPrice).toLocaleString()}
+                    </span>
+                    {telegramInspectionsLoading ? (
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Loading...
+                      </span>
+                    ) : telegramInspections !== null && (
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
+                        {telegramInspections} inspections
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700">{telegramListing.legalName}</p>
+                  <p className="text-xs text-gray-500">{telegramListing.city}, {telegramListing.state}</p>
+                </div>
+
+                {/* Custom Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Custom Message (Optional)
+                  </label>
+                  <Textarea
+                    placeholder="Add a custom message..."
+                    value={telegramMessage}
+                    onChange={(e) => setTelegramMessage(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
+                {/* Preview */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="text-xs font-medium text-blue-700 mb-2 flex items-center gap-1">
+                    <Send className="w-3 h-3" /> Preview
+                  </div>
+                  <div className="text-xs text-gray-700 space-y-1">
+                    {telegramMessage && <div className="italic">{telegramMessage}</div>}
+                    <div className="font-semibold">🚛 {telegramListing.title || telegramListing.legalName}</div>
+                    <div>📋 MC# ***{telegramListing.mcNumber.slice(-3)}</div>
+                    <div>💰 Listing Price: ${(telegramListing.listingPrice || telegramListing.askingPrice).toLocaleString()}</div>
+                    {telegramInspections !== null && (
+                      <div>🔍 {telegramInspections} Inspections</div>
+                    )}
+                    {telegramListing.state && <div>📍 {telegramListing.state}</div>}
+                    <div className="text-blue-600">🔗 View Listing</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowTelegramModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleTelegramShare} disabled={telegramSharing}>
+                  {telegramSharing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sharing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Share
+                    </>
+                  )}
+                </Button>
               </div>
             </motion.div>
           </motion.div>

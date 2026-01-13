@@ -30,6 +30,7 @@ interface Listing {
   id: string
   mcNumber: string
   title: string
+  listingPrice?: number
   askingPrice: number
   state?: string
   yearsActive?: number
@@ -392,7 +393,7 @@ const AdminTelegramPage = () => {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1 text-gray-900 font-medium">
                             <DollarSign className="w-4 h-4 text-gray-400" />
-                            {listing.askingPrice.toLocaleString()}
+                            {(listing.listingPrice || listing.askingPrice).toLocaleString()}
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -517,7 +518,7 @@ const AdminTelegramPage = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="bg-secondary-100 text-secondary-700 px-1.5 py-0.5 rounded text-xs font-bold">MC# {selectedListing.mcNumber}</span>
-                      <span className="text-sm font-medium text-gray-900">${selectedListing.askingPrice.toLocaleString()}</span>
+                      <span className="text-sm font-medium text-gray-900">${(selectedListing.listingPrice || selectedListing.askingPrice).toLocaleString()}</span>
                     </div>
                     <p className="text-sm text-gray-700 truncate">{selectedListing.title}</p>
                   </div>
@@ -544,7 +545,7 @@ const AdminTelegramPage = () => {
                   {customMessage && <div className="italic">{customMessage}</div>}
                   <div className="font-semibold">🚛 {selectedListing.title}</div>
                   <div>📋 MC# ***{selectedListing.mcNumber.slice(-3)}</div>
-                  <div>💰 Listing Price: ${selectedListing.askingPrice.toLocaleString()}</div>
+                  <div>💰 Listing Price: ${(selectedListing.listingPrice || selectedListing.askingPrice).toLocaleString()}</div>
                   {selectedListing.state && <div>📍 {selectedListing.state}</div>}
                   <div className="text-blue-600">🔗 View Listing</div>
                 </div>

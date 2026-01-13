@@ -56,7 +56,7 @@ interface MenuCategory {
 type MenuStructure = (MenuItem | MenuCategory)[]
 
 const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
-  const { user, logout } = useAuth()
+  const { user, logout, isProfileComplete } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -388,14 +388,26 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             to="/profile"
             onClick={() => setSidebarOpen(false)}
             className={clsx(
-              'flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+              'flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative',
               isActivePath('/profile')
                 ? 'bg-black text-white'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
             )}
           >
-            <Settings className={clsx('h-5 w-5 flex-shrink-0', isActivePath('/profile') ? 'text-white' : 'text-gray-600')} />
-            {!isCollapsed && <span className="font-medium text-inherit">Settings</span>}
+            <div className="relative">
+              <Settings className={clsx('h-5 w-5 flex-shrink-0', isActivePath('/profile') ? 'text-white' : 'text-gray-600')} />
+              {!isProfileComplete && user?.role !== 'admin' && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </div>
+            {!isCollapsed && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-inherit">Settings</span>
+                {!isProfileComplete && user?.role !== 'admin' && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">!</span>
+                )}
+              </div>
+            )}
           </Link>
           <button
             onClick={handleLogout}

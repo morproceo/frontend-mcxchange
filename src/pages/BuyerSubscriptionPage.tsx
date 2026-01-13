@@ -18,12 +18,17 @@ import {
   AlertCircle,
   Loader2,
   Package,
-  ShoppingBag
+  ShoppingBag,
+  Mail,
+  X,
+  Send
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import Textarea from '../components/ui/Textarea'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
+import { toast } from 'react-hot-toast'
 import type { SubscriptionPlanConfig, CreditPack } from '../types'
 
 // Plan display configuration (styling only - prices come from API)
@@ -88,6 +93,11 @@ const BuyerSubscriptionPage = () => {
   const [creditPacks, setCreditPacks] = useState<CreditPack[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null)
+
+  // Contact modal state
+  const [showContactModal, setShowContactModal] = useState(false)
+  const [contactMessage, setContactMessage] = useState('')
+  const [contactSending, setContactSending] = useState(false)
 
   // Fetch plans and credit packs from API (using public endpoints)
   useEffect(() => {
@@ -266,25 +276,26 @@ const BuyerSubscriptionPage = () => {
     }
   }
 
-  const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing period.')) {
+  const handleContactSubmit = async () => {
+    if (!contactMessage.trim()) {
+      toast.error('Please enter a message')
       return
     }
 
-    setIsProcessing(true)
-    setError(null)
+    setContactSending(true)
 
     try {
-      await api.cancelSubscription()
-      setSuccessMessage('Subscription cancelled successfully. You will retain access until the end of your billing period.')
-      // Refresh subscription data
-      const response = await api.getSubscription()
-      setSubscription(response.data?.subscription || null)
+      // Send inquiry to admin using existing messaging system
+      await api.sendInquiryToAdmin(undefined, `[Subscription Inquiry]\n\nUser: ${user?.name} (${user?.email})\nPlan: ${subscription?.plan || 'None'}\n\nMessage:\n${contactMessage}`)
+
+      toast.success('Message sent! We\'ll get back to you soon.')
+      setShowContactModal(false)
+      setContactMessage('')
     } catch (err: any) {
-      console.error('Cancel error:', err)
-      setError(err.message || 'Failed to cancel subscription')
+      console.error('Contact error:', err)
+      toast.error(err.message || 'Failed to send message')
     } finally {
-      setIsProcessing(false)
+      setContactSending(false)
     }
   }
 
@@ -441,11 +452,11 @@ const BuyerSubscriptionPage = () => {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={handleCancelSubscription}
-                  loading={isProcessing}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => setShowContactModal(true)}
+                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
                 >
-                  Cancel Subscription
+                  <Mail className="w-4 h-4 mr-2" />
+                  Contact Us
                 </Button>
               </div>
             </Card>
@@ -823,6 +834,86 @@ const BuyerSubscriptionPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl max-w-md w-full"
+          >
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Contact Us</h2>
+                    <p className="text-sm text-gray-500">Questions about your subscription?</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowContactModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* User Info */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p><span className="font-medium">Name:</span> {user?.name}</p>
+                  <p><span className="font-medium">Email:</span> {user?.email}</p>
+                  {subscription && (
+                    <p><span className="font-medium">Current Plan:</span> {subscription.plan}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  How can we help?
+                </label>
+                <Textarea
+                  placeholder="Describe your question or concern..."
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  rows={4}
+                />
+              </div>
+
+              <p className="text-xs text-gray-500">
+                We'll respond to your inquiry via email within 1-2 business days.
+              </p>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowContactModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleContactSubmit} disabled={contactSending || !contactMessage.trim()}>
+                {contactSending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Message
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

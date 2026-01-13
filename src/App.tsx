@@ -58,6 +58,8 @@ import BuyerTransactionsPage from './pages/BuyerTransactionsPage'
 import SellerTransactionsPage from './pages/SellerTransactionsPage'
 import TransactionRoomPage from './pages/TransactionRoomPage'
 import DisputePage from './pages/DisputePage'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
 
 function App() {
   return (
@@ -70,6 +72,8 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="privacy" element={<PrivacyPage />} />
             <Route path="admin-register" element={<AdminRegisterPage />} />
             <Route path="seller-verification" element={<SellerVerificationPage />} />
             <Route path="verify-email" element={<VerifyEmailPage />} />
