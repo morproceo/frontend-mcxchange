@@ -146,8 +146,7 @@ const BuyerMessagesPage = () => {
     const term = searchTerm.toLowerCase()
     return (
       conv.participantName.toLowerCase().includes(term) ||
-      (conv.listingTitle || '').toLowerCase().includes(term) ||
-      (conv.mcNumber || '').includes(searchTerm)
+      (conv.listingTitle || '').toLowerCase().includes(term)
     )
   })
 
@@ -226,7 +225,7 @@ const BuyerMessagesPage = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mb-2">
-                        {conv.listingTitle || (conv.mcNumber ? `MC #${conv.mcNumber}` : 'MC Inquiry')}
+                        {conv.listingTitle || 'MC Authority Inquiry'}
                       </div>
                       <div className="text-xs text-gray-600 line-clamp-1">{conv.lastMessage}</div>
                       <div className="text-xs text-gray-400 mt-1">
@@ -252,10 +251,7 @@ const BuyerMessagesPage = () => {
                         {selectedConversationData?.participantName || 'Support Team'}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {selectedConversationData?.listingTitle ||
-                          (selectedConversationData?.mcNumber
-                            ? `MC #${selectedConversationData.mcNumber}`
-                            : 'MC Inquiry')}
+                        {selectedConversationData?.listingTitle || 'MC Authority Inquiry'}
                       </div>
                     </div>
                   </div>

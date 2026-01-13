@@ -30,7 +30,11 @@ import {
   History,
   FileText,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Coins,
+  Plus,
+  Minus,
+  Loader2
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -92,6 +96,11 @@ const AdminUsersPage = () => {
     pending: 0,
     verified: 0
   })
+
+  // Credits adjustment state
+  const [creditAmount, setCreditAmount] = useState<string>('')
+  const [creditReason, setCreditReason] = useState<string>('')
+  const [creditAdjusting, setCreditAdjusting] = useState(false)
 
   // Fetch users from API
   const fetchUsers = async () => {
@@ -230,11 +239,54 @@ const AdminUsersPage = () => {
   const openUserDetail = async (user: UserData) => {
     setSelectedUser(user)
     setShowDetailModal(true)
+    setCreditAmount('')
+    setCreditReason('')
     try {
       const details = await api.getAdminUserDetails(user.id)
       setUserDetails(details)
     } catch (err) {
       console.error('Failed to fetch user details:', err)
+    }
+  }
+
+  const handleAdjustCredits = async (isAdding: boolean) => {
+    if (!userDetails || !creditAmount || !creditReason.trim()) return
+
+    const amount = parseInt(creditAmount, 10)
+    if (isNaN(amount) || amount <= 0) return
+
+    const adjustmentAmount = isAdding ? amount : -amount
+    const userId = userDetails.data?.id || userDetails.id
+
+    try {
+      setCreditAdjusting(true)
+      const response = await api.adjustUserCredits(userId, adjustmentAmount, creditReason.trim()) as any
+      const result = response.data || response
+
+      // Update userDetails with new credits
+      setUserDetails((prev: any) => {
+        if (!prev) return prev
+        const data = prev.data || prev
+        return {
+          ...prev,
+          data: {
+            ...data,
+            totalCredits: result.newTotal,
+            usedCredits: result.usedCredits,
+          },
+          totalCredits: result.newTotal,
+          usedCredits: result.usedCredits,
+        }
+      })
+
+      // Clear inputs
+      setCreditAmount('')
+      setCreditReason('')
+    } catch (err: any) {
+      console.error('Failed to adjust credits:', err)
+      alert(err.message || 'Failed to adjust credits')
+    } finally {
+      setCreditAdjusting(false)
     }
   }
 
@@ -828,6 +880,85 @@ const AdminUsersPage = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Credits Management */}
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-amber-600" />
+                    Credits Management
+                  </h3>
+
+                  {/* Current Credits Display */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center p-3 bg-white rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900">
+                        {userDetails?.data?.totalCredits ?? userDetails?.totalCredits ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-500">Total Credits</p>
+                    </div>
+                    <div className="text-center p-3 bg-white rounded-lg">
+                      <p className="text-2xl font-bold text-emerald-600">
+                        {(userDetails?.data?.totalCredits ?? userDetails?.totalCredits ?? 0) -
+                         (userDetails?.data?.usedCredits ?? userDetails?.usedCredits ?? 0)}
+                      </p>
+                      <p className="text-xs text-gray-500">Available</p>
+                    </div>
+                  </div>
+
+                  {/* Quick Adjust */}
+                  <div className="bg-white rounded-lg p-4 border border-amber-100">
+                    <div className="text-xs font-medium text-gray-500 mb-2">Quick Adjust Credits</div>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="number"
+                        placeholder="Amount"
+                        value={creditAmount}
+                        onChange={(e) => setCreditAmount(e.target.value)}
+                        min="1"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Reason (required)"
+                      value={creditReason}
+                      onChange={(e) => setCreditReason(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 mb-2"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAdjustCredits(true)}
+                        disabled={!creditAmount || !creditReason.trim() || creditAdjusting}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {creditAdjusting ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Add Credits
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleAdjustCredits(false)}
+                        disabled={!creditAmount || !creditReason.trim() || creditAdjusting ||
+                          ((userDetails?.data?.totalCredits ?? userDetails?.totalCredits ?? 0) -
+                           (userDetails?.data?.usedCredits ?? userDetails?.usedCredits ?? 0)) === 0}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {creditAdjusting ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Minus className="w-4 h-4" />
+                            Remove Credits
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">

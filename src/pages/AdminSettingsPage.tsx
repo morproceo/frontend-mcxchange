@@ -28,6 +28,15 @@ import Input from '../components/ui/Input'
 import { api } from '../services/api'
 import type { PricingConfig, SubscriptionPlanConfig, CreditPack } from '../types'
 
+interface NotificationSettings {
+  admin_notification_emails: string;
+  notify_new_users: boolean;
+  notify_new_inquiries: boolean;
+  notify_new_transactions: boolean;
+  notify_disputes: boolean;
+  notify_consultations: boolean;
+}
+
 const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'notifications' | 'security' | 'pricing'>('general')
   const [stripeConnected, setStripeConnected] = useState(true)
@@ -40,12 +49,85 @@ const AdminSettingsPage = () => {
   const [pricingError, setPricingError] = useState<string | null>(null)
   const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null)
 
+  // Notification settings state
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    admin_notification_emails: '',
+    notify_new_users: true,
+    notify_new_inquiries: true,
+    notify_new_transactions: true,
+    notify_disputes: true,
+    notify_consultations: true,
+  })
+  const [notificationLoading, setNotificationLoading] = useState(false)
+  const [notificationSaving, setNotificationSaving] = useState(false)
+  const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [notificationSuccess, setNotificationSuccess] = useState<string | null>(null)
+
   // Load pricing config when pricing tab is active
   useEffect(() => {
     if (activeTab === 'pricing' && !pricingConfig) {
       loadPricingConfig()
     }
   }, [activeTab])
+
+  // Load notification settings when notifications tab is active
+  useEffect(() => {
+    if (activeTab === 'notifications') {
+      loadNotificationSettings()
+    }
+  }, [activeTab])
+
+  const loadNotificationSettings = async () => {
+    setNotificationLoading(true)
+    setNotificationError(null)
+    try {
+      const response = await api.getNotificationSettings()
+      if (response.success && response.data) {
+        setNotificationSettings({
+          admin_notification_emails: response.data.admin_notification_emails || '',
+          notify_new_users: response.data.notify_new_users !== 'false',
+          notify_new_inquiries: response.data.notify_new_inquiries !== 'false',
+          notify_new_transactions: response.data.notify_new_transactions !== 'false',
+          notify_disputes: response.data.notify_disputes !== 'false',
+          notify_consultations: response.data.notify_consultations !== 'false',
+        })
+      }
+    } catch (err: any) {
+      setNotificationError(err.message || 'Failed to load notification settings')
+    } finally {
+      setNotificationLoading(false)
+    }
+  }
+
+  const saveNotificationSettings = async () => {
+    setNotificationSaving(true)
+    setNotificationError(null)
+    setNotificationSuccess(null)
+    try {
+      const settingsToSave = {
+        admin_notification_emails: notificationSettings.admin_notification_emails,
+        notify_new_users: notificationSettings.notify_new_users.toString(),
+        notify_new_inquiries: notificationSettings.notify_new_inquiries.toString(),
+        notify_new_transactions: notificationSettings.notify_new_transactions.toString(),
+        notify_disputes: notificationSettings.notify_disputes.toString(),
+        notify_consultations: notificationSettings.notify_consultations.toString(),
+      }
+      await api.updateNotificationSettings(settingsToSave)
+      setNotificationSuccess('Notification settings saved successfully!')
+      setTimeout(() => setNotificationSuccess(null), 3000)
+    } catch (err: any) {
+      setNotificationError(err.message || 'Failed to save notification settings')
+    } finally {
+      setNotificationSaving(false)
+    }
+  }
+
+  const toggleNotificationSetting = (key: keyof Omit<NotificationSettings, 'admin_notification_emails'>) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
 
   const loadPricingConfig = async () => {
     setPricingLoading(true)
@@ -676,37 +758,111 @@ const AdminSettingsPage = () => {
         {/* Notifications Tab */}
         {activeTab === 'notifications' && (
           <div className="space-y-6">
-            <Card>
-              <h2 className="text-xl font-bold mb-4">Email Notifications</h2>
-
-              <div className="space-y-4">
-                {[
-                  { label: 'New User Registration', description: 'Get notified when a new user signs up', enabled: true },
-                  { label: 'New Listing Submitted', description: 'Get notified when a seller submits a new listing', enabled: true },
-                  { label: 'Payment Received', description: 'Get notified for all successful payments', enabled: true },
-                  { label: 'User Reports', description: 'Get notified when a user or listing is reported', enabled: true },
-                  { label: 'Premium Requests', description: 'Get notified for premium listing contact requests', enabled: true },
-                  { label: 'Daily Summary', description: 'Receive a daily summary of platform activity', enabled: false },
-                  { label: 'Weekly Report', description: 'Receive weekly analytics and performance report', enabled: true }
-                ].map((notification, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium">{notification.label}</div>
-                      <div className="text-sm text-gray-500">{notification.description}</div>
-                    </div>
-                    <button
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        notification.enabled ? 'bg-primary-500' : 'bg-gray-200'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                        notification.enabled ? 'left-7' : 'left-1'
-                      }`} />
-                    </button>
-                  </div>
-                ))}
+            {notificationError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {notificationError}
               </div>
-            </Card>
+            )}
+
+            {notificationSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                {notificationSuccess}
+              </div>
+            )}
+
+            {notificationLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
+              </div>
+            ) : (
+              <>
+                {/* Admin Email Configuration */}
+                <Card>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-xl font-bold">Admin Notification Emails</h2>
+                      <p className="text-sm text-gray-500">Configure email addresses that will receive admin notifications</p>
+                    </div>
+                    <Button onClick={saveNotificationSettings} disabled={notificationSaving}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {notificationSaving ? 'Saving...' : 'Save Settings'}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email Addresses</label>
+                      <Input
+                        type="text"
+                        value={notificationSettings.admin_notification_emails}
+                        onChange={(e) => setNotificationSettings(prev => ({
+                          ...prev,
+                          admin_notification_emails: e.target.value
+                        }))}
+                        placeholder="admin@example.com, support@example.com"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Enter multiple email addresses separated by commas. All admin notifications will be sent to these addresses.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Admin Notification Toggles */}
+                <Card>
+                  <h2 className="text-xl font-bold mb-4">Admin Notification Types</h2>
+                  <p className="text-sm text-gray-500 mb-4">Choose which events trigger email notifications to admin addresses</p>
+
+                  <div className="space-y-4">
+                    {[
+                      {
+                        key: 'notify_new_users' as const,
+                        label: 'New User Registration',
+                        description: 'Get notified when a new user (buyer or seller) registers on the platform'
+                      },
+                      {
+                        key: 'notify_new_inquiries' as const,
+                        label: 'New Inquiries & Messages',
+                        description: 'Get notified when users send inquiries or contact messages'
+                      },
+                      {
+                        key: 'notify_new_transactions' as const,
+                        label: 'Transaction Updates',
+                        description: 'Get notified when transactions are created or change status'
+                      },
+                      {
+                        key: 'notify_disputes' as const,
+                        label: 'Account Disputes & Blocks',
+                        description: 'Get notified when users are blocked or submit dispute requests'
+                      },
+                      {
+                        key: 'notify_consultations' as const,
+                        label: 'Consultation Requests',
+                        description: 'Get notified when users request a consultation with a representative'
+                      },
+                    ].map((notification) => (
+                      <div key={notification.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">{notification.label}</div>
+                          <div className="text-sm text-gray-500">{notification.description}</div>
+                        </div>
+                        <button
+                          onClick={() => toggleNotificationSetting(notification.key)}
+                          className={`relative w-12 h-6 rounded-full transition-colors ${
+                            notificationSettings[notification.key] ? 'bg-primary-500' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                            notificationSettings[notification.key] ? 'left-7' : 'left-1'
+                          }`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </>
+            )}
           </div>
         )}
 

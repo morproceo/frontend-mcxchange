@@ -823,7 +823,7 @@ const MCDetailPage = () => {
                         )}
                       </div>
 
-                      {/* SMS Data - Inspections & Crashes */}
+                      {/* Inspections & Crashes - Data from FMCSA Carrier Response */}
                       <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                           <ClipboardCheck className="w-4 h-4 text-orange-500" />
@@ -833,19 +833,21 @@ const MCDetailPage = () => {
                         {/* Inspection Stats */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                           <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
-                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalInspections ?? 0}</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {(fmcsaCarrier?.driverInsp ?? 0) + (fmcsaCarrier?.vehicleInsp ?? 0) + (fmcsaCarrier?.hazmatInsp ?? 0)}
+                            </p>
                             <p className="text-xs text-gray-500">Total Inspections</p>
                           </div>
                           <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
-                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalDriverInspections ?? 0}</p>
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaCarrier?.driverInsp ?? 0}</p>
                             <p className="text-xs text-gray-500">Driver Inspections</p>
                           </div>
                           <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
-                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalVehicleInspections ?? 0}</p>
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaCarrier?.vehicleInsp ?? 0}</p>
                             <p className="text-xs text-gray-500">Vehicle Inspections</p>
                           </div>
                           <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
-                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalHazmatInspections ?? 0}</p>
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaCarrier?.hazmatInsp ?? 0}</p>
                             <p className="text-xs text-gray-500">Hazmat Inspections</p>
                           </div>
                         </div>
@@ -856,43 +858,43 @@ const MCDetailPage = () => {
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Driver OOS Rate</span>
                               <span className={`font-bold ${
-                                (fmcsaSmsData?.driverOosRate ?? 0) > 10 ? 'text-red-600' :
-                                (fmcsaSmsData?.driverOosRate ?? 0) > 5 ? 'text-yellow-600' : 'text-green-600'
+                                (fmcsaCarrier?.driverOosRate ?? 0) > 10 ? 'text-red-600' :
+                                (fmcsaCarrier?.driverOosRate ?? 0) > 5 ? 'text-yellow-600' : 'text-green-600'
                               }`}>
-                                {(fmcsaSmsData?.driverOosRate ?? 0).toFixed(1)}%
+                                {(fmcsaCarrier?.driverOosRate ?? 0).toFixed(1)}%
                               </span>
                             </div>
                             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
-                                  (fmcsaSmsData?.driverOosRate ?? 0) > 10 ? 'bg-red-500' :
-                                  (fmcsaSmsData?.driverOosRate ?? 0) > 5 ? 'bg-yellow-500' : 'bg-green-500'
+                                  (fmcsaCarrier?.driverOosRate ?? 0) > 10 ? 'bg-red-500' :
+                                  (fmcsaCarrier?.driverOosRate ?? 0) > 5 ? 'bg-yellow-500' : 'bg-green-500'
                                 }`}
-                                style={{ width: `${Math.min(fmcsaSmsData?.driverOosRate ?? 0, 100)}%` }}
+                                style={{ width: `${Math.min(fmcsaCarrier?.driverOosRate ?? 0, 100)}%` }}
                               />
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">{fmcsaSmsData?.driverOosInspections ?? 0} OOS inspections</p>
+                            <p className="text-xs text-gray-400 mt-1">{fmcsaCarrier?.driverOosInsp ?? 0} OOS inspections</p>
                           </div>
                           <div className="p-3 bg-white rounded-lg border border-gray-100">
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Vehicle OOS Rate</span>
                               <span className={`font-bold ${
-                                (fmcsaSmsData?.vehicleOosRate ?? 0) > 25 ? 'text-red-600' :
-                                (fmcsaSmsData?.vehicleOosRate ?? 0) > 15 ? 'text-yellow-600' : 'text-green-600'
+                                (fmcsaCarrier?.vehicleOosRate ?? 0) > 25 ? 'text-red-600' :
+                                (fmcsaCarrier?.vehicleOosRate ?? 0) > 15 ? 'text-yellow-600' : 'text-green-600'
                               }`}>
-                                {(fmcsaSmsData?.vehicleOosRate ?? 0).toFixed(1)}%
+                                {(fmcsaCarrier?.vehicleOosRate ?? 0).toFixed(1)}%
                               </span>
                             </div>
                             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
-                                  (fmcsaSmsData?.vehicleOosRate ?? 0) > 25 ? 'bg-red-500' :
-                                  (fmcsaSmsData?.vehicleOosRate ?? 0) > 15 ? 'bg-yellow-500' : 'bg-green-500'
+                                  (fmcsaCarrier?.vehicleOosRate ?? 0) > 25 ? 'bg-red-500' :
+                                  (fmcsaCarrier?.vehicleOosRate ?? 0) > 15 ? 'bg-yellow-500' : 'bg-green-500'
                                 }`}
-                                style={{ width: `${Math.min(fmcsaSmsData?.vehicleOosRate ?? 0, 100)}%` }}
+                                style={{ width: `${Math.min(fmcsaCarrier?.vehicleOosRate ?? 0, 100)}%` }}
                               />
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">{fmcsaSmsData?.vehicleOosInspections ?? 0} OOS inspections</p>
+                            <p className="text-xs text-gray-400 mt-1">{fmcsaCarrier?.vehicleOosInsp ?? 0} OOS inspections</p>
                           </div>
                         </div>
 
@@ -901,26 +903,26 @@ const MCDetailPage = () => {
                           <p className="text-sm font-medium text-gray-700 mb-2">Crash History (24 months)</p>
                           <div className="grid grid-cols-4 gap-2 text-center">
                             <div>
-                              <p className={`text-xl font-bold ${(fmcsaSmsData?.totalCrashes ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                {fmcsaSmsData?.totalCrashes ?? 0}
+                              <p className={`text-xl font-bold ${(fmcsaCarrier?.crashTotal ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {fmcsaCarrier?.crashTotal ?? 0}
                               </p>
                               <p className="text-xs text-gray-500">Total</p>
                             </div>
                             <div>
-                              <p className={`text-xl font-bold ${(fmcsaSmsData?.fatalCrashes ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {fmcsaSmsData?.fatalCrashes ?? 0}
+                              <p className={`text-xl font-bold ${(fmcsaCarrier?.fatalCrash ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {fmcsaCarrier?.fatalCrash ?? 0}
                               </p>
                               <p className="text-xs text-gray-500">Fatal</p>
                             </div>
                             <div>
-                              <p className={`text-xl font-bold ${(fmcsaSmsData?.injuryCrashes ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                {fmcsaSmsData?.injuryCrashes ?? 0}
+                              <p className={`text-xl font-bold ${(fmcsaCarrier?.injuryCrash ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {fmcsaCarrier?.injuryCrash ?? 0}
                               </p>
                               <p className="text-xs text-gray-500">Injury</p>
                             </div>
                             <div>
                               <p className="text-xl font-bold text-gray-700">
-                                {fmcsaSmsData?.towCrashes ?? 0}
+                                {fmcsaCarrier?.towCrash ?? 0}
                               </p>
                               <p className="text-xs text-gray-500">Tow-Away</p>
                             </div>
@@ -928,26 +930,26 @@ const MCDetailPage = () => {
                         </div>
                       </div>
 
-                      {/* BASIC Scores */}
+                      {/* BASIC Scores - From SMS API endpoint */}
                       {fmcsaSmsData?.basics && fmcsaSmsData.basics.length > 0 && (
                         <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                           <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             <AlertTriangle className="w-4 h-4 text-amber-500" />
                             BASIC Scores (Safety Measurement System)
                           </h3>
-                          <div className="space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {fmcsaSmsData.basics.map((basic, idx) => (
                               <div key={idx} className="p-3 bg-white rounded-lg border border-gray-100">
                                 <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-800">{basic.basicName}</span>
-                                    {basic.exceedsThreshold && (
-                                      <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-medium">
-                                        Alert
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className={`text-lg font-bold ${
+                                  <span className="text-sm font-medium text-gray-700 truncate">{basic.basicName}</span>
+                                  {basic.exceedsThreshold && (
+                                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded font-medium ml-1">
+                                      Alert
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-end gap-2">
+                                  <span className={`text-2xl font-bold ${
                                     basic.percentile > 75 ? 'text-red-600' :
                                     basic.percentile > 50 ? 'text-orange-600' :
                                     basic.percentile > 25 ? 'text-yellow-600' : 'text-green-600'
@@ -955,7 +957,7 @@ const MCDetailPage = () => {
                                     {basic.percentile.toFixed(0)}%
                                   </span>
                                 </div>
-                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
                                   <div
                                     className={`h-full rounded-full ${
                                       basic.percentile > 75 ? 'bg-red-500' :
@@ -965,9 +967,8 @@ const MCDetailPage = () => {
                                     style={{ width: `${Math.min(basic.percentile, 100)}%` }}
                                   />
                                 </div>
-                                <div className="flex justify-between text-xs text-gray-500">
-                                  <span>{basic.totalInspections} inspections • {basic.totalViolations} violations</span>
-                                  <span>Threshold: {basic.thresholdPercent}%</span>
+                                <div className="mt-2 text-xs text-gray-500">
+                                  <span>{basic.totalInspections} insp • {basic.totalViolations} viol</span>
                                 </div>
                               </div>
                             ))}
@@ -1566,7 +1567,7 @@ const MCDetailPage = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold">Premium MC Request</h3>
-                        <p className="text-sm text-gray-500">MC #{listing?.mcNumber}</p>
+                        <p className="text-sm text-gray-500">MC Authority Inquiry</p>
                       </div>
                     </div>
                     <button
@@ -1671,7 +1672,7 @@ const MCDetailPage = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">Contact Us</h3>
-                        <p className="text-sm text-gray-500">MC #{listing?.mcNumber}</p>
+                        <p className="text-sm text-gray-500">MC Authority Inquiry</p>
                       </div>
                     </div>
                     <button

@@ -511,6 +511,29 @@ export interface FMCSACarrierData {
   cargoOnFile: number
   bondOnFile: number
   cargoTypes: string[]
+  // Inspection Data (from FMCSA carrier endpoint)
+  driverInsp: number
+  driverOosInsp: number
+  driverOosRate: number
+  vehicleInsp: number
+  vehicleOosInsp: number
+  vehicleOosRate: number
+  hazmatInsp: number
+  hazmatOosInsp: number
+  hazmatOosRate: number
+  // Crash Data
+  crashTotal: number
+  fatalCrash: number
+  injuryCrash: number
+  towCrash: number
+  // BASIC Scores
+  unsafeDrivingBasic: number
+  hoursOfServiceBasic: number
+  driverFitnessBasic: number
+  controlledSubstancesBasic: number
+  vehicleMaintenanceBasic: number
+  hazmatBasic: number
+  crashIndicatorBasic: number
 }
 
 export interface FMCSAAuthorityHistory {
@@ -572,4 +595,58 @@ export interface FMCSASMSData {
   safetyRating: string
   safetyRatingDate?: string
   snapshotDate?: string
+}
+
+// ============================================
+// Stripe Transaction Types
+// ============================================
+
+export interface StripeTransaction {
+  id: string
+  type: 'payment_intent' | 'checkout_session' | 'charge'
+  amount: number
+  amountFormatted: string
+  currency: string
+  status: string
+  created: number
+  createdDate: string
+  description: string | null
+  customer: {
+    id: string | null
+    email: string | null
+    name: string | null
+    phone: string | null
+  }
+  billing: {
+    name: string | null
+    email: string | null
+    phone: string | null
+    address: {
+      line1: string | null
+      line2: string | null
+      city: string | null
+      state: string | null
+      postalCode: string | null
+      country: string | null
+    } | null
+  }
+  paymentMethod: {
+    type: string | null
+    brand: string | null
+    last4: string | null
+    expMonth: number | null
+    expYear: number | null
+    cardholderName: string | null
+  } | null
+  // User verification - matches cardholder against platform user
+  matchedUser: {
+    id: string
+    name: string
+    email: string
+  } | null
+  nameMatchStatus: 'match' | 'partial' | 'mismatch' | 'unknown'
+  metadata: Record<string, string>
+  receiptUrl: string | null
+  refunded: boolean
+  refundedAmount: number
 }

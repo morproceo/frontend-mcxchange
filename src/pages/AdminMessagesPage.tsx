@@ -11,7 +11,15 @@ import {
   Mail,
   ExternalLink,
   ChevronDown,
-  Hash
+  Hash,
+  User,
+  CreditCard,
+  Coins,
+  XCircle,
+  Loader2,
+  CheckCheck,
+  Plus,
+  Minus
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Card from '../components/ui/Card'
@@ -44,6 +52,8 @@ interface Conversation {
   status: 'new' | 'in-progress' | 'responded' | 'closed'
   userEmail?: string
   userPhone?: string
+  hasActiveSubscription?: boolean
+  hasCredits?: boolean
 }
 
 interface Message {
@@ -56,6 +66,21 @@ interface Message {
     name: string
     avatar?: string | null
   }
+}
+
+interface UserQuickInfo {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  totalCredits: number
+  usedCredits: number
+  subscription?: {
+    id: string
+    plan: string
+    status: string
+    currentPeriodEnd?: string
+  } | null
 }
 
 const statusConfig = {
@@ -84,6 +109,16 @@ const AdminMessagesPage = () => {
   const [userResults, setUserResults] = useState<UserSummary[]>([])
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null)
   const [composeMessage, setComposeMessage] = useState('')
+
+  // Quick user info popup state
+  const [showUserQuickInfo, setShowUserQuickInfo] = useState(false)
+  const [userQuickInfo, setUserQuickInfo] = useState<UserQuickInfo | null>(null)
+  const [userQuickInfoLoading, setUserQuickInfoLoading] = useState(false)
+
+  // Credits adjustment state
+  const [creditAmount, setCreditAmount] = useState<string>('')
+  const [creditReason, setCreditReason] = useState<string>('')
+  const [creditAdjusting, setCreditAdjusting] = useState(false)
 
   useEffect(() => {
     const loadConversations = async () => {
@@ -149,6 +184,10 @@ const AdminMessagesPage = () => {
 
         const userDetailsResponse = await api.getAdminUserDetails(selectedConversationId)
         const userDetails = userDetailsResponse?.data || {}
+        const hasActiveSubscription = userDetails?.subscription?.status === 'ACTIVE'
+        const availableCredits = (userDetails?.totalCredits || 0) - (userDetails?.usedCredits || 0)
+        const hasCredits = availableCredits > 0
+
         setConversations((prev) =>
           prev.map((conv) =>
             conv.participantId === selectedConversationId
@@ -157,6 +196,8 @@ const AdminMessagesPage = () => {
                   userEmail: userDetails?.email,
                   userPhone: userDetails?.phone,
                   participantName: userDetails?.name || conv.participantName,
+                  hasActiveSubscription,
+                  hasCredits,
                 }
               : conv
           )
@@ -310,6 +351,78 @@ const AdminMessagesPage = () => {
     setShowStatusDropdown(null)
   }
 
+  const handleShowUserQuickInfo = async (userId: string) => {
+    try {
+      setShowUserQuickInfo(true)
+      setUserQuickInfoLoading(true)
+      setUserQuickInfo(null)
+      setCreditAmount('')
+      setCreditReason('')
+
+      const response = await api.getAdminUserDetails(userId)
+      const userData = response.data || response
+
+      setUserQuickInfo({
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        totalCredits: userData.totalCredits || 0,
+        usedCredits: userData.usedCredits || 0,
+        subscription: userData.subscription ? {
+          id: userData.subscription.id,
+          plan: userData.subscription.plan,
+          status: userData.subscription.status,
+          currentPeriodEnd: userData.subscription.currentPeriodEnd,
+        } : null,
+      })
+    } catch (err: any) {
+      console.error('Failed to load user info:', err)
+    } finally {
+      setUserQuickInfoLoading(false)
+    }
+  }
+
+  const handleAdjustCredits = async (isAdding: boolean) => {
+    if (!userQuickInfo || !creditAmount || !creditReason.trim()) return
+
+    const amount = parseInt(creditAmount, 10)
+    if (isNaN(amount) || amount <= 0) return
+
+    const adjustmentAmount = isAdding ? amount : -amount
+
+    try {
+      setCreditAdjusting(true)
+      const response = await api.adjustUserCredits(userQuickInfo.id, adjustmentAmount, creditReason.trim()) as any
+      const result = response.data || response
+
+      // Update local state with new credits
+      setUserQuickInfo({
+        ...userQuickInfo,
+        totalCredits: result.newTotal,
+        usedCredits: result.usedCredits,
+      })
+
+      // Update conversation state too
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.participantId === userQuickInfo.id
+            ? { ...conv, hasCredits: result.availableCredits > 0 }
+            : conv
+        )
+      )
+
+      // Clear inputs
+      setCreditAmount('')
+      setCreditReason('')
+    } catch (err: any) {
+      console.error('Failed to adjust credits:', err)
+      alert(err.message || 'Failed to adjust credits')
+    } finally {
+      setCreditAdjusting(false)
+    }
+  }
+
   const stats = {
     total: conversations.length,
     new: conversations.filter(i => i.status === 'new').length,
@@ -449,7 +562,20 @@ void statusConfig[conversation.status].icon
                           <span className="text-xs font-bold text-white">{conversation.participantName.charAt(0)}</span>
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900 text-sm">{conversation.participantName}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-gray-900 text-sm">{conversation.participantName}</span>
+                            {conversation.hasActiveSubscription !== undefined && (
+                              conversation.hasActiveSubscription || conversation.hasCredits ? (
+                                <span title="Active subscription or has credits">
+                                  <CheckCheck className="w-4 h-4 text-emerald-500" />
+                                </span>
+                              ) : (
+                                <span title="No active subscription, no credits">
+                                  <XCircle className="w-3.5 h-3.5 text-red-400" />
+                                </span>
+                              )
+                            )}
+                          </div>
                           <div className="text-xs text-gray-500">
                             {conversation.mcNumber ? `MC #${conversation.mcNumber}` : 'MC Inquiry'}
                           </div>
@@ -488,7 +614,22 @@ void statusConfig[conversation.status].icon
                       <span className="text-lg font-bold text-white">{selectedConversation.participantName.charAt(0)}</span>
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">{selectedConversation.participantName}</h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-gray-900">{selectedConversation.participantName}</h2>
+                        {selectedConversation.hasActiveSubscription !== undefined && (
+                          selectedConversation.hasActiveSubscription || selectedConversation.hasCredits ? (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                              <CheckCheck className="w-3.5 h-3.5" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">
+                              <XCircle className="w-3.5 h-3.5" />
+                              No Sub/Credits
+                            </span>
+                          )
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Hash className="w-3 h-3" />
@@ -560,6 +701,14 @@ void statusConfig[conversation.status].icon
                       View Listing
                     </a>
                   )}
+                  {/* Quick User Info Button */}
+                  <button
+                    onClick={() => handleShowUserQuickInfo(selectedConversation.participantId)}
+                    className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 transition-colors bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg"
+                  >
+                    <User className="w-4 h-4" />
+                    User Info
+                  </button>
                 </div>
               </div>
 
@@ -710,6 +859,208 @@ void statusConfig[conversation.status].icon
                     Send Message
                   </Button>
                 </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* User Quick Info Popup */}
+      {showUserQuickInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowUserQuickInfo(false)}
+        >
+          <div
+            className="w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 -m-6 mb-6 p-6 border-b border-emerald-500/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">User Info</h3>
+                    <p className="text-sm text-gray-500">Credits & Subscription Status</p>
+                  </div>
+                  <button
+                    onClick={() => setShowUserQuickInfo(false)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <span className="text-gray-500 text-lg">×</span>
+                  </button>
+                </div>
+              </div>
+
+              {userQuickInfoLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                </div>
+              ) : userQuickInfo ? (
+                <div className="space-y-4">
+                  {/* User Details */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                        <span className="text-sm font-bold text-white">{userQuickInfo.name.charAt(0)}</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">{userQuickInfo.name}</div>
+                        <div className="text-sm text-gray-500">{userQuickInfo.email}</div>
+                      </div>
+                    </div>
+                    {userQuickInfo.phone && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone className="w-4 h-4" />
+                        {userQuickInfo.phone}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Credits */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Coins className="w-5 h-5 text-amber-500" />
+                      <span className="font-semibold text-gray-900">Credits</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900">{userQuickInfo.totalCredits}</div>
+                        <div className="text-xs text-gray-500">Total Credits</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-emerald-600">{userQuickInfo.totalCredits - userQuickInfo.usedCredits}</div>
+                        <div className="text-xs text-gray-500">Available</div>
+                      </div>
+                    </div>
+
+                    {/* Quick Credit Adjustment */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <div className="text-xs font-medium text-gray-500 mb-2">Quick Adjust Credits</div>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="number"
+                          placeholder="Amount"
+                          value={creditAmount}
+                          onChange={(e) => setCreditAmount(e.target.value)}
+                          min="1"
+                          className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Reason (required)"
+                        value={creditReason}
+                        onChange={(e) => setCreditReason(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 mb-2"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAdjustCredits(true)}
+                          disabled={!creditAmount || !creditReason.trim() || creditAdjusting}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {creditAdjusting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Add
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleAdjustCredits(false)}
+                          disabled={!creditAmount || !creditReason.trim() || creditAdjusting || (userQuickInfo.totalCredits - userQuickInfo.usedCredits) === 0}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {creditAdjusting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Minus className="w-4 h-4" />
+                              Remove
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {userQuickInfo.totalCredits === 0 && userQuickInfo.usedCredits === 0 && (
+                      <div className="mt-3 flex items-center gap-2 text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
+                        <XCircle className="w-4 h-4" />
+                        No credits available
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Subscription */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CreditCard className="w-5 h-5 text-indigo-500" />
+                      <span className="font-semibold text-gray-900">Subscription</span>
+                    </div>
+                    {userQuickInfo.subscription ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Plan</span>
+                          <span className="font-semibold text-gray-900 capitalize">{userQuickInfo.subscription.plan}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Status</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            userQuickInfo.subscription.status === 'ACTIVE'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {userQuickInfo.subscription.status}
+                          </span>
+                        </div>
+                        {userQuickInfo.subscription.currentPeriodEnd && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Renews</span>
+                            <span className="text-sm text-gray-900">
+                              {new Date(userQuickInfo.subscription.currentPeriodEnd).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
+                        <XCircle className="w-4 h-4" />
+                        No active subscription
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary Alert */}
+                  {!userQuickInfo.subscription && (userQuickInfo.totalCredits - userQuickInfo.usedCredits) === 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-red-700">No Active Subscription & No Credits</div>
+                          <div className="text-sm text-red-600 mt-1">
+                            This user cannot unlock listings or make purchases without credits or an active subscription.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Failed to load user information
+                </div>
+              )}
+
+              <div className="mt-6">
+                <Button
+                  fullWidth
+                  variant="secondary"
+                  onClick={() => setShowUserQuickInfo(false)}
+                >
+                  Close
+                </Button>
               </div>
             </Card>
           </div>

@@ -48,6 +48,7 @@ import AdminMessagesPage from './pages/AdminMessagesPage'
 import AdminOffersPage from './pages/AdminOffersPage'
 import AdminActiveClosingsPage from './pages/AdminActiveClosingsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminDisputesPage from './pages/AdminDisputesPage'
 import ProfilePage from './pages/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthRequiredRoute from './components/AuthRequiredRoute'
@@ -56,6 +57,7 @@ import BuyerDepositPage from './pages/BuyerDepositPage'
 import BuyerTransactionsPage from './pages/BuyerTransactionsPage'
 import SellerTransactionsPage from './pages/SellerTransactionsPage'
 import TransactionRoomPage from './pages/TransactionRoomPage'
+import DisputePage from './pages/DisputePage'
 
 function App() {
   return (
@@ -143,6 +145,7 @@ function App() {
             <Route path="consultations" element={<AdminConsultationsPage />} />
             <Route path="reported" element={<div className="p-8"><h1 className="text-2xl font-bold">Reported Items</h1></div>} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="disputes" element={<AdminDisputesPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
             <Route path="transactions" element={<AdminTransactionsPage />} />
             <Route path="active-closings" element={<AdminActiveClosingsPage />} />
@@ -151,6 +154,9 @@ function App() {
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="reports" element={<div className="p-8"><h1 className="text-2xl font-bold">Reports</h1></div>} />
           </Route>
+
+          {/* Public Dispute Page - No auth required */}
+          <Route path="dispute/:disputeId" element={<DisputePage />} />
 
           {/* Transaction Room - Shared by all roles */}
           <Route

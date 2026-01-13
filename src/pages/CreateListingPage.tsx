@@ -310,7 +310,6 @@ const CreateListingPage = () => {
 
       // The API returns carrier data directly in response.data (not nested under 'carrier')
       const carrier = response.data
-      const authority = response.authority || null
 
       if (!carrier || !carrier.dotNumber) {
         setFmcsaError('No carrier data found. Please verify the number and try again.')
@@ -374,11 +373,6 @@ const CreateListingPage = () => {
         yearsActive: yearsActive || prev.yearsActive,
         title: generatedTitle
       }))
-
-      // If we have authority info, we could use it too
-      if (authority) {
-        console.log('Authority history:', authority)
-      }
 
       setFmcsaFetched(true)
     } catch (err: any) {

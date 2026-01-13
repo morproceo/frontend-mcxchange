@@ -28,6 +28,7 @@ import {
   Handshake,
   Send,
   Scale,
+  ShieldAlert,
   LucideIcon
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -132,6 +133,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             items: [
               { icon: AlertTriangle, label: 'Pending Review', path: '/admin/pending' },
               { icon: Shield, label: 'Reported Items', path: '/admin/reported' },
+              { icon: ShieldAlert, label: 'Account Disputes', path: '/admin/disputes' },
               { icon: Crown, label: 'Premium Requests', path: '/admin/premium-requests' },
               { icon: MessageSquare, label: 'Consultations', path: '/admin/consultations' },
             ]

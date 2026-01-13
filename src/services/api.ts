@@ -12,6 +12,7 @@ import type {
   FMCSAAuthorityHistory,
   FMCSAInsuranceHistory,
   FMCSASMSData,
+  StripeTransaction,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -228,6 +229,20 @@ class ApiService {
   async verifySeller(userId: string) {
     return this.request<any>(`/admin/users/${userId}/verify-seller`, {
       method: 'POST',
+    });
+  }
+
+  async adjustUserCredits(userId: string, amount: number, reason: string) {
+    return this.request<{
+      userId: string;
+      previousTotal: number;
+      adjustment: number;
+      newTotal: number;
+      usedCredits: number;
+      availableCredits: number;
+    }>(`/admin/users/${userId}/credits`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, reason }),
     });
   }
 
@@ -942,6 +957,58 @@ class ApiService {
         totalPages: number;
       };
     }>(`/admin/transactions${query ? `?${query}` : ''}`);
+  }
+
+  // ============================================
+  // Stripe Transaction History (Admin)
+  // ============================================
+
+  // Get all Stripe transactions with full customer/billing details
+  async getStripeTransactions(params?: {
+    limit?: number;
+    status?: 'succeeded' | 'pending' | 'failed';
+    type?: 'all' | 'payment_intent' | 'checkout_session' | 'charge';
+    startingAfter?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.type) searchParams.set('type', params.type);
+    if (params?.startingAfter) searchParams.set('startingAfter', params.startingAfter);
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: StripeTransaction[];
+      hasMore: boolean;
+    }>(`/admin/stripe/transactions${query ? `?${query}` : ''}`);
+  }
+
+  // Get Stripe account balance
+  async getStripeBalance() {
+    return this.request<{
+      success: boolean;
+      data: {
+        available: number;
+        pending: number;
+        currency: string;
+      };
+    }>('/admin/stripe/balance');
+  }
+
+  // Get Stripe balance transactions (money movement)
+  async getStripeBalanceTransactions(params?: {
+    limit?: number;
+    startingAfter?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.startingAfter) searchParams.set('startingAfter', params.startingAfter);
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      hasMore: boolean;
+    }>(`/admin/stripe/balance-transactions${query ? `?${query}` : ''}`);
   }
 
   // Buyer approve transaction
@@ -1994,6 +2061,176 @@ class ApiService {
       }),
     });
     return response;
+  }
+
+  // ===========================
+  // ACCOUNT DISPUTE METHODS
+  // ===========================
+
+  /**
+   * Block user for cardholder name mismatch (admin only)
+   */
+  async blockUserForMismatch(data: {
+    userId: string;
+    stripeTransactionId: string;
+    cardholderName: string;
+    userName: string;
+  }): Promise<{
+    success: boolean;
+    data: {
+      user: any;
+      dispute: any;
+      alreadyExists: boolean;
+    };
+    message: string;
+  }> {
+    return this.request('/admin/disputes/block-mismatch', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Get all disputes (admin only)
+   */
+  async getDisputes(options?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<{
+    success: boolean;
+    data: any[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.append('page', options.page.toString());
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.status) params.append('status', options.status);
+
+    return this.request(`/admin/disputes?${params.toString()}`);
+  }
+
+  /**
+   * Resolve dispute - unblock user (admin only)
+   */
+  async resolveDispute(disputeId: string, notes?: string): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    return this.request(`/admin/disputes/${disputeId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  /**
+   * Reject dispute - keep user blocked (admin only)
+   */
+  async rejectDispute(disputeId: string, reason?: string): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    return this.request(`/admin/disputes/${disputeId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  /**
+   * Process auto-unblock for expired disputes (admin only)
+   */
+  async processAutoUnblock(): Promise<{
+    success: boolean;
+    data: Array<{ disputeId: string; userId: string; success: boolean; error?: string }>;
+    message: string;
+  }> {
+    return this.request('/admin/disputes/process-auto-unblock', {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Get dispute by ID (public - no auth required)
+   */
+  async getDispute(disputeId: string): Promise<{
+    success: boolean;
+    data: {
+      id: string;
+      cardholderName: string;
+      userName: string;
+      status: string;
+      createdAt: string;
+      submittedAt?: string;
+      autoUnblockAt?: string;
+    };
+  }> {
+    return this.request(`/disputes/${disputeId}`);
+  }
+
+  /**
+   * Submit dispute form (public - no auth required)
+   */
+  async submitDispute(disputeId: string, data: {
+    disputeEmail: string;
+    disputeInfo: string;
+    disputeReason: string;
+  }): Promise<{
+    success: boolean;
+    data: {
+      id: string;
+      status: string;
+      submittedAt: string;
+      autoUnblockAt: string;
+    };
+    message: string;
+  }> {
+    return this.request(`/disputes/${disputeId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ===========================
+  // NOTIFICATION SETTINGS (Admin)
+  // ===========================
+
+  /**
+   * Get notification settings (admin only)
+   */
+  async getNotificationSettings(): Promise<{
+    success: boolean;
+    data: {
+      admin_notification_emails: string;
+      notify_new_users: string;
+      notify_new_inquiries: string;
+      notify_new_transactions: string;
+      notify_disputes: string;
+      notify_consultations: string;
+    };
+  }> {
+    return this.request('/admin/settings/notifications');
+  }
+
+  /**
+   * Update notification settings (admin only)
+   */
+  async updateNotificationSettings(settings: {
+    admin_notification_emails?: string;
+    notify_new_users?: string;
+    notify_new_inquiries?: string;
+    notify_new_transactions?: string;
+    notify_disputes?: string;
+    notify_consultations?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return this.request('/admin/settings/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
   }
 }
 
