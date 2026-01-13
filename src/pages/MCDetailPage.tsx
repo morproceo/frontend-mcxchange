@@ -42,7 +42,9 @@ import Input from '../components/ui/Input'
 import { formatDistanceToNow } from 'date-fns'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
 import { useListing } from '../hooks/useListing'
+import { useFMCSAData } from '../hooks/useFMCSAData'
 import api from '../services/api'
+import { format } from 'date-fns'
 
 const MCDetailPage = () => {
   const { id } = useParams()
@@ -51,6 +53,15 @@ const MCDetailPage = () => {
 
   // Use custom hook for listing data management
   const { listing, loading, error, isUnlocked, unlocking, unlock } = useListing(id)
+
+  // Fetch FMCSA data when listing is unlocked
+  const {
+    carrier: fmcsaCarrier,
+    authority: fmcsaAuthority,
+    insurance: fmcsaInsurance,
+    smsData: fmcsaSmsData,
+    loading: fmcsaLoading
+  } = useFMCSAData(listing?.mcNumber, isUnlocked)
 
   // Get user's available credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
@@ -606,124 +617,456 @@ const MCDetailPage = () => {
               {/* Always visible summary */}
               <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl mb-4">
                 <span className="font-medium text-gray-900">SAFER Rating</span>
-                <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full font-bold text-lg">
-                  {listingDetails.safetyRecord.saferScore}
+                <span className={`px-4 py-2 rounded-full font-bold text-lg ${
+                  (fmcsaCarrier?.safetyRating || listingDetails.safetyRecord.saferScore)?.toLowerCase() === 'satisfactory'
+                    ? 'bg-green-100 text-green-700'
+                    : (fmcsaCarrier?.safetyRating || listingDetails.safetyRecord.saferScore)?.toLowerCase() === 'conditional'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : (fmcsaCarrier?.safetyRating || listingDetails.safetyRecord.saferScore)?.toLowerCase() === 'unsatisfactory'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {fmcsaCarrier?.safetyRating || listingDetails.safetyRecord.saferScore || 'Not Rated'}
                 </span>
               </div>
 
               {isUnlocked ? (
                 // Full safety record when unlocked
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{listingDetails.safetyRecord.totalInspections}</p>
-                      <p className="text-sm text-gray-500">Inspections</p>
+                  {fmcsaLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                      <span className="ml-2 text-gray-500">Loading FMCSA data...</span>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{listingDetails.safetyRecord.outOfServiceRate}%</p>
-                      <p className="text-sm text-gray-500">OOS Rate</p>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{listingDetails.safetyRecord.totalCrashes}</p>
-                      <p className="text-sm text-gray-500">Crashes</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-500 mb-3">BASIC Scores</p>
-                    <div className="space-y-2">
-                      {Object.entries(listingDetails.safetyRecord.basicScores).map(([key, value]) => (
-                        <div key={key} className="flex items-center gap-3">
-                          <span className="text-sm text-gray-600 w-40 capitalize">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
-                          </span>
-                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                value <= 25 ? 'bg-green-500' :
-                                value <= 50 ? 'bg-yellow-500' :
-                                value <= 75 ? 'bg-orange-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(value, 100)}%` }}
-                            />
+                  ) : (
+                    <>
+                      {/* Operating Status */}
+                      <div className={`p-4 rounded-xl border ${
+                        fmcsaCarrier?.allowedToOperate === 'Y'
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-red-50 border-red-200'
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          {fmcsaCarrier?.allowedToOperate === 'Y' ? (
+                            <CheckCircle className="w-6 h-6 text-green-600" />
+                          ) : (
+                            <XCircle className="w-6 h-6 text-red-600" />
+                          )}
+                          <div>
+                            <p className={`font-bold ${
+                              fmcsaCarrier?.allowedToOperate === 'Y' ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {fmcsaCarrier?.allowedToOperate === 'Y' ? 'Authorized to Operate' : 'Not Authorized'}
+                            </p>
+                            <p className="text-sm text-gray-600">Operating Authority Status</p>
                           </div>
-                          <span className={`text-sm font-medium w-12 text-right ${
-                            value <= 25 ? 'text-green-600' :
-                            value <= 50 ? 'text-yellow-600' :
-                            value <= 75 ? 'text-orange-600' : 'text-red-600'
-                          }`}>
-                            {value}%
-                          </span>
                         </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-3">
-                      * Lower BASIC scores are better. Scores above 75% may trigger FMCSA intervention.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
-                    <div className="flex items-start gap-3">
-                      <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-blue-900">Safety Summary</p>
-                        <p className="text-sm text-blue-700 mt-1">
-                          This carrier has a {listingDetails.safetyRecord.saferScore.toLowerCase()} safety rating with
-                          {listingDetails.safetyRecord.totalCrashes === 0 ? ' no recorded crashes' : ` ${listingDetails.safetyRecord.totalCrashes} recorded crashes`} and
-                          a {listingDetails.safetyRecord.outOfServiceRate}% out-of-service rate.
-                        </p>
                       </div>
-                    </div>
-                  </div>
+
+                      {/* Carrier Stats Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <p className="text-2xl font-bold text-gray-900">{fmcsaCarrier?.totalDrivers ?? listing?.totalDrivers ?? 0}</p>
+                          <p className="text-sm text-gray-500">Drivers</p>
+                        </div>
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <p className="text-2xl font-bold text-gray-900">{fmcsaCarrier?.totalPowerUnits ?? listing?.fleetSize ?? 0}</p>
+                          <p className="text-sm text-gray-500">Power Units</p>
+                        </div>
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <p className="text-lg font-bold text-gray-900">{fmcsaCarrier?.carrierOperation || 'Interstate'}</p>
+                          <p className="text-sm text-gray-500">Operation Type</p>
+                        </div>
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <p className="text-lg font-bold text-gray-900">
+                            {fmcsaCarrier?.mcs150Date ? format(new Date(fmcsaCarrier.mcs150Date), 'MM/dd/yyyy') : 'N/A'}
+                          </p>
+                          <p className="text-sm text-gray-500">MCS-150 Date</p>
+                        </div>
+                      </div>
+
+                      {/* Authority Status */}
+                      {fmcsaAuthority && (
+                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-indigo-500" />
+                            Authority Status
+                          </h3>
+                          <div className="grid md:grid-cols-3 gap-4">
+                            {/* Common Authority */}
+                            <div className="p-3 bg-white rounded-lg border border-gray-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                {fmcsaAuthority.commonAuthorityStatus?.toLowerCase() === 'active' ? (
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-gray-400" />
+                                )}
+                                <span className="font-medium text-gray-700">Common (Property)</span>
+                              </div>
+                              <p className={`text-sm font-semibold ${
+                                fmcsaAuthority.commonAuthorityStatus?.toLowerCase() === 'active'
+                                  ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {fmcsaAuthority.commonAuthorityStatus || 'N/A'}
+                              </p>
+                              {fmcsaAuthority.commonAuthorityGrantDate && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Granted: {format(new Date(fmcsaAuthority.commonAuthorityGrantDate), 'MM/dd/yyyy')}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Contract Authority */}
+                            <div className="p-3 bg-white rounded-lg border border-gray-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                {fmcsaAuthority.contractAuthorityStatus?.toLowerCase() === 'active' ? (
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-gray-400" />
+                                )}
+                                <span className="font-medium text-gray-700">Contract</span>
+                              </div>
+                              <p className={`text-sm font-semibold ${
+                                fmcsaAuthority.contractAuthorityStatus?.toLowerCase() === 'active'
+                                  ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {fmcsaAuthority.contractAuthorityStatus || 'N/A'}
+                              </p>
+                              {fmcsaAuthority.contractAuthorityGrantDate && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Granted: {format(new Date(fmcsaAuthority.contractAuthorityGrantDate), 'MM/dd/yyyy')}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Broker Authority */}
+                            <div className="p-3 bg-white rounded-lg border border-gray-100">
+                              <div className="flex items-center gap-2 mb-1">
+                                {fmcsaAuthority.brokerAuthorityStatus?.toLowerCase() === 'active' ? (
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-gray-400" />
+                                )}
+                                <span className="font-medium text-gray-700">Broker</span>
+                              </div>
+                              <p className={`text-sm font-semibold ${
+                                fmcsaAuthority.brokerAuthorityStatus?.toLowerCase() === 'active'
+                                  ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {fmcsaAuthority.brokerAuthorityStatus || 'N/A'}
+                              </p>
+                              {fmcsaAuthority.brokerAuthorityGrantDate && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Granted: {format(new Date(fmcsaAuthority.brokerAuthorityGrantDate), 'MM/dd/yyyy')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Insurance Information */}
+                      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-blue-500" />
+                          Insurance Coverage (FMCSA Filed)
+                        </h3>
+                        <div className="grid md:grid-cols-3 gap-4">
+                          <div className="p-3 bg-white rounded-lg border border-gray-100">
+                            <p className="text-sm text-gray-500 mb-1">BIPD Coverage</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              ${((fmcsaCarrier?.bipdOnFile ?? listing?.bipdCoverage) || 0).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Required: ${(fmcsaCarrier?.bipdRequired || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg border border-gray-100">
+                            <p className="text-sm text-gray-500 mb-1">Cargo Coverage</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              ${((fmcsaCarrier?.cargoOnFile ?? listing?.cargoCoverage) || 0).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Required: ${(fmcsaCarrier?.cargoRequired || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg border border-gray-100">
+                            <p className="text-sm text-gray-500 mb-1">Bond/Surety</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              ${((fmcsaCarrier?.bondOnFile ?? listing?.bondAmount) || 0).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Required: ${(fmcsaCarrier?.bondRequired || 0).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Insurance History */}
+                        {fmcsaInsurance && fmcsaInsurance.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Active Insurance Policies</p>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                              {fmcsaInsurance.filter(ins => ins.status?.toLowerCase() === 'active').slice(0, 5).map((ins, idx) => (
+                                <div key={idx} className="p-2 bg-white rounded border border-gray-100 flex justify-between items-center text-sm">
+                                  <div>
+                                    <p className="font-medium text-gray-800">{ins.insurerName}</p>
+                                    <p className="text-xs text-gray-500">{ins.insuranceType} • Policy: {ins.policyNumber}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-gray-900">${(ins.coverageAmount || 0).toLocaleString()}</p>
+                                    <p className="text-xs text-green-600">{ins.status}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* SMS Data - Inspections & Crashes */}
+                      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <ClipboardCheck className="w-4 h-4 text-orange-500" />
+                          Inspection & Crash History
+                        </h3>
+
+                        {/* Inspection Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                          <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalInspections ?? 0}</p>
+                            <p className="text-xs text-gray-500">Total Inspections</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalDriverInspections ?? 0}</p>
+                            <p className="text-xs text-gray-500">Driver Inspections</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalVehicleInspections ?? 0}</p>
+                            <p className="text-xs text-gray-500">Vehicle Inspections</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg border border-gray-100 text-center">
+                            <p className="text-2xl font-bold text-gray-900">{fmcsaSmsData?.totalHazmatInspections ?? 0}</p>
+                            <p className="text-xs text-gray-500">Hazmat Inspections</p>
+                          </div>
+                        </div>
+
+                        {/* OOS Rates */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="p-3 bg-white rounded-lg border border-gray-100">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Driver OOS Rate</span>
+                              <span className={`font-bold ${
+                                (fmcsaSmsData?.driverOosRate ?? 0) > 10 ? 'text-red-600' :
+                                (fmcsaSmsData?.driverOosRate ?? 0) > 5 ? 'text-yellow-600' : 'text-green-600'
+                              }`}>
+                                {(fmcsaSmsData?.driverOosRate ?? 0).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  (fmcsaSmsData?.driverOosRate ?? 0) > 10 ? 'bg-red-500' :
+                                  (fmcsaSmsData?.driverOosRate ?? 0) > 5 ? 'bg-yellow-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(fmcsaSmsData?.driverOosRate ?? 0, 100)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">{fmcsaSmsData?.driverOosInspections ?? 0} OOS inspections</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg border border-gray-100">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Vehicle OOS Rate</span>
+                              <span className={`font-bold ${
+                                (fmcsaSmsData?.vehicleOosRate ?? 0) > 25 ? 'text-red-600' :
+                                (fmcsaSmsData?.vehicleOosRate ?? 0) > 15 ? 'text-yellow-600' : 'text-green-600'
+                              }`}>
+                                {(fmcsaSmsData?.vehicleOosRate ?? 0).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  (fmcsaSmsData?.vehicleOosRate ?? 0) > 25 ? 'bg-red-500' :
+                                  (fmcsaSmsData?.vehicleOosRate ?? 0) > 15 ? 'bg-yellow-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(fmcsaSmsData?.vehicleOosRate ?? 0, 100)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">{fmcsaSmsData?.vehicleOosInspections ?? 0} OOS inspections</p>
+                          </div>
+                        </div>
+
+                        {/* Crash Data */}
+                        <div className="p-3 bg-white rounded-lg border border-gray-100">
+                          <p className="text-sm font-medium text-gray-700 mb-2">Crash History (24 months)</p>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div>
+                              <p className={`text-xl font-bold ${(fmcsaSmsData?.totalCrashes ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {fmcsaSmsData?.totalCrashes ?? 0}
+                              </p>
+                              <p className="text-xs text-gray-500">Total</p>
+                            </div>
+                            <div>
+                              <p className={`text-xl font-bold ${(fmcsaSmsData?.fatalCrashes ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {fmcsaSmsData?.fatalCrashes ?? 0}
+                              </p>
+                              <p className="text-xs text-gray-500">Fatal</p>
+                            </div>
+                            <div>
+                              <p className={`text-xl font-bold ${(fmcsaSmsData?.injuryCrashes ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {fmcsaSmsData?.injuryCrashes ?? 0}
+                              </p>
+                              <p className="text-xs text-gray-500">Injury</p>
+                            </div>
+                            <div>
+                              <p className="text-xl font-bold text-gray-700">
+                                {fmcsaSmsData?.towCrashes ?? 0}
+                              </p>
+                              <p className="text-xs text-gray-500">Tow-Away</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* BASIC Scores */}
+                      {fmcsaSmsData?.basics && fmcsaSmsData.basics.length > 0 && (
+                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            BASIC Scores (Safety Measurement System)
+                          </h3>
+                          <div className="space-y-3">
+                            {fmcsaSmsData.basics.map((basic, idx) => (
+                              <div key={idx} className="p-3 bg-white rounded-lg border border-gray-100">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-800">{basic.basicName}</span>
+                                    {basic.exceedsThreshold && (
+                                      <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-medium">
+                                        Alert
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className={`text-lg font-bold ${
+                                    basic.percentile > 75 ? 'text-red-600' :
+                                    basic.percentile > 50 ? 'text-orange-600' :
+                                    basic.percentile > 25 ? 'text-yellow-600' : 'text-green-600'
+                                  }`}>
+                                    {basic.percentile.toFixed(0)}%
+                                  </span>
+                                </div>
+                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      basic.percentile > 75 ? 'bg-red-500' :
+                                      basic.percentile > 50 ? 'bg-orange-500' :
+                                      basic.percentile > 25 ? 'bg-yellow-500' : 'bg-green-500'
+                                    }`}
+                                    style={{ width: `${Math.min(basic.percentile, 100)}%` }}
+                                  />
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-500">
+                                  <span>{basic.totalInspections} inspections • {basic.totalViolations} violations</span>
+                                  <span>Threshold: {basic.thresholdPercent}%</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-3">
+                            * Lower BASIC percentiles are better. Percentiles above the threshold may trigger FMCSA intervention.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Safety Summary */}
+                      <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
+                        <div className="flex items-start gap-3">
+                          <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-blue-900">FMCSA Safety Summary</p>
+                            <p className="text-sm text-blue-700 mt-1">
+                              This carrier has a <strong>{fmcsaCarrier?.safetyRating || 'Not Rated'}</strong> safety rating
+                              {fmcsaCarrier?.safetyRatingDate && (
+                                <> (as of {format(new Date(fmcsaCarrier.safetyRatingDate), 'MMMM d, yyyy')})</>
+                              )}.
+                              Operating with {fmcsaCarrier?.totalDrivers ?? 0} drivers and {fmcsaCarrier?.totalPowerUnits ?? 0} power units.
+                              {fmcsaCarrier?.insuranceOnFile && ' Insurance is current and on file with FMCSA.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 // Locked state - show teaser
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-3 bg-gray-50 rounded-lg relative overflow-hidden">
                       <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex items-center justify-center">
                         <Lock className="w-4 h-4 text-gray-400" />
                       </div>
                       <p className="text-2xl font-bold text-gray-300">--</p>
-                      <p className="text-sm text-gray-400">Inspections</p>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex items-center justify-center">
-                        <Lock className="w-4 h-4 text-gray-400" />
-                      </div>
-                      <p className="text-2xl font-bold text-gray-300">--%</p>
-                      <p className="text-sm text-gray-400">OOS Rate</p>
+                      <p className="text-sm text-gray-400">Drivers</p>
                     </div>
                     <div className="text-center p-3 bg-gray-50 rounded-lg relative overflow-hidden">
                       <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex items-center justify-center">
                         <Lock className="w-4 h-4 text-gray-400" />
                       </div>
                       <p className="text-2xl font-bold text-gray-300">--</p>
-                      <p className="text-sm text-gray-400">Crashes</p>
+                      <p className="text-sm text-gray-400">Power Units</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex items-center justify-center">
+                        <Lock className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <p className="text-lg font-bold text-gray-300">--</p>
+                      <p className="text-sm text-gray-400">Operation</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex items-center justify-center">
+                        <Lock className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <p className="text-lg font-bold text-gray-300">--/--/----</p>
+                      <p className="text-sm text-gray-400">MCS-150</p>
                     </div>
                   </div>
 
                   <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                     <div className="flex items-center gap-2 text-gray-500 mb-2">
                       <Lock className="w-4 h-4" />
-                      <span className="font-medium">BASIC Scores Locked</span>
+                      <span className="font-medium">Authority Details Locked</span>
                     </div>
                     <div className="space-y-2">
-                      {['Unsafe Driving', 'Hours of Service', 'Vehicle Maintenance'].map((label) => (
+                      {['Common Authority', 'Contract Authority', 'Broker Authority'].map((label) => (
                         <div key={label} className="flex items-center gap-3">
                           <span className="text-sm text-gray-400 w-40">{label}</span>
                           <div className="flex-1 h-2 bg-gray-200 rounded-full" />
-                          <span className="text-sm text-gray-400 w-12 text-right">--%</span>
+                          <span className="text-sm text-gray-400 w-20 text-right">Locked</span>
                         </div>
                       ))}
-                      <p className="text-xs text-gray-400 mt-2 italic">+ 4 more categories</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                    <div className="flex items-center gap-2 text-gray-500 mb-2">
+                      <Lock className="w-4 h-4" />
+                      <span className="font-medium">Insurance Coverage Locked</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['BIPD', 'Cargo', 'Bond'].map((type) => (
+                        <div key={type} className="p-2 bg-white rounded border border-gray-100 text-center">
+                          <p className="text-xs text-gray-400">{type}</p>
+                          <p className="text-lg font-bold text-gray-300">$--</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   <div className="text-center p-4 rounded-xl bg-yellow-50 border border-yellow-200">
                     <Coins className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                    <p className="text-sm text-yellow-700 font-medium">Unlock to view full safety record</p>
-                    <p className="text-xs text-yellow-600 mt-1">Includes detailed BASIC scores, inspection history & crash data</p>
+                    <p className="text-sm text-yellow-700 font-medium">Unlock to view full FMCSA safety record</p>
+                    <p className="text-xs text-yellow-600 mt-1">Includes authority status, insurance details, and carrier information</p>
                   </div>
                 </div>
               )}

@@ -8,6 +8,10 @@ import type {
   UserResponse,
   SubscriptionPlanConfig,
   CreditPack,
+  FMCSACarrierData,
+  FMCSAAuthorityHistory,
+  FMCSAInsuranceHistory,
+  FMCSASMSData,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -127,6 +131,20 @@ class ApiService {
   async getCurrentUser() {
     const response = await this.request<{ success: boolean; data: any }>('/auth/me');
     return { user: response.data };
+  }
+
+  // Email verification
+  async verifyEmail(token: string) {
+    return this.request<{ success: boolean; message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  async resendVerificationEmail() {
+    return this.request<{ success: boolean; message: string }>('/auth/resend-verification', {
+      method: 'POST',
+    });
   }
 
   async refreshToken() {
@@ -427,11 +445,49 @@ class ApiService {
 
   // FMCSA endpoints
   async fmcsaLookupByMC(mcNumber: string) {
-    return this.request<any>(`/fmcsa/mc/${mcNumber}`);
+    return this.request<{
+      success: boolean;
+      data: FMCSACarrierData;
+    }>(`/fmcsa/mc/${mcNumber}`);
   }
 
   async fmcsaLookupByDOT(dotNumber: string) {
-    return this.request<any>(`/fmcsa/dot/${dotNumber}`);
+    return this.request<{
+      success: boolean;
+      data: FMCSACarrierData;
+    }>(`/fmcsa/dot/${dotNumber}`);
+  }
+
+  async fmcsaGetSnapshot(identifier: string, type: 'MC' | 'DOT' = 'MC') {
+    return this.request<{
+      success: boolean;
+      data: {
+        carrier: FMCSACarrierData | null;
+        authority: FMCSAAuthorityHistory | null;
+        insurance: FMCSAInsuranceHistory[] | null;
+      };
+    }>(`/fmcsa/snapshot/${identifier}?type=${type}`);
+  }
+
+  async fmcsaGetAuthorityHistory(dotNumber: string) {
+    return this.request<{
+      success: boolean;
+      data: FMCSAAuthorityHistory;
+    }>(`/fmcsa/authority/${dotNumber}`);
+  }
+
+  async fmcsaGetInsuranceHistory(dotNumber: string) {
+    return this.request<{
+      success: boolean;
+      data: FMCSAInsuranceHistory[];
+    }>(`/fmcsa/insurance/${dotNumber}`);
+  }
+
+  async fmcsaGetSMSData(dotNumber: string) {
+    return this.request<{
+      success: boolean;
+      data: FMCSASMSData;
+    }>(`/fmcsa/sms/${dotNumber}`);
   }
 
   // Health check

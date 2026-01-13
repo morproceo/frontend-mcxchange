@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User as UserIcon } from 'lucide-react'
+import { Mail, Lock, User as UserIcon, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
@@ -10,19 +10,73 @@ import Select from '../components/ui/Select'
 import { DomileaIcon } from '../components/ui/DomileaLogo'
 import { UserRole } from '../types'
 
+// Email validation regex - comprehensive check for valid email format
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/
+
+// List of disposable/temporary email domains to block
+const DISPOSABLE_EMAIL_DOMAINS = [
+  'tempmail.com', 'throwaway.email', '10minutemail.com', 'guerrillamail.com',
+  'mailinator.com', 'yopmail.com', 'temp-mail.org', 'fakeinbox.com',
+  'sharklasers.com', 'trashmail.com', 'getnada.com', 'maildrop.cc',
+  'dispostable.com', 'mintemail.com', 'mytemp.email', 'tempail.com'
+]
+
+// Validate email format and check for disposable domains
+const validateEmail = (email: string): { isValid: boolean; error?: string } => {
+  if (!email) {
+    return { isValid: false, error: 'Email is required' }
+  }
+
+  // Check basic format
+  if (!EMAIL_REGEX.test(email)) {
+    return { isValid: false, error: 'Please enter a valid email address' }
+  }
+
+  // Extract domain
+  const domain = email.split('@')[1]?.toLowerCase()
+
+  // Check for disposable email domains
+  if (domain && DISPOSABLE_EMAIL_DOMAINS.includes(domain)) {
+    return { isValid: false, error: 'Please use a permanent email address, not a temporary one' }
+  }
+
+  // Check domain has at least one dot (e.g., gmail.com, not gmail)
+  if (domain && !domain.includes('.')) {
+    return { isValid: false, error: 'Please enter a valid email domain' }
+  }
+
+  return { isValid: true }
+}
+
 const RegisterPage = () => {
   const [searchParams] = useSearchParams()
   const roleParam = searchParams.get('role')
+  const redirectUrl = searchParams.get('redirect')
   // Only allow buyer or seller from URL params
   const initialRole: UserRole = (roleParam === 'seller' || roleParam === 'buyer') ? roleParam : 'buyer'
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [emailError, setEmailError] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<UserRole>(initialRole)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Validate email on blur
+  const handleEmailBlur = () => {
+    const validation = validateEmail(email)
+    setEmailError(validation.error || '')
+  }
+
+  // Clear email error when user starts typing again
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value)
+    if (emailError) {
+      setEmailError('')
+    }
+  }
 
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -30,6 +84,14 @@ const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setEmailError('')
+
+    // Validate email
+    const emailValidation = validateEmail(email)
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error || 'Invalid email')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -46,6 +108,12 @@ const RegisterPage = () => {
     try {
       // Register returns the user with their role
       const user = await register(email, password, name, role)
+
+      // If there's a redirect URL, use it (after validating it's a local path)
+      if (redirectUrl && redirectUrl.startsWith('/')) {
+        navigate(redirectUrl)
+        return
+      }
 
       // Navigate based on the user's role from the API response
       switch (user.role) {
@@ -113,15 +181,24 @@ const RegisterPage = () => {
               required
             />
 
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              icon={<Mail className="w-4 h-4" />}
-              required
-            />
+            <div>
+              <Input
+                label="Email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={handleEmailChange}
+                onBlur={handleEmailBlur}
+                icon={<Mail className="w-4 h-4" />}
+                required
+              />
+              {emailError && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{emailError}</span>
+                </div>
+              )}
+            </div>
 
             <Input
               label="Password"

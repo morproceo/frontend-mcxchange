@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import AdminRegisterPage from './pages/AdminRegisterPage'
 import SellerVerificationPage from './pages/SellerVerificationPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import MarketplacePage from './pages/MarketplacePage'
 import MCDetailPage from './pages/MCDetailPage'
 import ConsultationSuccessPage from './pages/ConsultationSuccessPage'
@@ -49,6 +50,7 @@ import AdminActiveClosingsPage from './pages/AdminActiveClosingsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import ProfilePage from './pages/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute'
+import AuthRequiredRoute from './components/AuthRequiredRoute'
 import BuyerUnlockedMCsPage from './pages/BuyerUnlockedMCsPage'
 import BuyerDepositPage from './pages/BuyerDepositPage'
 import BuyerTransactionsPage from './pages/BuyerTransactionsPage'
@@ -68,8 +70,9 @@ function App() {
             <Route path="register" element={<RegisterPage />} />
             <Route path="admin-register" element={<AdminRegisterPage />} />
             <Route path="seller-verification" element={<SellerVerificationPage />} />
+            <Route path="verify-email" element={<VerifyEmailPage />} />
             <Route path="marketplace" element={<MarketplacePage />} />
-            <Route path="mc/:id" element={<MCDetailPage />} />
+            <Route path="mc/:id" element={<AuthRequiredRoute><MCDetailPage /></AuthRequiredRoute>} />
             <Route path="consultation/success" element={<ConsultationSuccessPage />} />
             {/* Services Routes */}
             <Route path="services" element={<ServicesPage />} />

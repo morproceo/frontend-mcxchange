@@ -482,3 +482,94 @@ export interface PricingConfig {
   platformFees: PlatformFeesConfig
   creditPacks: CreditPack[]
 }
+
+// ============================================
+// FMCSA Data Types
+// ============================================
+
+export interface FMCSACarrierData {
+  dotNumber: string
+  mcNumber?: string
+  legalName: string
+  dbaName?: string
+  carrierOperation: string
+  hqCity: string
+  hqState: string
+  physicalAddress: string
+  phone: string
+  safetyRating: string
+  safetyRatingDate?: string
+  totalDrivers: number
+  totalPowerUnits: number
+  mcs150Date?: string
+  allowedToOperate: string
+  bipdRequired: number
+  cargoRequired: number
+  bondRequired: number
+  insuranceOnFile: boolean
+  bipdOnFile: number
+  cargoOnFile: number
+  bondOnFile: number
+  cargoTypes: string[]
+}
+
+export interface FMCSAAuthorityHistory {
+  commonAuthorityStatus: string
+  commonAuthorityGrantDate?: string
+  commonAuthorityReinstatedDate?: string
+  commonAuthorityRevokedDate?: string
+  contractAuthorityStatus: string
+  contractAuthorityGrantDate?: string
+  brokerAuthorityStatus: string
+  brokerAuthorityGrantDate?: string
+}
+
+export interface FMCSAInsuranceHistory {
+  insurerName: string
+  policyNumber: string
+  insuranceType: string
+  coverageAmount: number
+  effectiveDate: string
+  cancellationDate?: string
+  status: string
+}
+
+export interface FMCSASnapshot {
+  carrier: FMCSACarrierData | null
+  authority: FMCSAAuthorityHistory | null
+  insurance: FMCSAInsuranceHistory[] | null
+}
+
+// SMS (Safety Measurement System) Types
+export interface FMCSASMSBasic {
+  basicName: string
+  basicCode: string
+  percentile: number
+  totalInspections: number
+  totalViolations: number
+  oosInspections: number
+  oosRate: number
+  thresholdPercent: number
+  exceedsThreshold: boolean
+}
+
+export interface FMCSASMSData {
+  dotNumber: string
+  totalInspections: number
+  totalDriverInspections: number
+  totalVehicleInspections: number
+  totalHazmatInspections: number
+  totalIepInspections: number
+  driverOosRate: number
+  vehicleOosRate: number
+  driverOosInspections: number
+  vehicleOosInspections: number
+  totalCrashes: number
+  fatalCrashes: number
+  injuryCrashes: number
+  towCrashes: number
+  basics: FMCSASMSBasic[]
+  safetyRating: string
+  safetyRatingDate?: string
+  snapshotDate?: string
+}
