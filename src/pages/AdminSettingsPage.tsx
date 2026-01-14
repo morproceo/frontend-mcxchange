@@ -63,6 +63,13 @@ const AdminSettingsPage = () => {
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [notificationSuccess, setNotificationSuccess] = useState<string | null>(null)
 
+  // Platform settings state
+  const [listingPaymentRequired, setListingPaymentRequired] = useState(true)
+  const [platformSettingsLoading, setPlatformSettingsLoading] = useState(false)
+  const [platformSettingsSaving, setPlatformSettingsSaving] = useState(false)
+  const [platformSettingsError, setPlatformSettingsError] = useState<string | null>(null)
+  const [platformSettingsSuccess, setPlatformSettingsSuccess] = useState<string | null>(null)
+
   // Load pricing config when pricing tab is active
   useEffect(() => {
     if (activeTab === 'pricing' && !pricingConfig) {
@@ -76,6 +83,52 @@ const AdminSettingsPage = () => {
       loadNotificationSettings()
     }
   }, [activeTab])
+
+  // Load platform settings when general tab is active
+  useEffect(() => {
+    if (activeTab === 'general') {
+      loadPlatformSettings()
+    }
+  }, [activeTab])
+
+  const loadPlatformSettings = async () => {
+    setPlatformSettingsLoading(true)
+    setPlatformSettingsError(null)
+    try {
+      const response = await api.getPlatformSettings()
+      if (response.success && response.data) {
+        // listing_payment_required defaults to true if not set
+        const paymentRequired = response.data.listing_payment_required
+        setListingPaymentRequired(paymentRequired !== false)
+      }
+    } catch (err: any) {
+      setPlatformSettingsError(err.message || 'Failed to load platform settings')
+    } finally {
+      setPlatformSettingsLoading(false)
+    }
+  }
+
+  const toggleListingPaymentRequired = async () => {
+    const newValue = !listingPaymentRequired
+    setPlatformSettingsSaving(true)
+    setPlatformSettingsError(null)
+    setPlatformSettingsSuccess(null)
+
+    try {
+      const response = await api.updatePlatformSettings([
+        { key: 'listing_payment_required', value: String(newValue), type: 'boolean' }
+      ])
+      if (response.success) {
+        setListingPaymentRequired(newValue)
+        setPlatformSettingsSuccess(`Listing payment ${newValue ? 'enabled' : 'disabled'} successfully`)
+        setTimeout(() => setPlatformSettingsSuccess(null), 3000)
+      }
+    } catch (err: any) {
+      setPlatformSettingsError(err.message || 'Failed to update setting')
+    } finally {
+      setPlatformSettingsSaving(false)
+    }
+  }
 
   const loadNotificationSettings = async () => {
     setNotificationLoading(true)
@@ -468,7 +521,39 @@ const AdminSettingsPage = () => {
             <Card>
               <h2 className="text-xl font-bold mb-4">Site Features</h2>
 
+              {/* Platform Settings Messages */}
+              {platformSettingsError && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                  {platformSettingsError}
+                </div>
+              )}
+              {platformSettingsSuccess && (
+                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm">
+                  {platformSettingsSuccess}
+                </div>
+              )}
+
               <div className="space-y-4">
+                {/* Listing Payment Toggle - Dynamic */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border-2 border-primary-200">
+                  <div>
+                    <span className="font-medium">Require Listing Payment</span>
+                    <p className="text-sm text-gray-500">When enabled, sellers must pay the listing fee before submitting</p>
+                  </div>
+                  <button
+                    onClick={toggleListingPaymentRequired}
+                    disabled={platformSettingsSaving || platformSettingsLoading}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      listingPaymentRequired ? 'bg-primary-500' : 'bg-gray-300'
+                    } ${platformSettingsSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                      listingPaymentRequired ? 'left-7' : 'left-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Static feature toggles */}
                 {[
                   { label: 'Enable User Registration', enabled: true },
                   { label: 'Enable Premium Listings', enabled: true },

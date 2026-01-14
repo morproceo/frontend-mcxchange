@@ -2285,6 +2285,49 @@ class ApiService {
       body: JSON.stringify(settings),
     });
   }
+
+  // ===========================
+  // Platform Settings
+  // ===========================
+
+  /**
+   * Get public platform settings (no auth required)
+   */
+  async getPublicSettings(): Promise<{
+    success: boolean;
+    data: {
+      listingPaymentRequired: boolean;
+    };
+  }> {
+    return this.request('/settings/public');
+  }
+
+  /**
+   * Get all platform settings (admin only)
+   */
+  async getPlatformSettings(): Promise<{
+    success: boolean;
+    data: Record<string, unknown>;
+  }> {
+    return this.request('/admin/settings');
+  }
+
+  /**
+   * Update platform settings (admin only)
+   */
+  async updatePlatformSettings(settings: Array<{
+    key: string;
+    value: string;
+    type?: string;
+  }>): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return this.request('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ settings }),
+    });
+  }
 }
 
 export const api = new ApiService();
