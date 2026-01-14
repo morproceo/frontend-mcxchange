@@ -97,12 +97,13 @@ interface UploadedFile {
   type: string
 }
 
-const stepInfo = [
+// Step info will be filtered based on payment requirement
+const allSteps = [
   { num: 1, title: 'Authority Info', icon: Search, description: 'MC/DOT lookup & verification' },
   { num: 2, title: 'Listing Details', icon: Package, description: 'Pricing, platforms & features' },
   { num: 3, title: 'Authority Details', icon: TruckIcon, description: 'Fleet info & operations' },
   { num: 4, title: 'Documents', icon: FileText, description: 'Upload required files' },
-  { num: 5, title: 'Payment', icon: DollarSign, description: 'Listing activation fee' },
+  { num: 5, title: 'Payment', icon: DollarSign, description: 'Listing activation fee', isPaymentStep: true },
   { num: 6, title: 'Confirmation', icon: CheckCircle, description: 'Review & submit' }
 ]
 
@@ -120,6 +121,33 @@ const CreateListingPage = () => {
   const [listingCreated, setListingCreated] = useState(false)
   const [creatingListing, setCreatingListing] = useState(false)
   const [listingAttempted, setListingAttempted] = useState(false)
+
+  // Payment requirement setting (fetched from backend)
+  const [listingPaymentRequired, setListingPaymentRequired] = useState(true)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+
+  // Filter steps based on payment requirement
+  const stepInfo = listingPaymentRequired
+    ? allSteps
+    : allSteps.filter(s => !s.isPaymentStep)
+
+  // Fetch payment requirement setting on mount
+  useEffect(() => {
+    const fetchPaymentSetting = async () => {
+      try {
+        const response = await api.getPublicSettings()
+        if (response.success && response.data) {
+          setListingPaymentRequired(response.data.listingPaymentRequired)
+        }
+      } catch (err) {
+        // Default to requiring payment if we can't fetch the setting
+        console.error('Failed to fetch payment settings:', err)
+      } finally {
+        setSettingsLoaded(true)
+      }
+    }
+    fetchPaymentSetting()
+  }, [])
 
   // Handle return from Stripe checkout
   useEffect(() => {
@@ -416,6 +444,60 @@ const CreateListingPage = () => {
       console.error('Payment error:', err)
       setFmcsaError(err.message || 'Failed to initiate payment. Please try again.')
       setPaymentProcessing(false)
+    }
+  }
+
+  // Submit listing without payment (when payment requirement is disabled)
+  const handleSubmitWithoutPayment = async () => {
+    if (!formData.mcNumber) {
+      setFmcsaError('MC number is required')
+      return
+    }
+
+    setCreatingListing(true)
+    setFmcsaError('')
+
+    try {
+      // Get city from physical address or use state
+      const city = formData.physicalAddress?.split(',')[0] || 'Unknown'
+
+      // Create the listing in database and submit for review
+      const response = await api.createListing({
+        mcNumber: formData.mcNumber,
+        dotNumber: formData.dotNumber,
+        legalName: formData.legalName,
+        dbaName: formData.dbaName || undefined,
+        title: formData.title,
+        description: formData.description || undefined,
+        askingPrice: parseFloat(formData.price) || 0,
+        city: city,
+        state: formData.state,
+        address: formData.physicalAddress || undefined,
+        yearsActive: parseInt(formData.yearsActive) || 0,
+        fleetSize: parseInt(formData.fleetSize) || parseInt(formData.powerUnits) || 0,
+        totalDrivers: parseInt(formData.drivers) || 0,
+        safetyRating: formData.safetyRating || 'NONE',
+        insuranceOnFile: formData.insuranceStatus === 'active',
+        amazonStatus: formData.amazonStatus?.toUpperCase() || 'NONE',
+        amazonRelayScore: formData.amazonRelayScore || undefined,
+        highwaySetup: formData.highwaySetup === 'yes',
+        sellingWithEmail: formData.sellingWithEmail === 'yes',
+        sellingWithPhone: formData.sellingWithPhone === 'yes',
+        cargoTypes: formData.cargoCarried || [],
+        submitForReview: true, // Submit for review without payment
+      })
+
+      if (response.success) {
+        setListingCreated(true)
+        setStep(6) // Go to confirmation
+      } else {
+        throw new Error('Failed to create listing')
+      }
+    } catch (err: any) {
+      console.error('Listing creation error:', err)
+      setFmcsaError(err.message || 'Failed to create listing. Please try again.')
+    } finally {
+      setCreatingListing(false)
     }
   }
 
@@ -1599,21 +1681,34 @@ const CreateListingPage = () => {
                   <Button type="button" variant="secondary" onClick={() => setStep(3)} size="lg">
                     Back
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setStep(5)}
-                    size="lg"
-                    className="bg-gradient-to-r from-primary-500 to-purple-500 hover:from-primary-600 hover:to-purple-600 px-8"
-                  >
-                    Continue to Payment
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
+                  {listingPaymentRequired ? (
+                    <Button
+                      type="button"
+                      onClick={() => setStep(5)}
+                      size="lg"
+                      className="bg-gradient-to-r from-primary-500 to-purple-500 hover:from-primary-600 hover:to-purple-600 px-8"
+                    >
+                      Continue to Payment
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={handleSubmitWithoutPayment}
+                      size="lg"
+                      loading={creatingListing}
+                      className="bg-gradient-to-r from-primary-500 to-purple-500 hover:from-primary-600 hover:to-purple-600 px-8"
+                    >
+                      {creatingListing ? 'Submitting...' : 'Submit Listing'}
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             )}
 
-            {/* Step 5: Payment/Invoice */}
-            {step === 5 && (
+            {/* Step 5: Payment/Invoice (only shown if payment required) */}
+            {step === 5 && listingPaymentRequired && (
               <motion.div
                 key="step5"
                 initial={{ opacity: 0, x: 50 }}
