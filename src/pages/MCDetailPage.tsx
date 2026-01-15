@@ -195,13 +195,13 @@ const MCDetailPage = () => {
     try {
       setSendingPremiumRequest(true)
       const message = premiumMessage.trim() || 'Interested in this premium MC authority. Please provide pricing and details.'
-      await api.sendInquiryToAdmin(listing.id, message)
+      await api.createPremiumRequest(listing.id, message)
       setPremiumRequestSent(true)
       setShowPremiumModal(false)
       setPremiumMessage('')
     } catch (err: any) {
-      console.error('Failed to send premium inquiry:', err)
-      alert(err.message || 'Failed to send inquiry. Please try again.')
+      console.error('Failed to submit premium request:', err)
+      alert(err.message || 'Failed to submit request. Please try again.')
     } finally {
       setSendingPremiumRequest(false)
     }

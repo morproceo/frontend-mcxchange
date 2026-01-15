@@ -654,6 +654,26 @@ class ApiService {
     });
   }
 
+  // Premium request - creates a tracked request for premium listing access
+  async createPremiumRequest(listingId: string, message?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/buyer/premium-requests', {
+      method: 'POST',
+      body: JSON.stringify({ listingId, message }),
+    });
+  }
+
+  // Get buyer's premium requests
+  async getBuyerPremiumRequests() {
+    return this.request<{
+      success: boolean;
+      data: any[];
+    }>('/buyer/premium-requests');
+  }
+
   // Buyer subscription endpoints
   async getSubscription() {
     return this.request<ApiResponse<SubscriptionResponse>>('/buyer/subscription');
