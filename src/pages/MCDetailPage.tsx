@@ -30,7 +30,9 @@ import {
   X,
   Send,
   AlertTriangle,
-  Loader2
+  Loader2,
+  DollarSign,
+  ShoppingCart
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -74,6 +76,17 @@ const MCDetailPage = () => {
   const [contactPhone, setContactPhone] = useState('')
   const [messageSent, setMessageSent] = useState(false)
   const [sendingInquiry, setSendingInquiry] = useState(false)
+
+  // Offer modal state
+  const [showOfferModal, setShowOfferModal] = useState(false)
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false)
+  const [offerAmount, setOfferAmount] = useState('')
+  const [offerMessage, setOfferMessage] = useState('')
+  const [buyNowMessage, setBuyNowMessage] = useState('')
+  const [submittingOffer, setSubmittingOffer] = useState(false)
+  const [submittingBuyNow, setSubmittingBuyNow] = useState(false)
+  const [offerSuccess, setOfferSuccess] = useState(false)
+  const [buyNowSuccess, setBuyNowSuccess] = useState(false)
 
   // Check if listing is premium from actual listing data
   const isPremiumListing = listing?.isPremium ?? false
@@ -219,6 +232,59 @@ const MCDetailPage = () => {
     }
   }
 
+  // Handle submitting an offer
+  const handleSubmitOffer = async () => {
+    if (!listing || !offerAmount) return
+    setSubmittingOffer(true)
+    setOfferSuccess(false)
+
+    try {
+      await api.createOffer({
+        listingId: listing.id,
+        amount: parseFloat(offerAmount),
+        message: offerMessage || 'I am interested in purchasing this MC authority.'
+      })
+      setOfferSuccess(true)
+      setTimeout(() => {
+        setShowOfferModal(false)
+        setOfferAmount('')
+        setOfferMessage('')
+        setOfferSuccess(false)
+      }, 2000)
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit offer. Please try again.')
+    } finally {
+      setSubmittingOffer(false)
+    }
+  }
+
+  // Handle Buy Now (offer at listing price)
+  const handleBuyNow = async () => {
+    if (!listing) return
+    setSubmittingBuyNow(true)
+    setBuyNowSuccess(false)
+
+    try {
+      const price = listing.listingPrice || listing.askingPrice || listing.price || 0
+      await api.createOffer({
+        listingId: listing.id,
+        amount: price,
+        message: buyNowMessage || 'I want to buy this MC at the listed price.',
+        isBuyNow: true
+      })
+      setBuyNowSuccess(true)
+      setTimeout(() => {
+        setShowBuyNowModal(false)
+        setBuyNowMessage('')
+        setBuyNowSuccess(false)
+      }, 2000)
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit offer. Please try again.')
+    } finally {
+      setSubmittingBuyNow(false)
+    }
+  }
+
   // Show loading state
   if (loading) {
     return (
@@ -288,7 +354,12 @@ const MCDetailPage = () => {
                           <span className="text-xs font-bold text-yellow-600">PREMIUM</span>
                         </div>
                       )}
-                      {!isUnlocked && !isPremiumListing && (
+                      {isUnlocked ? (
+                        <div className="flex items-center gap-1 bg-emerald-100 px-2 py-1 rounded-full border border-emerald-300">
+                          <Unlock className="w-3 h-3 text-emerald-600" />
+                          <span className="text-xs font-bold text-emerald-600">Unlocked</span>
+                        </div>
+                      ) : !isPremiumListing && (
                         <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
                           <Lock className="w-3 h-3 text-yellow-600" />
                           <span className="text-xs text-yellow-600">Locked</span>
@@ -1312,8 +1383,8 @@ const MCDetailPage = () => {
 
             {/* Credits Card / Premium Card */}
             <Card className="overflow-hidden">
-              {isPremiumListing ? (
-                // Premium Listing - Contact Admin
+              {isPremiumListing && !isUnlocked ? (
+                // Premium Listing - Contact Admin (only show if not unlocked)
                 <>
                   <div className="bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 -m-6 mb-4 p-4 border-b border-yellow-500/30">
                     <div className="flex items-center gap-2">
@@ -1437,9 +1508,31 @@ const MCDetailPage = () => {
                         <div className="text-sm text-emerald-600">Full details are now visible</div>
                       </div>
 
-                      <Button fullWidth variant="secondary">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Contact Seller
+                      {/* Buy Now Button */}
+                      <Button
+                        fullWidth
+                        onClick={() => {
+                          setBuyNowMessage('')
+                          setShowBuyNowModal(true)
+                        }}
+                        className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Buy Now at ${(listing?.listingPrice || listing?.askingPrice || listing?.price || 0).toLocaleString()}
+                      </Button>
+
+                      {/* Place Offer Button */}
+                      <Button
+                        fullWidth
+                        variant="secondary"
+                        onClick={() => {
+                          setOfferAmount((listing?.listingPrice || listing?.askingPrice || listing?.price || 0).toString())
+                          setOfferMessage('')
+                          setShowOfferModal(true)
+                        }}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Place an Offer
                       </Button>
 
                       <Button fullWidth variant="secondary">
@@ -1752,6 +1845,255 @@ const MCDetailPage = () => {
                     </Button>
                   </div>
                 </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Offer Modal */}
+        {showOfferModal && listing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowOfferModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card className="overflow-hidden">
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 -m-6 mb-6 p-6 border-b border-indigo-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                        <Send className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">Place an Offer</h3>
+                        <p className="text-sm text-gray-500">MC #{listing.mcNumber}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowOfferModal(false)}
+                      className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                {offerSuccess ? (
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Offer Submitted!</h3>
+                    <p className="text-gray-600">Admin will review your offer and contact you shortly.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* MC Info */}
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-gray-900">{listing.title}</div>
+                          <div className="text-sm text-gray-500">Listed at ${(listing.listingPrice || listing.askingPrice || listing.price || 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Offer Amount */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Your Offer Amount
+                      </label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="number"
+                          value={offerAmount}
+                          onChange={(e) => setOfferAmount(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900"
+                          placeholder="Enter amount"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Message */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Message (Optional)
+                      </label>
+                      <textarea
+                        value={offerMessage}
+                        onChange={(e) => setOfferMessage(e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900 resize-none"
+                        placeholder="Add a message about your offer..."
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        fullWidth
+                        variant="outline"
+                        onClick={() => setShowOfferModal(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        fullWidth
+                        onClick={handleSubmitOffer}
+                        disabled={!offerAmount || submittingOffer}
+                      >
+                        {submittingOffer ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Submit Offer
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Buy Now Modal */}
+        {showBuyNowModal && listing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowBuyNowModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card className="overflow-hidden">
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-emerald-500/20 via-green-500/20 to-teal-500/20 -m-6 mb-6 p-6 border-b border-emerald-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+                        <ShoppingCart className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">Buy Now</h3>
+                        <p className="text-sm text-gray-500">MC #{listing.mcNumber}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowBuyNowModal(false)}
+                      className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                {buyNowSuccess ? (
+                  <div className="p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Purchase Request Submitted!</h3>
+                    <p className="text-gray-600">Admin will review and contact you to proceed with the transaction.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* MC Info */}
+                    <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                      <div className="text-center">
+                        <div className="font-bold text-gray-900 text-lg mb-1">{listing.title}</div>
+                        <div className="text-3xl font-bold text-emerald-600">
+                          ${(listing.listingPrice || listing.askingPrice || listing.price || 0).toLocaleString()}
+                        </div>
+                        <div className="text-sm text-emerald-700 mt-1">Listed Price</div>
+                      </div>
+                    </div>
+
+                    {/* Message */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Message (Optional)
+                      </label>
+                      <textarea
+                        value={buyNowMessage}
+                        onChange={(e) => setBuyNowMessage(e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900 resize-none"
+                        placeholder="Add any notes about your purchase..."
+                      />
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <h4 className="font-semibold mb-2 text-gray-900">What happens next?</h4>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          Admin reviews your purchase request
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          You'll receive deposit instructions
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          Transaction room opens for secure transfer
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        fullWidth
+                        variant="outline"
+                        onClick={() => setShowBuyNowModal(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        fullWidth
+                        onClick={handleBuyNow}
+                        disabled={submittingBuyNow}
+                        className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                      >
+                        {submittingBuyNow ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Confirm Purchase
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </Card>
             </motion.div>
           </motion.div>

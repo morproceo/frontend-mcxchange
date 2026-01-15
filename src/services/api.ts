@@ -563,6 +563,34 @@ class ApiService {
     return this.request<{ status: string; timestamp: string }>('/health');
   }
 
+  // Generic GET request
+  async get<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint);
+  }
+
+  // Generic POST request
+  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  // Generic PUT request
+  async put<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  // Generic DELETE request
+  async delete<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+    });
+  }
+
   // Messaging endpoints
   async getMessageConversations() {
     return this.request<{
