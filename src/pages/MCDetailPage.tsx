@@ -28,6 +28,7 @@ import {
   Sparkles,
   Crown,
   X,
+  AlertCircle,
   Send,
   AlertTriangle,
   Loader2,
@@ -1359,17 +1360,14 @@ const MCDetailPage = () => {
               </div>
 
               {isPremiumListing ? (
-                /* Premium Listing Disclaimer - No direct messaging */
+                /* Premium Listing - No direct messaging, use Unlock Premium MC button */
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
                   <div className="flex items-start gap-3">
                     <Crown className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <div className="font-semibold text-amber-700 mb-1">Premium Listing</div>
                       <p className="text-sm text-amber-600">
-                        This is a premium MC authority. Even if you have credits, our admin team must first review and approve your request before any credits are charged.
-                      </p>
-                      <p className="text-xs text-amber-500 mt-2">
-                        Use the "Request Access" button in the Premium card below to submit your interest.
+                        Use the "Unlock Premium MC" button below to request access to this listing.
                       </p>
                     </div>
                   </div>
@@ -1686,8 +1684,9 @@ const MCDetailPage = () => {
                 {/* Modal Content */}
                 <div className="space-y-4">
                   {/* Disclaimer */}
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                    <p className="text-sm text-amber-200">
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-gray-900">
                       <span className="font-semibold">Important:</span> Even if you have credits, your request must be reviewed and approved by our admin team first. Credits will only be charged upon approval.
                     </p>
                   </div>
