@@ -1358,7 +1358,23 @@ const MCDetailPage = () => {
                 </div>
               </div>
 
-              {messageSent ? (
+              {isPremiumListing ? (
+                /* Premium Listing Disclaimer - No direct messaging */
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                  <div className="flex items-start gap-3">
+                    <Crown className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-amber-700 mb-1">Premium Listing</div>
+                      <p className="text-sm text-amber-600">
+                        This is a premium MC authority. Even if you have credits, our admin team must first review and approve your request before any credits are charged.
+                      </p>
+                      <p className="text-xs text-amber-500 mt-2">
+                        Use the "Request Access" button in the Premium card below to submit your interest.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : messageSent ? (
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
                   <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                   <div className="font-semibold text-emerald-700">Message Sent!</div>
@@ -1371,7 +1387,7 @@ const MCDetailPage = () => {
                 </Button>
               )}
 
-              {!isAuthenticated && (
+              {!isAuthenticated && !isPremiumListing && (
                 <p className="text-xs text-center text-gray-500 mt-3">
                   <Link to="/login" className="text-indigo-600 hover:text-indigo-500 font-medium">
                     Sign in
