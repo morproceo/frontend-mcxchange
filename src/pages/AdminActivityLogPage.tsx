@@ -320,11 +320,8 @@ const AdminActivityLogPage = () => {
                 value={activityType}
                 onChange={(e) => setActivityType(e.target.value)}
                 label="Activity Type"
-              >
-                {activityTypeOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </Select>
+                options={activityTypeOptions}
+              />
             </div>
 
             <div className="flex-1">
@@ -371,10 +368,11 @@ const AdminActivityLogPage = () => {
             >
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <Select
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Action Type</label>
+                  <select
                     value={actionType}
                     onChange={(e) => setActionType(e.target.value)}
-                    label="Action Type"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     {activityType === 'credits' ? (
                       creditTypeOptions.map(opt => (
@@ -399,7 +397,7 @@ const AdminActivityLogPage = () => {
                         </optgroup>
                       </>
                     )}
-                  </Select>
+                  </select>
                 </div>
 
                 <div>
