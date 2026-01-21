@@ -336,6 +336,29 @@ class ApiService {
     }>(`/admin/users/${userId}/activity-log`);
   }
 
+  async getActivityLog(params?: {
+    type?: string;
+    userId?: string;
+    mcNumber?: string;
+    actionType?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.type) searchParams.set('type', params.type);
+    if (params?.userId) searchParams.set('userId', params.userId);
+    if (params?.mcNumber) searchParams.set('mcNumber', params.mcNumber);
+    if (params?.actionType) searchParams.set('actionType', params.actionType);
+    if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString();
+    return this.request<any>(`/admin/activity-log${query ? `?${query}` : ''}`);
+  }
+
   async getAdminPendingListings(params?: { page?: number; limit?: number }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());

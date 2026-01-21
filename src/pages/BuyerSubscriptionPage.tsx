@@ -172,36 +172,21 @@ const BuyerSubscriptionPage = () => {
       }
 
       // Handle subscription success
+      // NOTE: Credits are granted via webhook (customer.subscription.created), not via this endpoint
+      // We just refresh the subscription data to show updated credits from the webhook
       if (searchParams.get('success') === 'true' && user) {
+        setSuccessMessage('Subscription activated successfully! Your credits have been added.')
+        // Refresh subscription data to show updated credits (granted via webhook)
         try {
-          // Call verify endpoint to ensure subscription is fulfilled and credits are added
-          const response = await api.verifySubscription()
-          if (response.data?.fulfilled) {
-            setSuccessMessage('Subscription activated successfully! Your credits have been added.')
-            // Refresh subscription data to show updated credits
-            const subResponse = await api.getSubscription()
-            if (subResponse.data) {
-              setSubscription(subResponse.data.subscription)
-              setCredits(subResponse.data.credits)
-            }
-          } else {
-            setSuccessMessage('Subscription payment received! Processing your credits...')
+          const subResponse = await api.getSubscription()
+          if (subResponse.data) {
+            setSubscription(subResponse.data.subscription)
+            setCredits(subResponse.data.credits)
           }
         } catch (err) {
-          console.error('Failed to verify subscription:', err)
-          // Still try to refresh subscription data even if verify failed
-          try {
-            const subResponse = await api.getSubscription()
-            if (subResponse.data) {
-              setSubscription(subResponse.data.subscription)
-              setCredits(subResponse.data.credits)
-            }
-          } catch (subErr) {
-            console.error('Failed to fetch subscription:', subErr)
-          }
-          setSuccessMessage('Subscription payment received! Your account will be updated shortly.')
+          console.error('Failed to fetch subscription:', err)
         }
-        // Clear the success param from URL to prevent re-verification on refresh
+        // Clear the success param from URL to prevent re-fetch on refresh
         window.history.replaceState({}, '', '/buyer/subscription')
       }
     }
