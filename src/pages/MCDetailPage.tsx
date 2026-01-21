@@ -1728,7 +1728,7 @@ const MCDetailPage = () => {
                 <div className="space-y-4">
                   {/* Scrollable Terms */}
                   <div
-                    className="h-64 overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-700"
+                    className="h-80 overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-700"
                     onScroll={(e) => {
                       const target = e.target as HTMLDivElement
                       if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50) {
@@ -1736,34 +1736,111 @@ const MCDetailPage = () => {
                       }
                     }}
                   >
-                    <h4 className="font-bold text-gray-900 mb-3">MC-Xchange Platform Terms of Service</h4>
-                    <p className="mb-3">Last Updated: January 2026</p>
+                    <h4 className="font-bold text-gray-900 text-center mb-2 text-base">CONFIDENTIALITY, NON-DISCLOSURE, AND NON-CIRCUMVENTION AGREEMENT</h4>
+                    <p className="text-center mb-4 text-xs text-gray-600">THIS AMENDED AND RESTATED CONFIDENTIALITY, NON-DISCLOSURE, AND NON-CIRCUMVENTION AGREEMENT</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">1. Acceptance of Terms</h5>
-                    <p className="mb-3">By accessing or using the MC-Xchange platform ("Platform"), you agree to be bound by these Terms of Service. If you do not agree, you may not use our services.</p>
+                    <p className="mb-3">This Agreement is made and entered into as of <strong>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> (the "Effective Date"), by and between:</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">2. Platform Services</h5>
-                    <p className="mb-3">MC-Xchange provides a marketplace for buying and selling Motor Carrier (MC) authorities. We act as an intermediary and do not own or operate any MC authorities listed on the platform.</p>
+                    <p className="mb-3"><strong>DISCLOSING PARTY:</strong> The Domilea Group, a Pennsylvania limited liability company ("Provider"), acting in its capacity as the exclusive marketing consultant and intermediary for the owner(s) of the business opportunities presented hereunder ("Seller"); and</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">3. User Obligations</h5>
-                    <p className="mb-3">You agree to: (a) provide accurate and complete information; (b) maintain the security of your account; (c) comply with all applicable laws and regulations; (d) not engage in fraudulent activities.</p>
+                    <p className="mb-3"><strong>RECIPIENT:</strong> <em>{user?.name || '[Your Name]'}</em>, the undersigned party ("Recipient").</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">4. Premium Listing Access</h5>
-                    <p className="mb-3">Access to premium MC listings requires admin approval. Credits will only be charged upon approval of your request. Pricing is determined on a case-by-case basis.</p>
+                    <p className="mb-3">(Provider and Recipient are hereinafter collectively referred to as the "Parties" and individually as a "Party").</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">5. Credit System</h5>
-                    <p className="mb-3">Credits purchased are non-refundable except as required by law. Credits may expire according to the terms of your subscription plan.</p>
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">RECITALS</h5>
+                    <p className="mb-3">WHEREAS, Provider serves as an intermediary for the sale of certain transportation, logistics, and trucking business assets (the "Business"); and WHEREAS, Provider possesses, or has access to, certain proprietary, non-public, and highly confidential information regarding the Business, its operations, financial condition, and strategies, which is proprietary to the Seller; and WHEREAS, Recipient has expressed an interest in evaluating a potential acquisition of the assets or equity of the Business (the "Transaction") and desires access to such information for the sole and exclusive purpose of conducting its preliminary due diligence; and WHEREAS, Provider is willing to disclose such Confidential Information to Recipient only upon the strict terms and conditions of confidentiality, non-use, non-solicitation, and non-circumvention set forth in this Agreement;</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">6. Limitation of Liability</h5>
-                    <p className="mb-3">MC-Xchange is not liable for any indirect, incidental, or consequential damages arising from your use of the platform or any MC authority purchased through our services.</p>
+                    <p className="mb-4">NOW, THEREFORE, in consideration of the mutual covenants, conditions, and agreements set forth herein, and for other good and valuable consideration, the receipt and sufficiency of which are hereby acknowledged, the Parties agree as follows:</p>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">7. Dispute Resolution</h5>
-                    <p className="mb-3">Any disputes shall be resolved through binding arbitration in accordance with applicable laws. You waive any right to participate in class action lawsuits.</p>
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">ARTICLE 1: DEFINITION, SCOPE, AND PROTECTION OF CONFIDENTIAL INFORMATION</h5>
 
-                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">8. Contact Information</h5>
-                    <p className="mb-3">For questions about these terms, contact us at legal@domilea.com</p>
+                    <p className="mb-2"><strong>1.1. Comprehensive Definition of Confidential Information.</strong> For purposes of this Agreement, "Confidential Information" shall mean any and all data, information, documents, and materials regarding the Seller, the Business, or the Transaction, whether conveyed orally, in writing, electronically, visually, or by inspection of tangible assets, that is furnished to Recipient by Provider or Seller. This definition shall be broadly construed to include, without limitation:</p>
 
-                    <p className="text-xs text-gray-500 mt-6 pt-4 border-t border-gray-200">
+                    <ul className="list-disc pl-6 mb-3 space-y-1">
+                      <li><strong>(a) Corporate Identity:</strong> The specific identity of the Seller, its owners, shareholders, officers, and the precise geographic location of its terminals or facilities;</li>
+                      <li><strong>(b) Financial Data:</strong> Historical, current, and projected financial statements, tax returns, profit and loss statements, balance sheets, bank records, debt schedules, accounts receivable aging reports, and factoring agreements;</li>
+                      <li><strong>(c) Operational Assets:</strong> Equipment lists (including VINs, make, model, and year), maintenance records, lease agreements, and real estate documents;</li>
+                      <li><strong>(d) Commercial Relationships:</strong> Customer lists, shipper contracts, rate confirmation sheets, lane data, fuel surcharge schedules, and vendor/supplier agreements;</li>
+                      <li><strong>(e) Human Capital:</strong> Driver lists (including names, CDL numbers, and tenure), independent contractor agreements, employee personnel files, dispatcher compensation plans, and organizational charts;</li>
+                      <li><strong>(f) Regulatory Status:</strong> FMCSA/DOT safety ratings, SAFER system data, insurance loss runs, and claims history; and</li>
+                      <li><strong>(g) The "Fact of Sale":</strong> The existence of this Agreement, the fact that the Business is available for acquisition, and the status of any negotiations or offers.</li>
+                    </ul>
+
+                    <p className="mb-3"><strong>1.2. Inclusion of Derivative Works.</strong> "Confidential Information" shall also expressly include any notes, analyses, compilations, studies, interpretations, memoranda, or other documents prepared by Recipient or its Representatives which contain, reflect, or are based upon, in whole or in part, the Confidential Information furnished to Recipient ("Derivative Works").</p>
+
+                    <p className="mb-3"><strong>1.3. Exclusions from Definition.</strong> Confidential Information shall not include information that: (i) is or becomes generally available to the public other than as a result of a disclosure by Recipient or its Representatives in violation of this Agreement; (ii) was available to Recipient on a non-confidential basis prior to its disclosure by Provider; or (iii) becomes available to Recipient on a non-confidential basis from a person other than Provider or Seller who is not bound by a confidentiality agreement with Provider or Seller.</p>
+
+                    <p className="mb-3"><strong>1.4. Permitted Use and Standard of Care.</strong> Recipient agrees that it shall use the Confidential Information solely and exclusively for the purpose of evaluating the advisability of the Transaction. Recipient shall protect the Confidential Information with the same degree of care that it uses to protect its own confidential information of like nature, but in no event less than a reasonable standard of care. Recipient shall not use the Confidential Information to compete with Seller, reverse-engineer Seller's business model, or gain an unfair commercial advantage.</p>
+
+                    <p className="mb-3"><strong>1.5. Disclosure to Representatives.</strong> Recipient shall not disclose, disseminate, or publish any Confidential Information to any third party, except to Recipient's directors, officers, employees, attorneys, accountants, and lenders (collectively, "Representatives") who: (a) Have a specific, bona fide need to know such information for the purpose of the Transaction; (b) Are informed by Recipient of the confidential nature of the information; and (c) Are strictly bound by professional duties of confidentiality or written confidentiality agreements at least as protective as this Agreement. <strong>Vicarious Liability:</strong> Recipient agrees to be responsible for any breach of this Agreement by any of its Representatives.</p>
+
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">ARTICLE 2: NON-CIRCUMVENTION</h5>
+
+                    <p className="mb-3"><strong>2.1. Absolute Prohibition on Direct Contact.</strong> Recipient covenants and agrees that, during the Term and the Protection Period, neither Recipient nor its Representatives shall, directly or indirectly, initiate, solicit, maintain, or engage in any contact, communication, interview, or negotiation with the Seller, its beneficial owners, officers, employees, independent contractors (drivers), lessors, or supply chain vendors regarding the Business or the Transaction, without the express prior written consent and direct participation of Provider.</p>
+
+                    <p className="mb-3"><strong>(a) Exclusive Channel:</strong> All expressions of interest, offers, counter-offers, letters of intent (LOI), requests for due diligence materials, and scheduling of site visits must be transmitted and coordinated exclusively through Provider.</p>
+
+                    <p className="mb-3"><strong>(b) Duty to Notify and Redirect:</strong> In the event Recipient is contacted directly by Seller (or Seller's agents) regarding the Transaction, Recipient shall: (i) immediately suspend such communication; (ii) notify Provider in writing within twenty-four (24) hours of such contact; and (iii) redirect Seller to communicate solely through Provider. Failure to report such contact shall constitute a material breach of this Agreement.</p>
+
+                    <p className="mb-3"><strong>2.2. Non-Circumvention and Non-Interference.</strong> Recipient acknowledges that Provider has a valid contractual engagement with Seller and that Provider's proprietary network is its primary commercial asset. Accordingly, Recipient agrees that during the Term and for a period of twenty-four (24) months following the Effective Date (the "Protection Period"), Recipient shall not, directly or indirectly:</p>
+
+                    <ul className="list-disc pl-6 mb-3 space-y-1">
+                      <li><strong>(a) Transactional Bypass:</strong> Consummate, participate in, or facilitate any Transaction involving the Business, the Seller, or any material portion of Seller's assets, without Provider's full participation and compensation;</li>
+                      <li><strong>(b) Alternative Structures:</strong> Enter into any management agreement, consulting arrangement, lease agreement, or independent contractor relationship with Seller that has the effect of transferring the economic benefit, operational control, or goodwill of the Business to Recipient;</li>
+                      <li><strong>(c) Tortious Interference:</strong> Induce, encourage, aid, or abet Seller to breach, terminate, or modify its engagement agreement with Provider for the purpose of avoiding, reducing, or delaying the payment of commissions; or</li>
+                      <li><strong>(d) Parallel Pursuit:</strong> Enter into any agreement, option, or understanding with Seller during the Protection Period that contemplates a closing or transfer of assets occurring subsequent to the expiration of the Protection Period.</li>
+                    </ul>
+
+                    <p className="mb-3"><strong>2.3. Liability for Circumvention.</strong> The Parties expressly acknowledge that a breach of Section 2.1 or 2.2 will result in the loss of Provider's bargained-for compensation. Accordingly, in the event Recipient (or any Affiliate) consummates a Transaction or takes control of the Business in violation of this Article 2, Recipient shall be immediately liable to pay Provider a sum equal to Ten Percent (10.0%) of the "Total Transaction Value" or the specific commission amount Provider would have earned under its agreement with Seller, whichever is greater (the "Liquidated Damages").</p>
+
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">ARTICLE 3: NON-SOLICITATION AND NON-INTERFERENCE</h5>
+
+                    <p className="mb-3"><strong>3.1. Non-Solicitation and "No-Hire" of Workforce.</strong> Recipient acknowledges that the Business's enterprise value is inextricably linked to its workforce, specifically its DOT qualified drivers and key logistics personnel. Accordingly, Recipient covenants and agrees that, during the Term and for a period of twenty-four (24) months following the Effective Date (the "Restricted Period"), Recipient shall not, directly or indirectly:</p>
+
+                    <ul className="list-disc pl-6 mb-3 space-y-1">
+                      <li><strong>(a) Targeted Solicitation:</strong> Solicit, induce, recruit, encourage, or attempt to persuade any "Protected Individual" to terminate their employment or engagement with Seller; or</li>
+                      <li><strong>(b) Hiring Prohibition:</strong> Hire, engage, or contract with any Protected Individual, regardless of whether such individual approaches Recipient voluntarily or responds to a general solicitation.</li>
+                    </ul>
+
+                    <p className="mb-3"><strong>3.3. Non-Interference with Commercial Relationships.</strong> Recipient covenants that it shall not use any Confidential Information (including customer lists, lane history, or rate sheets) to divert, solicit, or interfere with any of Seller's commercial relationships.</p>
+
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">ARTICLE 4: DISCLAIMER OF WARRANTIES AND RELEASE OF LIABILITY</h5>
+
+                    <p className="mb-3"><strong>4.1. Limited Role of Provider.</strong> Recipient acknowledges and agrees that Provider acts solely as a marketing consultant and administrative intermediary for the Seller. Provider has not audited, verified, validated, investigated, or independently confirmed the accuracy, completeness, or authenticity of any information provided by Seller. Provider is not acting as legal counsel, certified public accountant, tax advisor, or licensed real estate broker/inspector for Recipient.</p>
+
+                    <p className="mb-3"><strong>4.2. Disclaimer of Representations and Warranties.</strong> PROVIDER MAKES NO REPRESENTATIONS OR WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, AT LAW OR IN EQUITY, WITH RESPECT TO THE TRANSACTION OR THE CONFIDENTIAL INFORMATION. Provider expressly disclaims any warranty regarding: (a) Financial projections; (b) Asset condition (AS-IS/WHERE-IS); (c) Regulatory compliance; and (d) Implied warranties of merchantability or fitness for a particular purpose.</p>
+
+                    <p className="mb-3"><strong>4.3. Non-Reliance Covenant.</strong> Recipient acknowledges that it is a sophisticated purchaser and has made its own independent investigation, analysis, and valuation of the Business. Recipient is relying solely on its own independent due diligence, inspection of assets, and the advice of its own legal and financial advisors.</p>
+
+                    <p className="mb-3"><strong>4.4. Waiver and Release of Liability.</strong> To the fullest extent permitted by applicable law, Recipient hereby irrevocably and unconditionally releases, acquits, and forever discharges Provider and its affiliates from any and all claims, demands, causes of action, liabilities, losses, damages, costs, and expenses arising out of or relating to any inaccuracy, error, omission, or misrepresentation in the Confidential Information.</p>
+
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">ARTICLE 5: OPERATIONAL CONDITIONS</h5>
+
+                    <p className="mb-3"><strong>5.1. Proof of Funds.</strong> Provider reserves the right to withhold specific categories of information until Recipient has provided current, verifiable evidence of its financial capacity to consummate the Transaction.</p>
+
+                    <p className="mb-3"><strong>5.2. Strict Prohibition on Unannounced Site Visits.</strong> Under no circumstances shall Recipient visit the Seller's offices, terminals, yards, or facilities without the express prior written consent of Provider and the presence of a designated escort.</p>
+
+                    <p className="mb-3"><strong>5.4. Return or Destruction of Confidential Information.</strong> Upon termination of negotiations, Recipient shall within five (5) business days permanently delete, destroy, or erase all copies of the Confidential Information from its systems and provide a certificate confirming such destruction.</p>
+
+                    <h5 className="font-bold text-gray-900 mt-6 mb-2 text-sm">ARTICLE 6: DISPUTE RESOLUTION, GOVERNING LAW, AND REMEDIES</h5>
+
+                    <p className="mb-3"><strong>6.1. Governing Law.</strong> This Agreement shall be governed by the internal laws of the State of New York, without giving effect to any choice of law provision.</p>
+
+                    <p className="mb-3"><strong>6.2. Mandatory Binding Arbitration.</strong> Any dispute, claim, or controversy arising out of or relating to this Agreement shall be determined exclusively by binding arbitration before a single arbitrator, administered by the American Arbitration Association in New York, New York.</p>
+
+                    <p className="mb-3"><strong>6.4. WAIVER OF JURY TRIAL.</strong> TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, EACH PARTY HEREBY KNOWINGLY, VOLUNTARILY, AND INTENTIONALLY WAIVES ANY RIGHT IT MAY HAVE TO A TRIAL BY JURY IN RESPECT OF ANY LITIGATION OR PROCEEDING ARISING OUT OF OR RELATING TO THIS AGREEMENT.</p>
+
+                    <p className="mb-3"><strong>6.5. Equitable Relief.</strong> The Parties acknowledge that a breach of Article 2 (Non-Circumvention) or Article 3 (Non-Solicitation) would cause irreparable harm. Provider shall be entitled to seek preliminary and permanent injunctive relief in any state or federal court located in New York County, New York, without the necessity of posting a bond.</p>
+
+                    <p className="mb-3"><strong>6.6. Attorneys' Fees.</strong> The Prevailing Party shall be entitled to recover from the non-prevailing party all reasonable attorneys' fees, court costs, and other expenses incurred in connection with any proceeding.</p>
+
+                    <p className="mb-3"><strong>6.7. Survival.</strong> The rights and obligations set forth in Articles 1-4 and 6 shall survive the expiration or termination of this Agreement for the duration of the Protection Period plus the applicable statute of limitations.</p>
+
+                    <div className="mt-6 pt-4 border-t border-gray-300">
+                      <p className="font-bold text-gray-900 mb-3">IN WITNESS WHEREOF, the Recipient has executed this Agreement as of the Effective Date.</p>
+                    </div>
+
+                    <p className="text-xs text-amber-600 mt-4 pt-4 border-t border-gray-200 text-center font-medium">
                       Scroll to the bottom to enable signing.
                     </p>
                   </div>
