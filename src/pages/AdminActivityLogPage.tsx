@@ -39,6 +39,7 @@ interface ActivityItem {
   userId?: string
   userName?: string
   userEmail?: string
+  listingId?: string
   mcNumber?: string
   listingTitle?: string
   location?: string
@@ -503,6 +504,13 @@ const AdminActivityLogPage = () => {
                             <span className="flex items-center gap-1 font-medium text-purple-600">
                               <Hash className="w-4 h-4" />
                               MC {activity.mcNumber}
+                            </span>
+                          )}
+
+                          {/* Listing ID for unlocks - helps identify duplicate listings */}
+                          {activity.activityType === 'UNLOCK' && activity.listingId && (
+                            <span className="flex items-center gap-1 text-xs text-gray-400">
+                              (Listing: {activity.listingId.slice(0, 8)}...)
                             </span>
                           )}
 
