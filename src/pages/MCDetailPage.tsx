@@ -196,21 +196,8 @@ const MCDetailPage = () => {
       return
     }
 
-    // Check if user has already accepted terms
-    try {
-      const response = await api.getTermsStatus()
-      if (response.data.hasAccepted) {
-        setTermsAccepted(true)
-        setShowPremiumModal(true)
-      } else {
-        // Show terms modal first
-        setShowTermsModal(true)
-      }
-    } catch (err: any) {
-      console.error('Failed to check terms status:', err)
-      // If error checking, still show terms modal to be safe
-      setShowTermsModal(true)
-    }
+    // Always show terms modal first - user must accept/acknowledge each time
+    setShowTermsModal(true)
   }
 
   const handleAcceptTerms = async () => {
@@ -221,9 +208,16 @@ const MCDetailPage = () => {
 
     try {
       setAcceptingTerms(true)
-      await api.acceptTerms(termsSignature.trim())
+      // Check if already accepted, if so just proceed
+      const statusResponse = await api.getTermsStatus()
+      if (!statusResponse.data.hasAccepted) {
+        // First time signing - record it
+        await api.acceptTerms(termsSignature.trim())
+      }
       setTermsAccepted(true)
       setShowTermsModal(false)
+      setTermsSignature('') // Reset for next time
+      setHasReadTerms(false) // Reset scroll state
       // Now show the premium request modal
       setShowPremiumModal(true)
     } catch (err: any) {
