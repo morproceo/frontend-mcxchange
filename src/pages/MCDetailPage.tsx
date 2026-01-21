@@ -1735,7 +1735,7 @@ const MCDetailPage = () => {
 
                     <p className="mb-3">This Agreement is made and entered into as of <strong>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> (the "Effective Date"), by and between:</p>
 
-                    <p className="mb-3"><strong>DISCLOSING PARTY:</strong> The Domilea Group, a Pennsylvania limited liability company ("Provider"), acting in its capacity as the exclusive marketing consultant and intermediary for the owner(s) of the business opportunities presented hereunder ("Seller"); and</p>
+                    <p className="mb-3"><strong>DISCLOSING PARTY:</strong> The Domilea Group, an Illinois limited liability company ("Provider"), acting in its capacity as the exclusive marketing consultant and intermediary for the owner(s) of the business opportunities presented hereunder ("Seller"); and</p>
 
                     <p className="mb-3"><strong>RECIPIENT:</strong> <em>{user?.name || '[Your Name]'}</em>, the undersigned party ("Recipient").</p>
 
