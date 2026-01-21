@@ -1426,24 +1426,13 @@ const MCDetailPage = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
-                        <div className="text-center">
-                          <Crown className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
-                          <div className="font-bold text-lg mb-1">Premium MC Authority</div>
-                          <div className="text-sm text-gray-500 mb-4">
-                            This is a premium listing. Contact our admin team for pricing and details.
-                          </div>
-                          <div className="text-2xl font-bold text-yellow-400">Contact for Price</div>
-                        </div>
-                      </div>
-
                       <Button
                         fullWidth
                         onClick={handlePremiumRequest}
                         className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                       >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Contact Admin for Pricing
+                        <Crown className="w-4 h-4 mr-2" />
+                        Unlock Premium MC
                       </Button>
 
                       <Button fullWidth variant="secondary">
@@ -1451,12 +1440,18 @@ const MCDetailPage = () => {
                         Save Listing
                       </Button>
 
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                        <p className="text-xs text-amber-600">
+                          <span className="font-semibold">Note:</span> Even if you have credits, our admin team must review and approve your request first. Credits will only be charged upon approval.
+                        </p>
+                      </div>
+
                       {!isAuthenticated && (
                         <p className="text-xs text-center text-gray-500">
                           <Link to="/login" className="text-primary-400 hover:text-primary-300">
                             Sign in
                           </Link>{' '}
-                          to contact admin about this listing
+                          to unlock this premium listing
                         </p>
                       )}
                     </div>
@@ -1690,9 +1685,12 @@ const MCDetailPage = () => {
 
                 {/* Modal Content */}
                 <div className="space-y-4">
-                  <p className="text-white/80">
-                    You're requesting information about a premium MC Authority. Our admin team will review your request and provide pricing details.
-                  </p>
+                  {/* Disclaimer */}
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                    <p className="text-sm text-amber-200">
+                      <span className="font-semibold">Important:</span> Even if you have credits, your request must be reviewed and approved by our admin team first. Credits will only be charged upon approval.
+                    </p>
+                  </div>
 
                   <Textarea
                     label="Message to Admin (Optional)"
@@ -1715,7 +1713,7 @@ const MCDetailPage = () => {
                       </li>
                       <li className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-primary-400" />
-                        Receive custom pricing and details
+                        Credits charged only upon approval
                       </li>
                     </ul>
                   </div>
