@@ -34,7 +34,11 @@ import {
   Coins,
   Plus,
   Minus,
-  Loader2
+  Loader2,
+  Unlock,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  MapPin
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -101,6 +105,42 @@ const AdminUsersPage = () => {
   const [creditAmount, setCreditAmount] = useState<string>('')
   const [creditReason, setCreditReason] = useState<string>('')
   const [creditAdjusting, setCreditAdjusting] = useState(false)
+
+  // Activity log modal state
+  const [showActivityModal, setShowActivityModal] = useState(false)
+  const [activityLogLoading, setActivityLogLoading] = useState(false)
+  const [activityLog, setActivityLog] = useState<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+    totalCredits: number;
+    usedCredits: number;
+    availableCredits: number;
+    unlockedMCs: Array<{
+      id: string;
+      listingId: string;
+      mcNumber: string;
+      title: string;
+      legalName: string;
+      location: string;
+      askingPrice: number;
+      status: string;
+      creditsUsed: number;
+      unlockedAt: string;
+      viewCount: number;
+    }>;
+    creditTransactions: Array<{
+      id: string;
+      type: string;
+      amount: number;
+      balance: number;
+      description: string;
+      mcNumber: string | null;
+      listingTitle: string | null;
+      createdAt: string;
+    }>;
+  } | null>(null)
+  const [activityTab, setActivityTab] = useState<'unlocked' | 'transactions'>('unlocked')
 
   // Fetch users from API
   const fetchUsers = async () => {
@@ -287,6 +327,22 @@ const AdminUsersPage = () => {
       alert(err.message || 'Failed to adjust credits')
     } finally {
       setCreditAdjusting(false)
+    }
+  }
+
+  const openActivityLog = async (user: UserData) => {
+    setSelectedUser(user)
+    setShowActivityModal(true)
+    setActivityLogLoading(true)
+    setActivityTab('unlocked')
+    try {
+      const response = await api.getUserActivityLog(user.id)
+      setActivityLog(response.data)
+    } catch (err) {
+      console.error('Failed to fetch activity log:', err)
+      setActivityLog(null)
+    } finally {
+      setActivityLogLoading(false)
     }
   }
 
@@ -966,7 +1022,13 @@ const AdminUsersPage = () => {
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Send Message
                   </Button>
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDetailModal(false)
+                      openActivityLog(selectedUser)
+                    }}
+                  >
                     <History className="w-4 h-4 mr-2" />
                     View Activity Log
                   </Button>
@@ -1006,6 +1068,235 @@ const AdminUsersPage = () => {
                     </Button>
                   )}
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Activity Log Modal */}
+      <AnimatePresence>
+        {showActivityModal && selectedUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowActivityModal(false)
+              setActivityLog(null)
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold">
+                      <History className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Activity Log</h2>
+                      <p className="text-white/80 text-sm">{selectedUser.name} ({selectedUser.email})</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowActivityModal(false)
+                      setActivityLog(null)
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Credits Summary */}
+              {activityLog && (
+                <div className="p-4 bg-amber-50 border-b border-amber-200">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-900">{activityLog.totalCredits}</p>
+                      <p className="text-xs text-gray-500">Total Credits</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-600">{activityLog.usedCredits}</p>
+                      <p className="text-xs text-gray-500">Used</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-emerald-600">{activityLog.availableCredits}</p>
+                      <p className="text-xs text-gray-500">Available</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActivityTab('unlocked')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    activityTab === 'unlocked'
+                      ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Unlock className="w-4 h-4" />
+                  Unlocked MCs ({activityLog?.unlockedMCs.length || 0})
+                </button>
+                <button
+                  onClick={() => setActivityTab('transactions')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    activityTab === 'transactions'
+                      ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Credit Transactions ({activityLog?.creditTransactions.length || 0})
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {activityLogLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+                  </div>
+                ) : !activityLog ? (
+                  <div className="text-center py-12">
+                    <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Failed to load activity log</p>
+                  </div>
+                ) : activityTab === 'unlocked' ? (
+                  /* Unlocked MCs Tab */
+                  <div className="space-y-3">
+                    {activityLog.unlockedMCs.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Unlock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500">No unlocked MCs yet</p>
+                      </div>
+                    ) : (
+                      activityLog.unlockedMCs.map((mc) => (
+                        <div
+                          key={mc.id}
+                          className="bg-gray-50 rounded-xl p-4 border border-gray-100"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg font-bold text-indigo-600">MC-{mc.mcNumber}</span>
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  mc.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
+                                  mc.status === 'SOLD' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {mc.status}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700 font-medium">{mc.title}</p>
+                              {mc.legalName && (
+                                <p className="text-xs text-gray-500">{mc.legalName}</p>
+                              )}
+                              {mc.location && (
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {mc.location}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                {mc.viewCount} views
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Unlocked {formatDate(mc.unlockedAt)}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {mc.creditsUsed} credit used
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              Asking: <span className="font-semibold text-gray-900">${mc.askingPrice.toLocaleString()}</span>
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  /* Credit Transactions Tab */
+                  <div className="space-y-2">
+                    {activityLog.creditTransactions.length === 0 ? (
+                      <div className="text-center py-12">
+                        <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500">No credit transactions yet</p>
+                      </div>
+                    ) : (
+                      activityLog.creditTransactions.map((tx) => (
+                        <div
+                          key={tx.id}
+                          className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              tx.amount > 0
+                                ? 'bg-emerald-100 text-emerald-600'
+                                : 'bg-red-100 text-red-600'
+                            }`}>
+                              {tx.amount > 0
+                                ? <ArrowUpCircle className="w-5 h-5" />
+                                : <ArrowDownCircle className="w-5 h-5" />
+                              }
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-semibold ${
+                                  tx.amount > 0 ? 'text-emerald-600' : 'text-red-600'
+                                }`}>
+                                  {tx.amount > 0 ? '+' : ''}{tx.amount} credit{Math.abs(tx.amount) !== 1 ? 's' : ''}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  tx.type === 'PURCHASE' ? 'bg-blue-100 text-blue-700' :
+                                  tx.type === 'USAGE' ? 'bg-orange-100 text-orange-700' :
+                                  tx.type === 'REFUND' ? 'bg-green-100 text-green-700' :
+                                  tx.type === 'BONUS' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {tx.type}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600">{tx.description}</p>
+                              {tx.mcNumber && (
+                                <p className="text-xs text-indigo-600 font-medium">
+                                  MC-{tx.mcNumber} {tx.listingTitle && `- ${tx.listingTitle}`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-500">
+                              Balance: <span className="font-medium text-gray-900">{tx.balance}</span>
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {formatDate(tx.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

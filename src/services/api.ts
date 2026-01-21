@@ -299,6 +299,43 @@ class ApiService {
     });
   }
 
+  async getUserActivityLog(userId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        userId: string;
+        userName: string;
+        userEmail: string;
+        totalCredits: number;
+        usedCredits: number;
+        availableCredits: number;
+        unlockedMCs: Array<{
+          id: string;
+          listingId: string;
+          mcNumber: string;
+          title: string;
+          legalName: string;
+          location: string;
+          askingPrice: number;
+          status: string;
+          creditsUsed: number;
+          unlockedAt: string;
+          viewCount: number;
+        }>;
+        creditTransactions: Array<{
+          id: string;
+          type: string;
+          amount: number;
+          balance: number;
+          description: string;
+          mcNumber: string | null;
+          listingTitle: string | null;
+          createdAt: string;
+        }>;
+      };
+    }>(`/admin/users/${userId}/activity-log`);
+  }
+
   async getAdminPendingListings(params?: { page?: number; limit?: number }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
