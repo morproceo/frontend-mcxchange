@@ -19,7 +19,9 @@ import {
   Loader2,
   CheckCheck,
   Plus,
-  Minus
+  Minus,
+  ArrowLeft,
+  X
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Card from '../components/ui/Card'
@@ -120,6 +122,9 @@ const AdminMessagesPage = () => {
   const [creditReason, setCreditReason] = useState<string>('')
   const [creditAdjusting, setCreditAdjusting] = useState(false)
 
+  // Mobile view state - show detail view on mobile
+  const [showMobileDetail, setShowMobileDetail] = useState(false)
+
   useEffect(() => {
     const loadConversations = async () => {
       try {
@@ -213,6 +218,17 @@ const AdminMessagesPage = () => {
   const selectedConversation = conversations.find(
     (conv) => conv.participantId === selectedConversationId
   )
+
+  // Handle selecting a conversation (also shows mobile detail)
+  const handleSelectConversation = (participantId: string) => {
+    setSelectedConversationId(participantId)
+    setShowMobileDetail(true)
+  }
+
+  // Handle back button on mobile
+  const handleMobileBack = () => {
+    setShowMobileDetail(false)
+  }
 
   const filteredConversations = conversations.filter((conversation) => {
     const matchesStatus = filterStatus === 'all' || conversation.status === filterStatus
@@ -435,10 +451,10 @@ const AdminMessagesPage = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">MC Inquiries</h1>
-          <p className="text-gray-500">Manage all messages from potential buyers</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">MC Inquiries</h1>
+          <p className="text-sm sm:text-base text-gray-500">Manage all messages from potential buyers</p>
         </div>
-        <Button onClick={handleOpenCompose}>
+        <Button onClick={handleOpenCompose} className="w-full sm:w-auto py-3 sm:py-2">
           <Send className="w-4 h-4 mr-2" />
           Send Message
         </Button>
@@ -494,8 +510,8 @@ const AdminMessagesPage = () => {
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Inquiry List */}
-        <div className="lg:col-span-1 space-y-4">
+        {/* Inquiry List - Hidden on mobile when viewing detail */}
+        <div className={`lg:col-span-1 space-y-4 ${showMobileDetail ? 'hidden lg:block' : 'block'}`}>
           {/* Search & Filter */}
           <Card className="p-4">
             <div className="relative mb-4">
@@ -503,7 +519,8 @@ const AdminMessagesPage = () => {
               <input
                 type="text"
                 placeholder="Search by name, email, MC#..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="w-full pl-10 pr-4 py-3 sm:py-2 text-base rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                style={{ fontSize: '16px' }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -514,10 +531,10 @@ const AdminMessagesPage = () => {
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition-colors active:scale-95 ${
                     filterStatus === status
                       ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300'
                   }`}
                 >
                   {status === 'all' ? 'All' : status === 'in-progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -527,7 +544,7 @@ const AdminMessagesPage = () => {
           </Card>
 
           {/* Inquiry List */}
-          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+          <div className="space-y-2 max-h-[50vh] sm:max-h-[600px] overflow-y-auto">
             {loading ? (
               <Card className="p-8 text-center">
                 <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -551,10 +568,10 @@ void statusConfig[conversation.status].icon
                   <Card
                     key={conversation.participantId}
                     hover
-                    className={`p-4 cursor-pointer transition-all ${
+                    className={`p-4 cursor-pointer transition-all active:scale-[0.98] ${
                       selectedConversationId === conversation.participantId ? 'ring-2 ring-indigo-500 bg-indigo-50/50' : ''
                     }`}
-                    onClick={() => setSelectedConversationId(conversation.participantId)}
+                    onClick={() => handleSelectConversation(conversation.participantId)}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -602,20 +619,27 @@ void statusConfig[conversation.status].icon
           </div>
         </div>
 
-        {/* Inquiry Detail */}
-        <div className="lg:col-span-2">
+        {/* Inquiry Detail - Hidden on mobile unless viewing detail */}
+        <div className={`lg:col-span-2 ${showMobileDetail ? 'block' : 'hidden lg:block'}`}>
           {selectedConversation ? (
             <Card className="h-full flex flex-col">
               {/* Header */}
-              <div className="p-6 border-b border-gray-100">
+              <div className="p-4 sm:p-6 border-b border-gray-100">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-lg font-bold text-white">{selectedConversation.participantName.charAt(0)}</span>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    {/* Mobile Back Button */}
+                    <button
+                      onClick={handleMobileBack}
+                      className="lg:hidden w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 transition-colors flex-shrink-0"
+                    >
+                      <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-base sm:text-lg font-bold text-white">{selectedConversation.participantName.charAt(0)}</span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-gray-900">{selectedConversation.participantName}</h2>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{selectedConversation.participantName}</h2>
                         {selectedConversation.hasActiveSubscription !== undefined && (
                           selectedConversation.hasActiveSubscription || selectedConversation.hasCredits ? (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
@@ -671,68 +695,68 @@ void statusConfig[conversation.status].icon
                   </div>
                 </div>
 
-                {/* Contact Info */}
-                <div className="flex flex-wrap gap-4">
+                {/* Contact Info - Mobile-friendly grid */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4">
                   {selectedConversation.userEmail && (
                     <a
                       href={`mailto:${selectedConversation.userEmail}`}
-                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
+                      className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 hover:text-indigo-600 active:text-indigo-700 transition-colors bg-gray-50 sm:bg-transparent px-3 py-2 sm:p-0 rounded-lg"
                     >
-                      <Mail className="w-4 h-4" />
-                      {selectedConversation.userEmail}
+                      <Mail className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{selectedConversation.userEmail}</span>
                     </a>
                   )}
                   {selectedConversation.userPhone && (
                     <a
                       href={`tel:${selectedConversation.userPhone}`}
-                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600 transition-colors"
+                      className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 hover:text-indigo-600 active:text-indigo-700 transition-colors bg-gray-50 sm:bg-transparent px-3 py-2 sm:p-0 rounded-lg"
                     >
-                      <Phone className="w-4 h-4" />
-                      {selectedConversation.userPhone}
+                      <Phone className="w-4 h-4 flex-shrink-0" />
+                      <span>{selectedConversation.userPhone}</span>
                     </a>
                   )}
                   {selectedConversation.listingId && (
                     <a
                       href={`/mc/${selectedConversation.listingId}`}
                       target="_blank"
-                      className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+                      className="flex items-center gap-2 text-xs sm:text-sm text-indigo-600 hover:text-indigo-700 active:text-indigo-800 transition-colors bg-indigo-50 sm:bg-transparent px-3 py-2 sm:p-0 rounded-lg"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4 flex-shrink-0" />
                       View Listing
                     </a>
                   )}
                   {/* Quick User Info Button */}
                   <button
                     onClick={() => handleShowUserQuickInfo(selectedConversation.participantId)}
-                    className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 transition-colors bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg"
+                    className="flex items-center gap-2 text-xs sm:text-sm text-emerald-600 hover:text-emerald-700 active:text-emerald-800 transition-colors bg-emerald-50 hover:bg-emerald-100 px-3 py-2 sm:py-1.5 rounded-lg"
                   >
-                    <User className="w-4 h-4" />
+                    <User className="w-4 h-4 flex-shrink-0" />
                     User Info
                   </button>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 p-6 overflow-y-auto space-y-4 max-h-[400px]">
+              {/* Messages - Mobile optimized height */}
+              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 max-h-[50vh] sm:max-h-[400px]">
                 {messages.map((msg) => {
                   const isAdmin = msg.senderId === user?.id
                   return (
-                    <div key={msg.id} className={`flex gap-3 ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`flex gap-2 sm:gap-3 ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                       {!isAdmin && (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                           <span className="text-xs font-bold text-white">{selectedConversation.participantName.charAt(0)}</span>
                         </div>
                       )}
-                      <div className={`${isAdmin ? 'max-w-[80%]' : 'flex-1'}`}>
-                        <div className={`${isAdmin ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-none' : 'bg-gray-100 rounded-2xl rounded-tl-none'} p-4`}>
-                          <p>{msg.content}</p>
+                      <div className={`${isAdmin ? 'max-w-[85%] sm:max-w-[80%]' : 'flex-1 max-w-[85%] sm:max-w-none'}`}>
+                        <div className={`${isAdmin ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-none' : 'bg-gray-100 rounded-2xl rounded-tl-none'} p-3 sm:p-4`}>
+                          <p className="text-sm sm:text-base break-words">{msg.content}</p>
                         </div>
                         <div className={`text-xs text-gray-400 mt-1 ${isAdmin ? 'text-right mr-2' : 'ml-2'}`}>
                           {isAdmin ? 'Admin' : selectedConversation.participantName} • {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
                         </div>
                       </div>
                       {isAdmin && (
-                        <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
                           <span className="text-xs font-bold text-white">A</span>
                         </div>
                       )}
@@ -741,33 +765,34 @@ void statusConfig[conversation.status].icon
                 })}
               </div>
 
-              {/* Reply Input */}
-              <div className="p-6 border-t border-gray-100">
-                <div className="flex gap-3">
+              {/* Reply Input - Mobile optimized with sticky behavior */}
+              <div className="p-4 sm:p-6 border-t border-gray-100 bg-white">
+                <div className="flex gap-2 sm:gap-3">
                   <Textarea
                     placeholder="Type your reply..."
                     value={replyMessage}
                     onChange={(e) => setReplyMessage(e.target.value)}
                     rows={2}
-                    className="flex-1"
+                    className="flex-1 text-base"
+                    style={{ fontSize: '16px' }} // Prevents iOS zoom on focus
                   />
                   <Button
                     onClick={handleSendReply}
                     disabled={!replyMessage.trim() || sending}
-                    className="self-end"
+                    className="self-end px-3 sm:px-4 h-10 sm:h-auto"
                   >
-                    <Send className="w-4 h-4 mr-2" />
-                    Send
+                    <Send className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Send</span>
                   </Button>
                 </div>
               </div>
             </Card>
           ) : (
-            <Card className="h-full flex items-center justify-center p-12">
+            <Card className="h-full flex items-center justify-center p-8 sm:p-12">
               <div className="text-center">
-                <MessageSquare className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Select an Inquiry</h3>
-                <p className="text-gray-500">Choose an inquiry from the list to view details and respond</p>
+                <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-gray-200 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Select an Inquiry</h3>
+                <p className="text-sm sm:text-base text-gray-500">Choose an inquiry from the list to view details and respond</p>
               </div>
             </Card>
           )}
@@ -776,40 +801,42 @@ void statusConfig[conversation.status].icon
 
       {showComposeModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setShowComposeModal(false)}
         >
           <div
-            className="w-full max-w-lg"
+            className="w-full sm:max-w-lg max-h-[90vh] sm:max-h-none overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-6 border-b border-indigo-500/20">
+            <Card className="overflow-hidden rounded-t-3xl sm:rounded-2xl rounded-b-none sm:rounded-b-2xl">
+              <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 -m-6 mb-6 p-4 sm:p-6 border-b border-indigo-500/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">New Message</h3>
-                    <p className="text-sm text-gray-500">Start a conversation with any user</p>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">New Message</h3>
+                    <p className="text-xs sm:text-sm text-gray-500">Start a conversation with any user</p>
                   </div>
                   <button
                     onClick={() => setShowComposeModal(false)}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 transition-colors"
                   >
-                    <span className="text-gray-500 text-lg">×</span>
+                    <X className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 pb-safe">
                 <div>
                   <Input
                     placeholder="Search users by name or email..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     icon={<Search className="w-4 h-4" />}
+                    className="text-base"
+                    style={{ fontSize: '16px' }}
                   />
                 </div>
 
-                <div className="max-h-52 overflow-y-auto rounded-lg border border-gray-200">
+                <div className="max-h-40 sm:max-h-52 overflow-y-auto rounded-lg border border-gray-200">
                   {userSearch.trim().length < 2 ? (
                     <div className="p-4 text-sm text-gray-500">Type at least 2 characters to search</div>
                   ) : userLoading ? (
@@ -823,7 +850,7 @@ void statusConfig[conversation.status].icon
                       <button
                         key={userItem.id}
                         onClick={() => setSelectedUser(userItem)}
-                        className={`w-full px-4 py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
+                        className={`w-full px-4 py-4 sm:py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-gray-50 active:bg-gray-100 ${
                           selectedUser?.id === userItem.id ? 'bg-indigo-50' : ''
                         }`}
                       >
@@ -838,8 +865,10 @@ void statusConfig[conversation.status].icon
                   placeholder={selectedUser ? `Message ${selectedUser.name}...` : 'Select a user to start messaging'}
                   value={composeMessage}
                   onChange={(e) => setComposeMessage(e.target.value)}
-                  rows={4}
+                  rows={3}
                   disabled={!selectedUser}
+                  className="text-base"
+                  style={{ fontSize: '16px' }}
                 />
 
                 <div className="flex gap-3 pt-2">
@@ -847,6 +876,7 @@ void statusConfig[conversation.status].icon
                     fullWidth
                     variant="secondary"
                     onClick={() => setShowComposeModal(false)}
+                    className="py-3 sm:py-2"
                   >
                     Cancel
                   </Button>
@@ -854,9 +884,10 @@ void statusConfig[conversation.status].icon
                     fullWidth
                     onClick={handleSendNewMessage}
                     disabled={!selectedUser || !composeMessage.trim() || sending}
+                    className="py-3 sm:py-2"
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    Send Message
+                    Send
                   </Button>
                 </div>
               </div>
@@ -868,25 +899,25 @@ void statusConfig[conversation.status].icon
       {/* User Quick Info Popup */}
       {showUserQuickInfo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setShowUserQuickInfo(false)}
         >
           <div
-            className="w-full max-w-md"
+            className="w-full sm:max-w-md max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 -m-6 mb-6 p-6 border-b border-emerald-500/20">
+            <Card className="overflow-hidden rounded-t-3xl sm:rounded-2xl rounded-b-none sm:rounded-b-2xl">
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 -m-6 mb-6 p-4 sm:p-6 border-b border-emerald-500/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">User Info</h3>
-                    <p className="text-sm text-gray-500">Credits & Subscription Status</p>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">User Info</h3>
+                    <p className="text-xs sm:text-sm text-gray-500">Credits & Subscription Status</p>
                   </div>
                   <button
                     onClick={() => setShowUserQuickInfo(false)}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 transition-colors"
                   >
-                    <span className="text-gray-500 text-lg">×</span>
+                    <X className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
               </div>
@@ -943,7 +974,8 @@ void statusConfig[conversation.status].icon
                           value={creditAmount}
                           onChange={(e) => setCreditAmount(e.target.value)}
                           min="1"
-                          className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          style={{ fontSize: '16px' }}
                         />
                       </div>
                       <input
@@ -951,13 +983,14 @@ void statusConfig[conversation.status].icon
                         placeholder="Reason (required)"
                         value={creditReason}
                         onChange={(e) => setCreditReason(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 mb-2"
+                        className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 mb-2"
+                        style={{ fontSize: '16px' }}
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleAdjustCredits(true)}
                           disabled={!creditAmount || !creditReason.trim() || creditAdjusting}
-                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-3 sm:py-2 text-sm font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 active:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {creditAdjusting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -971,7 +1004,7 @@ void statusConfig[conversation.status].icon
                         <button
                           onClick={() => handleAdjustCredits(false)}
                           disabled={!creditAmount || !creditReason.trim() || creditAdjusting || (userQuickInfo.totalCredits - userQuickInfo.usedCredits) === 0}
-                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-3 sm:py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {creditAdjusting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -1053,11 +1086,12 @@ void statusConfig[conversation.status].icon
                 </div>
               )}
 
-              <div className="mt-6">
+              <div className="mt-6 pb-safe">
                 <Button
                   fullWidth
                   variant="secondary"
                   onClick={() => setShowUserQuickInfo(false)}
+                  className="py-3 sm:py-2"
                 >
                   Close
                 </Button>
