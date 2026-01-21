@@ -734,6 +734,35 @@ class ApiService {
     }>('/buyer/premium-requests');
   }
 
+  // Terms of Service endpoints
+  async getTermsStatus(termsVersion?: string) {
+    const query = termsVersion ? `?version=${termsVersion}` : '';
+    return this.request<{
+      success: boolean;
+      data: {
+        hasAccepted: boolean;
+        acceptedAt: string | null;
+        signatureName: string | null;
+        termsVersion: string;
+      };
+    }>(`/buyer/terms-status${query}`);
+  }
+
+  async acceptTerms(signatureName: string, termsVersion?: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        hasAccepted: boolean;
+        acceptedAt: string;
+        signatureName: string;
+      };
+      message: string;
+    }>('/buyer/accept-terms', {
+      method: 'POST',
+      body: JSON.stringify({ signatureName, termsVersion }),
+    });
+  }
+
   // Buyer subscription endpoints
   async getSubscription() {
     return this.request<ApiResponse<SubscriptionResponse>>('/buyer/subscription');

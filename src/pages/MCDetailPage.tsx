@@ -72,6 +72,13 @@ const MCDetailPage = () => {
   const [premiumRequestSent, setPremiumRequestSent] = useState(false)
   const [premiumMessage, setPremiumMessage] = useState('')
   const [sendingPremiumRequest, setSendingPremiumRequest] = useState(false)
+
+  // Terms of Service state
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsSignature, setTermsSignature] = useState('')
+  const [acceptingTerms, setAcceptingTerms] = useState(false)
+  const [hasReadTerms, setHasReadTerms] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactMessage, setContactMessage] = useState('')
   const [contactPhone, setContactPhone] = useState('')
@@ -183,12 +190,48 @@ const MCDetailPage = () => {
     }
   }
 
-  const handlePremiumRequest = () => {
+  const handlePremiumRequest = async () => {
     if (!isAuthenticated) {
       navigate('/login')
       return
     }
-    setShowPremiumModal(true)
+
+    // Check if user has already accepted terms
+    try {
+      const response = await api.getTermsStatus()
+      if (response.data.hasAccepted) {
+        setTermsAccepted(true)
+        setShowPremiumModal(true)
+      } else {
+        // Show terms modal first
+        setShowTermsModal(true)
+      }
+    } catch (err: any) {
+      console.error('Failed to check terms status:', err)
+      // If error checking, still show terms modal to be safe
+      setShowTermsModal(true)
+    }
+  }
+
+  const handleAcceptTerms = async () => {
+    if (!termsSignature.trim() || termsSignature.trim().length < 2) {
+      alert('Please enter your full name to sign the terms.')
+      return
+    }
+
+    try {
+      setAcceptingTerms(true)
+      await api.acceptTerms(termsSignature.trim())
+      setTermsAccepted(true)
+      setShowTermsModal(false)
+      // Now show the premium request modal
+      setShowPremiumModal(true)
+    } catch (err: any) {
+      console.error('Failed to accept terms:', err)
+      alert(err.message || 'Failed to accept terms. Please try again.')
+    } finally {
+      setAcceptingTerms(false)
+    }
   }
 
   const handleSubmitPremiumRequest = async () => {
@@ -1641,6 +1684,154 @@ const MCDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Terms of Service Modal */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowTermsModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card className="overflow-hidden">
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 -m-6 mb-6 p-6 border-b border-slate-600">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white">Terms of Service</h3>
+                        <p className="text-sm text-gray-300">Please read and sign to continue</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowTermsModal(false)}
+                      className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Terms Content */}
+                <div className="space-y-4">
+                  {/* Scrollable Terms */}
+                  <div
+                    className="h-64 overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-700"
+                    onScroll={(e) => {
+                      const target = e.target as HTMLDivElement
+                      if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50) {
+                        setHasReadTerms(true)
+                      }
+                    }}
+                  >
+                    <h4 className="font-bold text-gray-900 mb-3">MC-Xchange Platform Terms of Service</h4>
+                    <p className="mb-3">Last Updated: January 2026</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">1. Acceptance of Terms</h5>
+                    <p className="mb-3">By accessing or using the MC-Xchange platform ("Platform"), you agree to be bound by these Terms of Service. If you do not agree, you may not use our services.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">2. Platform Services</h5>
+                    <p className="mb-3">MC-Xchange provides a marketplace for buying and selling Motor Carrier (MC) authorities. We act as an intermediary and do not own or operate any MC authorities listed on the platform.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">3. User Obligations</h5>
+                    <p className="mb-3">You agree to: (a) provide accurate and complete information; (b) maintain the security of your account; (c) comply with all applicable laws and regulations; (d) not engage in fraudulent activities.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">4. Premium Listing Access</h5>
+                    <p className="mb-3">Access to premium MC listings requires admin approval. Credits will only be charged upon approval of your request. Pricing is determined on a case-by-case basis.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">5. Credit System</h5>
+                    <p className="mb-3">Credits purchased are non-refundable except as required by law. Credits may expire according to the terms of your subscription plan.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">6. Limitation of Liability</h5>
+                    <p className="mb-3">MC-Xchange is not liable for any indirect, incidental, or consequential damages arising from your use of the platform or any MC authority purchased through our services.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">7. Dispute Resolution</h5>
+                    <p className="mb-3">Any disputes shall be resolved through binding arbitration in accordance with applicable laws. You waive any right to participate in class action lawsuits.</p>
+
+                    <h5 className="font-semibold text-gray-900 mt-4 mb-2">8. Contact Information</h5>
+                    <p className="mb-3">For questions about these terms, contact us at legal@domilea.com</p>
+
+                    <p className="text-xs text-gray-500 mt-6 pt-4 border-t border-gray-200">
+                      Scroll to the bottom to enable signing.
+                    </p>
+                  </div>
+
+                  {/* Read Confirmation */}
+                  {!hasReadTerms && (
+                    <p className="text-sm text-amber-600 text-center">
+                      Please scroll through and read the entire terms of service to continue.
+                    </p>
+                  )}
+
+                  {/* Signature Section */}
+                  {hasReadTerms && (
+                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Electronic Signature
+                      </label>
+                      <p className="text-xs text-gray-600 mb-3">
+                        By typing your full name below, you agree that this electronic signature has the same legal effect as a handwritten signature.
+                      </p>
+                      <input
+                        type="text"
+                        placeholder="Type your full legal name"
+                        value={termsSignature}
+                        onChange={(e) => setTermsSignature(e.target.value)}
+                        className="w-full px-4 py-3 border border-emerald-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 font-serif italic"
+                        style={{ fontFamily: 'Georgia, serif' }}
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      fullWidth
+                      variant="secondary"
+                      onClick={() => setShowTermsModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      fullWidth
+                      onClick={handleAcceptTerms}
+                      disabled={!hasReadTerms || termsSignature.trim().length < 2 || acceptingTerms}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {acceptingTerms ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Signing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Sign & Accept
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Premium Request Modal */}
       <AnimatePresence>
