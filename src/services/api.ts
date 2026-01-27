@@ -819,6 +819,53 @@ class ApiService {
     }>(`/seller/listings${query ? `?${query}` : ''}`);
   }
 
+  async getSellerListing(listingId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>(`/listings/${listingId}`);
+  }
+
+  async updateListing(listingId: string, data: {
+    title?: string;
+    description?: string;
+    askingPrice?: number;
+    city?: string;
+    state?: string;
+    yearsActive?: number;
+    fleetSize?: number;
+    totalDrivers?: number;
+    safetyRating?: string;
+    insuranceOnFile?: boolean;
+    bipdCoverage?: number;
+    cargoCoverage?: number;
+    amazonStatus?: string;
+    amazonRelayScore?: string;
+    highwaySetup?: boolean;
+    sellingWithEmail?: boolean;
+    sellingWithPhone?: boolean;
+    cargoTypes?: string[];
+    visibility?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/listings/${listingId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteListing(listingId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/listings/${listingId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getSellerOffers(params?: {
     page?: number;
     limit?: number;

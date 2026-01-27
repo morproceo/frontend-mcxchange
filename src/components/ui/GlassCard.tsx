@@ -26,13 +26,17 @@ const GlassCard = ({
     subtle: 'bg-gray-50 border border-gray-100',
   }
 
+  // Check if className contains padding classes to avoid duplicates
+  const hasPadding = className && /\bp-\d|px-|py-|pt-|pb-|pl-|pr-|sm:p-|md:p-|lg:p-/.test(className)
+
   return (
     <motion.div
       whileHover={hover ? { y: -4, boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08)' } : {}}
       transition={{ duration: 0.3 }}
       className={clsx(
         variantClasses[variant],
-        'rounded-2xl p-6 transition-all',
+        'rounded-2xl transition-all',
+        !hasPadding && 'p-6',
         hover && 'cursor-pointer',
         className
       )}
