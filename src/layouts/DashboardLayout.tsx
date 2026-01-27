@@ -30,12 +30,14 @@ import {
   Scale,
   ShieldAlert,
   Activity,
-  LucideIcon
+  LucideIcon,
+  Calendar
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import TrustBadge from '../components/ui/TrustBadge'
 import { getTrustLevel } from '../utils/helpers'
 import { DomileaLogoFull, DomileaIcon } from '../components/ui/DomileaLogo'
+import TalkToMariaModal from '../components/TalkToMariaModal'
 import clsx from 'clsx'
 
 interface DashboardLayoutProps {
@@ -63,6 +65,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Sales Pipeline', 'Moderation']))
+  const [isConsultationOpen, setIsConsultationOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -102,6 +105,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Handshake, label: 'Transactions', path: '/buyer/transactions' },
           { icon: Package, label: 'Purchases', path: '/buyer/purchases' },
           { icon: MessageSquare, label: 'Messages', path: '/buyer/messages' },
+          { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
         ]
       case 'admin':
         return [
@@ -384,6 +388,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           })}
         </nav>
 
+        {/* Consultation Button - Buyers Only */}
+        {user?.role === 'buyer' && (
+          <div className="px-3 py-3 border-t border-gray-100">
+            <button
+              onClick={() => setIsConsultationOpen(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium transition-all duration-200 shadow-sm"
+            >
+              <Calendar className="h-5 w-5" />
+              {!isCollapsed && <span>Book Consultation</span>}
+            </button>
+          </div>
+        )}
+
         {/* Bottom section */}
         <div className="px-3 py-4 border-t border-gray-100 space-y-1 flex-shrink-0">
           <Link
@@ -478,6 +495,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           {children || <Outlet />}
         </main>
       </div>
+
+      {/* Consultation Modal */}
+      <TalkToMariaModal
+        isOpen={isConsultationOpen}
+        onClose={() => setIsConsultationOpen(false)}
+      />
     </div>
   )
 }

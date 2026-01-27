@@ -61,6 +61,7 @@ import TransactionRoomPage from './pages/TransactionRoomPage'
 import DisputePage from './pages/DisputePage'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
+import DriversLandingPage from './pages/DriversLandingPage'
 
 function App() {
   return (
@@ -88,6 +89,7 @@ function App() {
             <Route path="services/recruiting" element={<RecruitingServicesPage />} />
             <Route path="services/dispatch" element={<DispatchServicesPage />} />
             <Route path="services/admin" element={<AdminServicesPage />} />
+            <Route path="drivers" element={<DriversLandingPage />} />
           </Route>
 
           {/* Seller Dashboard Routes */}
