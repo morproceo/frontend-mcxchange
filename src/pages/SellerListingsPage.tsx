@@ -27,12 +27,14 @@ interface Listing {
   mcNumber: string
   dotNumber?: string
   title: string
-  price: number
+  askingPrice?: number
+  listingPrice?: number
   status: string
   views: number
   saves: number
   createdAt: string
   yearsInBusiness?: number
+  yearsActive?: number
   fleetSize?: number
   trustScore?: number
   _count?: {
@@ -269,7 +271,7 @@ const SellerListingsPage = () => {
                     </div>
                     <div className="text-right flex-shrink-0 ml-2">
                       <div className="text-lg font-bold text-primary-600">
-                        ${(listing.price || 0).toLocaleString()}
+                        ${(listing.askingPrice || listing.listingPrice || 0).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500">
                         {new Date(listing.createdAt).toLocaleDateString()}
@@ -297,12 +299,12 @@ const SellerListingsPage = () => {
                   </div>
 
                   {/* Additional Info */}
-                  {(listing.yearsInBusiness || listing.fleetSize) && (
+                  {(listing.yearsInBusiness || listing.yearsActive || listing.fleetSize) && (
                     <div className="flex gap-2 mb-3">
-                      {listing.yearsInBusiness && (
+                      {(listing.yearsInBusiness || listing.yearsActive) && (
                         <div className="bg-gray-50 rounded-lg px-3 py-2 flex-1">
                           <div className="text-xs text-gray-500">Years</div>
-                          <div className="font-semibold text-gray-900 text-sm">{listing.yearsInBusiness}</div>
+                          <div className="font-semibold text-gray-900 text-sm">{listing.yearsInBusiness || listing.yearsActive}</div>
                         </div>
                       )}
                       {listing.fleetSize && (
@@ -421,7 +423,7 @@ const SellerListingsPage = () => {
                     <div className="text-right ml-4">
                       <div className="text-xs text-gray-500 mb-1">Your Asking Price</div>
                       <div className="text-2xl font-bold text-primary-600 mb-2">
-                        ${(listing.price || 0).toLocaleString()}
+                        ${(listing.askingPrice || listing.listingPrice || 0).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500">
                         Listed {new Date(listing.createdAt).toLocaleDateString()}
@@ -429,12 +431,12 @@ const SellerListingsPage = () => {
                     </div>
                   </div>
 
-                  {(listing.yearsInBusiness || listing.fleetSize) && (
+                  {(listing.yearsInBusiness || listing.yearsActive || listing.fleetSize) && (
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                      {listing.yearsInBusiness && (
+                      {(listing.yearsInBusiness || listing.yearsActive) && (
                         <div className="bg-gray-50 rounded-lg p-3">
                           <div className="text-xs text-gray-500 mb-1">Years Active</div>
-                          <div className="font-semibold text-gray-900">{listing.yearsInBusiness} years</div>
+                          <div className="font-semibold text-gray-900">{listing.yearsInBusiness || listing.yearsActive} years</div>
                         </div>
                       )}
                       {listing.fleetSize && (
