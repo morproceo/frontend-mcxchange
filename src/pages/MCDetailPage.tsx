@@ -363,7 +363,7 @@ const MCDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button
@@ -1676,6 +1676,141 @@ const MCDetailPage = () => {
               </div>
             </Card>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Sticky Bottom Bar - Only visible on mobile/tablet */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-200 shadow-lg">
+        <div className="px-4 py-3 safe-area-inset-bottom">
+          {isPremiumListing && !isUnlocked ? (
+            // Premium listing actions
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {/* Save functionality */}}
+              >
+                <Heart className="w-4 h-4" />
+              </Button>
+              {premiumRequestSent ? (
+                <div className="flex-[3] flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 rounded-lg px-4 py-2">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">Request Sent</span>
+                </div>
+              ) : (
+                <Button
+                  className="flex-[3] bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                  onClick={handlePremiumRequest}
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Unlock Premium MC
+                </Button>
+              )}
+            </div>
+          ) : !isAuthenticated ? (
+            // Not logged in
+            <div className="flex gap-3">
+              <Link to="/register" className="flex-1">
+                <Button variant="secondary" fullWidth>
+                  Sign Up
+                </Button>
+              </Link>
+              <Link to="/login" className="flex-[2]">
+                <Button fullWidth>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Sign In to Unlock
+                </Button>
+              </Link>
+            </div>
+          ) : user?.role === 'buyer' ? (
+            // Logged in buyer
+            isUnlocked ? (
+              // Already unlocked - show buy/offer buttons
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {/* Save functionality */}}
+                >
+                  <Heart className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    setOfferAmount((listing?.listingPrice || listing?.askingPrice || listing?.price || 0).toString())
+                    setOfferMessage('')
+                    setShowOfferModal(true)
+                  }}
+                >
+                  <Send className="w-4 h-4 mr-1" />
+                  Offer
+                </Button>
+                <Button
+                  className="flex-[2] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                  onClick={() => {
+                    setBuyNowMessage('')
+                    setShowBuyNowModal(true)
+                  }}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Buy Now
+                </Button>
+              </div>
+            ) : (
+              // Not unlocked yet
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Your Credits:</span>
+                  <span className="font-bold text-yellow-600">{userCredits} available</span>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => {/* Save functionality */}}
+                  >
+                    <Heart className="w-4 h-4" />
+                  </Button>
+                  {userCredits < 1 ? (
+                    <Button
+                      className="flex-[3] bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                      onClick={() => navigate('/buyer/subscription')}
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Get Credits
+                    </Button>
+                  ) : (
+                    <Button
+                      className="flex-[3] bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                      onClick={handleUnlockWithCredit}
+                      disabled={unlocking}
+                    >
+                      {unlocking ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Unlocking...
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="w-4 h-4 mr-2" />
+                          Unlock Now
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )
+          ) : (
+            // Seller or admin viewing
+            <div className="flex gap-3">
+              <Button variant="secondary" fullWidth onClick={() => {/* Save functionality */}}>
+                <Heart className="w-4 h-4 mr-2" />
+                Save Listing
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
