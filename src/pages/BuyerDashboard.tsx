@@ -103,7 +103,7 @@ interface BuyerOffer {
 const BuyerDashboard = () => {
   const { user } = useAuth()
   const [savedListings] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'unlocked' | 'marketplace' | 'saved'>('marketplace')
+  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace'>('marketplace')
   // Credits from user data (will be 0 for new users)
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
 
@@ -410,50 +410,33 @@ const BuyerDashboard = () => {
           </div>
         </Card>
 
-        {/* Tabs */}
+        {/* Tabs - Mobile Friendly */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-2">
+          <div className="grid grid-cols-3 gap-2 bg-gray-100 rounded-xl p-2">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'overview'
                   ? 'bg-black text-white'
                   : 'text-gray-600 hover:bg-gray-200'
               }`}
             >
               <LayoutDashboard className="w-4 h-4" />
-              <span>Overview</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('purchases')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                activeTab === 'purchases'
-                  ? 'bg-black text-white'
-                  : 'text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Purchases</span>
-              {transactions.length > 0 && (
-                <span className="ml-1 px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">
-                  {transactions.length}
-                </span>
-              )}
+              <span className="hidden sm:inline">Overview</span>
             </button>
 
             <button
               onClick={() => setActiveTab('unlocked')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'unlocked'
                   ? 'bg-black text-white'
                   : 'text-gray-600 hover:bg-gray-200'
               }`}
             >
               <Unlock className="w-4 h-4" />
-              <span>Unlocked MCs</span>
+              <span className="hidden sm:inline">Unlocked</span>
               {unlockedListings.length > 0 && (
-                <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-xs">
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-xs">
                   {unlockedListings.length}
                 </span>
               )}
@@ -461,31 +444,14 @@ const BuyerDashboard = () => {
 
             <button
               onClick={() => setActiveTab('marketplace')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'marketplace'
                   ? 'bg-black text-white'
                   : 'text-gray-600 hover:bg-gray-200'
               }`}
             >
               <Search className="w-4 h-4" />
-              <span>Browse Market</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('saved')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                activeTab === 'saved'
-                  ? 'bg-black text-white'
-                  : 'text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <Heart className="w-4 h-4" />
-              <span>Saved</span>
-              {savedListings.size > 0 && (
-                <span className="ml-1 px-2 py-0.5 rounded-full bg-secondary-500 text-white text-xs">
-                  {savedListings.size}
-                </span>
-              )}
+              <span className="hidden sm:inline">Browse</span>
             </button>
           </div>
         </div>
