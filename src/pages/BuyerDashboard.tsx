@@ -103,7 +103,7 @@ interface BuyerOffer {
 const BuyerDashboard = () => {
   const { user } = useAuth()
   const [savedListings] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'unlocked' | 'marketplace' | 'saved'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'unlocked' | 'marketplace' | 'saved'>('marketplace')
   // Credits from user data (will be 0 for new users)
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
 
@@ -125,27 +125,42 @@ const BuyerDashboard = () => {
         const response = await api.getListings()
 
         // Transform backend data to frontend MCListing format
-        const transformedListings: MCListing[] = (response.listings || []).map((listing: any) => ({
+        // API returns response.data array
+        const listingsData = response.data || response.listings || []
+        const transformedListings: MCListing[] = listingsData.map((listing: any) => ({
           id: listing.id,
           mcNumber: listing.mcNumber,
+          dotNumber: listing.dotNumber,
           title: listing.title || `MC Authority #${listing.mcNumber}`,
           description: listing.description || '',
-          price: listing.askingPrice || 0,
+          price: Number(listing.askingPrice) || 0,
+          askingPrice: Number(listing.askingPrice) || 0,
+          listingPrice: listing.listingPrice ? Number(listing.listingPrice) : undefined,
           yearsActive: listing.yearsActive || 0,
           fleetSize: listing.fleetSize || 0,
-          operationType: listing.operationType || [],
-          safetyRating: listing.safetyRating || 'satisfactory',
-          insuranceStatus: listing.insuranceStatus || 'active',
+          totalDrivers: listing.totalDrivers || 0,
+          state: listing.state || '',
+          city: listing.city || '',
+          operationType: listing.cargoTypes ? listing.cargoTypes.split(',') : [],
+          safetyRating: (listing.safetyRating || 'satisfactory').toLowerCase(),
+          insuranceStatus: listing.insuranceOnFile ? 'active' : 'none',
+          insuranceOnFile: listing.insuranceOnFile || false,
           verified: listing.verified || false,
+          isPremium: listing.isPremium || false,
           premium: listing.isPremium || false,
-          trustScore: listing.trustScore || 70,
-          trustLevel: getTrustLevel(listing.trustScore || 70),
+          amazonStatus: (listing.amazonStatus || 'none').toLowerCase(),
+          amazonRelayScore: listing.amazonRelayScore || null,
+          highwaySetup: listing.highwaySetup || false,
+          sellingWithEmail: listing.sellingWithEmail || false,
+          sellingWithPhone: listing.sellingWithPhone || false,
+          trustScore: listing.seller?.trustScore || 70,
+          trustLevel: getTrustLevel(listing.seller?.trustScore || 70),
           createdAt: new Date(listing.createdAt),
           seller: {
             id: listing.seller?.id || listing.sellerId,
             name: listing.seller?.name || 'Unknown Seller',
             email: listing.seller?.email || '',
-            verified: listing.seller?.isVerified || false,
+            verified: listing.seller?.verified || false,
             trustScore: listing.seller?.trustScore || 70,
             memberSince: new Date(listing.seller?.createdAt || Date.now()),
             completedDeals: listing.seller?.completedDeals || 0
