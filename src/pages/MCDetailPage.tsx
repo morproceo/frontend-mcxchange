@@ -715,12 +715,6 @@ const MCDetailPage = () => {
                     <p className="text-sm text-gray-500">Federal Motor Carrier Safety Administration</p>
                   </div>
                 </div>
-                {!isUnlocked && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-100 border border-yellow-300">
-                    <Lock className="w-4 h-4 text-yellow-600" />
-                    <span className="text-xs font-medium text-yellow-700">Unlock for full details</span>
-                  </div>
-                )}
               </div>
 
               {/* Always visible summary */}
@@ -1173,7 +1167,7 @@ const MCDetailPage = () => {
                     </div>
                   </div>
 
-                  <div className="text-center p-4 rounded-xl bg-yellow-50 border border-yellow-200">
+                  <div className="hidden lg:block text-center p-4 rounded-xl bg-yellow-50 border border-yellow-200">
                     <Coins className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
                     <p className="text-sm text-yellow-700 font-medium">Unlock to view full FMCSA safety record</p>
                     <p className="text-xs text-yellow-600 mt-1">Includes authority status, insurance details, and carrier information</p>
@@ -1350,7 +1344,7 @@ const MCDetailPage = () => {
                   <p className="text-gray-500 mb-4">
                     Unlock to view complete MC details, documents, and contact seller
                   </p>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+                  <div className="hidden lg:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30">
                     <Coins className="w-4 h-4 text-yellow-400" />
                     <span className="text-sm text-yellow-400 font-medium">Use 1 credit to unlock</span>
                   </div>
