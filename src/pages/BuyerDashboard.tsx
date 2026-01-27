@@ -415,28 +415,28 @@ const BuyerDashboard = () => {
           <div className="grid grid-cols-3 gap-2 bg-gray-100 rounded-xl p-2">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
+              className={`flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-lg font-medium transition-all ${
                 activeTab === 'overview'
                   ? 'bg-black text-white'
                   : 'text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline">Overview</span>
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-xs">Overview</span>
             </button>
 
             <button
               onClick={() => setActiveTab('unlocked')}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
+              className={`flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-lg font-medium transition-all relative ${
                 activeTab === 'unlocked'
                   ? 'bg-black text-white'
                   : 'text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <Unlock className="w-4 h-4" />
-              <span className="hidden sm:inline">Unlocked</span>
+              <Unlock className="w-5 h-5" />
+              <span className="text-xs">Unlocked</span>
               {unlockedListings.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-xs">
+                <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
                   {unlockedListings.length}
                 </span>
               )}
@@ -444,14 +444,14 @@ const BuyerDashboard = () => {
 
             <button
               onClick={() => setActiveTab('marketplace')}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
+              className={`flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-lg font-medium transition-all ${
                 activeTab === 'marketplace'
                   ? 'bg-black text-white'
                   : 'text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Browse</span>
+              <Search className="w-5 h-5" />
+              <span className="text-xs">Browse</span>
             </button>
           </div>
         </div>
