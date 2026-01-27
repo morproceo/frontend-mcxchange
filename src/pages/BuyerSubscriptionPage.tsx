@@ -438,7 +438,7 @@ const BuyerSubscriptionPage = () => {
                 <Button
                   variant="outline"
                   onClick={() => setShowContactModal(true)}
-                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  className="hidden lg:inline-flex text-blue-600 border-blue-200 hover:bg-blue-50"
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   Contact Us
