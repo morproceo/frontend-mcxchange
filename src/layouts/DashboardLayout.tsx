@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -40,6 +40,7 @@ import { getTrustLevel } from '../utils/helpers'
 import { DomileaLogoFull, DomileaIcon } from '../components/ui/DomileaLogo'
 import TalkToMariaModal from '../components/TalkToMariaModal'
 import clsx from 'clsx'
+import api from '../services/api'
 
 interface DashboardLayoutProps {
   children?: React.ReactNode
@@ -67,6 +68,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Sales Pipeline', 'Moderation']))
   const [isConsultationOpen, setIsConsultationOpen] = useState(false)
+  const [buyerSubscription, setBuyerSubscription] = useState<{ plan?: string; status?: string } | null>(null)
+  const [buyerSubscriptionLoading, setBuyerSubscriptionLoading] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -85,8 +88,44 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
     })
   }
 
+  useEffect(() => {
+    if (user?.role !== 'buyer') {
+      setBuyerSubscription(null)
+      return
+    }
+
+    let isActive = true
+    const fetchSubscription = async () => {
+      try {
+        setBuyerSubscriptionLoading(true)
+        const response = await api.getSubscription()
+        const subscription = response.data?.subscription || null
+        if (isActive) {
+          setBuyerSubscription(subscription ? { plan: subscription.plan, status: subscription.status } : null)
+        }
+      } catch (error) {
+        if (isActive) {
+          setBuyerSubscription(null)
+        }
+      } finally {
+        if (isActive) {
+          setBuyerSubscriptionLoading(false)
+        }
+      }
+    }
+
+    fetchSubscription()
+
+    return () => {
+      isActive = false
+    }
+  }, [user?.role])
+
   // Define menu items based on user role
   const getMenuItems = (): MenuStructure => {
+    const hasProfessionalAccess =
+      buyerSubscription?.plan?.toLowerCase() === 'professional' && buyerSubscription?.status === 'ACTIVE'
+
     switch (user?.role) {
       case 'seller':
         return [
@@ -107,7 +146,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Package, label: 'Purchases', path: '/buyer/purchases' },
           { icon: MessageSquare, label: 'Messages', path: '/buyer/messages' },
           { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
-          { icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' },
+          ...(hasProfessionalAccess && !buyerSubscriptionLoading
+            ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
+            : []),
         ]
       case 'admin':
         return [

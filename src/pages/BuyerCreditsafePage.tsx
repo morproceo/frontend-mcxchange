@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2,
@@ -44,6 +45,7 @@ import {
 import Button from '../components/ui/Button'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
 
 // ============ Reusable Sub-Components ============
 
@@ -269,7 +271,51 @@ interface CompanySearchResult {
 // ============ Main Page Component ============
 
 const BuyerCreditsafePage = () => {
-  // Unlocked MCs state
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [accessLoading, setAccessLoading] = useState(true)
+  const [hasProfessionalAccess, setHasProfessionalAccess] = useState(false)
+
+  useEffect(() => {
+    let isActive = true
+
+    const fetchAccess = async () => {
+      if (!user) {
+        if (isActive) {
+          setHasProfessionalAccess(false)
+          setAccessLoading(false)
+        }
+        return
+      }
+
+      try {
+        setAccessLoading(true)
+        const response = await api.getSubscription()
+        const subscription = response.data?.subscription
+        const isProfessional =
+          subscription?.plan?.toLowerCase() === 'professional' && subscription?.status === 'ACTIVE'
+        if (isActive) {
+          setHasProfessionalAccess(Boolean(isProfessional))
+        }
+      } catch (error) {
+        if (isActive) {
+          setHasProfessionalAccess(false)
+        }
+      } finally {
+        if (isActive) {
+          setAccessLoading(false)
+        }
+      }
+    }
+
+    fetchAccess()
+
+    return () => {
+      isActive = false
+    }
+  }, [user])
+
+  // Unlocked MCs state - all hooks must be called before any early returns
   const [unlockedMCs, setUnlockedMCs] = useState<UnlockedMC[]>([])
   const [loadingMCs, setLoadingMCs] = useState(true)
   const [selectedMCId, setSelectedMCId] = useState<string>('')
@@ -286,8 +332,44 @@ const BuyerCreditsafePage = () => {
 
   // Load unlocked MCs on mount
   useEffect(() => {
-    loadUnlockedMCs()
-  }, [])
+    if (hasProfessionalAccess && !accessLoading) {
+      loadUnlockedMCs()
+    }
+  }, [hasProfessionalAccess, accessLoading])
+
+  if (accessLoading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
+            <Loader2 className="w-10 h-10 text-gray-400 mx-auto mb-3 animate-spin" />
+            <p className="text-gray-600">Checking your subscription...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!hasProfessionalAccess) {
+    return (
+      <div className="p-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Professional Required</h1>
+            <p className="text-gray-600 mb-6">
+              Credit Reports are available only to buyers with an active Professional subscription.
+            </p>
+            <Button onClick={() => navigate('/buyer/subscription')}>
+              View Subscription Options
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const loadUnlockedMCs = async () => {
     setLoadingMCs(true)
