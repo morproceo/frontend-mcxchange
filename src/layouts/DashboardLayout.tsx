@@ -31,7 +31,8 @@ import {
   ShieldAlert,
   Activity,
   LucideIcon,
-  Calendar
+  Calendar,
+  FileSearch
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import TrustBadge from '../components/ui/TrustBadge'
@@ -106,6 +107,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Package, label: 'Purchases', path: '/buyer/purchases' },
           { icon: MessageSquare, label: 'Messages', path: '/buyer/messages' },
           { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
+          { icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' },
         ]
       case 'admin':
         return [

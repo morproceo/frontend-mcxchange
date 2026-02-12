@@ -1749,6 +1749,57 @@ class ApiService {
     });
   }
 
+  // ============================================
+  // Buyer Creditsafe Endpoints
+  // ============================================
+
+  /**
+   * Search Creditsafe for a company based on an unlocked listing
+   */
+  async buyerCreditsafeSearch(listingId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        companies: Array<{
+          id: string;
+          connectId?: string;
+          name: string;
+          regNo?: string;
+          vatNo?: string;
+          address?: {
+            simpleValue?: string;
+            street?: string;
+            city?: string;
+            postCode?: string;
+            province?: string;
+            country?: string;
+          };
+          status?: string;
+          type?: string;
+          safeNumber?: string;
+        }>;
+        totalResults: number;
+        listing: {
+          id: string;
+          mcNumber: string;
+          dotNumber: string;
+          legalName: string;
+          state: string;
+        };
+      };
+    }>(`/buyer/creditsafe/search/${listingId}`);
+  }
+
+  /**
+   * Get full Creditsafe credit report by connectId (requires unlocked listing)
+   */
+  async buyerCreditsafeReport(connectId: string, listingId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>(`/buyer/creditsafe/companies/${encodeURIComponent(connectId)}?listingId=${listingId}`);
+  }
+
   // ===== AI Due Diligence =====
 
   // Run comprehensive due diligence analysis on an MC number

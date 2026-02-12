@@ -54,6 +54,7 @@ import ProfilePage from './pages/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthRequiredRoute from './components/AuthRequiredRoute'
 import BuyerUnlockedMCsPage from './pages/BuyerUnlockedMCsPage'
+import BuyerCreditsafePage from './pages/BuyerCreditsafePage'
 import BuyerDepositPage from './pages/BuyerDepositPage'
 import BuyerTransactionsPage from './pages/BuyerTransactionsPage'
 import SellerTransactionsPage from './pages/SellerTransactionsPage'
@@ -124,6 +125,7 @@ function App() {
             <Route path="purchases" element={<BuyerPurchasesPage />} />
             <Route path="messages" element={<BuyerMessagesPage />} />
             <Route path="subscription" element={<BuyerSubscriptionPage />} />
+            <Route path="creditsafe" element={<BuyerCreditsafePage />} />
             <Route path="unlocked" element={<BuyerUnlockedMCsPage />} />
             <Route path="deposit/:offerId" element={<BuyerDepositPage />} />
             <Route path="transactions" element={<BuyerTransactionsPage />} />
