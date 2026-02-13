@@ -13,13 +13,16 @@ import {
   Shield,
   Headphones,
   Route,
-  Calculator
+  Calculator,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
 import Select from '../../components/ui/Select'
+import { api } from '../../services/api'
 
 const DispatchServicesPage = () => {
   const [formData, setFormData] = useState({
@@ -32,10 +35,22 @@ const DispatchServicesPage = () => {
     message: ''
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    setError(null)
+
+    try {
+      await api.submitDispatchForm(formData)
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const services = [
@@ -442,9 +457,25 @@ const DispatchServicesPage = () => {
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 />
 
-                <Button type="submit" fullWidth size="lg">
-                  Request Dispatch Quote
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                {error && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" fullWidth size="lg" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Request Dispatch Quote
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
                 </Button>
               </form>
             )}

@@ -2609,6 +2609,28 @@ class ApiService {
     });
   }
   // ===========================
+  // Dispatch Services
+  // ===========================
+
+  async submitDispatchForm(data: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    fleetSize?: string;
+    equipmentType?: string;
+    message?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/dispatch/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ===========================
   // AI Chat Assistant
   // ===========================
 
