@@ -19,6 +19,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 class ApiService {
   private token: string | null = null;
+  private refreshPromise: Promise<any> | null = null;
 
   constructor() {
     // Load token from localStorage on init
@@ -61,20 +62,28 @@ class ApiService {
       }
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-    const data = await response.json();
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const err = new Error(data.error || data.message || 'API request failed') as Error & { code?: string };
-      err.code = data.code;
-      throw err;
+      const data = await response.json();
+
+      if (!response.ok) {
+        const err = new Error(data.error || data.message || 'API request failed') as Error & { code?: string };
+        err.code = data.code;
+        throw err;
+      }
+
+      return data;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    return data;
   }
 
   // Auth endpoints
@@ -204,12 +213,17 @@ class ApiService {
   }
 
   async refreshToken() {
+    // Prevent concurrent refresh calls - reuse in-flight promise
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
     const refreshToken = localStorage.getItem('mcx_refresh_token');
     if (!refreshToken) {
       throw new Error('No refresh token');
     }
 
-    const response = await this.request<{
+    this.refreshPromise = this.request<{
       success: boolean;
       data: {
         accessToken: string;
@@ -218,12 +232,15 @@ class ApiService {
     }>('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
+    }).then((response) => {
+      this.setToken(response.data.accessToken);
+      localStorage.setItem('mcx_refresh_token', response.data.refreshToken);
+      return response.data;
+    }).finally(() => {
+      this.refreshPromise = null;
     });
 
-    this.setToken(response.data.accessToken);
-    localStorage.setItem('mcx_refresh_token', response.data.refreshToken);
-
-    return response.data;
+    return this.refreshPromise;
   }
 
   // Admin endpoints
