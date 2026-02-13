@@ -212,6 +212,7 @@ const AdminReviewPage = () => {
             insuranceStatus: data.insuranceStatus || 'active',
             verified: data.verified || false,
             isPremium: data.isPremium || false,
+            isVip: data.isVip || false,
             trustScore: data.trustScore || 70,
             trustLevel: getTrustLevel(data.trustScore || 70),
             verificationBadges: data.verificationBadges || [],

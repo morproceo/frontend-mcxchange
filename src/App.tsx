@@ -51,10 +51,12 @@ import AdminUsersPage from './pages/AdminUsersPage'
 import AdminDisputesPage from './pages/AdminDisputesPage'
 import AdminActivityLogPage from './pages/AdminActivityLogPage'
 import ProfilePage from './pages/ProfilePage'
+import AIChatWidget from './components/AIChatWidget'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthRequiredRoute from './components/AuthRequiredRoute'
 import BuyerUnlockedMCsPage from './pages/BuyerUnlockedMCsPage'
 import BuyerCreditsafePage from './pages/BuyerCreditsafePage'
+import VipMarketplacePage from './pages/VipMarketplacePage'
 import BuyerDepositPage from './pages/BuyerDepositPage'
 import BuyerTransactionsPage from './pages/BuyerTransactionsPage'
 import SellerTransactionsPage from './pages/SellerTransactionsPage'
@@ -69,6 +71,7 @@ function App() {
     <Router>
       <AuthProvider>
         <Toaster position="top-right" />
+        <AIChatWidget />
         <Routes>
           {/* Public Routes with MainLayout */}
           <Route path="/" element={<MainLayout />}>
@@ -126,6 +129,7 @@ function App() {
             <Route path="messages" element={<BuyerMessagesPage />} />
             <Route path="subscription" element={<BuyerSubscriptionPage />} />
             <Route path="creditsafe" element={<BuyerCreditsafePage />} />
+            <Route path="vip-marketplace" element={<VipMarketplacePage />} />
             <Route path="unlocked" element={<BuyerUnlockedMCsPage />} />
             <Route path="deposit/:offerId" element={<BuyerDepositPage />} />
             <Route path="transactions" element={<BuyerTransactionsPage />} />

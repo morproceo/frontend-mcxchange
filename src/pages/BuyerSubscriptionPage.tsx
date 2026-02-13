@@ -54,6 +54,13 @@ const planStyles = {
     borderColor: 'border-yellow-200',
     popular: false,
   },
+  vip_access: {
+    icon: Crown,
+    color: 'from-amber-500 to-red-500',
+    bgColor: 'from-amber-50 to-red-50',
+    borderColor: 'border-amber-300',
+    popular: false,
+  },
 }
 
 interface DisplayPlan extends SubscriptionPlanConfig {

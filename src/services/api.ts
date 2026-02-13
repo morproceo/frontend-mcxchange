@@ -69,7 +69,9 @@ class ApiService {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || data.message || 'API request failed');
+      const err = new Error(data.error || data.message || 'API request failed') as Error & { code?: string };
+      err.code = data.code;
+      throw err;
     }
 
     return data;
@@ -435,6 +437,7 @@ class ApiService {
     status?: string;
     visibility?: string;
     isPremium?: boolean;
+    isVip?: boolean;
   }) {
     return this.request<any>(`/admin/listings/${listingId}`, {
       method: 'PUT',
@@ -565,6 +568,31 @@ class ApiService {
 
     const query = searchParams.toString();
     return this.request<any>(`/listings${query ? `?${query}` : ''}`);
+  }
+
+  async getVipListings(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    state?: string;
+    amazonStatus?: string;
+    sort?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('vip', 'true');
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.minPrice) searchParams.set('minPrice', params.minPrice.toString());
+    if (params?.maxPrice) searchParams.set('maxPrice', params.maxPrice.toString());
+    if (params?.state) searchParams.set('state', params.state);
+    if (params?.amazonStatus) searchParams.set('amazonStatus', params.amazonStatus);
+    if (params?.sort) searchParams.set('sort', params.sort);
+
+    const query = searchParams.toString();
+    return this.request<any>(`/listings/vip${query ? `?${query}` : ''}`);
   }
 
   async getListing(id: string) {
@@ -2561,6 +2589,28 @@ class ApiService {
     return this.request('/admin/settings', {
       method: 'PUT',
       body: JSON.stringify({ settings }),
+    });
+  }
+  // ===========================
+  // AI Chat Assistant
+  // ===========================
+
+  async createAIChatThread() {
+    return this.request<{
+      success: boolean;
+      threadId: string;
+    }>('/ai-chat/thread', {
+      method: 'POST',
+    });
+  }
+
+  async sendAIChatMessage(threadId: string, message: string) {
+    return this.request<{
+      success: boolean;
+      response: string;
+    }>('/ai-chat/message', {
+      method: 'POST',
+      body: JSON.stringify({ threadId, message }),
     });
   }
 }

@@ -59,7 +59,8 @@ export const mockListings: MCListing[] = [
     highwaySetup: true,
     sellingWithEmail: true,
     sellingWithPhone: true,
-    isPremium: false
+    isPremium: false,
+    isVip: false
   },
   {
     id: '2',
@@ -92,7 +93,8 @@ export const mockListings: MCListing[] = [
     highwaySetup: true,
     sellingWithEmail: true,
     sellingWithPhone: false,
-    isPremium: true
+    isPremium: true,
+    isVip: false
   },
   {
     id: '3',
@@ -125,7 +127,8 @@ export const mockListings: MCListing[] = [
     highwaySetup: true,
     sellingWithEmail: true,
     sellingWithPhone: true,
-    isPremium: true
+    isPremium: true,
+    isVip: false
   },
   {
     id: '4',
@@ -158,7 +161,8 @@ export const mockListings: MCListing[] = [
     highwaySetup: false,
     sellingWithEmail: false,
     sellingWithPhone: true,
-    isPremium: false
+    isPremium: false,
+    isVip: false
   },
   {
     id: '5',
@@ -191,7 +195,8 @@ export const mockListings: MCListing[] = [
     highwaySetup: true,
     sellingWithEmail: true,
     sellingWithPhone: true,
-    isPremium: false
+    isPremium: false,
+    isVip: false
   },
   {
     id: '6',
@@ -224,6 +229,7 @@ export const mockListings: MCListing[] = [
     highwaySetup: true,
     sellingWithEmail: true,
     sellingWithPhone: false,
-    isPremium: true
+    isPremium: true,
+    isVip: false
   }
 ]

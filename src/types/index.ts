@@ -59,7 +59,7 @@ export interface UserResponse {
 }
 
 // Subscription Types
-export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise'
+export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise' | 'vip_access'
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'INCOMPLETE'
 
 export interface SubscriptionInfo {
@@ -161,6 +161,7 @@ export interface MCListing {
 
   // Premium listing
   isPremium: boolean
+  isVip: boolean
 
   // Documents
   documents: Document[]
@@ -279,6 +280,7 @@ export interface FilterOptions {
   hasEmail?: boolean
   hasPhone?: boolean
   isPremium?: boolean
+  isVip?: boolean
   sortBy?: 'price-asc' | 'price-desc' | 'trust-score' | 'newest' | 'oldest' | 'years-active'
 }
 

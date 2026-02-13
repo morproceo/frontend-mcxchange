@@ -337,6 +337,38 @@ const MCDetailPage = () => {
     )
   }
 
+  // Show VIP access denied state
+  if (error === 'ENTERPRISE_REQUIRED') {
+    return (
+      <div className="min-h-screen py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <Card className="p-8 text-center">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Crown className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">VIP Listing — Enterprise Only</h2>
+            <p className="text-gray-500 mb-6">This listing is exclusive to Enterprise subscribers. Upgrade your plan to access VIP listings.</p>
+            <div className="flex items-center justify-center gap-3">
+              <Button variant="outline" onClick={() => navigate('/marketplace')}>
+                Back to Marketplace
+              </Button>
+              <Button onClick={() => navigate('/buyer/subscription')}>
+                Upgrade to Enterprise
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   // Show error state
   if (error || !listing) {
     return (

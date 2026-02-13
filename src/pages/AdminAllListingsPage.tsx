@@ -89,6 +89,7 @@ interface Listing {
   state: string
   city: string
   isPremium: boolean
+  isVip: boolean
   amazonStatus: string
   amazonRelayScore: string | null
   highwaySetup: boolean
@@ -110,7 +111,7 @@ interface User {
 
 const AdminAllListingsPage = () => {
   const navigate = useNavigate()
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'rejected' | 'sold' | 'premium' | 'draft'>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'rejected' | 'sold' | 'premium' | 'vip' | 'draft'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
@@ -349,15 +350,19 @@ const AdminAllListingsPage = () => {
         'sold': 'SOLD',
         'rejected': 'REJECTED',
         'draft': 'DRAFT',
-        'premium': ''
+        'premium': '',
+        'vip': ''
       }
 
       const params: any = { limit: 100 }
-      if (activeFilter !== 'all' && activeFilter !== 'premium') {
+      if (activeFilter !== 'all' && activeFilter !== 'premium' && activeFilter !== 'vip') {
         params.status = statusMap[activeFilter]
       }
       if (activeFilter === 'premium') {
         params.isPremium = true
+      }
+      if (activeFilter === 'vip') {
+        params.isVip = true
       }
       if (searchTerm) {
         params.search = searchTerm
@@ -401,6 +406,7 @@ const AdminAllListingsPage = () => {
         state: item.state || '',
         city: item.city || '',
         isPremium: item.isPremium || false,
+        isVip: item.isVip || false,
         amazonStatus: item.amazonStatus?.toLowerCase() || 'none',
         amazonRelayScore: item.amazonRelayScore || null,
         highwaySetup: item.highwaySetup || false,
@@ -437,6 +443,16 @@ const AdminAllListingsPage = () => {
   }, [openActionDropdown])
 
   // Open Telegram modal and fetch inspections
+  const handleToggleVip = async (listing: Listing) => {
+    try {
+      await api.updateAdminListing(listing.id, { isVip: !listing.isVip })
+      // Update local state
+      setAllListings(prev => prev.map(l => l.id === listing.id ? { ...l, isVip: !l.isVip } : l))
+    } catch (err: any) {
+      console.error('Failed to toggle VIP:', err)
+    }
+  }
+
   const openTelegramModal = async (listing: Listing) => {
     setTelegramListing(listing)
     setShowTelegramModal(true)
@@ -502,6 +518,7 @@ const AdminAllListingsPage = () => {
     amazonRelayScore: '',
     highwaySetup: false,
     isPremium: false,
+    isVip: false,
     sellingWithEmail: true,
     sellingWithPhone: true,
     bipdCoverage: '',
@@ -527,6 +544,8 @@ const AdminAllListingsPage = () => {
         matchesFilter = true
       } else if (activeFilter === 'premium') {
         matchesFilter = listing.isPremium
+      } else if (activeFilter === 'vip') {
+        matchesFilter = listing.isVip
       } else {
         matchesFilter = listing.status === activeFilter
       }
@@ -567,6 +586,7 @@ const AdminAllListingsPage = () => {
     { label: 'Rejected', value: allListings.filter(l => l.status === 'rejected').length, color: 'bg-red-100 text-red-700' },
     { label: 'Draft', value: allListings.filter(l => l.status === 'draft').length, color: 'bg-purple-100 text-purple-700' },
     { label: 'Premium', value: allListings.filter(l => l.isPremium).length, color: 'bg-amber-100 text-amber-700' },
+    { label: 'VIP', value: allListings.filter(l => l.isVip).length, color: 'bg-yellow-100 text-yellow-700' },
   ]
 
   const getStatusBadge = (status: string) => {
@@ -625,6 +645,7 @@ const AdminAllListingsPage = () => {
       state: newListing.state,
       city: newListing.city,
       isPremium: newListing.isPremium,
+      isVip: newListing.isVip,
       amazonStatus: newListing.amazonStatus,
       amazonRelayScore: newListing.amazonRelayScore || null,
       highwaySetup: newListing.highwaySetup,
@@ -656,6 +677,7 @@ const AdminAllListingsPage = () => {
       amazonRelayScore: '',
       highwaySetup: false,
       isPremium: false,
+      isVip: false,
       sellingWithEmail: true,
       sellingWithPhone: true,
       bipdCoverage: '',
@@ -849,7 +871,7 @@ const AdminAllListingsPage = () => {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(['all', 'active', 'pending', 'sold', 'rejected', 'draft', 'premium'] as const).map((filter) => (
+            {(['all', 'active', 'pending', 'sold', 'rejected', 'draft', 'premium', 'vip'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -860,6 +882,7 @@ const AdminAllListingsPage = () => {
                 }`}
               >
                 {filter === 'premium' && <Crown className="w-3 h-3 inline mr-1" />}
+                {filter === 'vip' && <Crown className="w-3 h-3 inline mr-1" />}
                 {filter}
               </button>
             ))}
@@ -945,7 +968,8 @@ const AdminAllListingsPage = () => {
                   >
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        {listing.isPremium && <Crown className="w-4 h-4 text-amber-500" />}
+                        {listing.isPremium && <span title="Premium"><Crown className="w-4 h-4 text-amber-500" /></span>}
+                        {listing.isVip && <span title="VIP"><Crown className="w-4 h-4 text-yellow-500" /></span>}
                         <div>
                           <p className="font-semibold text-gray-900">MC-{listing.mcNumber}</p>
                           <p className="text-xs text-gray-500">DOT-{listing.dotNumber}</p>
@@ -1029,6 +1053,16 @@ const AdminAllListingsPage = () => {
                             >
                               <ExternalLink className="w-4 h-4" />
                               View Public Page
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleToggleVip(listing)
+                                setOpenActionDropdown(null)
+                              }}
+                              className={`w-full flex items-center gap-2 px-4 py-2 text-sm ${listing.isVip ? 'text-yellow-600 hover:bg-yellow-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                            >
+                              <Crown className="w-4 h-4" />
+                              {listing.isVip ? 'Remove VIP' : 'Mark as VIP'}
                             </button>
                             {listing.status === 'active' && (
                               <button
@@ -1652,6 +1686,15 @@ const AdminAllListingsPage = () => {
                         className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-sm text-gray-700">Premium Listing</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newListing.isVip}
+                        onChange={(e) => setNewListing({ ...newListing, isVip: e.target.checked })}
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-gray-700">VIP Listing</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input

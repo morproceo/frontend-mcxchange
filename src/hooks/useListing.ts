@@ -87,6 +87,7 @@ export function useListing(listingId: string | undefined): UseListingResult {
 
       // Premium listing
       isPremium: Boolean(data.isPremium),
+      isVip: Boolean(data.isVip),
 
       // Documents
       documents: data.documents || [],
@@ -158,9 +159,11 @@ export function useListing(listingId: string | undefined): UseListingResult {
           console.error('Failed to check unlock status:', err)
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch listing:', err)
-      setError('Failed to load listing details')
+      const msg = err?.message || 'Failed to load listing details'
+      const code = err?.code || ''
+      setError(code === 'ENTERPRISE_REQUIRED' ? 'ENTERPRISE_REQUIRED' : msg)
       setListing(null)
     } finally {
       setLoading(false)

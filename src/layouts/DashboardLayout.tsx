@@ -123,8 +123,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
 
   // Define menu items based on user role
   const getMenuItems = (): MenuStructure => {
+    const planLower = buyerSubscription?.plan?.toLowerCase()
+    const isActive = buyerSubscription?.status === 'ACTIVE'
+
     const hasProfessionalAccess =
-      buyerSubscription?.plan?.toLowerCase() === 'professional' && buyerSubscription?.status === 'ACTIVE'
+      (planLower === 'professional' || planLower === 'enterprise' || planLower === 'vip_access') && isActive
+
+    const hasEnterpriseAccess =
+      (planLower === 'enterprise' || planLower === 'vip_access') && isActive
 
     switch (user?.role) {
       case 'seller':
@@ -140,6 +146,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
       case 'buyer':
         return [
           { icon: LayoutDashboard, label: 'Dashboard', path: '/buyer/dashboard' },
+          ...(hasEnterpriseAccess && !buyerSubscriptionLoading
+            ? [{ icon: Crown, label: 'VIP Marketplace', path: '/buyer/vip-marketplace' }]
+            : []),
           { icon: Unlock, label: 'Unlocked MCs', path: '/buyer/unlocked' },
           { icon: ShoppingCart, label: 'My Offers', path: '/buyer/offers' },
           { icon: Handshake, label: 'Transactions', path: '/buyer/transactions' },

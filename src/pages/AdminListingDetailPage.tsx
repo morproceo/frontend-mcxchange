@@ -46,6 +46,7 @@ interface Listing {
   status: string
   visibility: string
   isPremium: boolean
+  isVip: boolean
   city: string
   state: string
   address: string | null
@@ -141,6 +142,7 @@ const AdminListingDetailPage = () => {
     status: 'DRAFT',
     visibility: 'PUBLIC',
     isPremium: false,
+    isVip: false,
   })
 
   useEffect(() => {
@@ -203,6 +205,7 @@ const AdminListingDetailPage = () => {
         status: data.status || 'DRAFT',
         visibility: data.visibility || 'PUBLIC',
         isPremium: data.isPremium || false,
+        isVip: data.isVip || false,
       })
     } catch (err: any) {
       setError(err.message || 'Failed to load listing')
@@ -254,6 +257,7 @@ const AdminListingDetailPage = () => {
         status: formData.status,
         visibility: formData.visibility,
         isPremium: formData.isPremium,
+        isVip: formData.isVip,
       }
 
       await api.updateAdminListing(id, updateData)
@@ -330,6 +334,11 @@ const AdminListingDetailPage = () => {
               {formData.isPremium && (
                 <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold flex items-center gap-1">
                   <Crown className="w-3 h-3" /> PREMIUM
+                </span>
+              )}
+              {formData.isVip && (
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold flex items-center gap-1">
+                  <Crown className="w-3 h-3" /> VIP
                 </span>
               )}
               <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(formData.status)}`}>
@@ -756,17 +765,30 @@ const AdminListingDetailPage = () => {
                   />
                   <p className="text-xs text-gray-500 mt-1">Price shown to buyers (defaults to asking price if empty)</p>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isPremium}
-                    onChange={(e) => handleInputChange('isPremium', e.target.checked)}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm text-gray-700 flex items-center gap-1">
-                    <Crown className="w-4 h-4 text-amber-500" /> Premium Listing
-                  </span>
-                </label>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPremium}
+                      onChange={(e) => handleInputChange('isPremium', e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm text-gray-700 flex items-center gap-1">
+                      <Crown className="w-4 h-4 text-amber-500" /> Premium Listing
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isVip}
+                      onChange={(e) => handleInputChange('isVip', e.target.checked)}
+                      className="rounded text-yellow-600 focus:ring-yellow-500"
+                    />
+                    <span className="text-sm text-gray-700 flex items-center gap-1">
+                      <Crown className="w-4 h-4 text-yellow-500" /> VIP Listing
+                    </span>
+                  </label>
+                </div>
               </div>
             </Card>
 

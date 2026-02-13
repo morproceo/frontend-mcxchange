@@ -292,8 +292,9 @@ const BuyerCreditsafePage = () => {
         setAccessLoading(true)
         const response = await api.getSubscription()
         const subscription = response.data?.subscription
+        const planLower = subscription?.plan?.toLowerCase()
         const isProfessional =
-          subscription?.plan?.toLowerCase() === 'professional' && subscription?.status === 'ACTIVE'
+          (planLower === 'professional' || planLower === 'enterprise' || planLower === 'vip_access') && subscription?.status === 'ACTIVE'
         if (isActive) {
           setHasProfessionalAccess(Boolean(isProfessional))
         }
@@ -358,9 +359,9 @@ const BuyerCreditsafePage = () => {
             <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
               <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Professional Required</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Upgrade Required</h1>
             <p className="text-gray-600 mb-6">
-              Credit Reports are available only to buyers with an active Professional subscription.
+              Credit Reports are available to buyers with an active Professional, Enterprise, or VIP Access subscription.
             </p>
             <Button onClick={() => navigate('/buyer/subscription')}>
               View Subscription Options

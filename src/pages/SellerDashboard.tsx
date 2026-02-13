@@ -89,6 +89,7 @@ const SellerDashboard = () => {
             insuranceStatus: listing.insuranceStatus || 'active',
             verified: listing.verified || false,
             isPremium: listing.isPremium || false,
+            isVip: listing.isVip || false,
             trustScore: listing.trustScore || 70,
             trustLevel: getTrustLevel(listing.trustScore || 70),
             verificationBadges: listing.verificationBadges || [],
