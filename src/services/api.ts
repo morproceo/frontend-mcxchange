@@ -2631,6 +2631,28 @@ class ApiService {
   }
 
   // ===========================
+  // Admin Services
+  // ===========================
+
+  async submitAdminServicesForm(data: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    fleetSize?: string;
+    serviceType?: string;
+    message?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/admin-services/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ===========================
   // AI Chat Assistant
   // ===========================
 

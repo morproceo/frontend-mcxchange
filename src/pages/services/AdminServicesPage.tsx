@@ -13,13 +13,16 @@ import {
   Clock,
   Building,
   Shield,
-  CreditCard
+  CreditCard,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
 import Select from '../../components/ui/Select'
+import { api } from '../../services/api'
 
 const AdminServicesPage = () => {
   const [formData, setFormData] = useState({
@@ -32,10 +35,22 @@ const AdminServicesPage = () => {
     message: ''
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    setError(null)
+
+    try {
+      await api.submitAdminServicesForm(formData)
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const services = [
@@ -448,9 +463,25 @@ const AdminServicesPage = () => {
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 />
 
-                <Button type="submit" fullWidth size="lg">
-                  Get a Free Consultation
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                {error && (
+                  <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <Button type="submit" fullWidth size="lg" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Get a Free Consultation
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
                 </Button>
               </form>
             )}
