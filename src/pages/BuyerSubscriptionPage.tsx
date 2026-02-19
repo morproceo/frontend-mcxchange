@@ -367,7 +367,7 @@ const BuyerSubscriptionPage = () => {
 
   return (
     <div className="min-h-screen py-8 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
@@ -547,13 +547,14 @@ const BuyerSubscriptionPage = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {plans.map((plan, index) => {
             const Icon = plan.icon
             const isSelected = selectedPlan === plan.id
             const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === plan.id
             const displayPrice = billingCycle === 'monthly' ? plan.priceMonthly : Number(getMonthlyEquivalent(plan))
             const yearlyTotal = plan.priceYearly
+            const isVip = plan.id === 'vip_access'
 
             return (
               <motion.div
@@ -563,9 +564,9 @@ const BuyerSubscriptionPage = () => {
                 transition={{ delay: 0.1 * index }}
               >
                 <Card
-                  className={`relative overflow-hidden cursor-pointer transition-all ${
+                  className={`relative overflow-hidden cursor-pointer transition-all h-full ${
                     isSelected ? `ring-2 ring-gray-900 ${plan.borderColor}` : ''
-                  } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''} ${plan.popular ? 'md:-mt-4 md:mb-4' : ''}`}
+                  } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''} ${plan.popular ? 'lg:-mt-4 lg:mb-4' : ''}`}
                   onClick={() => !isCurrentPlan && setSelectedPlan(plan.id)}
                 >
                   {plan.popular && (
@@ -587,7 +588,9 @@ const BuyerSubscriptionPage = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-sm text-gray-500">{plan.credits} credits/month</p>
+                        <p className="text-sm text-gray-500">
+                          {isVip ? 'All Access Plan' : `${plan.credits} credits/month`}
+                        </p>
                       </div>
                     </div>
 
@@ -602,14 +605,24 @@ const BuyerSubscriptionPage = () => {
                     )}
                   </div>
 
-                  {/* Credits Highlight */}
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-yellow-50 border border-yellow-200 mb-6">
-                    <Coins className="w-8 h-8 text-yellow-500" />
-                    <div>
-                      <div className="text-2xl font-bold text-yellow-600">{plan.credits}</div>
-                      <div className="text-sm text-gray-600">MC unlock credits</div>
+                  {/* Credits Highlight / VIP Highlight */}
+                  {isVip ? (
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 mb-6">
+                      <Sparkles className="w-8 h-8 text-amber-500" />
+                      <div>
+                        <div className="text-lg font-bold text-amber-600">All Access</div>
+                        <div className="text-sm text-gray-600">AI-Powered Tools</div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-yellow-50 border border-yellow-200 mb-6">
+                      <Coins className="w-8 h-8 text-yellow-500" />
+                      <div>
+                        <div className="text-2xl font-bold text-yellow-600">{plan.credits}</div>
+                        <div className="text-sm text-gray-600">MC unlock credits</div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Features */}
                   <ul className="space-y-3 mb-6">
@@ -677,7 +690,7 @@ const BuyerSubscriptionPage = () => {
                   {hasActiveSubscription ? 'Upgrade Your Subscription' : 'Complete Your Subscription'}
                 </h2>
                 <p className="text-gray-600">
-                  {selectedPlanData.name} Plan - {selectedPlanData.credits} credits/month
+                  {selectedPlanData.name} Plan {selectedPlan !== 'vip_access' ? `- ${selectedPlanData.credits} credits/month` : '- All Access'}
                 </p>
               </div>
 
