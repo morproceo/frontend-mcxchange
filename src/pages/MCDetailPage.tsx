@@ -233,10 +233,16 @@ const MCDetailPage = () => {
     try {
       setSendingPremiumRequest(true)
       const message = premiumMessage.trim() || 'Interested in this premium MC authority. Please provide pricing and details.'
-      await api.createPremiumRequest(listing.id, message)
-      setPremiumRequestSent(true)
+      const response = await api.createPremiumRequest(listing.id, message)
       setShowPremiumModal(false)
       setPremiumMessage('')
+
+      // If auto-approved (Enterprise subscriber), reload to show unlocked content
+      if (response.data?.status === 'COMPLETED') {
+        window.location.reload()
+      } else {
+        setPremiumRequestSent(true)
+      }
     } catch (err: any) {
       console.error('Failed to submit premium request:', err)
       alert(err.message || 'Failed to submit request. Please try again.')
