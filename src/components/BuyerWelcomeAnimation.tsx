@@ -226,25 +226,25 @@ const BuyerWelcomeAnimation = ({ userId }: BuyerWelcomeAnimationProps) => {
                   name: 'Starter',
                   color: 'from-blue-500 to-cyan-500',
                   border: 'border-blue-500/30',
-                  credits: '5 credits/mo',
-                  features: ['Unlock 5 MC listings', 'Basic marketplace access', 'Email support'],
+                  credits: '4 credits/mo',
+                  features: ['Unlock 4 MC listings', 'Basic marketplace access', 'Email support'],
                   popular: false,
                 },
                 {
                   name: 'Professional',
                   color: 'from-purple-500 to-indigo-500',
                   border: 'border-purple-500/50',
-                  credits: '15 credits/mo',
-                  features: ['Unlock 15 MC listings', 'AI due diligence tools', 'Credit reports', 'Priority support'],
-                  popular: true,
+                  credits: '10 credits/mo',
+                  features: ['Unlock 10 MC listings', 'Priority marketplace access', 'Advanced search filters', 'Priority support'],
+                  popular: false,
                 },
                 {
-                  name: 'VIP Access',
-                  color: 'from-amber-500 to-orange-500',
-                  border: 'border-amber-500/30',
-                  credits: 'Unlimited unlocks',
-                  features: ['Unlimited MC unlocks', '$399 toward MC purchase', 'Free consultation call', 'AI tools & credit reports'],
-                  popular: false,
+                  name: 'Enterprise',
+                  color: 'from-yellow-500 to-orange-500',
+                  border: 'border-yellow-500/50',
+                  credits: '10 credits/mo',
+                  features: ['AI-powered due diligence', 'Credit report access', 'Dedicated support', 'Early access to listings'],
+                  popular: true,
                 },
               ].map((plan, i) => (
                 <div key={i} className={`anim relative rounded-2xl p-5 text-left bg-white/5 border ${plan.border}`}>
@@ -332,7 +332,6 @@ const BuyerWelcomeAnimation = ({ userId }: BuyerWelcomeAnimationProps) => {
               {[
                 { title: 'You are buying a real business', desc: 'When you purchase an MC authority, you are buying the full interest and ownership of a legal business entity — not just a number.' },
                 { title: 'An agreement is required', desc: 'Before any transaction is finalized, both buyer and seller must sign a Bill of Sale transferring ownership of the business.' },
-                { title: 'All deals go through Domilea', desc: 'Transactions must be completed through the platform. Taking deals off-platform with a Domilea user results in a $1,000 liquidated damages charge.' },
                 { title: 'Do your due diligence', desc: 'Use our AI tools, credit reports, and FMCSA data to research listings thoroughly before making an offer.' },
               ].map((item, i) => (
                 <div key={i} className="anim flex items-start gap-4 bg-white/5 rounded-xl p-4">
