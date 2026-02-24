@@ -44,6 +44,7 @@ const SellerDocumentsPage = lazy(() => import('./pages/SellerDocumentsPage'))
 const SellerTransactionsPage = lazy(() => import('./pages/SellerTransactionsPage'))
 
 // Buyer pages
+const BuyerWelcomePage = lazy(() => import('./pages/BuyerWelcomePage'))
 const BuyerDashboard = lazy(() => import('./pages/BuyerDashboard'))
 const BuyerOffersPage = lazy(() => import('./pages/BuyerOffersPage'))
 const BuyerPurchasesPage = lazy(() => import('./pages/BuyerPurchasesPage'))
@@ -151,6 +152,16 @@ function App() {
               <Route path="documents" element={<SellerDocumentsPage />} />
               <Route path="transactions" element={<SellerTransactionsPage />} />
             </Route>
+
+            {/* Buyer Welcome (standalone, no DashboardLayout) */}
+            <Route
+              path="buyer/welcome"
+              element={
+                <ProtectedRoute allowedRoles={['buyer']}>
+                  <BuyerWelcomePage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Buyer Dashboard Routes */}
             <Route

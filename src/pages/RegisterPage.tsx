@@ -148,7 +148,7 @@ const RegisterPage = () => {
           navigate('/seller/welcome')
           break
         case 'buyer':
-          navigate('/buyer/dashboard')
+          navigate('/buyer/welcome')
           break
         case 'admin':
           navigate('/admin/dashboard')
