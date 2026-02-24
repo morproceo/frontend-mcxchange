@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User as UserIcon, AlertCircle, Phone } from 'lucide-react'
+import { Mail, Lock, User as UserIcon, AlertCircle, Phone, FileText, Shield, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Select from '../components/ui/Select'
 import { DomileaIcon } from '../components/ui/DomileaLogo'
+import ScrollToAgreeModal from '../components/ScrollToAgreeModal'
+import { TermsContent } from '../components/LegalDocumentContent'
+import { PrivacyContent } from '../components/LegalDocumentContent'
 import { UserRole } from '../types'
 
 // Email validation regex - comprehensive check for valid email format
@@ -65,6 +68,12 @@ const RegisterPage = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsRead, setTermsRead] = useState(false)
+  const [privacyRead, setPrivacyRead] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [smsTransactionalConsent, setSmsTransactionalConsent] = useState(false)
+  const [smsMarketingConsent, setSmsMarketingConsent] = useState(false)
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string) => {
@@ -257,31 +266,140 @@ const RegisterPage = () => {
               required
             />
 
-            <div className="text-sm text-gray-600">
+            {/* Legal Documents Section */}
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Required: Review Legal Documents</p>
+                <p className="text-xs text-gray-500 mt-1">You must read both documents before you can create an account.</p>
+              </div>
+
+              {/* Read Terms Button */}
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                className={`w-full py-4 px-4 rounded-xl border-2 text-left flex items-center gap-3 transition-all ${
+                  termsRead
+                    ? 'bg-green-50 border-green-300 text-green-800'
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {termsRead ? (
+                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                ) : (
+                  <FileText className="w-6 h-6 text-gray-400 flex-shrink-0" />
+                )}
+                <span className="text-base font-medium">
+                  {termsRead ? 'Terms of Service' : 'Read Terms of Service'}
+                </span>
+                {termsRead && (
+                  <span className="ml-auto text-sm font-semibold text-green-600">Read</span>
+                )}
+              </button>
+
+              {/* Read Privacy Button */}
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(true)}
+                className={`w-full py-4 px-4 rounded-xl border-2 text-left flex items-center gap-3 transition-all ${
+                  privacyRead
+                    ? 'bg-green-50 border-green-300 text-green-800'
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {privacyRead ? (
+                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                ) : (
+                  <Shield className="w-6 h-6 text-gray-400 flex-shrink-0" />
+                )}
+                <span className="text-base font-medium">
+                  {privacyRead ? 'Privacy Policy' : 'Read Privacy Policy'}
+                </span>
+                {privacyRead && (
+                  <span className="ml-auto text-sm font-semibold text-green-600">Read</span>
+                )}
+              </button>
+
+              {/* Agreement Checkbox */}
+              <div className={`text-sm ${termsRead && privacyRead ? 'opacity-100' : 'opacity-50'}`}>
+                <label className={`flex items-start gap-3 ${termsRead && privacyRead ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => {
+                      if (termsRead && privacyRead) {
+                        setTermsAccepted(e.target.checked)
+                      }
+                    }}
+                    disabled={!termsRead || !privacyRead}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50"
+                  />
+                  <span className="text-gray-700">
+                    I agree to the Terms of Service and Privacy Policy
+                  </span>
+                </label>
+                {!(termsRead && privacyRead) && (
+                  <p className="text-xs text-amber-600 mt-1.5 ml-7">Please read both documents above first</p>
+                )}
+                {termsRead && privacyRead && (
+                  <p className="text-xs text-green-600 mt-1.5 ml-7">You have read both documents</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modals */}
+            <ScrollToAgreeModal
+              isOpen={showTermsModal}
+              onClose={() => setShowTermsModal(false)}
+              onFullyScrolled={() => setTermsRead(true)}
+              title="Terms of Service"
+              icon={<FileText className="w-5 h-5 text-gray-600" />}
+            >
+              <TermsContent />
+            </ScrollToAgreeModal>
+
+            <ScrollToAgreeModal
+              isOpen={showPrivacyModal}
+              onClose={() => setShowPrivacyModal(false)}
+              onFullyScrolled={() => setPrivacyRead(true)}
+              title="Privacy Policy"
+              icon={<Shield className="w-5 h-5 text-gray-600" />}
+            >
+              <PrivacyContent />
+            </ScrollToAgreeModal>
+
+            {/* SMS Consent Section */}
+            <div className="space-y-3 border-t border-gray-200 pt-5">
+              <p className="text-sm font-semibold text-gray-900">SMS Communications</p>
+
+              {/* Transactional SMS Consent */}
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  checked={smsTransactionalConsent}
+                  onChange={(e) => setSmsTransactionalConsent(e.target.checked)}
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
                 />
-                <span>
-                  I agree to the{' '}
-                  <Link
-                    to="/terms"
-                    target="_blank"
-                    className="text-secondary-600 hover:text-secondary-700 font-medium underline"
-                  >
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link
-                    to="/privacy"
-                    target="_blank"
-                    className="text-secondary-600 hover:text-secondary-700 font-medium underline"
-                  >
-                    Privacy Policy
-                  </Link>
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  I consent to receive transactional messages from{' '}
+                  <span className="font-semibold">Domilea</span> at the phone number provided.
+                  Message frequency may vary. Message & Data rates may apply.
+                  Reply HELP for help or STOP to opt-out.
+                </span>
+              </label>
+
+              {/* Marketing SMS Consent */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smsMarketingConsent}
+                  onChange={(e) => setSmsMarketingConsent(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  I consent to receive marketing and promotional messages from{' '}
+                  <span className="font-semibold">Domilea</span> at the phone number provided.
+                  Message frequency may vary. Message & Data rates may apply.
+                  Reply HELP for help or STOP to opt-out.
                 </span>
               </label>
             </div>
@@ -289,6 +407,12 @@ const RegisterPage = () => {
             <Button type="submit" fullWidth size="lg" loading={loading}>
               Create Account
             </Button>
+
+            <div className="text-center text-xs text-gray-400 -mt-2">
+              <Link to="/privacy" target="_blank" className="underline hover:text-gray-600">Privacy Policy</Link>
+              {' | '}
+              <Link to="/terms" target="_blank" className="underline hover:text-gray-600">Terms of Service</Link>
+            </div>
 
             <div className="text-center text-sm text-gray-500">
               Already have an account?{' '}
