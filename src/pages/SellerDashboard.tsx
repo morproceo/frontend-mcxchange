@@ -12,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import MCCard from '../components/MCCard'
@@ -53,7 +54,7 @@ interface DashboardStats {
 }
 
 const SellerDashboard = () => {
-  const { user } = useAuth()
+  const { user, isIdentityVerified } = useAuth()
 
   // API data state
   const [myListings, setMyListings] = useState<MCListing[]>([])
@@ -115,7 +116,8 @@ const SellerDashboard = () => {
               trustScore: user?.trustScore || 70,
               memberSince: user?.memberSince || new Date(),
               completedDeals: user?.completedDeals || 0,
-              reviews: []
+              reviews: [],
+              identityVerified: user?.identityVerified || false
             }
           }))
 
@@ -230,6 +232,9 @@ const SellerDashboard = () => {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Identity Verification Banner */}
+        {!isIdentityVerified && <IdentityVerificationBanner />}
+
         {/* Quick Action */}
         <div className="flex items-center justify-between mb-8">
           <div>

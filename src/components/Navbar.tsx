@@ -13,14 +13,16 @@ import {
   Users,
   Truck,
   FileText,
-  Search
+  Search,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react'
 import { useState } from 'react'
 import Button from './ui/Button'
 import { DomileaMainLogo } from './ui/DomileaLogo'
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated } = useAuth()
+  const { user, logout, isAuthenticated, isIdentityVerified } = useAuth()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false)
@@ -158,6 +160,15 @@ const Navbar = () => {
                 >
                   <User className="w-4 h-4" />
                   <span>{user?.name}</span>
+                  {isAuthenticated && user?.role !== 'admin' && (
+                    isIdentityVerified ? (
+                      <span title="Identity Verified"><CheckCircle className="w-4 h-4 text-emerald-500" /></span>
+                    ) : (
+                      <Link to="/settings" onClick={(e) => e.stopPropagation()} title="Identity Not Verified">
+                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                      </Link>
+                    )
+                  )}
                 </Link>
 
                 <Button

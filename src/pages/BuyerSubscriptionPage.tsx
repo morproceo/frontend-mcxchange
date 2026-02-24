@@ -596,9 +596,10 @@ const BuyerSubscriptionPage = () => {
 
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-bold text-gray-900">${displayPrice.toFixed(2)}</span>
-                      <span className="text-gray-500">/month</span>
+                      {!isVip && <span className="text-gray-500">/month</span>}
+                      {isVip && <span className="text-gray-500">one-time</span>}
                     </div>
-                    {billingCycle === 'yearly' && (
+                    {billingCycle === 'yearly' && !isVip && (
                       <p className="text-sm text-gray-500 mt-1">
                         Billed ${yearlyTotal.toFixed(2)} annually
                       </p>
@@ -607,11 +608,27 @@ const BuyerSubscriptionPage = () => {
 
                   {/* Credits Highlight / VIP Highlight */}
                   {isVip ? (
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 mb-6">
-                      <Sparkles className="w-8 h-8 text-amber-500" />
-                      <div>
-                        <div className="text-lg font-bold text-amber-600">All Access</div>
-                        <div className="text-sm text-gray-600">AI-Powered Tools</div>
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                        <Sparkles className="w-8 h-8 text-amber-500 flex-shrink-0" />
+                        <div>
+                          <div className="text-lg font-bold text-amber-600">Unlimited Access</div>
+                          <div className="text-sm text-gray-600">Browse & unlock every MC until you buy</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
+                        <TrendingUp className="w-6 h-6 text-green-500 flex-shrink-0" />
+                        <div className="text-sm">
+                          <span className="font-semibold text-green-700">$399 applied to your purchase</span>
+                          <span className="text-gray-600"> — credited toward your final MC price</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 border border-purple-200">
+                        <Mail className="w-6 h-6 text-purple-500 flex-shrink-0" />
+                        <div className="text-sm">
+                          <span className="font-semibold text-purple-700">Free consultation call with Maria</span>
+                          <span className="text-gray-600"> — personalized guidance on your MC purchase</span>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -719,6 +736,17 @@ const BuyerSubscriptionPage = () => {
                   </span>
                 </div>
               </div>
+
+              {/* VIP Credit Notice */}
+              {selectedPlan === 'vip_access' && (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3 mb-6">
+                  <Sparkles className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-amber-700 mb-1">Your $399 goes toward your MC purchase</p>
+                    <p className="text-gray-600">Enjoy unlimited access to browse, unlock, and research every MC on the platform. Includes a free consultation call with Maria. When you're ready to buy, your $399 VIP fee is credited toward the final purchase price.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Security Notice */}
               <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex items-start gap-3 mb-6">

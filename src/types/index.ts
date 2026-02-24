@@ -56,6 +56,8 @@ export interface UserResponse {
   avatar?: string
   totalCredits: number
   usedCredits: number
+  identityVerified: boolean
+  identityVerificationStatus?: string | null
 }
 
 // Subscription Types
@@ -104,6 +106,8 @@ export interface User {
   reviews: Review[]
   totalCredits?: number
   usedCredits?: number
+  identityVerified: boolean
+  identityVerificationStatus?: string | null
 }
 
 export type TrustLevel = 'high' | 'medium' | 'low'

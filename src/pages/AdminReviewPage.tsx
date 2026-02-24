@@ -249,7 +249,8 @@ const AdminReviewPage = () => {
               trustScore: data.seller?.trustScore || 70,
               memberSince: new Date(data.seller?.createdAt || Date.now()),
               completedDeals: data.seller?.completedDeals || 0,
-              reviews: []
+              reviews: [],
+              identityVerified: data.seller?.identityVerified || false
             }
           } as MCListingExtended
           setListing(transformedListing)

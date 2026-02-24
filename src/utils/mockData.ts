@@ -11,7 +11,8 @@ export const mockSellers: User[] = [
     trustScore: 92,
     memberSince: new Date('2022-01-15'),
     completedDeals: 12,
-    reviews: []
+    reviews: [],
+    identityVerified: false
   },
   {
     id: '2',
@@ -22,7 +23,8 @@ export const mockSellers: User[] = [
     trustScore: 88,
     memberSince: new Date('2021-06-20'),
     completedDeals: 18,
-    reviews: []
+    reviews: [],
+    identityVerified: false
   }
 ]
 

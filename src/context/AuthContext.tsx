@@ -12,6 +12,8 @@ interface AuthContextType {
   isProfileComplete: boolean
   profileCompletionPercent: number
   checkProfileComplete: () => Promise<void>
+  isIdentityVerified: boolean
+  refreshIdentityStatus: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -56,7 +58,9 @@ const transformUser = (apiUser: any): User => {
     completedDeals: apiUser.completedDeals || 0,
     reviews: apiUser.reviews || [],
     totalCredits: apiUser.totalCredits || 0,
-    usedCredits: apiUser.usedCredits || 0
+    usedCredits: apiUser.usedCredits || 0,
+    identityVerified: apiUser.identityVerified || false,
+    identityVerificationStatus: apiUser.identityVerificationStatus || null
   }
 }
 
@@ -215,6 +219,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }
 
+  const isIdentityVerified = user?.identityVerified || user?.role === 'admin' || false
+
+  const refreshIdentityStatus = async () => {
+    if (!user) return
+    try {
+      const response = await api.getIdentityStatus()
+      if (response.success && response.data) {
+        const updated = {
+          ...user,
+          identityVerified: response.data.identityVerified,
+          identityVerificationStatus: response.data.identityVerificationStatus
+        }
+        setUser(updated)
+        localStorage.setItem('mcx_user', JSON.stringify(updated))
+      }
+    } catch (error) {
+      console.error('Failed to refresh identity status:', error)
+    }
+  }
+
   const logout = async () => {
     try {
       await api.logout()
@@ -239,7 +263,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isLoading,
         isProfileComplete,
         profileCompletionPercent,
-        checkProfileComplete
+        checkProfileComplete,
+        isIdentityVerified,
+        refreshIdentityStatus
       }}
     >
       {children}

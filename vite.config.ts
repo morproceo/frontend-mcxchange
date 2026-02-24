@@ -18,7 +18,7 @@ export default defineConfig({
           // React core - rarely changes, cache separately
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           // UI libraries
-          'vendor-ui': ['framer-motion', 'lucide-react', 'react-hot-toast'],
+          'vendor-ui': ['framer-motion', 'lucide-react', 'react-hot-toast', 'gsap'],
         },
       },
     },

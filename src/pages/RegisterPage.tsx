@@ -145,7 +145,7 @@ const RegisterPage = () => {
       // Navigate based on the user's role from the API response
       switch (user.role) {
         case 'seller':
-          navigate('/seller/dashboard')
+          navigate('/seller/welcome')
           break
         case 'buyer':
           navigate('/buyer/dashboard')

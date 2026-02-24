@@ -7,6 +7,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 import AIChatWidget from './components/AIChatWidget'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthRequiredRoute from './components/AuthRequiredRoute'
+import VerificationRequiredRoute from './components/VerificationRequiredRoute'
 
 // Eagerly loaded - landing page (first paint)
 import HomePage from './pages/HomePage'
@@ -33,6 +34,7 @@ const DispatchServicesPage = lazy(() => import('./pages/services/DispatchService
 const AdminServicesPage = lazy(() => import('./pages/services/AdminServicesPage'))
 
 // Seller pages
+const SellerWelcomePage = lazy(() => import('./pages/SellerWelcomePage'))
 const SellerDashboard = lazy(() => import('./pages/SellerDashboard'))
 const CreateListingPage = lazy(() => import('./pages/CreateListingPage'))
 const SellerListingsPage = lazy(() => import('./pages/SellerListingsPage'))
@@ -78,6 +80,7 @@ const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
 
 // Shared pages
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const TransactionRoomPage = lazy(() => import('./pages/TransactionRoomPage'))
 const DisputePage = lazy(() => import('./pages/DisputePage'))
 
@@ -109,7 +112,7 @@ function App() {
               <Route path="seller-verification" element={<SellerVerificationPage />} />
               <Route path="verify-email" element={<VerifyEmailPage />} />
               <Route path="marketplace" element={<MarketplacePage />} />
-              <Route path="mc/:id" element={<AuthRequiredRoute><MCDetailPage /></AuthRequiredRoute>} />
+              <Route path="mc/:id" element={<VerificationRequiredRoute><MCDetailPage /></VerificationRequiredRoute>} />
               <Route path="consultation/success" element={<ConsultationSuccessPage />} />
               {/* Services Routes */}
               <Route path="services" element={<ServicesPage />} />
@@ -120,6 +123,16 @@ function App() {
               <Route path="services/admin" element={<AdminServicesPage />} />
               <Route path="drivers" element={<DriversLandingPage />} />
             </Route>
+
+            {/* Seller Welcome (standalone, no DashboardLayout) */}
+            <Route
+              path="seller/welcome"
+              element={
+                <ProtectedRoute allowedRoles={['seller']}>
+                  <SellerWelcomePage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Seller Dashboard Routes */}
             <Route
@@ -225,9 +238,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DashboardLayout>
-                    <div className="p-8">
-                      <h1 className="text-2xl font-bold">Settings</h1>
-                    </div>
+                    <SettingsPage />
                   </DashboardLayout>
                 </ProtectedRoute>
               }

@@ -6,6 +6,7 @@ import {
   X,
   MapPin,
   Crown,
+  Sparkles,
   Mail,
   Phone,
   CheckCircle,
@@ -144,6 +145,7 @@ const MarketplacePage = () => {
           sellingWithEmail: listing.sellingWithEmail || false,
           sellingWithPhone: listing.sellingWithPhone || false,
           isPremium: listing.isPremium || false,
+          isVip: listing.isVip || false,
           documents: [],
           status: (listing.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
           visibility: (listing.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
@@ -623,19 +625,84 @@ const MarketplacePage = () => {
           </Card>
         )}
 
-        {/* Listings Grid */}
-        {!loading && !error && filteredListings.length > 0 && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredListings.map((listing) => (
-              <MCCard
-                key={listing.id}
-                listing={listing}
-                onSave={handleSaveListing}
-                isSaved={savedListings.has(listing.id)}
-              />
-            ))}
-          </div>
-        )}
+        {/* Listings Grid — Tier Grouped */}
+        {!loading && !error && filteredListings.length > 0 && (() => {
+          const vipListings = filteredListings.filter(l => l.isVip)
+          const premiumListings = filteredListings.filter(l => l.isPremium && !l.isVip)
+          const standardListings = filteredListings.filter(l => !l.isPremium && !l.isVip)
+
+          return (
+            <div className="space-y-10">
+              {/* VIP Collection */}
+              {vipListings.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 shadow-md shadow-amber-200/50">
+                      <Sparkles className="w-4 h-4 text-white" />
+                      <span className="text-sm font-bold text-white tracking-wide">VIP COLLECTION</span>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent" />
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {vipListings.map((listing) => (
+                      <MCCard
+                        key={listing.id}
+                        listing={listing}
+                        onSave={handleSaveListing}
+                        isSaved={savedListings.has(listing.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Premium Listings */}
+              {premiumListings.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 shadow-md shadow-violet-200/50">
+                      <Crown className="w-4 h-4 text-white" />
+                      <span className="text-sm font-bold text-white tracking-wide">PREMIUM LISTINGS</span>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-violet-200 to-transparent" />
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {premiumListings.map((listing) => (
+                      <MCCard
+                        key={listing.id}
+                        listing={listing}
+                        onSave={handleSaveListing}
+                        isSaved={savedListings.has(listing.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* All Listings */}
+              {standardListings.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800 shadow-md">
+                      <span className="text-sm font-bold text-white tracking-wide">ALL LISTINGS</span>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent" />
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {standardListings.map((listing) => (
+                      <MCCard
+                        key={listing.id}
+                        listing={listing}
+                        onSave={handleSaveListing}
+                        isSaved={savedListings.has(listing.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Empty State */}
         {!loading && !error && filteredListings.length === 0 && (

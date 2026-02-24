@@ -20,9 +20,11 @@ import {
   ShoppingBag,
   CreditCard,
   Receipt,
-  DollarSign
+  DollarSign,
+  Crown
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import TrustBadge from '../components/ui/TrustBadge'
@@ -101,7 +103,7 @@ interface BuyerOffer {
 }
 
 const BuyerDashboard = () => {
-  const { user } = useAuth()
+  const { user, isIdentityVerified } = useAuth()
   const [savedListings] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace'>('marketplace')
   // Credits from user data (will be 0 for new users)
@@ -148,6 +150,7 @@ const BuyerDashboard = () => {
           verified: listing.verified || false,
           isPremium: listing.isPremium || false,
           premium: listing.isPremium || false,
+          isVip: listing.isVip || false,
           amazonStatus: (listing.amazonStatus || 'none').toLowerCase(),
           amazonRelayScore: listing.amazonRelayScore || null,
           highwaySetup: listing.highwaySetup || false,
@@ -384,6 +387,9 @@ const BuyerDashboard = () => {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Identity Verification Banner */}
+        {!isIdentityVerified && <IdentityVerificationBanner />}
+
         {/* Credits Banner */}
         <Card className="mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 -m-6 p-4">
@@ -750,7 +756,7 @@ const BuyerDashboard = () => {
               </p>
             </div>
 
-            {/* Listings Grid */}
+            {/* Listings Grid - grouped by tier */}
             {loading ? (
               <Card>
                 <div className="text-center py-12">
@@ -767,15 +773,75 @@ const BuyerDashboard = () => {
                 </div>
               </Card>
             ) : filteredListings.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredListings.map((listing) => (
-                  <MCCard
-                    key={listing.id}
-                    listing={listing}
-                    onSave={handleSaveListing}
-                    isSaved={savedListings.has(listing.id)}
-                  />
-                ))}
+              <div className="space-y-10">
+                {/* VIP Section */}
+                {filteredListings.filter(l => l.isVip).length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 shadow-sm">
+                        <Sparkles className="w-4 h-4 text-white" />
+                        <span className="text-sm font-bold text-white">VIP Collection</span>
+                      </div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent" />
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredListings.filter(l => l.isVip).map((listing) => (
+                        <MCCard
+                          key={listing.id}
+                          listing={listing}
+                          onSave={handleSaveListing}
+                          isSaved={savedListings.has(listing.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Premium Section */}
+                {filteredListings.filter(l => l.isPremium && !l.isVip).length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 shadow-sm">
+                        <Crown className="w-4 h-4 text-white" />
+                        <span className="text-sm font-bold text-white">Premium Listings</span>
+                      </div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-violet-200 to-transparent" />
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredListings.filter(l => l.isPremium && !l.isVip).map((listing) => (
+                        <MCCard
+                          key={listing.id}
+                          listing={listing}
+                          onSave={handleSaveListing}
+                          isSaved={savedListings.has(listing.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Standard Section */}
+                {filteredListings.filter(l => !l.isPremium && !l.isVip).length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800 shadow-sm">
+                        <Search className="w-4 h-4 text-white" />
+                        <span className="text-sm font-bold text-white">All Listings</span>
+                      </div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent" />
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredListings.filter(l => !l.isPremium && !l.isVip).map((listing) => (
+                        <MCCard
+                          key={listing.id}
+                          listing={listing}
+                          onSave={handleSaveListing}
+                          isSaved={savedListings.has(listing.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <Card>
