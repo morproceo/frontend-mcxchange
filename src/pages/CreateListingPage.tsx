@@ -201,6 +201,11 @@ const CreateListingPage = () => {
             sellingWithEmail: parsedFormData.sellingWithEmail === 'yes',
             sellingWithPhone: parsedFormData.sellingWithPhone === 'yes',
             cargoTypes: parsedFormData.cargoCarried || [],
+            fmcsaData: parsedFormData._fmcsaCarrierData ? JSON.stringify(parsedFormData._fmcsaCarrierData) : undefined,
+            authorityHistory: parsedFormData._authorityHistory ? JSON.stringify(parsedFormData._authorityHistory) : undefined,
+            insuranceHistory: parsedFormData._insuranceHistory?.length > 0 ? JSON.stringify(parsedFormData._insuranceHistory) : undefined,
+            insuranceCompany: parsedFormData.insuranceCompany || undefined,
+            monthlyInsurancePremium: parseFloat(parsedFormData.monthlyInsurancePremium) || undefined,
             submitForReview: true, // Set status to PENDING_REVIEW since payment was made
           })
 
@@ -284,13 +289,22 @@ const CreateListingPage = () => {
     fleetSize: '',
     safetyRating: 'satisfactory',
     insuranceStatus: 'active',
-    operationTypes: [] as string[]
+    operationTypes: [] as string[],
+
+    // Insurance (user-entered)
+    insuranceCompany: '',
+    monthlyInsurancePremium: ''
   })
 
   // FMCSA lookup state
   const [isFetchingFMCSA, setIsFetchingFMCSA] = useState(false)
   const [fmcsaFetched, setFmcsaFetched] = useState(false)
   const [fmcsaError, setFmcsaError] = useState('')
+
+  // FMCSA authority/insurance history (auto-populated, not user-editable)
+  const [authorityHistory, setAuthorityHistory] = useState<any>(null)
+  const [insuranceHistory, setInsuranceHistory] = useState<any[]>([])
+  const [fmcsaCarrierData, setFmcsaCarrierData] = useState<any>(null)
 
   const [uploadedFiles, setUploadedFiles] = useState<{
     articleOfIncorporation: UploadedFile | null
@@ -402,6 +416,30 @@ const CreateListingPage = () => {
         title: generatedTitle
       }))
 
+      // Store the raw carrier data
+      setFmcsaCarrierData(carrier)
+
+      // Fetch authority history and insurance history in parallel
+      const dotNum = carrier.dotNumber || formData.dotNumber
+      if (dotNum) {
+        try {
+          const [authResponse, insResponse] = await Promise.all([
+            api.fmcsaGetAuthorityHistory(dotNum).catch(() => null),
+            api.fmcsaGetInsuranceHistory(dotNum).catch(() => null)
+          ])
+
+          if (authResponse?.data) {
+            setAuthorityHistory(authResponse.data)
+          }
+          if (insResponse?.data) {
+            setInsuranceHistory(Array.isArray(insResponse.data) ? insResponse.data : [])
+          }
+        } catch (e) {
+          // Non-critical — don't block the flow if these fail
+          console.warn('Failed to fetch authority/insurance history:', e)
+        }
+      }
+
       setFmcsaFetched(true)
     } catch (err: any) {
       console.error('FMCSA lookup error:', err)
@@ -421,7 +459,12 @@ const CreateListingPage = () => {
 
     try {
       // Save form data to localStorage before redirecting to Stripe
-      localStorage.setItem('mcx_listing_form_data', JSON.stringify(formData))
+      localStorage.setItem('mcx_listing_form_data', JSON.stringify({
+        ...formData,
+        _fmcsaCarrierData: fmcsaCarrierData,
+        _authorityHistory: authorityHistory,
+        _insuranceHistory: insuranceHistory
+      }))
 
       // Create Stripe checkout session for listing fee
       const baseUrl = window.location.origin
@@ -484,6 +527,11 @@ const CreateListingPage = () => {
         sellingWithEmail: formData.sellingWithEmail === 'yes',
         sellingWithPhone: formData.sellingWithPhone === 'yes',
         cargoTypes: formData.cargoCarried || [],
+        fmcsaData: fmcsaCarrierData ? JSON.stringify(fmcsaCarrierData) : undefined,
+        authorityHistory: authorityHistory ? JSON.stringify(authorityHistory) : undefined,
+        insuranceHistory: insuranceHistory.length > 0 ? JSON.stringify(insuranceHistory) : undefined,
+        insuranceCompany: formData.insuranceCompany || undefined,
+        monthlyInsurancePremium: parseFloat(formData.monthlyInsurancePremium) || undefined,
         submitForReview: true, // Submit for review without payment
       })
 
@@ -850,6 +898,50 @@ const CreateListingPage = () => {
                                     {cargo}
                                   </span>
                                 ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Authority History Summary */}
+                          {authorityHistory && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <div className="text-xs text-gray-400 mb-3 font-semibold uppercase tracking-wide">Authority History</div>
+                              <div className="grid md:grid-cols-3 gap-3">
+                                {/* Common Authority */}
+                                <div className="p-3 rounded-lg bg-white border border-gray-200">
+                                  <div className="text-xs text-gray-400 mb-1">Common Authority</div>
+                                  <div className={`text-sm font-bold ${authorityHistory.commonAuthorityStatus === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                                    {authorityHistory.commonAuthorityStatus || 'N/A'}
+                                  </div>
+                                  {authorityHistory.commonAuthorityGrantDate && (
+                                    <div className="text-xs text-gray-400 mt-1">Granted: {authorityHistory.commonAuthorityGrantDate}</div>
+                                  )}
+                                  {authorityHistory.commonAuthorityRevokedDate && (
+                                    <div className="text-xs text-red-400 mt-1">Revoked: {authorityHistory.commonAuthorityRevokedDate}</div>
+                                  )}
+                                </div>
+
+                                {/* Contract Authority */}
+                                <div className="p-3 rounded-lg bg-white border border-gray-200">
+                                  <div className="text-xs text-gray-400 mb-1">Contract Authority</div>
+                                  <div className={`text-sm font-bold ${authorityHistory.contractAuthorityStatus === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                                    {authorityHistory.contractAuthorityStatus || 'N/A'}
+                                  </div>
+                                  {authorityHistory.contractAuthorityGrantDate && (
+                                    <div className="text-xs text-gray-400 mt-1">Granted: {authorityHistory.contractAuthorityGrantDate}</div>
+                                  )}
+                                </div>
+
+                                {/* Broker Authority */}
+                                <div className="p-3 rounded-lg bg-white border border-gray-200">
+                                  <div className="text-xs text-gray-400 mb-1">Broker Authority</div>
+                                  <div className={`text-sm font-bold ${authorityHistory.brokerAuthorityStatus === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                                    {authorityHistory.brokerAuthorityStatus || 'N/A'}
+                                  </div>
+                                  {authorityHistory.brokerAuthorityGrantDate && (
+                                    <div className="text-xs text-gray-400 mt-1">Granted: {authorityHistory.brokerAuthorityGrantDate}</div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1339,6 +1431,21 @@ const CreateListingPage = () => {
                         { value: 'expired', label: '❌ Expired' },
                         { value: 'pending', label: '⏳ Pending Renewal' }
                       ]}
+                    />
+                    <Input
+                      label="Insurance Company"
+                      placeholder="e.g. Progressive, National Indemnity"
+                      value={formData.insuranceCompany}
+                      onChange={(e) => setFormData({ ...formData, insuranceCompany: e.target.value })}
+                      icon={<Shield className="w-4 h-4 text-cyan-400" />}
+                    />
+                    <Input
+                      label="Monthly Insurance Premium"
+                      type="number"
+                      placeholder="1500"
+                      value={formData.monthlyInsurancePremium}
+                      onChange={(e) => setFormData({ ...formData, monthlyInsurancePremium: e.target.value })}
+                      icon={<DollarSign className="w-4 h-4 text-green-400" />}
                     />
                   </div>
 

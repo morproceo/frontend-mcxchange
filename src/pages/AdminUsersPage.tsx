@@ -58,6 +58,13 @@ interface UserData {
   memberSince: string
   lastLoginAt?: string
   companyName?: string
+  identityVerified?: boolean
+  identityVerificationStatus?: string
+  identityVerifiedAt?: string
+  subscription?: {
+    plan: string
+    status: string
+  } | null
   _count?: {
     listings: number
     sentOffers: number
@@ -105,6 +112,10 @@ const AdminUsersPage = () => {
   const [creditAmount, setCreditAmount] = useState<string>('')
   const [creditReason, setCreditReason] = useState<string>('')
   const [creditAdjusting, setCreditAdjusting] = useState(false)
+
+  // Role editing state
+  const [editingRole, setEditingRole] = useState<string>('')
+  const [roleUpdating, setRoleUpdating] = useState(false)
 
   // Activity log modal state
   const [showActivityModal, setShowActivityModal] = useState(false)
@@ -243,6 +254,30 @@ const AdminUsersPage = () => {
     return styles[role] || 'bg-gray-100 text-gray-700'
   }
 
+  const getSubscriptionBadge = (plan: string) => {
+    const styles: Record<string, string> = {
+      STARTER: 'bg-blue-50 text-blue-700 border-blue-200',
+      PROFESSIONAL: 'bg-purple-50 text-purple-700 border-purple-200',
+      ENTERPRISE: 'bg-amber-50 text-amber-700 border-amber-200',
+      VIP_ACCESS: 'bg-pink-50 text-pink-700 border-pink-200',
+    }
+    return styles[plan] || 'bg-gray-100 text-gray-500 border-gray-200'
+  }
+
+  const getSubscriptionStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return 'bg-emerald-500'
+      case 'PAST_DUE': return 'bg-red-500'
+      case 'CANCELLED':
+      case 'EXPIRED':
+      default: return 'bg-gray-400'
+    }
+  }
+
+  const formatPlanName = (plan: string) => {
+    return plan.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\bVip\b/, 'VIP')
+  }
+
   const handleBlockUser = async (userId: string) => {
     try {
       await api.blockUser(userId, 'Blocked by admin')
@@ -276,11 +311,30 @@ const AdminUsersPage = () => {
     }
   }
 
+  const handleUpdateRole = async () => {
+    if (!selectedUser || !editingRole || editingRole === selectedUser.role) return
+    try {
+      setRoleUpdating(true)
+      await api.updateUserRole(selectedUser.id, editingRole)
+      setSelectedUser({ ...selectedUser, role: editingRole as UserData['role'] })
+      // Refresh user details and list
+      const details = await api.getAdminUserDetails(selectedUser.id)
+      setUserDetails(details)
+      fetchUsers()
+    } catch (err: any) {
+      console.error('Failed to update role:', err)
+      alert(err.message || 'Failed to update role')
+    } finally {
+      setRoleUpdating(false)
+    }
+  }
+
   const openUserDetail = async (user: UserData) => {
     setSelectedUser(user)
     setShowDetailModal(true)
     setCreditAmount('')
     setCreditReason('')
+    setEditingRole(user.role)
     try {
       const details = await api.getAdminUserDetails(user.id)
       setUserDetails(details)
@@ -569,19 +623,48 @@ const AdminUsersPage = () => {
                       {user.role.charAt(0) + user.role.slice(1).toLowerCase()}
                     </span>
 
-                    {/* Status Badge */}
-                    <span className={`px-2 py-0.5 rounded-lg text-xs font-medium border flex items-center gap-1 ${getStatusBadge(user.status)}`}>
-                      {user.status === 'BLOCKED' && <Ban className="w-3 h-3" />}
-                      {user.status === 'ACTIVE' && <CheckCircle className="w-3 h-3" />}
-                      {user.status === 'PENDING' && <Clock className="w-3 h-3" />}
-                      {user.status.charAt(0) + user.status.slice(1).toLowerCase()}
-                    </span>
+                    {/* Status Badge — only show for non-active */}
+                    {user.status !== 'ACTIVE' && (
+                      <span className={`px-2 py-0.5 rounded-lg text-xs font-medium border flex items-center gap-1 ${getStatusBadge(user.status)}`}>
+                        {user.status === 'BLOCKED' && <Ban className="w-3 h-3" />}
+                        {user.status === 'PENDING' && <Clock className="w-3 h-3" />}
+                        {user.status.charAt(0) + user.status.slice(1).toLowerCase()}
+                      </span>
+                    )}
 
-                    {/* Verified Badge */}
-                    {user.verified && (
-                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                        <Shield className="w-3 h-3" />
-                        Verified
+                    {/* Stripe Identity Badge */}
+                    {user.identityVerified ? (
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" />
+                        ID Verified
+                      </span>
+                    ) : user.identityVerificationStatus === 'pending' || user.identityVerificationStatus === 'processing' ? (
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        ID {user.identityVerificationStatus === 'processing' ? 'Processing' : 'Pending'}
+                      </span>
+                    ) : user.identityVerificationStatus === 'requires_input' ? (
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        ID Failed
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-400 border border-gray-200 flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" />
+                        Not Verified
+                      </span>
+                    )}
+
+                    {/* Subscription Tier Badge */}
+                    {user.subscription ? (
+                      <span className={`px-2 py-0.5 rounded-lg text-xs font-medium border flex items-center gap-1 ${getSubscriptionBadge(user.subscription.plan)}`}>
+                        <Crown className="w-3 h-3" />
+                        {formatPlanName(user.subscription.plan)}
+                        <span className={`w-1.5 h-1.5 rounded-full inline-block ${getSubscriptionStatusColor(user.subscription.status)}`} />
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-400 border border-gray-200">
+                        No Plan
                       </span>
                     )}
                   </div>
@@ -876,6 +959,26 @@ const AdminUsersPage = () => {
                           <span className="text-gray-700">{selectedUser.companyName}</span>
                         </div>
                       )}
+                      {userDetails?.data?.city && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-700">
+                            {[userDetails.data.city, userDetails.data.state, userDetails.data.zipCode].filter(Boolean).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      {userDetails?.data?.companyAddress && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-700">Company: {userDetails.data.companyAddress}</span>
+                        </div>
+                      )}
+                      {userDetails?.data?.ein && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-700">EIN: {userDetails.data.ein}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -885,6 +988,29 @@ const AdminUsersPage = () => {
                       Account Details
                     </h3>
                     <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Role</span>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={editingRole}
+                            onChange={(e) => setEditingRole(e.target.value)}
+                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          >
+                            <option value="BUYER">Buyer</option>
+                            <option value="SELLER">Seller</option>
+                            <option value="ADMIN">Admin</option>
+                          </select>
+                          {editingRole !== selectedUser.role && (
+                            <button
+                              onClick={handleUpdateRole}
+                              disabled={roleUpdating}
+                              className="px-2 py-1 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                            >
+                              {roleUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Member Since</span>
                         <span className="text-gray-700">{formatDate(selectedUser.memberSince)}</span>
@@ -900,13 +1026,84 @@ const AdminUsersPage = () => {
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Verified</span>
+                        <span className="text-gray-500">Email Verified</span>
+                        <span className={userDetails?.data?.emailVerified ? 'text-emerald-600' : 'text-gray-400'}>
+                          {userDetails?.data?.emailVerified ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Seller Verified</span>
                         <span className={selectedUser.verified ? 'text-emerald-600' : 'text-gray-400'}>
                           {selectedUser.verified ? 'Yes' : 'No'}
                         </span>
                       </div>
+                      {selectedUser.verified && userDetails?.data?.sellerVerifiedAt && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">Seller Verified On</span>
+                          <span className="text-gray-700">{formatDate(userDetails.data.sellerVerifiedAt)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Stripe Identity</span>
+                        {selectedUser.identityVerified ? (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                            Verified
+                          </span>
+                        ) : selectedUser.identityVerificationStatus === 'pending' ? (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
+                            Pending
+                          </span>
+                        ) : selectedUser.identityVerificationStatus === 'processing' ? (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
+                            Processing
+                          </span>
+                        ) : selectedUser.identityVerificationStatus === 'requires_input' ? (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                            Failed
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Not Started</span>
+                        )}
+                      </div>
+                      {selectedUser.identityVerified && userDetails?.data?.identityVerifiedAt && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">ID Verified On</span>
+                          <span className="text-gray-700">{formatDate(userDetails.data.identityVerifiedAt)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+                </div>
+
+                {/* Subscription Info */}
+                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-indigo-600" />
+                    Subscription
+                  </h3>
+                  {userDetails?.data?.subscription || selectedUser.subscription ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-white rounded-lg">
+                        <p className={`text-lg font-bold ${getSubscriptionBadge((userDetails?.data?.subscription || selectedUser.subscription)?.plan || '').includes('purple') ? 'text-purple-700' : (userDetails?.data?.subscription || selectedUser.subscription)?.plan === 'ENTERPRISE' ? 'text-amber-700' : (userDetails?.data?.subscription || selectedUser.subscription)?.plan === 'VIP_ACCESS' ? 'text-pink-700' : 'text-blue-700'}`}>
+                          {formatPlanName((userDetails?.data?.subscription || selectedUser.subscription)?.plan || '')}
+                        </p>
+                        <p className="text-xs text-gray-500">Plan</p>
+                      </div>
+                      <div className="text-center p-3 bg-white rounded-lg">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${getSubscriptionStatusColor((userDetails?.data?.subscription || selectedUser.subscription)?.status || '')}`} />
+                          <p className="text-lg font-bold text-gray-900">
+                            {((userDetails?.data?.subscription || selectedUser.subscription)?.status || '').charAt(0) + ((userDetails?.data?.subscription || selectedUser.subscription)?.status || '').slice(1).toLowerCase().replace(/_/g, ' ')}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500">Status</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center p-4 bg-white rounded-lg">
+                      <p className="text-gray-400 text-sm">No active subscription</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Activity Stats */}

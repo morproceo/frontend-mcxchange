@@ -9,7 +9,7 @@ import Button from '../components/ui/Button'
 import Select from '../components/ui/Select'
 import { DomileaIcon } from '../components/ui/DomileaLogo'
 import ScrollToAgreeModal from '../components/ScrollToAgreeModal'
-import { TermsContent } from '../components/LegalDocumentContent'
+import { SellerTermsContent, BuyerTermsContent } from '../components/LegalDocumentContent'
 import { PrivacyContent } from '../components/LegalDocumentContent'
 import { UserRole } from '../types'
 
@@ -200,7 +200,11 @@ const RegisterPage = () => {
             <Select
               label="I want to"
               value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
+              onChange={(e) => {
+                setRole(e.target.value as UserRole)
+                setTermsRead(false)
+                setTermsAccepted(false)
+              }}
               options={[
                 { value: 'buyer', label: 'Buy MC Authorities' },
                 { value: 'seller', label: 'Sell MC Authorities' }
@@ -289,7 +293,9 @@ const RegisterPage = () => {
                   <FileText className="w-6 h-6 text-gray-400 flex-shrink-0" />
                 )}
                 <span className="text-base font-medium">
-                  {termsRead ? 'Terms of Service' : 'Read Terms of Service'}
+                  {termsRead
+                    ? (role === 'seller' ? 'Seller User Agreement' : 'Buyer Terms of Service')
+                    : (role === 'seller' ? 'Read Seller User Agreement' : 'Read Buyer Terms of Service')}
                 </span>
                 {termsRead && (
                   <span className="ml-auto text-sm font-semibold text-green-600">Read</span>
@@ -334,7 +340,7 @@ const RegisterPage = () => {
                     className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50"
                   />
                   <span className="text-gray-700">
-                    I agree to the Terms of Service and Privacy Policy
+                    I agree to the {role === 'seller' ? 'Seller User Agreement' : 'Buyer Terms of Service'} and Privacy Policy
                   </span>
                 </label>
                 {!(termsRead && privacyRead) && (
@@ -351,10 +357,10 @@ const RegisterPage = () => {
               isOpen={showTermsModal}
               onClose={() => setShowTermsModal(false)}
               onFullyScrolled={() => setTermsRead(true)}
-              title="Terms of Service"
+              title={role === 'seller' ? 'Seller User Agreement' : 'Buyer Terms of Service'}
               icon={<FileText className="w-5 h-5 text-gray-600" />}
             >
-              <TermsContent />
+              {role === 'seller' ? <SellerTermsContent /> : <BuyerTermsContent />}
             </ScrollToAgreeModal>
 
             <ScrollToAgreeModal

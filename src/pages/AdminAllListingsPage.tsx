@@ -298,14 +298,7 @@ const AdminAllListingsPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [allListings, setAllListings] = useState<Listing[]>([])
 
-  // Mock users for assignment
-  const [users] = useState<User[]>([
-    { id: 'admin-1', name: 'Admin (Me)', email: 'admin@domilea.com', role: 'admin' },
-    { id: 'seller-1', name: 'John Smith', email: 'john@email.com', role: 'seller' },
-    { id: 'seller-2', name: 'Sarah Johnson', email: 'sarah@email.com', role: 'seller' },
-    { id: 'seller-3', name: 'Mike Wilson', email: 'mike@email.com', role: 'seller' },
-    { id: 'seller-4', name: 'Emily Davis', email: 'emily@email.com', role: 'seller' },
-  ])
+  // Users (no longer mock — seller search is used instead)
 
   // Helper to parse JSON fields safely
   const parseJsonField = (field: any): string[] => {
@@ -507,6 +500,7 @@ const AdminAllListingsPage = () => {
     legalName: '',
     dbaName: '',
     title: '',
+    description: '',
     price: '',
     state: '',
     city: '',
@@ -523,10 +517,161 @@ const AdminAllListingsPage = () => {
     sellingWithPhone: true,
     bipdCoverage: '',
     cargoCoverage: '',
-    cargoTypes: '',
+    cargoTypes: [] as string[],
     assignedTo: '',
     notes: ''
   })
+
+  // Add Listing modal states
+  const [addListingLoading, setAddListingLoading] = useState(false)
+  const [addListingError, setAddListingError] = useState<string | null>(null)
+  const [addListingFmcsaLoading, setAddListingFmcsaLoading] = useState(false)
+  const [addListingFmcsaError, setAddListingFmcsaError] = useState<string | null>(null)
+  const [addListingFmcsaSuccess, setAddListingFmcsaSuccess] = useState(false)
+  const [addListingAuthorityHistory, setAddListingAuthorityHistory] = useState<any>(null)
+  const [addListingFmcsaCarrierData, setAddListingFmcsaCarrierData] = useState<any>(null)
+
+  // Seller search state
+  const [sellerSearchTerm, setSellerSearchTerm] = useState('')
+  const [sellerSearchResults, setSellerSearchResults] = useState<any[]>([])
+  const [sellerSearchLoading, setSellerSearchLoading] = useState(false)
+  const [selectedSeller, setSelectedSeller] = useState<any>(null)
+  const [showSellerDropdown, setShowSellerDropdown] = useState(false)
+
+  // Debounced seller search
+  useEffect(() => {
+    if (!sellerSearchTerm || sellerSearchTerm.length < 2) {
+      setSellerSearchResults([])
+      setShowSellerDropdown(false)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSellerSearchLoading(true)
+        const response = await api.getAdminUsers({ search: sellerSearchTerm, role: 'SELLER', limit: 10 })
+        setSellerSearchResults(response.users || [])
+        setShowSellerDropdown(true)
+      } catch (err) {
+        console.error('Seller search failed:', err)
+        setSellerSearchResults([])
+      } finally {
+        setSellerSearchLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [sellerSearchTerm])
+
+  // FMCSA lookup for Add Listing modal
+  const handleAddListingFmcsaLookup = async () => {
+    const lookupValue = newListing.mcNumber || newListing.dotNumber
+    if (!lookupValue) {
+      setAddListingFmcsaError('Please enter an MC or DOT number')
+      return
+    }
+
+    setAddListingFmcsaLoading(true)
+    setAddListingFmcsaError(null)
+    setAddListingFmcsaSuccess(false)
+    setAddListingAuthorityHistory(null)
+    setAddListingFmcsaCarrierData(null)
+
+    try {
+      let response
+      // Detect if it's likely a DOT number (7+ digits) or MC number
+      if (newListing.mcNumber) {
+        response = await api.fmcsaLookupByMC(newListing.mcNumber)
+      } else if (newListing.dotNumber) {
+        response = await api.fmcsaLookupByDOT(newListing.dotNumber)
+      }
+
+      if (!response || !response.data) {
+        setAddListingFmcsaError('No carrier found with that number. Please check and try again.')
+        setAddListingFmcsaLoading(false)
+        return
+      }
+
+      const carrier = response.data
+      if (!carrier || !carrier.dotNumber) {
+        setAddListingFmcsaError('No carrier data found. Please verify the number and try again.')
+        setAddListingFmcsaLoading(false)
+        return
+      }
+
+      // Map safety rating
+      let safetyRatingValue = 'not-rated'
+      if (carrier.safetyRating) {
+        const rating = carrier.safetyRating.toLowerCase()
+        if (rating.includes('satisfactory')) safetyRatingValue = 'satisfactory'
+        else if (rating.includes('conditional')) safetyRatingValue = 'conditional'
+        else if (rating.includes('unsatisfactory')) safetyRatingValue = 'unsatisfactory'
+      }
+
+      // Calculate years active from MCS-150 date
+      let yearsActive = ''
+      if (carrier.mcs150Date) {
+        try {
+          const mcsDate = new Date(carrier.mcs150Date)
+          const now = new Date()
+          const years = Math.floor((now.getTime() - mcsDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          if (years > 0) yearsActive = String(years)
+        } catch (e) {
+          // Ignore date parsing errors
+        }
+      }
+
+      // Auto-generate title
+      const mcNum = newListing.mcNumber || carrier.dotNumber
+      const generatedTitle = `${carrier.legalName} - MC #${mcNum}`
+
+      setNewListing(prev => ({
+        ...prev,
+        dotNumber: String(carrier.dotNumber || prev.dotNumber),
+        legalName: carrier.legalName || '',
+        dbaName: carrier.dbaName || '',
+        city: carrier.hqCity || '',
+        state: carrier.hqState || prev.state,
+        totalDrivers: String(carrier.totalDrivers || 0),
+        fleetSize: String(carrier.totalPowerUnits || 0),
+        safetyRating: safetyRatingValue,
+        bipdCoverage: String(carrier.bipdOnFile || 0),
+        cargoCoverage: String(carrier.cargoOnFile || 0),
+        cargoTypes: carrier.cargoTypes || [],
+        title: generatedTitle,
+        yearsActive: yearsActive || prev.yearsActive,
+      }))
+
+      // Store raw carrier data for persistence
+      setAddListingFmcsaCarrierData(carrier)
+
+      // Fetch authority history in background
+      const dotNum = carrier.dotNumber || newListing.dotNumber
+      if (dotNum) {
+        try {
+          const authResponse = await api.fmcsaGetAuthorityHistory(dotNum).catch(() => null)
+          if (authResponse?.data) {
+            setAddListingAuthorityHistory(authResponse.data)
+          }
+        } catch (e) {
+          console.warn('Failed to fetch authority history:', e)
+        }
+      }
+
+      setAddListingFmcsaSuccess(true)
+    } catch (err: any) {
+      const message = err.message || 'Failed to lookup carrier data'
+      // 404 / "not found" is an expected user scenario, not an app error
+      if (message.toLowerCase().includes('not found')) {
+        setAddListingFmcsaError('No carrier found with that number. Please check and try again.')
+      } else {
+        console.warn('FMCSA Lookup failed:', message)
+        setAddListingFmcsaError(message)
+      }
+    } finally {
+      setAddListingFmcsaLoading(false)
+    }
+  }
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -605,67 +750,14 @@ const AdminAllListingsPage = () => {
     setShowDetailModal(true)
   }
 
-  const handleAddListing = () => {
-    const newId = `new-${Date.now()}`
-    const listing: Listing = {
-      id: newId,
-      mcNumber: newListing.mcNumber,
-      dotNumber: newListing.dotNumber,
-      title: newListing.title || `${newListing.legalName} - MC Authority`,
-      legalName: newListing.legalName,
-      dbaName: newListing.dbaName,
-      price: parseInt(newListing.price) || 0,
-      askingPrice: parseInt(newListing.price) || 0,
-      listingPrice: null,
-      status: 'draft',
-      seller: users.find(u => u.id === newListing.assignedTo) ? {
-        id: newListing.assignedTo,
-        name: users.find(u => u.id === newListing.assignedTo)!.name,
-        email: users.find(u => u.id === newListing.assignedTo)!.email,
-        phone: '',
-        trustScore: 100,
-        verified: true
-      } : {
-        id: 'admin-1',
-        name: 'Admin (Me)',
-        email: 'admin@domilea.com',
-        phone: '',
-        trustScore: 100,
-        verified: true
-      },
-      views: 0,
-      saves: 0,
-      offers: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-      yearsActive: parseInt(newListing.yearsActive) || 0,
-      fleetSize: parseInt(newListing.fleetSize) || 0,
-      totalDrivers: parseInt(newListing.totalDrivers) || 0,
-      safetyRating: newListing.safetyRating,
-      state: newListing.state,
-      city: newListing.city,
-      isPremium: newListing.isPremium,
-      isVip: newListing.isVip,
-      amazonStatus: newListing.amazonStatus,
-      amazonRelayScore: newListing.amazonRelayScore || null,
-      highwaySetup: newListing.highwaySetup,
-      sellingWithEmail: newListing.sellingWithEmail,
-      sellingWithPhone: newListing.sellingWithPhone,
-      insuranceOnFile: true,
-      bipdCoverage: parseInt(newListing.bipdCoverage) || 0,
-      cargoCoverage: parseInt(newListing.cargoCoverage) || 0,
-      cargoTypes: newListing.cargoTypes.split(',').map(t => t.trim()).filter(Boolean),
-      assignedAdmin: newListing.assignedTo || 'admin-1'
-    }
-
-    setAllListings([listing, ...allListings])
-    setShowAddModal(false)
+  const resetAddListingForm = () => {
     setNewListing({
       mcNumber: '',
       dotNumber: '',
       legalName: '',
       dbaName: '',
       title: '',
+      description: '',
       price: '',
       state: '',
       city: '',
@@ -682,10 +774,86 @@ const AdminAllListingsPage = () => {
       sellingWithPhone: true,
       bipdCoverage: '',
       cargoCoverage: '',
-      cargoTypes: '',
+      cargoTypes: [],
       assignedTo: '',
       notes: ''
     })
+    setAddListingError(null)
+    setAddListingFmcsaSuccess(false)
+    setAddListingFmcsaError(null)
+    setAddListingAuthorityHistory(null)
+    setAddListingFmcsaCarrierData(null)
+    setSelectedSeller(null)
+    setSellerSearchTerm('')
+    setSellerSearchResults([])
+  }
+
+  const handleAddListing = async () => {
+    if (!selectedSeller) {
+      setAddListingError('Please search and select a seller to assign this listing to')
+      return
+    }
+    if (!newListing.mcNumber) {
+      setAddListingError('MC Number is required')
+      return
+    }
+
+    const askingPrice = parseFloat(newListing.price)
+    if (isNaN(askingPrice) || askingPrice <= 0) {
+      setAddListingError('Please enter a valid asking price')
+      return
+    }
+
+    setAddListingLoading(true)
+    setAddListingError(null)
+
+    try {
+      const response = await api.createAdminListing({
+        sellerId: selectedSeller.id,
+        mcNumber: newListing.mcNumber,
+        dotNumber: newListing.dotNumber || undefined,
+        legalName: newListing.legalName || undefined,
+        dbaName: newListing.dbaName || undefined,
+        title: newListing.title || `${newListing.legalName} - MC #${newListing.mcNumber}`,
+        description: newListing.description || undefined,
+        askingPrice,
+        city: newListing.city || undefined,
+        state: newListing.state || undefined,
+        yearsActive: newListing.yearsActive ? parseInt(newListing.yearsActive) : undefined,
+        fleetSize: newListing.fleetSize ? parseInt(newListing.fleetSize) : undefined,
+        totalDrivers: newListing.totalDrivers ? parseInt(newListing.totalDrivers) : undefined,
+        safetyRating: newListing.safetyRating || undefined,
+        insuranceOnFile: (parseInt(newListing.bipdCoverage) || 0) > 0 || (parseInt(newListing.cargoCoverage) || 0) > 0,
+        bipdCoverage: newListing.bipdCoverage ? parseInt(newListing.bipdCoverage) : undefined,
+        cargoCoverage: newListing.cargoCoverage ? parseInt(newListing.cargoCoverage) : undefined,
+        amazonStatus: newListing.amazonStatus?.toUpperCase() || undefined,
+        amazonRelayScore: newListing.amazonRelayScore || undefined,
+        highwaySetup: newListing.highwaySetup,
+        sellingWithEmail: newListing.sellingWithEmail,
+        sellingWithPhone: newListing.sellingWithPhone,
+        cargoTypes: newListing.cargoTypes.length > 0 ? newListing.cargoTypes : undefined,
+        isPremium: newListing.isPremium,
+        isVip: newListing.isVip,
+        status: 'ACTIVE',
+        adminNotes: newListing.notes || undefined,
+        fmcsaData: addListingFmcsaCarrierData ? JSON.stringify(addListingFmcsaCarrierData) : undefined,
+        authorityHistory: addListingAuthorityHistory ? JSON.stringify(addListingAuthorityHistory) : undefined,
+      })
+
+      if (response.success) {
+        toast.success('Listing created successfully!')
+        setShowAddModal(false)
+        resetAddListingForm()
+        fetchListings()
+      } else {
+        setAddListingError('Failed to create listing')
+      }
+    } catch (err: any) {
+      console.error('Failed to create listing:', err)
+      setAddListingError(err.message || 'Failed to create listing')
+    } finally {
+      setAddListingLoading(false)
+    }
   }
 
   // Handle creating user with listing
@@ -1462,7 +1630,7 @@ const AdminAllListingsPage = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={() => setShowAddModal(false)}
+            onClick={() => { setShowAddModal(false); resetAddListingForm() }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -1472,17 +1640,17 @@ const AdminAllListingsPage = () => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl">
+              <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl z-10">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2">
                       <Plus className="w-6 h-6" />
                       Add New Listing
                     </h2>
-                    <p className="text-indigo-200 mt-1">Manually create a listing and assign to a user</p>
+                    <p className="text-indigo-200 mt-1">Look up FMCSA data, assign to a seller, and create</p>
                   </div>
                   <button
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => { setShowAddModal(false); resetAddListingForm() }}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                   >
                     <X className="w-6 h-6" />
@@ -1491,37 +1659,304 @@ const AdminAllListingsPage = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* MC/DOT Info */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Hash className="w-5 h-5 text-indigo-600" />
-                    Authority Numbers
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
+                {/* Error Message */}
+                {addListingError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <span>{addListingError}</span>
+                    <button onClick={() => setAddListingError(null)} className="ml-auto">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Section 1: FMCSA Authority Lookup */}
+                <div className="bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 -mx-6 px-6 py-5 border-b border-gray-100">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+                      <Search className="w-6 h-6 text-white" />
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">MC Number *</label>
+                      <h3 className="text-lg font-bold text-gray-900">Authority Lookup</h3>
+                      <p className="text-sm text-gray-500">Enter MC or DOT number to auto-fill carrier information</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">MC Number</label>
                       <Input
-                        placeholder="123456"
+                        placeholder="Enter MC number..."
                         value={newListing.mcNumber}
-                        onChange={(e) => setNewListing({ ...newListing, mcNumber: e.target.value })}
+                        onChange={(e) => {
+                          setNewListing({ ...newListing, mcNumber: e.target.value })
+                          setAddListingFmcsaSuccess(false)
+                          setAddListingFmcsaError(null)
+                        }}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">DOT Number *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">DOT Number</label>
                       <Input
-                        placeholder="1234567"
+                        placeholder="Enter DOT number..."
                         value={newListing.dotNumber}
-                        onChange={(e) => setNewListing({ ...newListing, dotNumber: e.target.value })}
+                        onChange={(e) => {
+                          setNewListing({ ...newListing, dotNumber: e.target.value })
+                          setAddListingFmcsaSuccess(false)
+                          setAddListingFmcsaError(null)
+                        }}
                       />
                     </div>
                   </div>
+                  <Button
+                    onClick={handleAddListingFmcsaLookup}
+                    disabled={addListingFmcsaLoading || (!newListing.mcNumber && !newListing.dotNumber)}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    {addListingFmcsaLoading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Looking up...</>
+                    ) : (
+                      <><Search className="w-4 h-4 mr-2" /> Lookup FMCSA</>
+                    )}
+                  </Button>
+                  {addListingFmcsaError && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      {addListingFmcsaError}
+                    </div>
+                  )}
+                  {addListingFmcsaSuccess && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                      Carrier data loaded successfully! Fields have been auto-populated below.
+                    </div>
+                  )}
                 </div>
 
-                {/* Company Info */}
+                {/* FMCSA Snapshot (shown after successful lookup) */}
+                {addListingFmcsaCarrierData && (
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <BadgeCheck className="w-4 h-4 text-green-600" />
+                      FMCSA Carrier Snapshot
+                    </h4>
+
+                    {/* Carrier Identity & Operating Status */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">Legal Name</div>
+                        <div className="text-sm font-semibold text-gray-900">{addListingFmcsaCarrierData.legalName}</div>
+                        {addListingFmcsaCarrierData.dbaName && (
+                          <div className="text-xs text-gray-500 mt-0.5">DBA: {addListingFmcsaCarrierData.dbaName}</div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">Operating Status</div>
+                        <div className={`text-sm font-bold ${addListingFmcsaCarrierData.allowedToOperate === 'Y' ? 'text-green-600' : 'text-red-600'}`}>
+                          {addListingFmcsaCarrierData.allowedToOperate === 'Y' ? 'AUTHORIZED' : 'NOT AUTHORIZED'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">Address</div>
+                        <div className="text-sm text-gray-800">
+                          {[addListingFmcsaCarrierData.physicalAddress, addListingFmcsaCarrierData.hqCity, addListingFmcsaCarrierData.hqState].filter(Boolean).join(', ')}
+                        </div>
+                        {addListingFmcsaCarrierData.phone && (
+                          <div className="text-xs text-gray-500 mt-0.5">{addListingFmcsaCarrierData.phone}</div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">MCS-150 Date</div>
+                        <div className="text-sm font-medium text-gray-800">{addListingFmcsaCarrierData.mcs150Date || '—'}</div>
+                        {addListingFmcsaCarrierData.carrierOperation && (
+                          <div className="text-xs text-gray-500 mt-0.5">Type: {addListingFmcsaCarrierData.carrierOperation}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Fleet & Safety */}
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Power Units</div>
+                        <div className="text-lg font-bold text-gray-900">{addListingFmcsaCarrierData.totalPowerUnits || 0}</div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Drivers</div>
+                        <div className="text-lg font-bold text-gray-900">{addListingFmcsaCarrierData.totalDrivers || 0}</div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Safety Rating</div>
+                        <div className={`text-sm font-bold ${
+                          addListingFmcsaCarrierData.safetyRating?.toLowerCase().includes('satisfactory') ? 'text-green-600' :
+                          addListingFmcsaCarrierData.safetyRating?.toLowerCase().includes('conditional') ? 'text-yellow-600' :
+                          addListingFmcsaCarrierData.safetyRating?.toLowerCase().includes('unsatisfactory') ? 'text-red-600' : 'text-gray-600'
+                        }`}>
+                          {addListingFmcsaCarrierData.safetyRating || 'None'}
+                        </div>
+                        {addListingFmcsaCarrierData.safetyRatingDate && (
+                          <div className="text-xs text-gray-400">{addListingFmcsaCarrierData.safetyRatingDate}</div>
+                        )}
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Insurance</div>
+                        <div className={`text-sm font-bold ${addListingFmcsaCarrierData.insuranceOnFile ? 'text-green-600' : 'text-red-600'}`}>
+                          {addListingFmcsaCarrierData.insuranceOnFile ? 'On File' : 'None'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Insurance Details */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">BIPD on File</div>
+                        <div className="text-sm font-semibold text-gray-900">${(addListingFmcsaCarrierData.bipdOnFile || 0).toLocaleString()}</div>
+                        <div className="text-xs text-gray-400">Req: ${(addListingFmcsaCarrierData.bipdRequired || 0).toLocaleString()}</div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Cargo on File</div>
+                        <div className="text-sm font-semibold text-gray-900">${(addListingFmcsaCarrierData.cargoOnFile || 0).toLocaleString()}</div>
+                        <div className="text-xs text-gray-400">Req: ${(addListingFmcsaCarrierData.cargoRequired || 0).toLocaleString()}</div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Bond on File</div>
+                        <div className="text-sm font-semibold text-gray-900">${(addListingFmcsaCarrierData.bondOnFile || 0).toLocaleString()}</div>
+                        <div className="text-xs text-gray-400">Req: ${(addListingFmcsaCarrierData.bondRequired || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    {/* Inspections & Crashes */}
+                    {(addListingFmcsaCarrierData.driverInsp > 0 || addListingFmcsaCarrierData.vehicleInsp > 0 || addListingFmcsaCarrierData.crashTotal > 0) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-white border border-gray-200">
+                          <div className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Inspections (24 mo)</div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-xs text-gray-400">Driver</div>
+                              <div className="text-sm font-bold">{addListingFmcsaCarrierData.driverInsp || 0}</div>
+                              {addListingFmcsaCarrierData.driverOosRate > 0 && <div className="text-xs text-red-500">{addListingFmcsaCarrierData.driverOosRate}% OOS</div>}
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Vehicle</div>
+                              <div className="text-sm font-bold">{addListingFmcsaCarrierData.vehicleInsp || 0}</div>
+                              {addListingFmcsaCarrierData.vehicleOosRate > 0 && <div className="text-xs text-red-500">{addListingFmcsaCarrierData.vehicleOosRate}% OOS</div>}
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Hazmat</div>
+                              <div className="text-sm font-bold">{addListingFmcsaCarrierData.hazmatInsp || 0}</div>
+                              {addListingFmcsaCarrierData.hazmatOosRate > 0 && <div className="text-xs text-red-500">{addListingFmcsaCarrierData.hazmatOosRate}% OOS</div>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-lg bg-white border border-gray-200">
+                          <div className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Crashes (24 mo)</div>
+                          <div className="grid grid-cols-2 gap-2 text-center">
+                            <div>
+                              <div className="text-xs text-gray-400">Total</div>
+                              <div className={`text-sm font-bold ${addListingFmcsaCarrierData.crashTotal > 0 ? 'text-red-600' : 'text-green-600'}`}>{addListingFmcsaCarrierData.crashTotal || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400">Fatal</div>
+                              <div className={`text-sm font-bold ${addListingFmcsaCarrierData.fatalCrash > 0 ? 'text-red-600' : 'text-green-600'}`}>{addListingFmcsaCarrierData.fatalCrash || 0}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cargo Types */}
+                    {addListingFmcsaCarrierData.cargoTypes?.length > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-400 mb-2">Cargo Types</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {addListingFmcsaCarrierData.cargoTypes.map((type: string, idx: number) => (
+                            <span key={idx} className="px-2 py-0.5 bg-white border border-gray-200 rounded text-xs text-gray-700">{type}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Authority History (shown after FMCSA lookup) */}
+                {addListingAuthorityHistory && (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                      Authority History & Key Dates
+                    </h4>
+
+                    {/* Key MC Dates */}
+                    <div className="grid grid-cols-4 gap-3 mb-3">
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Applied</div>
+                        <div className="text-sm font-semibold text-gray-800">
+                          {addListingAuthorityHistory.applicationDate || '—'}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Granted</div>
+                        <div className="text-sm font-semibold text-gray-800">
+                          {addListingAuthorityHistory.grantDate || '—'}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Effective</div>
+                        <div className="text-sm font-semibold text-gray-800">
+                          {addListingAuthorityHistory.effectiveDate || '—'}
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                        <div className="text-xs text-gray-400 mb-1">Revoked</div>
+                        <div className={`text-sm font-semibold ${addListingAuthorityHistory.revocationDate ? 'text-red-600' : 'text-gray-800'}`}>
+                          {addListingAuthorityHistory.revocationDate || '—'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Authority Type Statuses */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">Common Authority</div>
+                        <div className={`text-sm font-bold ${addListingAuthorityHistory.commonAuthorityStatus === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                          {addListingAuthorityHistory.commonAuthorityStatus || 'N/A'}
+                        </div>
+                        {addListingAuthorityHistory.commonAuthorityGrantDate && (
+                          <div className="text-xs text-gray-400 mt-1">Granted: {addListingAuthorityHistory.commonAuthorityGrantDate}</div>
+                        )}
+                        {addListingAuthorityHistory.commonAuthorityRevokedDate && (
+                          <div className="text-xs text-red-400 mt-1">Revoked: {addListingAuthorityHistory.commonAuthorityRevokedDate}</div>
+                        )}
+                        {addListingAuthorityHistory.commonAuthorityReinstatedDate && (
+                          <div className="text-xs text-green-400 mt-1">Reinstated: {addListingAuthorityHistory.commonAuthorityReinstatedDate}</div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">Contract Authority</div>
+                        <div className={`text-sm font-bold ${addListingAuthorityHistory.contractAuthorityStatus === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                          {addListingAuthorityHistory.contractAuthorityStatus || 'N/A'}
+                        </div>
+                        {addListingAuthorityHistory.contractAuthorityGrantDate && (
+                          <div className="text-xs text-gray-400 mt-1">Granted: {addListingAuthorityHistory.contractAuthorityGrantDate}</div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="text-xs text-gray-400 mb-1">Broker Authority</div>
+                        <div className={`text-sm font-bold ${addListingAuthorityHistory.brokerAuthorityStatus === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                          {addListingAuthorityHistory.brokerAuthorityStatus || 'N/A'}
+                        </div>
+                        {addListingAuthorityHistory.brokerAuthorityGrantDate && (
+                          <div className="text-xs text-gray-400 mt-1">Granted: {addListingAuthorityHistory.brokerAuthorityGrantDate}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 2: Auto-filled Company Info */}
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-indigo-600" />
                     Company Information
+                    {addListingFmcsaSuccess && <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Auto-filled</span>}
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1541,7 +1976,7 @@ const AdminAllListingsPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                       <Input
                         placeholder="Houston"
                         value={newListing.city}
@@ -1549,38 +1984,29 @@ const AdminAllListingsPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                       <Input
                         placeholder="TX"
                         value={newListing.state}
                         onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
                       />
                     </div>
-                  </div>
-                </div>
-
-                {/* Listing Info */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-indigo-600" />
-                    Listing Details
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Listing Title</label>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Drivers</label>
                       <Input
-                        placeholder="Interstate Carrier Authority - Clean Record"
-                        value={newListing.title}
-                        onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
+                        type="number"
+                        placeholder="12"
+                        value={newListing.totalDrivers}
+                        onChange={(e) => setNewListing({ ...newListing, totalDrivers: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Asking Price ($)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Fleet Size (Power Units)</label>
                       <Input
                         type="number"
-                        placeholder="45000"
-                        value={newListing.price}
-                        onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+                        placeholder="10"
+                        value={newListing.fleetSize}
+                        onChange={(e) => setNewListing({ ...newListing, fleetSize: e.target.value })}
                       />
                     </div>
                     <div>
@@ -1593,34 +2019,6 @@ const AdminAllListingsPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fleet Size</label>
-                      <Input
-                        type="number"
-                        placeholder="10"
-                        value={newListing.fleetSize}
-                        onChange={(e) => setNewListing({ ...newListing, fleetSize: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Drivers</label>
-                      <Input
-                        type="number"
-                        placeholder="12"
-                        value={newListing.totalDrivers}
-                        onChange={(e) => setNewListing({ ...newListing, totalDrivers: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Safety & Insurance */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-indigo-600" />
-                    Safety & Insurance
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Safety Rating</label>
                       <select
                         value={newListing.safetyRating}
@@ -1630,19 +2028,7 @@ const AdminAllListingsPage = () => {
                         <option value="satisfactory">Satisfactory</option>
                         <option value="conditional">Conditional</option>
                         <option value="unsatisfactory">Unsatisfactory</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Status</label>
-                      <select
-                        value={newListing.amazonStatus}
-                        onChange={(e) => setNewListing({ ...newListing, amazonStatus: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="none">None</option>
-                        <option value="pending">Pending</option>
-                        <option value="active">Active</option>
-                        <option value="suspended">Suspended</option>
+                        <option value="not-rated">Not Rated</option>
                       </select>
                     </div>
                     <div>
@@ -1664,19 +2050,79 @@ const AdminAllListingsPage = () => {
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Cargo Types (comma separated)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cargo Types</label>
+                      <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border border-gray-200 rounded-xl bg-white">
+                        {newListing.cargoTypes.map((type, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium flex items-center gap-1">
+                            {type}
+                            <button onClick={() => setNewListing({ ...newListing, cargoTypes: newListing.cargoTypes.filter((_, i) => i !== idx) })}>
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {newListing.cargoTypes.length === 0 && (
+                          <span className="text-gray-400 text-sm">Auto-filled from FMCSA lookup</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Listing Details (admin fills) */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                    Listing Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Listing Title</label>
                       <Input
-                        placeholder="General Freight, Dry Van, Refrigerated"
-                        value={newListing.cargoTypes}
-                        onChange={(e) => setNewListing({ ...newListing, cargoTypes: e.target.value })}
+                        placeholder="Auto-generated from FMCSA lookup or enter manually"
+                        value={newListing.title}
+                        onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Asking Price ($) *</label>
+                      <Input
+                        type="number"
+                        placeholder="45000"
+                        value={newListing.price}
+                        onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Status</label>
+                      <select
+                        value={newListing.amazonStatus}
+                        onChange={(e) => setNewListing({ ...newListing, amazonStatus: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="none">None</option>
+                        <option value="pending">Pending</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <Textarea
+                        placeholder="Optional description for the listing..."
+                        value={newListing.description}
+                        onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
+                        rows={2}
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Options */}
+                {/* Section 4: Options */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Options</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-indigo-600" />
+                    Options
+                  </h3>
                   <div className="flex flex-wrap gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1712,7 +2158,7 @@ const AdminAllListingsPage = () => {
                         onChange={(e) => setNewListing({ ...newListing, sellingWithEmail: e.target.checked })}
                         className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span className="text-sm text-gray-700">Includes Email</span>
+                      <span className="text-sm text-gray-700">Selling with Email</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -1721,38 +2167,84 @@ const AdminAllListingsPage = () => {
                         onChange={(e) => setNewListing({ ...newListing, sellingWithPhone: e.target.checked })}
                         className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span className="text-sm text-gray-700">Includes Phone</span>
+                      <span className="text-sm text-gray-700">Selling with Phone</span>
                     </label>
                   </div>
                 </div>
 
-                {/* Assignment */}
+                {/* Section 5: Assign to Seller (searchable) */}
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <UserPlus className="w-5 h-5 text-indigo-600" />
-                    Assign Listing
+                    Assign to Seller *
                   </h3>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assign to User</label>
-                    <select
-                      value={newListing.assignedTo}
-                      onChange={(e) => setNewListing({ ...newListing, assignedTo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="">Assign to myself (Admin)</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} ({user.email}) - {user.role}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      The listing will be created as a draft and assigned to the selected user
-                    </p>
-                  </div>
+                  {selectedSeller ? (
+                    <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{selectedSeller.name}</p>
+                        <p className="text-sm text-gray-500">{selectedSeller.email}{selectedSeller.companyName ? ` - ${selectedSeller.companyName}` : ''}</p>
+                      </div>
+                      <button
+                        onClick={() => { setSelectedSeller(null); setSellerSearchTerm(''); setNewListing({ ...newListing, assignedTo: '' }) }}
+                        className="p-1 hover:bg-indigo-100 rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4 text-indigo-600" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          placeholder="Search sellers by name, email, or company..."
+                          value={sellerSearchTerm}
+                          onChange={(e) => setSellerSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                        {sellerSearchLoading && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                        )}
+                      </div>
+                      {showSellerDropdown && sellerSearchResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-60 overflow-y-auto">
+                          {sellerSearchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              onClick={() => {
+                                setSelectedSeller(user)
+                                setNewListing({ ...newListing, assignedTo: user.id })
+                                setShowSellerDropdown(false)
+                                setSellerSearchTerm('')
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left transition-colors border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                <User className="w-4 h-4 text-gray-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                                <p className="text-xs text-gray-500 truncate">{user.email}{user.companyName ? ` - ${user.companyName}` : ''}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {showSellerDropdown && sellerSearchResults.length === 0 && sellerSearchTerm.length >= 2 && !sellerSearchLoading && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 p-4 text-center text-sm text-gray-500">
+                          No sellers found matching "{sellerSearchTerm}"
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Type at least 2 characters to search for sellers
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Notes */}
+                {/* Section 6: Admin Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
                   <Textarea
@@ -1767,13 +2259,16 @@ const AdminAllListingsPage = () => {
                 <div className="flex gap-3 pt-4 border-t border-gray-200">
                   <Button
                     onClick={handleAddListing}
-                    disabled={!newListing.mcNumber || !newListing.dotNumber || !newListing.legalName}
+                    disabled={addListingLoading || !newListing.mcNumber || !selectedSeller || !newListing.price}
                     className="flex-1 bg-indigo-600 hover:bg-indigo-700"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Listing
+                    {addListingLoading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
+                    ) : (
+                      <><Plus className="w-4 h-4 mr-2" /> Create Listing</>
+                    )}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                  <Button variant="outline" onClick={() => { setShowAddModal(false); resetAddListingForm() }}>
                     Cancel
                   </Button>
                 </div>

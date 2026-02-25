@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FileText } from 'lucide-react'
 import Card from '../components/ui/Card'
-import { TermsContent } from '../components/LegalDocumentContent'
+import { SellerTermsContent, BuyerTermsContent } from '../components/LegalDocumentContent'
 
 const TermsPage = () => {
+  const [activeTab, setActiveTab] = useState<'buyer' | 'seller'>('buyer')
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <motion.div
@@ -20,8 +23,33 @@ const TermsPage = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Terms and Conditions</h1>
         </div>
 
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+            <button
+              onClick={() => setActiveTab('buyer')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'buyer'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Buyer Terms of Service
+            </button>
+            <button
+              onClick={() => setActiveTab('seller')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'seller'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Seller User Agreement
+            </button>
+          </div>
+        </div>
+
         <Card>
-          <TermsContent />
+          {activeTab === 'seller' ? <SellerTermsContent /> : <BuyerTermsContent />}
         </Card>
       </motion.div>
     </div>

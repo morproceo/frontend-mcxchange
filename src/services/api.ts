@@ -511,6 +511,14 @@ class ApiService {
     });
   }
 
+  // Admin Update User Role
+  async updateUserRole(userId: string, role: string) {
+    return this.request<any>(`/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+  }
+
   // Admin Create Listing
   async createAdminListing(data: {
     sellerId: string;
@@ -521,8 +529,28 @@ class ApiService {
     title: string;
     description?: string;
     askingPrice: number;
+    city?: string;
     state?: string;
+    yearsActive?: number;
+    fleetSize?: number;
+    totalDrivers?: number;
+    safetyRating?: string;
+    insuranceOnFile?: boolean;
+    bipdCoverage?: number;
+    cargoCoverage?: number;
+    amazonStatus?: string;
+    amazonRelayScore?: string;
+    highwaySetup?: boolean;
+    sellingWithEmail?: boolean;
+    sellingWithPhone?: boolean;
+    cargoTypes?: string[];
+    isPremium?: boolean;
+    isVip?: boolean;
     status?: string;
+    adminNotes?: string;
+    fmcsaData?: string;
+    authorityHistory?: string;
+    insuranceHistory?: string;
   }) {
     return this.request<{
       success: boolean;
@@ -990,6 +1018,11 @@ class ApiService {
     contactEmail?: string;
     contactPhone?: string;
     cargoTypes?: string[];
+    fmcsaData?: string;
+    authorityHistory?: string;
+    insuranceHistory?: string;
+    insuranceCompany?: string;
+    monthlyInsurancePremium?: number;
     submitForReview?: boolean;
   }) {
     return this.request<{

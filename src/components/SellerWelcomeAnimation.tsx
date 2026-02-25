@@ -104,19 +104,19 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-white overflow-y-auto"
     >
       {/* Progress dots */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex gap-2.5">
         {Array.from({ length: TOTAL_SCENES }).map((_, i) => (
           <div
             key={i}
-            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
               i === scene
-                ? 'bg-emerald-400 scale-125'
+                ? 'bg-emerald-500 scale-125'
                 : i < scene
-                  ? 'bg-emerald-400/40'
-                  : 'bg-white/20'
+                  ? 'bg-emerald-300'
+                  : 'bg-gray-200'
             }`}
           />
         ))}
@@ -125,8 +125,8 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
       {/* ========== SCENE 0: Welcome ========== */}
       {scene === 0 && (
         <div className="scene-0 flex flex-col items-center justify-center min-h-screen px-6 text-center">
-          <div className="welcome-icon anim mb-6">
-            <svg viewBox="0 0 80 80" className="w-20 h-20 mx-auto" fill="none">
+          <div className="welcome-icon anim mb-8">
+            <svg viewBox="0 0 80 80" className="w-24 h-24 mx-auto" fill="none">
               <circle cx="40" cy="40" r="38" fill="#10b981" />
               <path
                 d="M40 18 C40 18, 56 30, 56 42 C56 51, 49 58, 40 58 C31 58, 24 51, 24 42 C24 30, 40 18, 40 18Z"
@@ -135,10 +135,10 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
               <circle cx="40" cy="42" r="6" fill="#10b981" />
             </svg>
           </div>
-          <h1 className="anim text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4">
+          <h1 className="anim text-4xl sm:text-5xl font-extrabold text-gray-900 mb-5">
             Welcome to Domilea
           </h1>
-          <p className="anim text-lg sm:text-xl text-gray-300 max-w-lg">
+          <p className="anim text-xl sm:text-2xl text-gray-500 max-w-lg leading-relaxed">
             Before you get started, there are a few important things you need to know about selling on our platform.
           </p>
         </div>
@@ -148,33 +148,33 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
       {scene === 1 && (
         <div className="scene-1 flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="anim text-3xl sm:text-4xl font-bold text-white mb-6">
+            <h2 className="anim text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
               This is{' '}
-              <span className="reality-not inline-block text-red-400 underline decoration-4 underline-offset-4">
+              <span className="reality-not inline-block text-red-500 underline decoration-4 underline-offset-4">
                 NOT
               </span>{' '}
               just selling a DOT & MC number
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-              <div className="anim bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-left">
-                <div className="text-red-400 text-2xl mb-3">
+              <div className="anim bg-red-50 border border-red-200 rounded-2xl p-6 text-left">
+                <div className="text-red-500 text-2xl mb-3">
                   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <h3 className="text-red-300 font-semibold text-lg mb-2">What people think</h3>
-                <p className="text-gray-400 text-sm">"I'm just selling my MC number and DOT to someone else."</p>
+                <h3 className="text-red-700 font-semibold text-lg mb-2">What people think</h3>
+                <p className="text-gray-600 text-base">"I'm just selling my MC number and DOT to someone else."</p>
               </div>
 
-              <div className="anim bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 text-left">
-                <div className="text-emerald-400 text-2xl mb-3">
+              <div className="anim bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-left">
+                <div className="text-emerald-500 text-2xl mb-3">
                   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="text-emerald-300 font-semibold text-lg mb-2">What it actually is</h3>
-                <p className="text-gray-400 text-sm">You are selling the <strong className="text-white">interest and ownership of your entire business</strong> — the MC is just one part of it.</p>
+                <h3 className="text-emerald-700 font-semibold text-lg mb-2">What it actually is</h3>
+                <p className="text-gray-600 text-base">You are selling the <strong className="text-gray-900">interest and ownership of your entire business</strong> — the MC is just one part of it.</p>
               </div>
             </div>
 
@@ -185,11 +185,11 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
                 'This includes everything tied to that business — safety record, compliance history, platform accounts, and more.',
               ].map((text, i) => (
                 <div key={i} className="anim flex items-start gap-3">
-                  <span className="text-amber-400 mt-1 flex-shrink-0">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495z" /><path fill="#1f2937" d="M10 7a.75.75 0 01.75.75v3a.75.75 0 11-1.5 0v-3A.75.75 0 0110 7zm0 7.5a.75.75 0 100-1.5.75.75 0 000 1.5z" /></svg>
+                  <span className="text-amber-500 mt-1 flex-shrink-0">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495z" /><path fill="#ffffff" d="M10 7a.75.75 0 01.75.75v3a.75.75 0 11-1.5 0v-3A.75.75 0 0110 7zm0 7.5a.75.75 0 100-1.5.75.75 0 000 1.5z" /></svg>
                   </span>
-                  <p className="text-gray-300 text-sm sm:text-base">
-                    <strong className="text-white">{text.split(' — ')[0]}</strong>
+                  <p className="text-gray-600 text-base sm:text-lg">
+                    <strong className="text-gray-900">{text.split(' — ')[0]}</strong>
                     {text.includes(' — ') ? ` — ${text.split(' — ')[1]}` : ''}
                   </p>
                 </div>
@@ -203,7 +203,7 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
       {scene === 2 && (
         <div className="scene-2 flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="anim text-3xl sm:text-4xl font-bold text-white mb-8">
+            <h2 className="anim text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
               When you list on Domilea, you're selling:
             </h2>
 
@@ -216,18 +216,18 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
                 { icon: '\u{1F517}', title: 'Platform Integrations', desc: 'Amazon Relay, Highway, factoring relationships, and load board setups' },
                 { icon: '\u{1F4CA}', title: 'Operating History', desc: 'Years of active authority, fleet records, and business reputation' },
               ].map((item, i) => (
-                <div key={i} className="anim flex items-start gap-4 bg-white/5 rounded-xl p-4">
+                <div key={i} className="anim flex items-start gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
                   <span className="text-2xl flex-shrink-0 mt-0.5">{item.icon}</span>
                   <div>
-                    <h3 className="text-white font-semibold">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.desc}</p>
+                    <h3 className="text-gray-900 font-semibold text-lg">{item.title}</h3>
+                    <p className="text-gray-500 text-base">{item.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="anim bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 max-w-xl mx-auto">
-              <p className="text-amber-200 font-medium text-sm sm:text-base">
+            <div className="anim bg-amber-50 border border-amber-200 rounded-2xl p-5 max-w-xl mx-auto">
+              <p className="text-amber-800 font-medium text-base sm:text-lg">
                 This is why we require your Articles of Incorporation, EIN Letter, Driver License, Certificate of Insurance, and Loss Run — these documents prove ownership and legitimacy of the entire business.
               </p>
             </div>
@@ -239,7 +239,7 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
       {scene === 3 && (
         <div className="scene-3 flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="anim text-3xl sm:text-4xl font-bold text-white mb-8">
+            <h2 className="anim text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
               How the legal process works
             </h2>
 
@@ -247,25 +247,25 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
               {[
                 { step: '1', title: 'You list your business', desc: 'Provide your MC/DOT, upload required documents, and set your asking price. We verify everything through FMCSA records.' },
                 { step: '2', title: 'A buyer makes an offer', desc: 'Verified buyers submit offers through the platform. You review and accept the one that works for you.' },
-                { step: '3', title: 'Domilea facilitates the transaction', desc: 'We act as the intermediary. The buyer places a deposit, and we open a secure Transaction Room for both parties.' },
+                { step: '3', title: 'Domilea facilitates the transaction', desc: 'We connect you with the buyer and provide the platform tools. The buyer places a deposit, and we open a secure Transaction Room for both parties.' },
                 { step: '4', title: 'Legal transfer of ownership', desc: 'A Bill of Sale is prepared to transfer the interest and ownership of the business. Both parties review and sign.' },
                 { step: '5', title: 'Final payment & closing', desc: 'The buyer sends the remaining payment. Once confirmed, ownership is officially transferred and the deal is closed.' },
               ].map((item, i) => (
                 <div key={i} className="anim flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-bold">
+                  <div className="flex-shrink-0 w-11 h-11 rounded-full bg-indigo-500 flex items-center justify-center text-white text-base font-bold">
                     {item.step}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.desc}</p>
+                    <h3 className="text-gray-900 font-semibold text-lg">{item.title}</h3>
+                    <p className="text-gray-500 text-base">{item.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="anim bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-5 max-w-xl mx-auto">
-              <p className="text-indigo-200 font-medium text-sm sm:text-base">
-                All transactions are governed by the laws of the State of Illinois. Domilea acts as a broker/intermediary — all deals must be closed through the platform. Selling off-platform to a Domilea user results in a $1,000 liquidated damages charge per our Terms of Service.
+            <div className="anim bg-indigo-50 border border-indigo-200 rounded-2xl p-5 max-w-xl mx-auto">
+              <p className="text-indigo-800 font-medium text-base sm:text-lg">
+                All transactions are governed by the laws of the State of Arizona. Domilea facilitates the connection between buyers and sellers — you are doing business with each other directly. All deals must be closed through the platform.
               </p>
             </div>
           </div>
@@ -276,7 +276,7 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
       {scene === 4 && (
         <div className="scene-4 flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="anim text-3xl sm:text-4xl font-bold text-white mb-8">
+            <h2 className="anim text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
               Post with intention
             </h2>
 
@@ -287,15 +287,15 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
                 { title: 'Upload all required documents', desc: 'Articles of Incorporation, EIN Letter, Driver License, Certificate of Insurance, and Loss Run are all required to verify your business.' },
                 { title: 'Understand what you are transferring', desc: 'You are transferring full ownership and interest of your business entity. Once the deal closes, the buyer owns everything associated with that company.' },
               ].map((item, i) => (
-                <div key={i} className="anim flex items-start gap-4 bg-white/5 rounded-xl p-4">
+                <div key={i} className="anim flex items-start gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
                   <span className="flex-shrink-0 mt-0.5">
-                    <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-7 h-7 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </span>
                   <div>
-                    <h3 className="text-white font-semibold">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.desc}</p>
+                    <h3 className="text-gray-900 font-semibold text-lg">{item.title}</h3>
+                    <p className="text-gray-500 text-base">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -308,32 +308,32 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
       {scene === 5 && (
         <div className="scene-5 flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
           <div className="max-w-lg mx-auto">
-            <div className="confirm-icon anim mb-6">
-              <svg viewBox="0 0 80 80" className="w-20 h-20 mx-auto" fill="none">
+            <div className="confirm-icon anim mb-8">
+              <svg viewBox="0 0 80 80" className="w-24 h-24 mx-auto" fill="none">
                 <circle cx="40" cy="40" r="38" fill="#10b981" />
                 <path d="M24 40l10 10 22-22" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
 
-            <h2 className="anim text-3xl sm:text-4xl font-bold text-white mb-4">
+            <h2 className="anim text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               You're all set
             </h2>
-            <p className="anim text-gray-300 text-base sm:text-lg mb-3">
+            <p className="anim text-gray-500 text-lg sm:text-xl mb-4">
               By clicking below, you confirm that you understand:
             </p>
 
-            <div className="anim text-left max-w-md mx-auto mb-8 space-y-2">
+            <div className="anim text-left max-w-md mx-auto mb-8 space-y-3">
               {[
                 'Selling on Domilea means selling the full interest and ownership of your business — not just an MC number.',
                 'You will need to provide legal documents proving ownership.',
                 'All transactions must be completed through the Domilea platform.',
                 'You are listing with genuine intent to sell.',
               ].map((text, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <svg className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div key={i} className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  <p className="text-gray-300 text-sm">{text}</p>
+                  <p className="text-gray-600 text-base sm:text-lg">{text}</p>
                 </div>
               ))}
             </div>
@@ -354,7 +354,7 @@ const SellerWelcomeAnimation = ({ userId }: SellerWelcomeAnimationProps) => {
           <button
             onClick={handleNext}
             disabled={animating}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-lg"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-lg text-base"
           >
             Next
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
