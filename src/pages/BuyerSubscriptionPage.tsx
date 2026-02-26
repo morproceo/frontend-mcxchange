@@ -40,7 +40,7 @@ const planStyles = {
     borderColor: 'border-blue-200',
     popular: false,
   },
-  professional: {
+  premium: {
     icon: Zap,
     color: 'from-purple-500 to-indigo-500',
     bgColor: 'from-purple-50 to-indigo-50',
@@ -88,7 +88,7 @@ const BuyerSubscriptionPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user, isLoading: authLoading } = useAuth()
-  const [selectedPlan, setSelectedPlan] = useState<string | null>('professional')
+  const [selectedPlan, setSelectedPlan] = useState<string | null>('premium')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [isProcessing, setIsProcessing] = useState(false)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -118,7 +118,7 @@ const BuyerSubscriptionPage = () => {
 
         if (plansResponse.data && plansResponse.data.length > 0) {
           // Transform API plans array into display plans
-          // API returns id as 'STARTER', 'PROFESSIONAL', 'ENTERPRISE' (uppercase)
+          // API returns id as 'STARTER', 'PREMIUM', 'ENTERPRISE' (uppercase)
           const displayPlans: DisplayPlan[] = plansResponse.data.map(plan => {
             const planKey = plan.id.toLowerCase() as keyof typeof planStyles
             const styles = planStyles[planKey] || planStyles.starter

@@ -126,8 +126,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
     const planLower = buyerSubscription?.plan?.toLowerCase()
     const isActive = buyerSubscription?.status === 'ACTIVE'
 
-    const hasProfessionalAccess =
-      (planLower === 'professional' || planLower === 'enterprise' || planLower === 'vip_access') && isActive
+    const hasPremiumAccess =
+      (planLower === 'premium' || planLower === 'enterprise' || planLower === 'vip_access') && isActive
 
     const hasEnterpriseAccess =
       (planLower === 'enterprise' || planLower === 'vip_access') && isActive
@@ -155,7 +155,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Package, label: 'Purchases', path: '/buyer/purchases' },
           { icon: MessageSquare, label: 'Messages', path: '/buyer/messages' },
           { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
-          ...(hasProfessionalAccess && !buyerSubscriptionLoading
+          ...(hasPremiumAccess && !buyerSubscriptionLoading
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
             : []),
         ]

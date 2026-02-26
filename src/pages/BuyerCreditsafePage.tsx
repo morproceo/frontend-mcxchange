@@ -274,7 +274,7 @@ const BuyerCreditsafePage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [accessLoading, setAccessLoading] = useState(true)
-  const [hasProfessionalAccess, setHasProfessionalAccess] = useState(false)
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -282,7 +282,7 @@ const BuyerCreditsafePage = () => {
     const fetchAccess = async () => {
       if (!user) {
         if (isActive) {
-          setHasProfessionalAccess(false)
+          setHasPremiumAccess(false)
           setAccessLoading(false)
         }
         return
@@ -293,14 +293,14 @@ const BuyerCreditsafePage = () => {
         const response = await api.getSubscription()
         const subscription = response.data?.subscription
         const planLower = subscription?.plan?.toLowerCase()
-        const isProfessional =
-          (planLower === 'professional' || planLower === 'enterprise' || planLower === 'vip_access') && subscription?.status === 'ACTIVE'
+        const isPremium =
+          (planLower === 'premium' || planLower === 'enterprise' || planLower === 'vip_access') && subscription?.status === 'ACTIVE'
         if (isActive) {
-          setHasProfessionalAccess(Boolean(isProfessional))
+          setHasPremiumAccess(Boolean(isPremium))
         }
       } catch (error) {
         if (isActive) {
-          setHasProfessionalAccess(false)
+          setHasPremiumAccess(false)
         }
       } finally {
         if (isActive) {
@@ -333,10 +333,10 @@ const BuyerCreditsafePage = () => {
 
   // Load unlocked MCs on mount
   useEffect(() => {
-    if (hasProfessionalAccess && !accessLoading) {
+    if (hasPremiumAccess && !accessLoading) {
       loadUnlockedMCs()
     }
-  }, [hasProfessionalAccess, accessLoading])
+  }, [hasPremiumAccess, accessLoading])
 
   if (accessLoading) {
     return (
@@ -351,7 +351,7 @@ const BuyerCreditsafePage = () => {
     )
   }
 
-  if (!hasProfessionalAccess) {
+  if (!hasPremiumAccess) {
     return (
       <div className="p-8">
         <div className="max-w-5xl mx-auto">

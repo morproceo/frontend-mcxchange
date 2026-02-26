@@ -61,7 +61,7 @@ export interface UserResponse {
 }
 
 // Subscription Types
-export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise' | 'vip_access'
+export type SubscriptionPlan = 'starter' | 'premium' | 'enterprise' | 'vip_access'
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'INCOMPLETE'
 
 export interface SubscriptionInfo {
@@ -482,7 +482,7 @@ export interface PlatformFeesConfig {
 export interface PricingConfig {
   subscriptionPlans: {
     starter: SubscriptionPlanConfig
-    professional: SubscriptionPlanConfig
+    premium: SubscriptionPlanConfig
     enterprise: SubscriptionPlanConfig
   }
   platformFees: PlatformFeesConfig

@@ -257,7 +257,7 @@ const AdminUsersPage = () => {
   const getSubscriptionBadge = (plan: string) => {
     const styles: Record<string, string> = {
       STARTER: 'bg-blue-50 text-blue-700 border-blue-200',
-      PROFESSIONAL: 'bg-purple-50 text-purple-700 border-purple-200',
+      PREMIUM: 'bg-purple-50 text-purple-700 border-purple-200',
       ENTERPRISE: 'bg-amber-50 text-amber-700 border-amber-200',
       VIP_ACCESS: 'bg-pink-50 text-pink-700 border-pink-200',
     }
