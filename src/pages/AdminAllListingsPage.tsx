@@ -88,6 +88,9 @@ interface Listing {
   safetyRating: string
   state: string
   city: string
+  address?: string
+  contactEmail?: string
+  contactPhone?: string
   isPremium: boolean
   isVip: boolean
   amazonStatus: string
@@ -98,7 +101,14 @@ interface Listing {
   insuranceOnFile: boolean
   bipdCoverage: number
   cargoCoverage: number
+  bondAmount?: number
+  insuranceCompany?: string
+  monthlyInsurancePremium?: number
   cargoTypes: string[]
+  visibility?: string
+  fmcsaData?: string
+  authorityHistory?: string
+  insuranceHistory?: string
   assignedAdmin?: string
 }
 
@@ -116,6 +126,10 @@ const AdminAllListingsPage = () => {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editForm, setEditForm] = useState<any>(null)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [sortField, setSortField] = useState<'mcNumber' | 'price' | 'createdAt' | 'views'>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -504,6 +518,9 @@ const AdminAllListingsPage = () => {
     price: '',
     state: '',
     city: '',
+    address: '',
+    contactEmail: '',
+    contactPhone: '',
     yearsActive: '',
     fleetSize: '',
     totalDrivers: '',
@@ -517,7 +534,18 @@ const AdminAllListingsPage = () => {
     sellingWithPhone: true,
     bipdCoverage: '',
     cargoCoverage: '',
+    bondAmount: '',
+    insuranceCompany: '',
+    monthlyInsurancePremium: '',
     cargoTypes: [] as string[],
+    visibility: 'public',
+    hasFactoring: '',
+    factoringCompany: '',
+    entryAuditCompleted: '',
+    applicationDate: '',
+    grantDate: '',
+    effectiveDate: '',
+    revocationDate: '',
     assignedTo: '',
     notes: ''
   })
@@ -632,11 +660,14 @@ const AdminAllListingsPage = () => {
         dbaName: carrier.dbaName || '',
         city: carrier.hqCity || '',
         state: carrier.hqState || prev.state,
+        address: carrier.physicalAddress || '',
+        contactPhone: carrier.phone || prev.contactPhone,
         totalDrivers: String(carrier.totalDrivers || 0),
         fleetSize: String(carrier.totalPowerUnits || 0),
         safetyRating: safetyRatingValue,
         bipdCoverage: String(carrier.bipdOnFile || 0),
         cargoCoverage: String(carrier.cargoOnFile || 0),
+        bondAmount: String(carrier.bondOnFile || 0),
         cargoTypes: carrier.cargoTypes || [],
         title: generatedTitle,
         yearsActive: yearsActive || prev.yearsActive,
@@ -652,6 +683,15 @@ const AdminAllListingsPage = () => {
           const authResponse = await api.fmcsaGetAuthorityHistory(dotNum).catch(() => null)
           if (authResponse?.data) {
             setAddListingAuthorityHistory(authResponse.data)
+            // Auto-fill authority date fields if available
+            const auth = authResponse.data
+            setNewListing(prev => ({
+              ...prev,
+              applicationDate: auth.applicationDate || prev.applicationDate,
+              grantDate: auth.grantDate || auth.commonAuthorityGrantDate || prev.grantDate,
+              effectiveDate: auth.effectiveDate || prev.effectiveDate,
+              revocationDate: auth.revocationDate || auth.commonAuthorityRevokedDate || prev.revocationDate,
+            }))
           }
         } catch (e) {
           console.warn('Failed to fetch authority history:', e)
@@ -748,6 +788,131 @@ const AdminAllListingsPage = () => {
   const openDetailModal = (listing: Listing) => {
     setSelectedListing(listing)
     setShowDetailModal(true)
+    setIsEditMode(false)
+    setEditForm(null)
+    setEditError(null)
+  }
+
+  const enterEditMode = (listing: Listing) => {
+    // Parse authority history if stored as JSON string
+    let parsedAuth: any = null
+    if (listing.authorityHistory) {
+      try { parsedAuth = typeof listing.authorityHistory === 'string' ? JSON.parse(listing.authorityHistory) : listing.authorityHistory } catch { parsedAuth = null }
+    }
+    setEditForm({
+      mcNumber: listing.mcNumber || '',
+      dotNumber: listing.dotNumber || '',
+      legalName: listing.legalName || '',
+      dbaName: listing.dbaName || '',
+      title: listing.title || '',
+      description: (listing as any).description || '',
+      askingPrice: String(listing.askingPrice || listing.price || ''),
+      city: listing.city || '',
+      state: listing.state || '',
+      address: listing.address || '',
+      contactEmail: listing.contactEmail || '',
+      contactPhone: listing.contactPhone || '',
+      yearsActive: String(listing.yearsActive || ''),
+      fleetSize: String(listing.fleetSize || ''),
+      totalDrivers: String(listing.totalDrivers || ''),
+      safetyRating: listing.safetyRating?.toLowerCase() || 'not-rated',
+      bipdCoverage: String(listing.bipdCoverage || ''),
+      cargoCoverage: String(listing.cargoCoverage || ''),
+      bondAmount: String(listing.bondAmount || ''),
+      insuranceCompany: listing.insuranceCompany || '',
+      monthlyInsurancePremium: String(listing.monthlyInsurancePremium || ''),
+      amazonStatus: listing.amazonStatus?.toLowerCase() || 'none',
+      amazonRelayScore: listing.amazonRelayScore || '',
+      highwaySetup: listing.highwaySetup || false,
+      isPremium: listing.isPremium || false,
+      isVip: listing.isVip || false,
+      sellingWithEmail: listing.sellingWithEmail || false,
+      sellingWithPhone: listing.sellingWithPhone || false,
+      visibility: listing.visibility?.toLowerCase() || 'public',
+      cargoTypes: listing.cargoTypes || [],
+      status: listing.status || 'active',
+      // Authority date fields from parsed authority history
+      applicationDate: parsedAuth?.applicationDate || '',
+      grantDate: parsedAuth?.grantDate || parsedAuth?.commonAuthorityGrantDate || '',
+      effectiveDate: parsedAuth?.effectiveDate || '',
+      revocationDate: parsedAuth?.revocationDate || parsedAuth?.commonAuthorityRevokedDate || '',
+    })
+    setIsEditMode(true)
+    setEditError(null)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedListing || !editForm) return
+    setEditLoading(true)
+    setEditError(null)
+
+    try {
+      // Build authority history JSON with dates
+      let authorityHistoryUpdate: string | undefined
+      if (editForm.applicationDate || editForm.grantDate || editForm.effectiveDate || editForm.revocationDate) {
+        let existingAuth: any = {}
+        if (selectedListing.authorityHistory) {
+          try { existingAuth = typeof selectedListing.authorityHistory === 'string' ? JSON.parse(selectedListing.authorityHistory) : selectedListing.authorityHistory } catch { existingAuth = {} }
+        }
+        authorityHistoryUpdate = JSON.stringify({
+          ...existingAuth,
+          applicationDate: editForm.applicationDate || undefined,
+          grantDate: editForm.grantDate || undefined,
+          effectiveDate: editForm.effectiveDate || undefined,
+          revocationDate: editForm.revocationDate || undefined,
+        })
+      }
+
+      const response = await api.updateAdminListing(selectedListing.id, {
+        mcNumber: editForm.mcNumber || undefined,
+        dotNumber: editForm.dotNumber || undefined,
+        legalName: editForm.legalName || undefined,
+        dbaName: editForm.dbaName || undefined,
+        title: editForm.title || undefined,
+        description: editForm.description || undefined,
+        askingPrice: editForm.askingPrice ? parseFloat(editForm.askingPrice) : undefined,
+        city: editForm.city || undefined,
+        state: editForm.state || undefined,
+        address: editForm.address || undefined,
+        contactEmail: editForm.contactEmail || undefined,
+        contactPhone: editForm.contactPhone || undefined,
+        yearsActive: editForm.yearsActive ? parseInt(editForm.yearsActive) : undefined,
+        fleetSize: editForm.fleetSize ? parseInt(editForm.fleetSize) : undefined,
+        totalDrivers: editForm.totalDrivers ? parseInt(editForm.totalDrivers) : undefined,
+        safetyRating: editForm.safetyRating || undefined,
+        bipdCoverage: editForm.bipdCoverage ? parseInt(editForm.bipdCoverage) : undefined,
+        cargoCoverage: editForm.cargoCoverage ? parseInt(editForm.cargoCoverage) : undefined,
+        bondAmount: editForm.bondAmount ? parseInt(editForm.bondAmount) : undefined,
+        insuranceCompany: editForm.insuranceCompany || undefined,
+        monthlyInsurancePremium: editForm.monthlyInsurancePremium ? parseFloat(editForm.monthlyInsurancePremium) : undefined,
+        amazonStatus: editForm.amazonStatus?.toUpperCase() || undefined,
+        amazonRelayScore: editForm.amazonRelayScore || undefined,
+        highwaySetup: editForm.highwaySetup,
+        sellingWithEmail: editForm.sellingWithEmail,
+        sellingWithPhone: editForm.sellingWithPhone,
+        isPremium: editForm.isPremium,
+        isVip: editForm.isVip,
+        visibility: editForm.visibility || undefined,
+        cargoTypes: editForm.cargoTypes?.length > 0 ? editForm.cargoTypes : undefined,
+        status: editForm.status?.toUpperCase() || undefined,
+        authorityHistory: authorityHistoryUpdate,
+      })
+
+      if (response.success) {
+        toast.success('Listing updated successfully!')
+        setIsEditMode(false)
+        setEditForm(null)
+        setShowDetailModal(false)
+        fetchListings()
+      } else {
+        setEditError('Failed to update listing')
+      }
+    } catch (err: any) {
+      console.error('Failed to update listing:', err)
+      setEditError(err.message || 'Failed to update listing')
+    } finally {
+      setEditLoading(false)
+    }
   }
 
   const resetAddListingForm = () => {
@@ -761,6 +926,9 @@ const AdminAllListingsPage = () => {
       price: '',
       state: '',
       city: '',
+      address: '',
+      contactEmail: '',
+      contactPhone: '',
       yearsActive: '',
       fleetSize: '',
       totalDrivers: '',
@@ -774,7 +942,18 @@ const AdminAllListingsPage = () => {
       sellingWithPhone: true,
       bipdCoverage: '',
       cargoCoverage: '',
+      bondAmount: '',
+      insuranceCompany: '',
+      monthlyInsurancePremium: '',
       cargoTypes: [],
+      visibility: 'public',
+      hasFactoring: '',
+      factoringCompany: '',
+      entryAuditCompleted: '',
+      applicationDate: '',
+      grantDate: '',
+      effectiveDate: '',
+      revocationDate: '',
       assignedTo: '',
       notes: ''
     })
@@ -819,6 +998,9 @@ const AdminAllListingsPage = () => {
         askingPrice,
         city: newListing.city || undefined,
         state: newListing.state || undefined,
+        address: newListing.address || undefined,
+        contactEmail: newListing.contactEmail || undefined,
+        contactPhone: newListing.contactPhone || undefined,
         yearsActive: newListing.yearsActive ? parseInt(newListing.yearsActive) : undefined,
         fleetSize: newListing.fleetSize ? parseInt(newListing.fleetSize) : undefined,
         totalDrivers: newListing.totalDrivers ? parseInt(newListing.totalDrivers) : undefined,
@@ -826,6 +1008,9 @@ const AdminAllListingsPage = () => {
         insuranceOnFile: (parseInt(newListing.bipdCoverage) || 0) > 0 || (parseInt(newListing.cargoCoverage) || 0) > 0,
         bipdCoverage: newListing.bipdCoverage ? parseInt(newListing.bipdCoverage) : undefined,
         cargoCoverage: newListing.cargoCoverage ? parseInt(newListing.cargoCoverage) : undefined,
+        bondAmount: newListing.bondAmount ? parseInt(newListing.bondAmount) : undefined,
+        insuranceCompany: newListing.insuranceCompany || undefined,
+        monthlyInsurancePremium: newListing.monthlyInsurancePremium ? parseFloat(newListing.monthlyInsurancePremium) : undefined,
         amazonStatus: newListing.amazonStatus?.toUpperCase() || undefined,
         amazonRelayScore: newListing.amazonRelayScore || undefined,
         highwaySetup: newListing.highwaySetup,
@@ -834,10 +1019,20 @@ const AdminAllListingsPage = () => {
         cargoTypes: newListing.cargoTypes.length > 0 ? newListing.cargoTypes : undefined,
         isPremium: newListing.isPremium,
         isVip: newListing.isVip,
+        visibility: newListing.visibility || 'public',
+        hasFactoring: newListing.hasFactoring || undefined,
+        factoringCompany: newListing.factoringCompany || undefined,
+        entryAuditCompleted: newListing.entryAuditCompleted || undefined,
         status: 'ACTIVE',
         adminNotes: newListing.notes || undefined,
         fmcsaData: addListingFmcsaCarrierData ? JSON.stringify(addListingFmcsaCarrierData) : undefined,
-        authorityHistory: addListingAuthorityHistory ? JSON.stringify(addListingAuthorityHistory) : undefined,
+        authorityHistory: JSON.stringify({
+          ...(addListingAuthorityHistory || {}),
+          applicationDate: newListing.applicationDate || undefined,
+          grantDate: newListing.grantDate || undefined,
+          effectiveDate: newListing.effectiveDate || undefined,
+          revocationDate: newListing.revocationDate || undefined,
+        }),
       })
 
       if (response.success) {
@@ -1372,250 +1567,554 @@ const AdminAllListingsPage = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Company Info */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-indigo-600" />
-                      Company Information
-                    </h3>
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs text-gray-500">Legal Name</p>
-                        <p className="font-medium text-gray-900">{selectedListing.legalName}</p>
-                      </div>
-                      {selectedListing.dbaName && (
+                {/* Edit Error */}
+                {editError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <span>{editError}</span>
+                    <button onClick={() => setEditError(null)} className="ml-auto"><X className="w-4 h-4" /></button>
+                  </div>
+                )}
+
+                {isEditMode && editForm ? (
+                  <>
+                    {/* EDIT MODE */}
+                    {/* Company Info */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Building2 className="w-5 h-5 text-indigo-600" />
+                        Company Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs text-gray-500">DBA</p>
-                          <p className="font-medium text-gray-900">{selectedListing.dbaName}</p>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">MC Number</label>
+                          <Input value={editForm.mcNumber} onChange={(e: any) => setEditForm({ ...editForm, mcNumber: e.target.value })} />
                         </div>
-                      )}
-                      <div>
-                        <p className="text-xs text-gray-500">Location</p>
-                        <p className="font-medium text-gray-900">{selectedListing.city}, {selectedListing.state}</p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 pt-2">
-                        <div className="text-center p-2 bg-white rounded-lg">
-                          <p className="text-lg font-bold text-gray-900">{selectedListing.yearsActive}</p>
-                          <p className="text-xs text-gray-500">Years</p>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">DOT Number</label>
+                          <Input value={editForm.dotNumber} onChange={(e: any) => setEditForm({ ...editForm, dotNumber: e.target.value })} />
                         </div>
-                        <div className="text-center p-2 bg-white rounded-lg">
-                          <p className="text-lg font-bold text-gray-900">{selectedListing.fleetSize}</p>
-                          <p className="text-xs text-gray-500">Trucks</p>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Legal Name</label>
+                          <Input value={editForm.legalName} onChange={(e: any) => setEditForm({ ...editForm, legalName: e.target.value })} />
                         </div>
-                        <div className="text-center p-2 bg-white rounded-lg">
-                          <p className="text-lg font-bold text-gray-900">{selectedListing.totalDrivers}</p>
-                          <p className="text-xs text-gray-500">Drivers</p>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">DBA Name</label>
+                          <Input value={editForm.dbaName} onChange={(e: any) => setEditForm({ ...editForm, dbaName: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                          <Input value={editForm.city} onChange={(e: any) => setEditForm({ ...editForm, city: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                          <Input value={editForm.state} onChange={(e: any) => setEditForm({ ...editForm, state: e.target.value })} />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                          <Input value={editForm.address} onChange={(e: any) => setEditForm({ ...editForm, address: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                          <Input type="email" value={editForm.contactEmail} onChange={(e: any) => setEditForm({ ...editForm, contactEmail: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                          <Input type="tel" value={editForm.contactPhone} onChange={(e: any) => setEditForm({ ...editForm, contactPhone: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Years Active</label>
+                          <Input type="number" value={editForm.yearsActive} onChange={(e: any) => setEditForm({ ...editForm, yearsActive: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Fleet Size</label>
+                          <Input type="number" value={editForm.fleetSize} onChange={(e: any) => setEditForm({ ...editForm, fleetSize: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Total Drivers</label>
+                          <Input type="number" value={editForm.totalDrivers} onChange={(e: any) => setEditForm({ ...editForm, totalDrivers: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Safety Rating</label>
+                          <select value={editForm.safetyRating} onChange={(e) => setEditForm({ ...editForm, safetyRating: e.target.value })} className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="satisfactory">Satisfactory</option>
+                            <option value="conditional">Conditional</option>
+                            <option value="unsatisfactory">Unsatisfactory</option>
+                            <option value="not-rated">Not Rated</option>
+                          </select>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <User className="w-5 h-5 text-indigo-600" />
-                      Owner / Seller
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <User className="w-6 h-6 text-indigo-600" />
+                    {/* Authority Key Dates */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-indigo-600" />
+                        MC Authority Dates
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Applied</label>
+                          <Input type="date" value={editForm.applicationDate} onChange={(e: any) => setEditForm({ ...editForm, applicationDate: e.target.value })} />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{selectedListing.seller.name}</p>
-                          <div className="flex items-center gap-1">
-                            <TrustBadge
-                              score={selectedListing.seller.trustScore}
-                              level={getTrustLevel(selectedListing.seller.trustScore)}
-                              verified={selectedListing.seller.verified}
-                              size="sm"
-                            />
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Granted</label>
+                          <Input type="date" value={editForm.grantDate} onChange={(e: any) => setEditForm({ ...editForm, grantDate: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Effective</label>
+                          <Input type="date" value={editForm.effectiveDate} onChange={(e: any) => setEditForm({ ...editForm, effectiveDate: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Revoked</label>
+                          <Input type="date" value={editForm.revocationDate} onChange={(e: any) => setEditForm({ ...editForm, revocationDate: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Insurance & Coverage */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                        Insurance & Coverage
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">BIPD Coverage ($)</label>
+                          <Input type="number" value={editForm.bipdCoverage} onChange={(e: any) => setEditForm({ ...editForm, bipdCoverage: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Cargo Coverage ($)</label>
+                          <Input type="number" value={editForm.cargoCoverage} onChange={(e: any) => setEditForm({ ...editForm, cargoCoverage: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Bond Amount ($)</label>
+                          <Input type="number" value={editForm.bondAmount} onChange={(e: any) => setEditForm({ ...editForm, bondAmount: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Company</label>
+                          <Input value={editForm.insuranceCompany} onChange={(e: any) => setEditForm({ ...editForm, insuranceCompany: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Premium ($)</label>
+                          <Input type="number" value={editForm.monthlyInsurancePremium} onChange={(e: any) => setEditForm({ ...editForm, monthlyInsurancePremium: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Listing Details */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-600" />
+                        Listing Details
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                          <Input value={editForm.title} onChange={(e: any) => setEditForm({ ...editForm, title: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Asking Price ($)</label>
+                          <Input type="number" value={editForm.askingPrice} onChange={(e: any) => setEditForm({ ...editForm, askingPrice: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                          <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="draft">Draft</option>
+                            <option value="sold">Sold</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Status</label>
+                          <select value={editForm.amazonStatus} onChange={(e) => setEditForm({ ...editForm, amazonStatus: e.target.value })} className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="none">None</option>
+                            <option value="pending">Pending</option>
+                            <option value="active">Active</option>
+                            <option value="suspended">Suspended</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Relay Score</label>
+                          <Input value={editForm.amazonRelayScore} onChange={(e: any) => setEditForm({ ...editForm, amazonRelayScore: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                          <select value={editForm.visibility} onChange={(e) => setEditForm({ ...editForm, visibility: e.target.value })} className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="public">Public</option>
+                            <option value="private">Private</option>
+                            <option value="unlisted">Unlisted</option>
+                          </select>
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                          <Textarea value={editForm.description} onChange={(e: any) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Options */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-indigo-600" />
+                        Options
+                      </h3>
+                      <div className="flex flex-wrap gap-4">
+                        {[
+                          { key: 'isPremium', label: 'Premium' },
+                          { key: 'isVip', label: 'VIP' },
+                          { key: 'highwaySetup', label: 'Highway Setup' },
+                          { key: 'sellingWithEmail', label: 'Selling with Email' },
+                          { key: 'sellingWithPhone', label: 'Selling with Phone' },
+                        ].map(opt => (
+                          <label key={opt.key} className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={editForm[opt.key]} onChange={(e) => setEditForm({ ...editForm, [opt.key]: e.target.checked })} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                            <span className="text-sm text-gray-700">{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Save / Cancel */}
+                    <div className="flex gap-3 pt-4 border-t border-gray-200">
+                      <Button onClick={handleSaveEdit} disabled={editLoading} className="flex-1 bg-indigo-600 hover:bg-indigo-700">
+                        {editLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : <><CheckCircle className="w-4 h-4 mr-2" /> Save Changes</>}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setIsEditMode(false); setEditForm(null); setEditError(null) }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* VIEW MODE */}
+                    {/* Company Info */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Building2 className="w-5 h-5 text-indigo-600" />
+                          Company Information
+                        </h3>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs text-gray-500">Legal Name</p>
+                            <p className="font-medium text-gray-900">{selectedListing.legalName}</p>
+                          </div>
+                          {selectedListing.dbaName && (
+                            <div>
+                              <p className="text-xs text-gray-500">DBA</p>
+                              <p className="font-medium text-gray-900">{selectedListing.dbaName}</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs text-gray-500">Location</p>
+                            <p className="font-medium text-gray-900">{selectedListing.city}, {selectedListing.state}</p>
+                          </div>
+                          {selectedListing.address && (
+                            <div>
+                              <p className="text-xs text-gray-500">Address</p>
+                              <p className="font-medium text-gray-900">{selectedListing.address}</p>
+                            </div>
+                          )}
+                          {(selectedListing.contactEmail || selectedListing.contactPhone) && (
+                            <div className="space-y-1 pt-1">
+                              {selectedListing.contactEmail && (
+                                <p className="text-sm text-gray-600 flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedListing.contactEmail}</p>
+                              )}
+                              {selectedListing.contactPhone && (
+                                <p className="text-sm text-gray-600 flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedListing.contactPhone}</p>
+                              )}
+                            </div>
+                          )}
+                          <div className="grid grid-cols-3 gap-2 pt-2">
+                            <div className="text-center p-2 bg-white rounded-lg">
+                              <p className="text-lg font-bold text-gray-900">{selectedListing.yearsActive}</p>
+                              <p className="text-xs text-gray-500">Years</p>
+                            </div>
+                            <div className="text-center p-2 bg-white rounded-lg">
+                              <p className="text-lg font-bold text-gray-900">{selectedListing.fleetSize}</p>
+                              <p className="text-xs text-gray-500">Trucks</p>
+                            </div>
+                            <div className="text-center p-2 bg-white rounded-lg">
+                              <p className="text-lg font-bold text-gray-900">{selectedListing.totalDrivers}</p>
+                              <p className="text-xs text-gray-500">Drivers</p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-600 flex items-center gap-2">
-                          <Mail className="w-4 h-4" /> {selectedListing.seller.email}
-                        </p>
-                        {selectedListing.seller.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Phone className="w-4 h-4" /> {selectedListing.seller.phone}
+
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <User className="w-5 h-5 text-indigo-600" />
+                          Owner / Seller
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <User className="w-6 h-6 text-indigo-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{selectedListing.seller.name}</p>
+                              <div className="flex items-center gap-1">
+                                <TrustBadge
+                                  score={selectedListing.seller.trustScore}
+                                  level={getTrustLevel(selectedListing.seller.trustScore)}
+                                  verified={selectedListing.seller.verified}
+                                  size="sm"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-600 flex items-center gap-2">
+                              <Mail className="w-4 h-4" /> {selectedListing.seller.email}
+                            </p>
+                            {selectedListing.seller.phone && (
+                              <p className="text-sm text-gray-600 flex items-center gap-2">
+                                <Phone className="w-4 h-4" /> {selectedListing.seller.phone}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Authority Key Dates (from stored authorityHistory) */}
+                    {(() => {
+                      let auth: any = null
+                      if (selectedListing.authorityHistory) {
+                        try { auth = typeof selectedListing.authorityHistory === 'string' ? JSON.parse(selectedListing.authorityHistory) : selectedListing.authorityHistory } catch { auth = null }
+                      }
+                      if (!auth) return null
+                      const hasAnyDate = auth.applicationDate || auth.grantDate || auth.effectiveDate || auth.revocationDate || auth.commonAuthorityGrantDate
+                      if (!hasAnyDate && !auth.commonAuthorityStatus) return null
+                      return (
+                        <div className="p-4 bg-gray-50 rounded-xl">
+                          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-indigo-600" />
+                            MC Authority Dates
+                          </h3>
+                          <div className="grid grid-cols-4 gap-3">
+                            <div className="text-center p-2.5 bg-white rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-400 mb-1">Applied</p>
+                              <p className="text-sm font-semibold text-gray-800">{auth.applicationDate || '—'}</p>
+                            </div>
+                            <div className="text-center p-2.5 bg-white rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-400 mb-1">Granted</p>
+                              <p className="text-sm font-semibold text-gray-800">{auth.grantDate || auth.commonAuthorityGrantDate || '—'}</p>
+                            </div>
+                            <div className="text-center p-2.5 bg-white rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-400 mb-1">Effective</p>
+                              <p className="text-sm font-semibold text-gray-800">{auth.effectiveDate || '—'}</p>
+                            </div>
+                            <div className="text-center p-2.5 bg-white rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-400 mb-1">Revoked</p>
+                              <p className={`text-sm font-semibold ${auth.revocationDate || auth.commonAuthorityRevokedDate ? 'text-red-600' : 'text-gray-800'}`}>
+                                {auth.revocationDate || auth.commonAuthorityRevokedDate || '—'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* Safety & Compliance */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                          Safety & Compliance
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Safety Rating</span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              selectedListing.safetyRating?.toLowerCase().includes('satisfactory') ? 'bg-green-100 text-green-700' :
+                              selectedListing.safetyRating?.toLowerCase().includes('conditional') ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {selectedListing.safetyRating}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Insurance on File</span>
+                            {selectedListing.insuranceOnFile ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">BIPD Coverage</span>
+                            <span className="font-medium">${selectedListing.bipdCoverage.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Cargo Coverage</span>
+                            <span className="font-medium">${selectedListing.cargoCoverage.toLocaleString()}</span>
+                          </div>
+                          {(selectedListing.bondAmount ?? 0) > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Bond Amount</span>
+                              <span className="font-medium">${selectedListing.bondAmount!.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedListing.insuranceCompany && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Insurance Company</span>
+                              <span className="font-medium">{selectedListing.insuranceCompany}</span>
+                            </div>
+                          )}
+                          {(selectedListing.monthlyInsurancePremium ?? 0) > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Monthly Premium</span>
+                              <span className="font-medium">${selectedListing.monthlyInsurancePremium!.toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Globe className="w-5 h-5 text-indigo-600" />
+                          Platform Integrations
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Amazon Relay</span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              selectedListing.amazonStatus === 'active' ? 'bg-green-100 text-green-700' :
+                              selectedListing.amazonStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              selectedListing.amazonStatus === 'suspended' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {selectedListing.amazonStatus === 'active' && selectedListing.amazonRelayScore
+                                ? `Active (${selectedListing.amazonRelayScore})`
+                                : selectedListing.amazonStatus.charAt(0).toUpperCase() + selectedListing.amazonStatus.slice(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Highway Setup</span>
+                            {selectedListing.highwaySetup ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-gray-300" />
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Selling with Email</span>
+                            {selectedListing.sellingWithEmail ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-gray-300" />
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Selling with Phone</span>
+                            {selectedListing.sellingWithPhone ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-gray-300" />
+                            )}
+                          </div>
+                          {selectedListing.visibility && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Visibility</span>
+                              <span className="font-medium capitalize">{selectedListing.visibility}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cargo Types */}
+                    {selectedListing.cargoTypes.length > 0 && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Truck className="w-5 h-5 text-indigo-600" />
+                          Cargo Types
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedListing.cargoTypes.map((cargo, i) => (
+                            <span key={i} className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-700">
+                              {cargo}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Financial & Stats */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-indigo-600" />
+                        Pricing & Statistics
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-3 bg-white rounded-lg">
+                          <p className="text-2xl font-bold text-gray-900">
+                            {selectedListing.isPremium ? 'Contact' : `$${selectedListing.price.toLocaleString()}`}
+                          </p>
+                          <p className="text-xs text-gray-500">Asking Price</p>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg">
+                          <p className="text-2xl font-bold text-gray-900">{selectedListing.views}</p>
+                          <p className="text-xs text-gray-500">Views</p>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg">
+                          <p className="text-2xl font-bold text-gray-900">{selectedListing.saves}</p>
+                          <p className="text-xs text-gray-500">Saves</p>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg">
+                          <p className="text-2xl font-bold text-gray-900">{selectedListing.offers}</p>
+                          <p className="text-xs text-gray-500">Offers</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rejection Reason */}
+                    {selectedListing.rejectionReason && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                        <h3 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5" />
+                          Rejection Reason
+                        </h3>
+                        <p className="text-red-700">{selectedListing.rejectionReason}</p>
+                        {selectedListing.rejectedDate && (
+                          <p className="text-sm text-red-600 mt-2">
+                            Rejected on {new Date(selectedListing.rejectedDate).toLocaleDateString()}
                           </p>
                         )}
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Safety & Compliance */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                      Safety & Compliance
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Safety Rating</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          selectedListing.safetyRating === 'Satisfactory' ? 'bg-green-100 text-green-700' :
-                          selectedListing.safetyRating === 'Conditional' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {selectedListing.safetyRating}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Insurance on File</span>
-                        {selectedListing.insuranceOnFile ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">BIPD Coverage</span>
-                        <span className="font-medium">${selectedListing.bipdCoverage.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Cargo Coverage</span>
-                        <span className="font-medium">${selectedListing.cargoCoverage.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-indigo-600" />
-                      Platform Integrations
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Amazon Relay</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          selectedListing.amazonStatus === 'active' ? 'bg-green-100 text-green-700' :
-                          selectedListing.amazonStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          selectedListing.amazonStatus === 'suspended' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {selectedListing.amazonStatus === 'active' && selectedListing.amazonRelayScore
-                            ? `Active (${selectedListing.amazonRelayScore})`
-                            : selectedListing.amazonStatus.charAt(0).toUpperCase() + selectedListing.amazonStatus.slice(1)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Highway Setup</span>
-                        {selectedListing.highwaySetup ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-gray-300" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Selling with Email</span>
-                        {selectedListing.sellingWithEmail ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-gray-300" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Selling with Phone</span>
-                        {selectedListing.sellingWithPhone ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-gray-300" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cargo Types */}
-                {selectedListing.cargoTypes.length > 0 && (
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Truck className="w-5 h-5 text-indigo-600" />
-                      Cargo Types
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedListing.cargoTypes.map((cargo, i) => (
-                        <span key={i} className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-700">
-                          {cargo}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Financial & Stats */}
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-indigo-600" />
-                    Pricing & Statistics
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-white rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">
-                        {selectedListing.isPremium ? 'Contact' : `$${selectedListing.price.toLocaleString()}`}
-                      </p>
-                      <p className="text-xs text-gray-500">Asking Price</p>
-                    </div>
-                    <div className="text-center p-3 bg-white rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{selectedListing.views}</p>
-                      <p className="text-xs text-gray-500">Views</p>
-                    </div>
-                    <div className="text-center p-3 bg-white rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{selectedListing.saves}</p>
-                      <p className="text-xs text-gray-500">Saves</p>
-                    </div>
-                    <div className="text-center p-3 bg-white rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{selectedListing.offers}</p>
-                      <p className="text-xs text-gray-500">Offers</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Rejection Reason */}
-                {selectedListing.rejectionReason && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <h3 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5" />
-                      Rejection Reason
-                    </h3>
-                    <p className="text-red-700">{selectedListing.rejectionReason}</p>
-                    {selectedListing.rejectedDate && (
-                      <p className="text-sm text-red-600 mt-2">
-                        Rejected on {new Date(selectedListing.rejectedDate).toLocaleDateString()}
-                      </p>
                     )}
-                  </div>
-                )}
 
-                {/* Actions */}
-                <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                  <Button onClick={() => navigate(`/mc/${selectedListing.id}`)}>
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Public Page
-                  </Button>
-                  {selectedListing.status === 'pending' && (
-                    <Button
-                      onClick={() => navigate(`/admin/review/${selectedListing.id}`)}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Review Listing
-                    </Button>
-                  )}
-                  <Button variant="outline">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" className="text-red-600 hover:bg-red-50">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                      <Button onClick={() => navigate(`/mc/${selectedListing.id}`)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Public Page
+                      </Button>
+                      {selectedListing.status === 'pending' && (
+                        <Button
+                          onClick={() => navigate(`/admin/review/${selectedListing.id}`)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Review Listing
+                        </Button>
+                      )}
+                      <Button variant="outline" onClick={() => enterEditMode(selectedListing)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button variant="outline" className="text-red-600 hover:bg-red-50">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -1951,6 +2450,50 @@ const AdminAllListingsPage = () => {
                   </div>
                 )}
 
+                {/* MC Authority Dates (editable) */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
+                    MC Authority Dates
+                    {addListingFmcsaSuccess && (newListing.applicationDate || newListing.grantDate) && <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Auto-filled</span>}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Applied</label>
+                      <Input
+                        type="date"
+                        value={newListing.applicationDate}
+                        onChange={(e) => setNewListing({ ...newListing, applicationDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Granted</label>
+                      <Input
+                        type="date"
+                        value={newListing.grantDate}
+                        onChange={(e) => setNewListing({ ...newListing, grantDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Effective</label>
+                      <Input
+                        type="date"
+                        value={newListing.effectiveDate}
+                        onChange={(e) => setNewListing({ ...newListing, effectiveDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Revoked</label>
+                      <Input
+                        type="date"
+                        value={newListing.revocationDate}
+                        onChange={(e) => setNewListing({ ...newListing, revocationDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Auto-populated from FMCSA when available, or enter manually</p>
+                </div>
+
                 {/* Section 2: Auto-filled Company Info */}
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -1989,6 +2532,32 @@ const AdminAllListingsPage = () => {
                         placeholder="TX"
                         value={newListing.state}
                         onChange={(e) => setNewListing({ ...newListing, state: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                      <Input
+                        placeholder="123 Main St"
+                        value={newListing.address}
+                        onChange={(e) => setNewListing({ ...newListing, address: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                      <Input
+                        type="email"
+                        placeholder="contact@company.com"
+                        value={newListing.contactEmail}
+                        onChange={(e) => setNewListing({ ...newListing, contactEmail: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                      <Input
+                        type="tel"
+                        placeholder="(555) 123-4567"
+                        value={newListing.contactPhone}
+                        onChange={(e) => setNewListing({ ...newListing, contactPhone: e.target.value })}
                       />
                     </div>
                     <div>
@@ -2049,6 +2618,32 @@ const AdminAllListingsPage = () => {
                         onChange={(e) => setNewListing({ ...newListing, cargoCoverage: e.target.value })}
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bond Amount ($)</label>
+                      <Input
+                        type="number"
+                        placeholder="75000"
+                        value={newListing.bondAmount}
+                        onChange={(e) => setNewListing({ ...newListing, bondAmount: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Company</label>
+                      <Input
+                        placeholder="Progressive, National Interstate..."
+                        value={newListing.insuranceCompany}
+                        onChange={(e) => setNewListing({ ...newListing, insuranceCompany: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Insurance Premium ($)</label>
+                      <Input
+                        type="number"
+                        placeholder="2500"
+                        value={newListing.monthlyInsurancePremium}
+                        onChange={(e) => setNewListing({ ...newListing, monthlyInsurancePremium: e.target.value })}
+                      />
+                    </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Cargo Types</label>
                       <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border border-gray-200 rounded-xl bg-white">
@@ -2105,6 +2700,26 @@ const AdminAllListingsPage = () => {
                         <option value="suspended">Suspended</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amazon Relay Score</label>
+                      <Input
+                        placeholder="e.g. 850"
+                        value={newListing.amazonRelayScore}
+                        onChange={(e) => setNewListing({ ...newListing, amazonRelayScore: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                      <select
+                        value={newListing.visibility}
+                        onChange={(e) => setNewListing({ ...newListing, visibility: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="public">Public</option>
+                        <option value="private">Private</option>
+                        <option value="unlisted">Unlisted</option>
+                      </select>
+                    </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                       <Textarea
@@ -2113,6 +2728,51 @@ const AdminAllListingsPage = () => {
                         onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
                         rows={2}
                       />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Factoring & Audit */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Banknote className="w-5 h-5 text-indigo-600" />
+                    Factoring & Compliance
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Has Factoring?</label>
+                      <select
+                        value={newListing.hasFactoring}
+                        onChange={(e) => setNewListing({ ...newListing, hasFactoring: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">Not Specified</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Factoring Company</label>
+                      <Input
+                        placeholder="Company name"
+                        value={newListing.factoringCompany}
+                        onChange={(e) => setNewListing({ ...newListing, factoringCompany: e.target.value })}
+                        disabled={newListing.hasFactoring !== 'yes'}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Entry Audit Completed?</label>
+                      <select
+                        value={newListing.entryAuditCompleted}
+                        onChange={(e) => setNewListing({ ...newListing, entryAuditCompleted: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">Not Specified</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="not-required">Not Required</option>
+                      </select>
                     </div>
                   </div>
                 </div>
