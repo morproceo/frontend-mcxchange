@@ -354,17 +354,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile overlay */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          />
-        )}
-      </AnimatePresence>
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+        />
+      )}
 
       {/* Sidebar */}
       <aside

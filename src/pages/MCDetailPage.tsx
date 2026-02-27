@@ -25,7 +25,6 @@ import {
   XCircle,
   Coins,
   CreditCard,
-  Sparkles,
   Crown,
   X,
   AlertCircle,
@@ -1486,10 +1485,29 @@ const MCDetailPage = () => {
                         </div>
                       </div>
 
-                      <Button fullWidth variant="secondary">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Save to My List
-                      </Button>
+                      {isAuthenticated && user?.role === 'buyer' && (
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <Coins className="w-4 h-4 text-amber-600" />
+                            <span className="font-bold text-amber-600">{userCredits} credits</span>
+                          </div>
+                          {user.totalCredits === 0 ? (
+                            <Link to="/buyer/subscription">
+                              <Button size="sm" variant="secondary" fullWidth className="mt-2">
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Get Subscription
+                              </Button>
+                            </Link>
+                          ) : userCredits < 1 ? (
+                            <Link to="/buyer/subscription">
+                              <Button size="sm" variant="secondary" fullWidth className="mt-2">
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Buy More Credits
+                              </Button>
+                            </Link>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1502,10 +1520,29 @@ const MCDetailPage = () => {
                         Unlock Premium MC
                       </Button>
 
-                      <Button fullWidth variant="secondary">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Save Listing
-                      </Button>
+                      {isAuthenticated && user?.role === 'buyer' && (
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <Coins className="w-4 h-4 text-amber-600" />
+                            <span className="font-bold text-amber-600">{userCredits} credits</span>
+                          </div>
+                          {user.totalCredits === 0 ? (
+                            <Link to="/buyer/subscription">
+                              <Button size="sm" variant="secondary" fullWidth className="mt-2">
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Get Subscription
+                              </Button>
+                            </Link>
+                          ) : userCredits < 1 ? (
+                            <Link to="/buyer/subscription">
+                              <Button size="sm" variant="secondary" fullWidth className="mt-2">
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Buy More Credits
+                              </Button>
+                            </Link>
+                          ) : null}
+                        </div>
+                      )}
 
                       <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
                         <p className="text-xs text-amber-600">
@@ -1613,10 +1650,27 @@ const MCDetailPage = () => {
                         Place an Offer
                       </Button>
 
-                      <Button fullWidth variant="secondary">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Save to My List
-                      </Button>
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Coins className="w-4 h-4 text-amber-600" />
+                          <span className="font-bold text-amber-600">{userCredits} credits remaining</span>
+                        </div>
+                        {user?.totalCredits === 0 ? (
+                          <Link to="/buyer/subscription">
+                            <Button size="sm" variant="secondary" fullWidth className="mt-2">
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Get Subscription
+                            </Button>
+                          </Link>
+                        ) : userCredits < 1 ? (
+                          <Link to="/buyer/subscription">
+                            <Button size="sm" variant="secondary" fullWidth className="mt-2">
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Buy More Credits
+                            </Button>
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1639,32 +1693,27 @@ const MCDetailPage = () => {
                         )}
                       </Button>
 
-                      {userCredits < 1 && (
+                      {user?.totalCredits === 0 ? (
                         <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-center">
-                          <p className="text-sm text-red-600 mb-2">You're out of credits!</p>
+                          <p className="text-sm text-red-600 mb-2">You don't have a subscription yet</p>
                           <Link to="/buyer/subscription">
-                            <Button size="sm" variant="secondary">
+                            <Button size="sm" fullWidth>
                               <CreditCard className="w-4 h-4 mr-2" />
-                              Get More Credits
+                              Get Subscription
                             </Button>
                           </Link>
                         </div>
-                      )}
-
-                      <Button fullWidth variant="secondary">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Save Listing
-                      </Button>
-
-                      <div className="text-center">
-                        <Link
-                          to="/buyer/subscription"
-                          className="text-sm text-indigo-600 hover:text-indigo-500 flex items-center justify-center gap-1"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          Upgrade for more credits
-                        </Link>
-                      </div>
+                      ) : userCredits < 1 ? (
+                        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-center">
+                          <p className="text-sm text-red-600 mb-2">You're out of credits!</p>
+                          <Link to="/buyer/subscription">
+                            <Button size="sm" fullWidth>
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Buy More Credits
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </>
@@ -1684,11 +1733,6 @@ const MCDetailPage = () => {
                         {user?.role === 'seller' ? 'You are viewing as a seller' : 'You are viewing as an admin'}
                       </div>
                     </div>
-
-                    <Button fullWidth variant="secondary">
-                      <Heart className="w-4 h-4 mr-2" />
-                      Save Listing
-                    </Button>
                   </div>
                 </>
               )}
@@ -1717,21 +1761,22 @@ const MCDetailPage = () => {
           {isPremiumListing && !isUnlocked ? (
             // Premium listing actions
             <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => {/* Save functionality */}}
-              >
-                <Heart className="w-4 h-4" />
-              </Button>
+              {isAuthenticated && user?.role === 'buyer' && (
+                <Link to="/buyer/subscription" className="flex-1">
+                  <Button variant="secondary" fullWidth>
+                    <Coins className="w-4 h-4 mr-1" />
+                    {user.totalCredits === 0 ? 'Get Subscription' : userCredits < 1 ? 'Buy Credits' : `${userCredits} Credits`}
+                  </Button>
+                </Link>
+              )}
               {premiumRequestSent ? (
-                <div className="flex-[3] flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 rounded-lg px-4 py-2">
+                <div className="flex-[2] flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 rounded-lg px-4 py-2">
                   <CheckCircle className="w-5 h-5" />
                   <span className="font-medium">Request Sent</span>
                 </div>
               ) : (
                 <Button
-                  className="flex-[3] bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                  className="flex-[2] bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                   onClick={handlePremiumRequest}
                 >
                   <Crown className="w-4 h-4 mr-2" />
@@ -1759,13 +1804,12 @@ const MCDetailPage = () => {
             isUnlocked ? (
               // Already unlocked - show buy/offer buttons
               <div className="flex gap-3">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => {/* Save functionality */}}
-                >
-                  <Heart className="w-4 h-4" />
-                </Button>
+                <Link to="/buyer/subscription" className="flex-1">
+                  <Button variant="secondary" fullWidth>
+                    <Coins className="w-4 h-4 mr-1" />
+                    {user?.totalCredits === 0 ? 'Get Subscription' : userCredits < 1 ? 'Buy Credits' : `${userCredits} Credits`}
+                  </Button>
+                </Link>
                 <Button
                   variant="secondary"
                   className="flex-1"
@@ -1791,56 +1835,50 @@ const MCDetailPage = () => {
               </div>
             ) : (
               // Not unlocked yet
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Your Credits:</span>
-                  <span className="font-bold text-yellow-600">{userCredits} available</span>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={() => {/* Save functionality */}}
-                  >
-                    <Heart className="w-4 h-4" />
+              <div className="flex gap-3">
+                <Link to="/buyer/subscription" className="flex-1">
+                  <Button variant="secondary" fullWidth>
+                    <Coins className="w-4 h-4 mr-1" />
+                    {user?.totalCredits === 0 ? 'Get Subscription' : userCredits < 1 ? 'Buy Credits' : `${userCredits} Credits`}
                   </Button>
-                  {userCredits < 1 ? (
+                </Link>
+                {user?.totalCredits === 0 || userCredits < 1 ? (
+                  <Link to="/buyer/subscription" className="flex-[2]">
                     <Button
-                      className="flex-[3] bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
-                      onClick={() => navigate('/buyer/subscription')}
+                      fullWidth
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
                     >
                       <CreditCard className="w-4 h-4 mr-2" />
-                      Get Credits
+                      {user?.totalCredits === 0 ? 'Get Subscription' : 'Buy More Credits'}
                     </Button>
-                  ) : (
-                    <Button
-                      className="flex-[3] bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                      onClick={handleUnlockWithCredit}
-                      disabled={unlocking}
-                    >
-                      {unlocking ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Unlocking...
-                        </>
-                      ) : (
-                        <>
-                          <Unlock className="w-4 h-4 mr-2" />
-                          Unlock Now
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
+                  </Link>
+                ) : (
+                  <Button
+                    className="flex-[2] bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                    onClick={handleUnlockWithCredit}
+                    disabled={unlocking}
+                  >
+                    {unlocking ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Unlocking...
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="w-4 h-4 mr-2" />
+                        Unlock with 1 Credit
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             )
           ) : (
             // Seller or admin viewing
             <div className="flex gap-3">
-              <Button variant="secondary" fullWidth onClick={() => {/* Save functionality */}}>
-                <Heart className="w-4 h-4 mr-2" />
-                Save Listing
-              </Button>
+              <div className="flex-1 flex items-center justify-center text-sm text-gray-500">
+                {user?.role === 'seller' ? 'Viewing as seller' : 'Viewing as admin'}
+              </div>
             </div>
           )}
         </div>
