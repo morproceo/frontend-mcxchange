@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -94,6 +94,22 @@ const MCDetailPage = () => {
   const [submittingBuyNow, setSubmittingBuyNow] = useState(false)
   const [offerSuccess, setOfferSuccess] = useState(false)
   const [buyNowSuccess, setBuyNowSuccess] = useState(false)
+
+  // Subscription plan state for premium request gating
+  const [buyerPlan, setBuyerPlan] = useState<string | null>(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+
+  // Fetch subscription plan for buyer users
+  useEffect(() => {
+    if (user?.role !== 'buyer') return
+    let active = true
+    api.getSubscription().then((res) => {
+      if (active) setBuyerPlan(res.data?.subscription?.plan || null)
+    }).catch(() => {
+      if (active) setBuyerPlan(null)
+    })
+    return () => { active = false }
+  }, [user?.role])
 
   // Check if listing is premium from actual listing data
   const isPremiumListing = listing?.isPremium ?? false
@@ -229,6 +245,14 @@ const MCDetailPage = () => {
 
   const handleSubmitPremiumRequest = async () => {
     if (!listing) return
+
+    // Block starter plan users from submitting premium requests
+    if (buyerPlan === 'starter') {
+      setShowPremiumModal(false)
+      setShowUpgradeModal(true)
+      return
+    }
+
     try {
       setSendingPremiumRequest(true)
       const message = premiumMessage.trim() || 'Interested in this premium MC authority. Please provide pricing and details.'
@@ -2210,6 +2234,59 @@ const MCDetailPage = () => {
                         </>
                       )}
                     </Button>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Upgrade Required Modal (Starter plan cannot request premium) */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card className="overflow-hidden text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center">
+                    <AlertTriangle className="w-7 h-7 text-orange-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Upgrade Required</h3>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Starter plan members cannot request premium MC listings. Upgrade to <span className="font-semibold text-indigo-600">Premium</span> or <span className="font-semibold text-amber-600">Enterprise</span> to unlock premium requests.
+                    </p>
+                  </div>
+                  <div className="flex gap-3 w-full pt-2">
+                    <Button
+                      fullWidth
+                      variant="secondary"
+                      onClick={() => setShowUpgradeModal(false)}
+                    >
+                      Close
+                    </Button>
+                    <Link to="/buyer/subscription" className="flex-1">
+                      <Button
+                        fullWidth
+                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Upgrade Plan
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </Card>
