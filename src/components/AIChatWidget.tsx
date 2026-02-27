@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bot, Send, X, Sparkles, MessageSquare, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -64,6 +65,7 @@ const THREAD_KEY = 'mcx_ai_thread_id';
 
 export default function AIChatWidget() {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threadId, setThreadId] = useState<string | null>(() => localStorage.getItem(THREAD_KEY));
@@ -81,6 +83,9 @@ export default function AIChatWidget() {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // On MC detail pages, the mobile bottom bar overlaps the chat button
+  const hasBottomBar = /^\/mc\/\d+/.test(location.pathname);
 
   if (!isAuthenticated) return null;
 
@@ -132,7 +137,9 @@ export default function AIChatWidget() {
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg hover:from-indigo-600 hover:to-purple-700 transition-colors"
+            className={`fixed right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg hover:from-indigo-600 hover:to-purple-700 transition-colors ${
+              hasBottomBar ? 'bottom-24 lg:bottom-6' : 'bottom-6'
+            }`}
           >
             <MessageSquare className="h-6 w-6" />
           </motion.button>
