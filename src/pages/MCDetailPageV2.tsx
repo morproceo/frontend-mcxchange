@@ -1220,38 +1220,47 @@ function SafetyTab() {
                   OOS means a vehicle or driver was found so unsafe during an inspection that they were taken off the road immediately.
                   Lower is better — green means this carrier is below the national average.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <p className={`text-2xl font-bold ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {mockInspections.vehicleOOSRate}%
-                    </p>
-                    <p className="text-xs font-medium text-gray-700 mt-1">Vehicle OOS Rate</p>
-                    <p className="text-[10px] text-gray-400">National avg: {mockInspections.nationalVehicleOOSRate}%</p>
-                    <p className={`text-[10px] mt-1 font-medium ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'Below average — good' : 'Above average — concern'}
-                    </p>
+                {mockInspections.vehicleInspections === 0 && mockInspections.driverInspections === 0 ? (
+                  <div className="text-center py-6 text-gray-400">
+                    <p className="text-sm font-medium">No inspection data available</p>
+                    <p className="text-xs mt-1">This carrier has no roadside inspections recorded in the last 24 months.</p>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <p className={`text-2xl font-bold ${mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {mockInspections.driverOOSRate}%
-                    </p>
-                    <p className="text-xs font-medium text-gray-700 mt-1">Driver OOS Rate</p>
-                    <p className="text-[10px] text-gray-400">National avg: {mockInspections.nationalDriverOOSRate}%</p>
-                    <p className={`text-[10px] mt-1 font-medium ${mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'Below average — good' : 'Above average — concern'}
-                    </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                      { label: 'Vehicle OOS Rate', inspections: mockInspections.vehicleInspections, oos: mockInspections.vehicleOOS, rate: mockInspections.vehicleOOSRate, natl: mockInspections.nationalVehicleOOSRate },
+                      { label: 'Driver OOS Rate', inspections: mockInspections.driverInspections, oos: mockInspections.driverOOS, rate: mockInspections.driverOOSRate, natl: mockInspections.nationalDriverOOSRate },
+                      { label: 'Hazmat OOS Rate', inspections: mockInspections.hazmatInspections, oos: mockInspections.hazmatOOS, rate: mockInspections.hazmatOOSRate, natl: mockInspections.nationalHazmatOOSRate },
+                    ].map((item) => {
+                      const hasData = item.inspections > 0
+                      const belowAvg = hasData && item.rate <= item.natl
+                      return (
+                        <div key={item.label} className="text-center p-3 rounded-lg bg-gray-50">
+                          {hasData ? (
+                            <>
+                              <p className={`text-2xl font-bold ${belowAvg ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {item.rate}%
+                              </p>
+                              <p className="text-xs font-medium text-gray-700 mt-1">{item.label}</p>
+                              <p className="text-[10px] text-gray-400">{item.oos} out of {item.inspections} inspections</p>
+                              <p className="text-[10px] text-gray-400">National avg: {item.natl}%</p>
+                              <p className={`text-[10px] mt-1 font-medium ${belowAvg ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {belowAvg ? 'Below average — good' : 'Above average — concern'}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-2xl font-bold text-gray-300">—</p>
+                              <p className="text-xs font-medium text-gray-700 mt-1">{item.label}</p>
+                              <p className="text-[10px] text-gray-400">No inspections</p>
+                              <p className="text-[10px] text-gray-400">National avg: {item.natl}%</p>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <p className={`text-2xl font-bold ${activeAlertCount > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>
-                      {activeAlertCount} of 7
-                    </p>
-                    <p className="text-xs font-medium text-gray-700 mt-1">BASIC Alerts Active</p>
-                    <p className="text-[10px] text-gray-400">Flagged for potential issues</p>
-                    <p className={`text-[10px] mt-1 font-medium ${activeAlertCount === 0 ? 'text-emerald-600' : activeAlertCount <= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {activeAlertCount === 0 ? 'No alerts — clean record' : activeAlertCount <= 2 ? 'Monitor these areas' : 'Multiple flags — review carefully'}
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Row 4: BASIC Scores Table */}
@@ -1423,16 +1432,26 @@ function SafetyTab() {
                   <p className="text-xs text-gray-500 mt-1">Clean Rate</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className={`text-2xl font-bold ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {mockInspections.vehicleOOSRate}%
-                  </p>
+                  {mockInspections.vehicleInspections > 0 ? (
+                    <p className={`text-2xl font-bold ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {mockInspections.vehicleOOSRate}%
+                    </p>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-300">—</p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">Vehicle OOS Rate</p>
+                  {mockInspections.vehicleInspections > 0 && <p className="text-[10px] text-gray-400">{mockInspections.vehicleOOS}/{mockInspections.vehicleInspections} inspections</p>}
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className={`text-2xl font-bold ${mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {mockInspections.driverOOSRate}%
-                  </p>
+                  {mockInspections.driverInspections > 0 ? (
+                    <p className={`text-2xl font-bold ${mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {mockInspections.driverOOSRate}%
+                    </p>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-300">—</p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">Driver OOS Rate</p>
+                  {mockInspections.driverInspections > 0 && <p className="text-[10px] text-gray-400">{mockInspections.driverOOS}/{mockInspections.driverInspections} inspections</p>}
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
                   <p className="text-2xl font-bold text-gray-900">{safeFmtDate(mockOperations.lastInspectionDate)}</p>
