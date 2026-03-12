@@ -1174,9 +1174,15 @@ function SafetyTab() {
                     }
                   </p>
                 </div>
-                {exceedingBasics.length === 0 && (
+                {exceedingBasics.length === 0 && mockBasicScores.length > 0 && (
                   <p className="text-xs text-gray-500 mt-1 ml-6">
-                    Closest: Hours-of-Service ({mockBasicScores.find(b => b.name === 'Hours-of-Service')?.score}/{mockBasicScores.find(b => b.name === 'Hours-of-Service')?.threshold}), Vehicle Maintenance ({mockBasicScores.find(b => b.name === 'Vehicle Maintenance')?.score}/{mockBasicScores.find(b => b.name === 'Vehicle Maintenance')?.threshold})
+                    {(() => {
+                      const scored = mockBasicScores.filter(b => b.score > 0).sort((a, b) => (b.score / b.threshold) - (a.score / a.threshold))
+                      const top2 = scored.slice(0, 2)
+                      return top2.length > 0
+                        ? `Closest: ${top2.map(b => `${b.name} (${b.score}/${b.threshold})`).join(', ')}`
+                        : 'No scored BASICs — insufficient inspection data'
+                    })()}
                   </p>
                 )}
               </div>
@@ -1197,9 +1203,9 @@ function SafetyTab() {
                   <p className="text-[10px] text-gray-400">Nat'l: {mockInspections.nationalVehicleOOSRate}%</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className="text-2xl font-bold text-gray-900">0.42</p>
-                  <p className="text-xs text-gray-500 mt-1">Crash Rate</p>
-                  <p className="text-[10px] text-gray-400">per million miles</p>
+                  <p className={`text-2xl font-bold ${mockCrashes.total > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>{mockCrashes.total}</p>
+                  <p className="text-xs text-gray-500 mt-1">Total Crashes</p>
+                  <p className="text-[10px] text-gray-400">24-month period</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
                   <p className={`text-2xl font-bold ${activeAlertCount > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>

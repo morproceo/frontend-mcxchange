@@ -491,9 +491,10 @@ export function mapToV2BasicScores(report: any): V2BasicScore[] {
   const scores = report?.safety?.basicScores || []
   return scores.map((b: any) => ({
     name: b.basicName || b.name || 'Unknown',
-    score: b.percentile ?? b.measure ?? b.score ?? 0,
-    threshold: b.thresholdPercent ?? b.threshold ?? 65,
-    percentile: b.percentile ?? b.measure ?? 0,
+    // score can be null from API — treat null as 0 (not enough data to score)
+    score: b.score ?? b.percentile ?? b.measure ?? 0,
+    threshold: b.threshold ?? b.thresholdPercent ?? 65,
+    percentile: b.score ?? b.percentile ?? b.measure ?? 0,
     description: b.description || b.basicCode || '',
   }))
 }
@@ -502,11 +503,11 @@ export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
   const alerts = report?.safety?.basicAlerts || {}
   return {
     unsafeDrivingAlert: alerts.unsafeDriving || alerts.unsafeDrivingAlert || false,
-    hoursOfServiceAlert: alerts.hoursOfService || alerts.hoursOfServiceAlert || false,
+    hoursOfServiceAlert: alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false,
     driverFitnessAlert: alerts.driverFitness || alerts.driverFitnessAlert || false,
-    controlledSubstanceAlert: alerts.controlledSubstance || alerts.controlledSubstanceAlert || false,
+    controlledSubstanceAlert: alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false,
     vehicleMaintenanceAlert: alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false,
-    hazmatAlert: alerts.hazmat || alerts.hazmatAlert || false,
+    hazmatAlert: alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false,
     crashIndicatorAlert: alerts.crashIndicator || alerts.crashIndicatorAlert || false,
     unsafeDrivingOOSAlert: alerts.unsafeDrivingOOS || alerts.unsafeDrivingOOSAlert || false,
     hoursOfServiceOOSAlert: alerts.hoursOfServiceOOS || alerts.hoursOfServiceOOSAlert || false,
@@ -518,11 +519,11 @@ export function mapToV2ViolationBreakdown(report: any): V2ViolationBreakdown {
   const breakdown = report?.safety?.violationBreakdown || {}
   return {
     unsafeDriving: breakdown.unsafeDriving || 0,
-    hoursOfService: breakdown.hoursOfService || 0,
+    hoursOfService: breakdown.hoursOfService || breakdown.hosCompliance || 0,
     vehicleMaintenance: breakdown.vehicleMaintenance || 0,
-    controlledSubstance: breakdown.controlledSubstance || 0,
+    controlledSubstance: breakdown.controlledSubstance || breakdown.controlledSubstances || 0,
     driverFitness: breakdown.driverFitness || 0,
-    hazardousMaterials: breakdown.hazardousMaterials || breakdown.hazmat || 0,
+    hazardousMaterials: breakdown.hazardousMaterials || breakdown.hazmat || breakdown.hazmatCompliance || 0,
   }
 }
 
@@ -542,17 +543,28 @@ export function mapToV2ISSData(_report: any): V2ISSData {
 // INSPECTIONS
 // ============================================================
 export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
-  const summary = report?.inspections?.summary || report?.safety?.inspectionTotals || {}
+  const inspSummary = report?.inspections?.summary || {}
+  const safetyTotals = report?.safety?.inspectionTotals || {}
+
+  // API may return string numbers — parse them
+  const p = (v: any) => parseFloat(v) || 0
+
+  // Try inspections.summary first, then safety.inspectionTotals
+  const totalInsp = p(inspSummary.total_inspections) || p(safetyTotals.last24Months) || p(safetyTotals.total) || 0
+  const driverInsp = p(safetyTotals.driver) || Math.round(totalInsp * 0.4)  // estimate if not available
+  const vehicleInsp = p(safetyTotals.vehicle) || Math.round(totalInsp * 0.5)
+  const hazmatInsp = p(safetyTotals.hazmat) || 0
+
   return {
-    driverInspections: summary.driverInspections || summary.totalDriverInspections || 0,
-    vehicleInspections: summary.vehicleInspections || summary.totalVehicleInspections || 0,
-    hazmatInspections: summary.hazmatInspections || summary.totalHazmatInspections || 0,
-    driverOOSRate: summary.driverOOSRate || summary.driverOosRate || 0,
-    vehicleOOSRate: summary.vehicleOOSRate || summary.vehicleOosRate || 0,
-    hazmatOOSRate: summary.hazmatOOSRate || summary.hazmatOosRate || 0,
-    nationalDriverOOSRate: summary.nationalDriverOOSRate || 5.51,
-    nationalVehicleOOSRate: summary.nationalVehicleOOSRate || 20.72,
-    nationalHazmatOOSRate: summary.nationalHazmatOOSRate || 4.50,
+    driverInspections: driverInsp,
+    vehicleInspections: vehicleInsp,
+    hazmatInspections: hazmatInsp,
+    driverOOSRate: p(inspSummary.driver_oos_rate) || p(safetyTotals.driverOOS) || 0,
+    vehicleOOSRate: p(inspSummary.vehicle_oos_rate) || p(safetyTotals.vehicleOOS) || 0,
+    hazmatOOSRate: p(inspSummary.hazmat_oos_rate) || 0,
+    nationalDriverOOSRate: 5.51,
+    nationalVehicleOOSRate: 20.72,
+    nationalHazmatOOSRate: 4.50,
   }
 }
 
@@ -584,35 +596,48 @@ export function mapToV2Operations(report: any): V2OperationsSummary {
   const topViolations = report?.inspections?.topViolations || []
   const records = report?.inspections?.records || []
 
-  const totalInspections = (summary.driverInspections || 0) + (summary.vehicleInspections || 0) + (summary.hazmatInspections || 0)
-  const totalOOS = summary.totalOOS || 0
-  const overallOOSRate = totalInspections > 0 ? Math.round((totalOOS / totalInspections) * 1000) / 10 : 0
+  const p = (v: any) => parseFloat(v) || 0
+  const totalInspections = p(summary.total_inspections) || p(summary.driverInspections || 0) + p(summary.vehicleInspections || 0) + p(summary.hazmatInspections || 0)
+  const overallOOSRate = p(summary.overall_oos_rate) || 0
+  const totalOOS = overallOOSRate > 0 && totalInspections > 0 ? Math.round(totalInspections * overallOOSRate / 100) : (p(summary.totalOOS) || 0)
 
-  // Build operating states from records
-  const stateMap: Record<string, { inspections: number; oosCount: number }> = {}
-  records.forEach((r: any) => {
-    const state = r.report_state || r.state || 'Unknown'
-    if (!stateMap[state]) stateMap[state] = { inspections: 0, oosCount: 0 }
-    stateMap[state].inspections++
-    if ((r.oos_total || 0) > 0) stateMap[state].oosCount++
-  })
-  const operatingStates = Object.entries(stateMap)
-    .sort((a, b) => b[1].inspections - a[1].inspections)
-    .map(([stateCode, data]) => ({
-      state: stateCode,
-      stateCode,
-      inspections: data.inspections,
-      oosCount: data.oosCount,
-      oosRate: data.inspections > 0 ? Math.round((data.oosCount / data.inspections) * 1000) / 10 : 0,
+  // Build operating states — use API summary if available, else derive from records
+  const apiStates = summary.operating_states || []
+  let operatingStates: any[] = []
+
+  if (apiStates.length > 0 && records.length === 0) {
+    // Use API summary operating states (no per-state breakdown available)
+    operatingStates = apiStates.map((s: string) => ({
+      state: s, stateCode: s, inspections: 0, oosCount: 0, oosRate: 0,
     }))
+  } else {
+    const stateMap: Record<string, { inspections: number; oosCount: number }> = {}
+    records.forEach((r: any) => {
+      const state = r.report_state || r.state || 'Unknown'
+      if (!stateMap[state]) stateMap[state] = { inspections: 0, oosCount: 0 }
+      stateMap[state].inspections++
+      if (p(r.oos_total) > 0) stateMap[state].oosCount++
+    })
+    operatingStates = Object.entries(stateMap)
+      .sort((a, b) => b[1].inspections - a[1].inspections)
+      .map(([stateCode, data]) => ({
+        state: stateCode, stateCode,
+        inspections: data.inspections, oosCount: data.oosCount,
+        oosRate: data.inspections > 0 ? Math.round((data.oosCount / data.inspections) * 1000) / 10 : 0,
+      }))
+  }
 
-  const cleanCount = records.filter((r: any) => (r.viol_total || r.violations || 0) === 0).length
-  const cleanInspectionRate = totalInspections > 0 ? Math.round((cleanCount / totalInspections) * 1000) / 10 : 0
+  // Clean inspection rate — use API value if available
+  const cleanInspectionRate = p(summary.clean_inspection_rate) || (
+    records.length > 0
+      ? Math.round(records.filter((r: any) => p(r.viol_total || r.violations) === 0).length / records.length * 1000) / 10
+      : 0
+  )
 
   const lastRecord = records.length > 0 ? records[0] : null
-  const lastInspectionDate = lastRecord?.inspection_date || lastRecord?.date || ''
+  const lastInspectionDate = normalizeDate(lastRecord?.inspection_date || lastRecord?.date || '')
 
-  const totalViolations = records.reduce((s: number, r: any) => s + (r.viol_total || r.violations || 0), 0)
+  const totalViolations = records.reduce((s: number, r: any) => s + p(r.viol_total || r.violations), 0)
 
   return {
     totalInspections,
@@ -622,8 +647,8 @@ export function mapToV2Operations(report: any): V2OperationsSummary {
     trendPct: 0,
     topViolations: topViolations.map((v: any) => ({
       category: v.category || v.group_desc || '',
-      count: v.count || v.total || 0,
-      severity: (v.severity || 'minor') as 'critical' | 'major' | 'minor',
+      count: p(v.count) || p(v.total) || 0,
+      severity: (v.severity || (p(v.oos_count) > 0 ? 'major' : 'minor')) as 'critical' | 'major' | 'minor',
     })),
     operatingStates,
     mileageEstimate: '',
@@ -648,26 +673,41 @@ export function mapToV2ViolationTrend(report: any): V2ViolationTrend[] {
 // ============================================================
 export function mapToV2CrashData(report: any): V2CrashData {
   const summary = report?.crashes?.summary || {}
+  const p = (v: any) => parseInt(v) || 0
   return {
-    fatal: summary.fatal || summary.fatalCrashes || 0,
-    injury: summary.injury || summary.injuryCrashes || 0,
-    towaway: summary.towaway || summary.towCrashes || 0,
-    total: summary.total || summary.totalCrashes || 0,
+    fatal: p(summary.fatal) || p(summary.fatalCrashes),
+    injury: p(summary.injury) || p(summary.injuryCrashes),
+    towaway: p(summary.towaway) || p(summary.towCrashes),
+    total: p(summary.total) || p(summary.totalCrashes),
   }
 }
 
 export function mapToV2CrashRecords(report: any): V2CrashRecord[] {
   const records = report?.crashes?.records || []
-  return records.map((r: any) => ({
-    id: r.id || r.report_number || '',
-    date: normalizeDate(r.crash_date || r.date || ''),
-    state: r.report_state || r.state || '',
-    severity: r.severity || r.crash_severity || '',
-    fatalities: r.fatalities || r.fatal_count || 0,
-    injuries: r.injuries || r.injury_count || 0,
-    hazmatRelease: r.hazmat_release === true || r.hazmat_release === 'Y' || false,
-    reportNumber: r.report_number || r.reportNumber || '',
-  }))
+  return records.map((r: any) => {
+    // Derive severity from fatalities/injuries/tow
+    const fatalities = parseInt(r.fatalities || r.fatal_count || 0) || 0
+    const injuries = parseInt(r.injuries || r.injury_count || 0) || 0
+    const towAway = r.tow_away === true || r.tow_away === 'true' || r.towAway === true
+    let severity = r.severity || r.crash_severity || ''
+    if (!severity) {
+      if (fatalities > 0) severity = 'Fatal'
+      else if (injuries > 0) severity = 'Injury'
+      else if (towAway) severity = 'Tow-Away'
+      else severity = 'Property Damage'
+    }
+
+    return {
+      id: r.id || r.report_number || '',
+      date: normalizeDate(r.crash_date || r.date || ''),
+      state: r.report_state || r.state || '',
+      severity,
+      fatalities,
+      injuries,
+      hazmatRelease: r.hazmat_released === true || r.hazmat_release === true || r.hazmat_release === 'Y' || false,
+      reportNumber: r.report_number || r.reportNumber || '',
+    }
+  })
 }
 
 // ============================================================
