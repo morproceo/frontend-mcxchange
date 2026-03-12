@@ -1307,45 +1307,150 @@ function SafetyTab() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-5"
             >
-              {/* Row 1: 7 BASIC Gauge Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {mockBasicScores.map((basic, i) => (
-                  <motion.div
-                    key={basic.name}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    className="bg-gray-50 rounded-xl border border-gray-200 p-3"
-                  >
-                    <SpeedometerGauge
-                      name={basic.name}
-                      score={basic.score}
-                      threshold={basic.threshold}
-                      alert={alertMap[basic.name] || false}
-                    />
-                  </motion.div>
-                ))}
+              {/* Explainer */}
+              <div className="bg-blue-50 rounded-xl border border-blue-200 p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>What are BASICs?</strong> FMCSA's SMS (Safety Measurement System) scores carriers in 7 categories called BASICs.
+                  Each score is a <strong>percentile</strong> (0–100) — higher means worse compared to peer carriers.
+                  When a score crosses the <strong>threshold</strong>, FMCSA may intervene. "Not Scored" means insufficient inspection data.
+                </p>
               </div>
 
-              {/* Row 2: Violation Breakdown */}
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-500" />
-                  Violation Breakdown
-                  <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">24 months</span>
-                </h4>
-                <ViolationBreakdownChart violations={mockViolationBreakdown} alerts={mockBasicAlerts} />
+              {/* Alert summary */}
+              {activeAlertCount > 0 && (
+                <div className="bg-yellow-50 rounded-xl border border-yellow-200 p-4 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-yellow-700">
+                      {activeAlertCount} of 7 BASICs flagged for alert
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-0.5">
+                      Alerts mean FMCSA has identified enough violations in this category to warrant attention, even if the carrier isn't formally scored yet.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* BASIC Scores Table */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                  <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-indigo-500" />
+                    BASIC Scores
+                  </h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Category</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Description</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Percentile</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Threshold</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Violations</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mockBasicScores.map((basic, i) => {
+                        const isScored = basic.score != null
+                        const ratio = isScored ? basic.score! / basic.threshold : 0
+                        const hasAlert = alertMap[basic.name] || false
+                        const violations = violationMap[basic.name] ?? 0
+                        return (
+                          <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${hasAlert ? 'bg-yellow-50/50' : ''}`}>
+                            <td className="py-2.5 px-4 font-medium text-gray-900">
+                              {basic.name}
+                              {hasAlert && <span className="ml-1.5 inline-flex w-2 h-2 rounded-full bg-yellow-400" />}
+                            </td>
+                            <td className="py-2.5 px-4 text-xs text-gray-500 hidden sm:table-cell">{basic.description}</td>
+                            <td className="py-2.5 px-4 text-right">
+                              {isScored ? (
+                                <span className={`font-bold ${
+                                  ratio >= 1 ? 'text-red-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'
+                                }`}>{basic.score}%</span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">Not Scored</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-4 text-right text-gray-400">{basic.threshold}%</td>
+                            <td className="py-2.5 px-4 text-right text-gray-700">{violations}</td>
+                            <td className="py-2.5 px-4 text-right">
+                              {hasAlert ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Alert</span>
+                              ) : isScored && basic.score! >= basic.threshold ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">Exceeding</span>
+                              ) : isScored ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">OK</span>
+                              ) : violations > 0 ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">{violations} viol.</span>
+                              ) : (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">No Data</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Row 3: Violation Trend */}
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-indigo-500" />
-                  Violation Trend
-                  <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">24 months</span>
+              {/* 7 BASIC Gauge Cards */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  BASIC Percentile Gauges
+                  <span className="text-[10px] text-gray-400 font-normal">Higher = worse. Red zone = above threshold.</span>
                 </h4>
-                <ViolationTrendChart data={mockViolationTrend} />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {mockBasicScores.map((basic, i) => (
+                    <motion.div
+                      key={basic.name}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      className="bg-gray-50 rounded-xl border border-gray-200 p-3"
+                    >
+                      <SpeedometerGauge
+                        name={basic.name}
+                        score={basic.score}
+                        threshold={basic.threshold}
+                        alert={alertMap[basic.name] || false}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               </div>
+
+              {/* Violation Breakdown */}
+              {totalViolations > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                    Violation Breakdown by BASIC
+                    <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">24 months</span>
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-4">{totalViolations} total violations across {totalInspections} inspections</p>
+                  <ViolationBreakdownChart violations={mockViolationBreakdown} alerts={mockBasicAlerts} />
+                </div>
+              )}
+
+              {/* Violation Trend */}
+              {mockViolationTrend.length > 0 ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-indigo-500" />
+                    Violation Trend
+                    <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">24 months</span>
+                  </h4>
+                  <ViolationTrendChart data={mockViolationTrend} />
+                </div>
+              ) : totalViolations > 0 ? (
+                <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 text-center">
+                  <p className="text-sm text-gray-400">Violation trend data not available for this carrier</p>
+                  <p className="text-xs text-gray-300 mt-1">Trend requires multiple months of data to calculate</p>
+                </div>
+              ) : null}
             </motion.div>
           )}
 
