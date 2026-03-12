@@ -1440,52 +1440,51 @@ function SafetyTab() {
                 </div>
               </div>
 
-              {/* Row 2: OOS Summary Table */}
+              {/* Row 2: OOS Summary Table — matches FMCSA SAFER Snapshot layout */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                   <h4 className="text-sm font-semibold text-gray-900">Out-of-Service Summary</h4>
+                  <p className="text-[10px] text-gray-400 mt-0.5">OOS Rate = Out of Service / Inspections. Based on most recent 24 months of inspection data.</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Type</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Inspection Type</th>
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Inspections</th>
-                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">OOS</th>
-                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">OOS Rate</th>
-                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Nat'l Avg</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Out of Service</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Out of Service %</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Nat'l Average %</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        { type: 'Driver', inspections: mockInspections.driverInspections, oos: Math.round(mockInspections.driverInspections * mockInspections.driverOOSRate / 100), rate: mockInspections.driverOOSRate, natl: mockInspections.nationalDriverOOSRate },
-                        { type: 'Vehicle', inspections: mockInspections.vehicleInspections, oos: Math.round(mockInspections.vehicleInspections * mockInspections.vehicleOOSRate / 100), rate: mockInspections.vehicleOOSRate, natl: mockInspections.nationalVehicleOOSRate },
-                        { type: 'HazMat', inspections: mockInspections.hazmatInspections, oos: Math.round(mockInspections.hazmatInspections * mockInspections.hazmatOOSRate / 100), rate: mockInspections.hazmatOOSRate, natl: mockInspections.nationalHazmatOOSRate },
+                        { type: 'Vehicle', inspections: mockInspections.vehicleInspections, oos: mockInspections.vehicleOOS, rate: mockInspections.vehicleOOSRate, natl: mockInspections.nationalVehicleOOSRate },
+                        { type: 'Driver', inspections: mockInspections.driverInspections, oos: mockInspections.driverOOS, rate: mockInspections.driverOOSRate, natl: mockInspections.nationalDriverOOSRate },
+                        { type: 'Hazmat', inspections: mockInspections.hazmatInspections, oos: mockInspections.hazmatOOS, rate: mockInspections.hazmatOOSRate, natl: mockInspections.nationalHazmatOOSRate },
+                        { type: 'IEP', inspections: mockInspections.iepInspections, oos: mockInspections.iepOOS, rate: mockInspections.iepOOSRate, natl: null as number | null },
                       ].map((row, i) => {
-                        const belowAvg = row.rate <= row.natl
+                        const hasData = row.inspections > 0
+                        const belowAvg = row.natl != null && row.rate <= row.natl
+                        const rateDisplay = hasData ? `${row.rate}%` : row.inspections === 0 && row.type === 'Hazmat' ? '%' : '0%'
                         return (
                           <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                             <td className="py-2.5 px-4 font-medium text-gray-900">{row.type}</td>
                             <td className="py-2.5 px-4 text-right text-gray-700">{row.inspections}</td>
                             <td className="py-2.5 px-4 text-right">
-                              <span className={`font-semibold ${row.oos > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{row.oos}</span>
+                              <span className={`font-semibold ${row.oos > 0 ? 'text-red-600' : 'text-gray-700'}`}>{row.oos}</span>
                             </td>
                             <td className="py-2.5 px-4 text-right">
-                              <span className={`font-bold ${belowAvg ? 'text-emerald-600' : 'text-red-600'}`}>{row.rate}%</span>
+                              {hasData ? (
+                                <span className={`font-bold ${belowAvg ? 'text-emerald-600' : row.natl != null ? 'text-red-600' : 'text-gray-700'}`}>{rateDisplay}</span>
+                              ) : (
+                                <span className="text-gray-400">{rateDisplay}</span>
+                              )}
                             </td>
-                            <td className="py-2.5 px-4 text-right text-gray-400">{row.natl}%</td>
+                            <td className="py-2.5 px-4 text-right text-gray-400">{row.natl != null ? `${row.natl}%` : 'N/A'}</td>
                           </tr>
                         )
                       })}
-                      <tr className="bg-gray-50 font-semibold">
-                        <td className="py-2.5 px-4 text-gray-900">Total</td>
-                        <td className="py-2.5 px-4 text-right text-gray-900">{mockInspections.driverInspections + mockInspections.vehicleInspections + mockInspections.hazmatInspections}</td>
-                        <td className="py-2.5 px-4 text-right text-red-600">{mockOperations.totalOOS}</td>
-                        <td className="py-2.5 px-4 text-right">
-                          <span className={mockOperations.overallOOSRate < 12.9 ? 'text-emerald-600' : 'text-red-600'}>{mockOperations.overallOOSRate}%</span>
-                        </td>
-                        <td className="py-2.5 px-4 text-right text-gray-400">12.9%</td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>

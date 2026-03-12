@@ -552,22 +552,47 @@ export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
   // API may return string numbers — parse them
   const p = (v: any) => parseFloat(v) || 0
 
-  // Try inspections.summary first, then safety.inspectionTotals
+  // --- Inspection COUNTS (from safety.inspectionTotals or inspections.summary) ---
   const totalInsp = p(inspSummary.total_inspections) || p(safetyTotals.last24Months) || p(safetyTotals.total) || 0
-  const driverInsp = p(safetyTotals.driver) || Math.round(totalInsp * 0.4)  // estimate if not available
-  const vehicleInsp = p(safetyTotals.vehicle) || Math.round(totalInsp * 0.5)
+  const driverInsp = p(safetyTotals.driver) || 0
+  const vehicleInsp = p(safetyTotals.vehicle) || 0
   const hazmatInsp = p(safetyTotals.hazmat) || 0
+  const iepInsp = p(safetyTotals.iep) || 0
+
+  // --- OOS COUNTS (raw numbers, NOT percentages) ---
+  const driverOOS = p(safetyTotals.driverOOS) || 0
+  const vehicleOOS = p(safetyTotals.vehicleOOS) || 0
+  const hazmatOOS = p(safetyTotals.hazmatOOS) || 0
+  const iepOOS = p(safetyTotals.iepOOS) || 0
+
+  // --- OOS RATES (percentages) ---
+  // FMCSA formula: OOS Rate % = (OOS Count / Inspection Count) * 100
+  // Use pre-calculated rate from API if available, otherwise compute from counts
+  const computeRate = (oos: number, insp: number, apiRate: any): number => {
+    const preCalc = parseFloat(apiRate)
+    if (!isNaN(preCalc) && preCalc > 0) return Math.round(preCalc * 100) / 100
+    if (insp > 0) return Math.round((oos / insp) * 10000) / 100  // e.g. 2/3 = 66.67
+    return 0
+  }
 
   return {
+    totalInspections: totalInsp,
     driverInspections: driverInsp,
     vehicleInspections: vehicleInsp,
     hazmatInspections: hazmatInsp,
-    driverOOSRate: p(inspSummary.driver_oos_rate) || p(safetyTotals.driverOOS) || 0,
-    vehicleOOSRate: p(inspSummary.vehicle_oos_rate) || p(safetyTotals.vehicleOOS) || 0,
-    hazmatOOSRate: p(inspSummary.hazmat_oos_rate) || 0,
-    nationalDriverOOSRate: 5.51,
-    nationalVehicleOOSRate: 20.72,
-    nationalHazmatOOSRate: 4.50,
+    iepInspections: iepInsp,
+    driverOOS,
+    vehicleOOS,
+    hazmatOOS,
+    iepOOS,
+    driverOOSRate: computeRate(driverOOS, driverInsp, inspSummary.driver_oos_rate),
+    vehicleOOSRate: computeRate(vehicleOOS, vehicleInsp, inspSummary.vehicle_oos_rate),
+    hazmatOOSRate: computeRate(hazmatOOS, hazmatInsp, inspSummary.hazmat_oos_rate),
+    iepOOSRate: computeRate(iepOOS, iepInsp, null),
+    // FMCSA national averages as of 02/27/2026
+    nationalDriverOOSRate: 6.67,
+    nationalVehicleOOSRate: 22.26,
+    nationalHazmatOOSRate: 4.44,
   }
 }
 

@@ -69,12 +69,19 @@ export interface V2BasicScore {
 }
 
 export interface V2InspectionSummary {
+  totalInspections: number
   driverInspections: number
   vehicleInspections: number
   hazmatInspections: number
+  iepInspections: number
+  driverOOS: number
+  vehicleOOS: number
+  hazmatOOS: number
+  iepOOS: number
   driverOOSRate: number
   vehicleOOSRate: number
   hazmatOOSRate: number
+  iepOOSRate: number
   nationalDriverOOSRate: number
   nationalVehicleOOSRate: number
   nationalHazmatOOSRate: number
@@ -280,15 +287,22 @@ export const mockBasicScores: V2BasicScore[] = [
 ]
 
 export const mockInspections: V2InspectionSummary = {
+  totalInspections: 106,
   driverInspections: 42,
   vehicleInspections: 56,
   hazmatInspections: 8,
+  iepInspections: 0,
+  driverOOS: 2,
+  vehicleOOS: 10,
+  hazmatOOS: 0,
+  iepOOS: 0,
   driverOOSRate: 4.8,
-  vehicleOOSRate: 18.2,
+  vehicleOOSRate: 17.9,
   hazmatOOSRate: 0,
-  nationalDriverOOSRate: 5.51,
-  nationalVehicleOOSRate: 20.72,
-  nationalHazmatOOSRate: 4.5,
+  iepOOSRate: 0,
+  nationalDriverOOSRate: 6.67,
+  nationalVehicleOOSRate: 22.26,
+  nationalHazmatOOSRate: 4.44,
 }
 
 export const mockCrashes: V2CrashData = {
