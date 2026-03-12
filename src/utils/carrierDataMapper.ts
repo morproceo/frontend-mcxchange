@@ -284,8 +284,8 @@ export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2C
     yearsActive: parseFloat(carrier.yearsActive) || listing.yearsActive || 0,
     powerUnits: carrier.totalPowerUnits || carrier.powerUnits || listing.fleetSize || 0,
     drivers: carrier.totalDrivers || listing.totalDrivers || 0,
-    mcs150Date: carrier.mcs150Date || carrier.mcs150FormDate || '',
-    registrantDate: carrier.registrantDate || carrier.applicationDate || '',
+    mcs150Date: normalizeDate(carrier.mcs150Date || carrier.mcs150FormDate || ''),
+    registrantDate: normalizeDate(carrier.registrantDate || carrier.applicationDate || ''),
     trustScore: 0,          // Not available yet from API
     riskScore: 0,           // Not available yet from API
     safetyRating,
@@ -327,8 +327,9 @@ export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2C
 export function mapToV2AuthorityData(report: any): V2AuthorityData {
   const auth = report?.authority || {}
   const statuses = auth.statuses || {}
+  const timeline = auth.timeline || []
 
-  function mapStatus(s: string | undefined): 'active' | 'inactive' | 'revoked' {
+  function mapStatus(s: string | undefined | null): 'active' | 'inactive' | 'revoked' {
     if (!s) return 'inactive'
     const lower = String(s).toLowerCase()
     if (lower === 'active' || lower === 'a') return 'active'
@@ -336,32 +337,125 @@ export function mapToV2AuthorityData(report: any): V2AuthorityData {
     return 'inactive'
   }
 
+  // The API returns statuses as nested objects: statuses.common.status
+  // OR as flat fields: statuses.commonAuthorityStatus
+  function getStatus(key: string): string | undefined {
+    // Nested: statuses.common.status
+    if (statuses[key]?.status) return statuses[key].status
+    // Flat: statuses.commonAuthorityStatus
+    return statuses[`${key}AuthorityStatus`] || undefined
+  }
+
+  function getDate(key: string, dateField: string): string {
+    // Nested: statuses.common.grantedDate
+    if (statuses[key]?.[dateField]) return normalizeDate(statuses[key][dateField])
+    // Flat: statuses.commonAuthorityGrantDate
+    const flatKey = `${key}Authority${dateField.charAt(0).toUpperCase() + dateField.slice(1)}`
+    return normalizeDate(statuses[flatKey] || '')
+  }
+
+  // Derive authority statuses from timeline if direct statuses are null
+  // Look for the most recent GRANTED/DISMISSED event per docket type
+  function deriveStatusFromTimeline(docketKeyword: string): { status: 'active' | 'inactive' | 'revoked'; grantedDate: string } {
+    const relevant = timeline
+      .filter((e: any) => (e.docket || '').toLowerCase().includes(docketKeyword))
+      .sort((a: any, b: any) => {
+        const da = new Date(normalizeDate(a.date || ''))
+        const db = new Date(normalizeDate(b.date || ''))
+        return db.getTime() - da.getTime()
+      })
+
+    if (relevant.length === 0) return { status: 'inactive', grantedDate: '' }
+
+    const latest = relevant[0]
+    const event = String(latest.event || '').toLowerCase()
+    if (event.includes('granted')) return { status: 'active', grantedDate: normalizeDate(latest.date || '') }
+    if (event.includes('revoked')) return { status: 'revoked', grantedDate: normalizeDate(latest.date || '') }
+    // DISMISSED = authority was denied/removed
+    if (event.includes('dismissed')) return { status: 'inactive', grantedDate: normalizeDate(latest.date || '') }
+
+    return { status: 'inactive', grantedDate: normalizeDate(latest.date || '') }
+  }
+
+  // Try direct statuses first, fall back to timeline derivation
+  const commonStatus = getStatus('common')
+  const contractStatus = getStatus('contract')
+  const brokerStatus = getStatus('broker')
+
+  const commonDerived = !commonStatus ? deriveStatusFromTimeline('common') : null
+  const contractDerived = !contractStatus ? deriveStatusFromTimeline('contract') : null
+  const brokerDerived = !brokerStatus ? deriveStatusFromTimeline('broker') : null
+
   return {
     common: {
-      status: mapStatus(statuses.commonAuthorityStatus || statuses.common),
-      grantedDate: statuses.commonAuthorityGrantDate || auth.commonGrantDate || '',
-      effectiveDate: statuses.commonAuthorityEffectiveDate || statuses.commonAuthorityGrantDate || '',
+      status: commonDerived ? commonDerived.status : mapStatus(commonStatus),
+      grantedDate: commonDerived ? commonDerived.grantedDate : getDate('common', 'grantedDate'),
+      effectiveDate: commonDerived ? commonDerived.grantedDate : getDate('common', 'effectiveDate'),
     },
     contract: {
-      status: mapStatus(statuses.contractAuthorityStatus || statuses.contract),
-      grantedDate: statuses.contractAuthorityGrantDate || auth.contractGrantDate || '',
-      effectiveDate: statuses.contractAuthorityEffectiveDate || statuses.contractAuthorityGrantDate || '',
+      status: contractDerived ? contractDerived.status : mapStatus(contractStatus),
+      grantedDate: contractDerived ? contractDerived.grantedDate : getDate('contract', 'grantedDate'),
+      effectiveDate: contractDerived ? contractDerived.grantedDate : getDate('contract', 'effectiveDate'),
     },
     broker: {
-      status: mapStatus(statuses.brokerAuthorityStatus || statuses.broker),
-      grantedDate: statuses.brokerAuthorityGrantDate || auth.brokerGrantDate || '',
-      effectiveDate: statuses.brokerAuthorityEffectiveDate || statuses.brokerAuthorityGrantDate || '',
+      status: brokerDerived ? brokerDerived.status : mapStatus(brokerStatus),
+      grantedDate: brokerDerived ? brokerDerived.grantedDate : getDate('broker', 'grantedDate'),
+      effectiveDate: brokerDerived ? brokerDerived.grantedDate : getDate('broker', 'effectiveDate'),
     },
   }
 }
 
 export function mapToV2AuthorityHistory(report: any): V2AuthorityEvent[] {
   const timeline = report?.authority?.timeline || []
-  return timeline.map((e: any) => ({
-    date: e.date || e.eventDate || '',
-    event: e.event || e.description || '',
-    type: mapEventType(e.type || e.eventType || ''),
-  }))
+  return timeline.map((e: any) => {
+    // Build a descriptive event string including the docket if available
+    const eventAction = e.event || e.description || ''
+    const docket = e.docket || ''
+    const eventText = docket ? `${eventAction} — ${docket}` : eventAction
+
+    return {
+      date: normalizeDate(e.date || e.eventDate || ''),
+      event: eventText,
+      // The API puts the action in `event` (GRANTED, DISMISSED, etc.)
+      // and `type` is always "authority" — so map from `event` field
+      type: mapEventType(e.event || e.type || e.eventType || ''),
+    }
+  })
+}
+
+/**
+ * Normalize dates from various formats to ISO (YYYY-MM-DD).
+ * Handles: "MM/DD/YYYY", "MM-DD-YYYY", "15-JUL-19", ISO strings, etc.
+ */
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+}
+
+function normalizeDate(dateStr: string): string {
+  if (!dateStr) return ''
+  // Already ISO format (YYYY-MM-DD or full ISO timestamp)
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr.slice(0, 10)
+  // MM/DD/YYYY or MM-DD-YYYY
+  const slashMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+  if (slashMatch) {
+    const [, month, day, year] = slashMatch
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+  // DD-MON-YY format (e.g., "15-JUL-19")
+  const monMatch = dateStr.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/)
+  if (monMatch) {
+    const [, day, mon, yy] = monMatch
+    const month = MONTH_MAP[mon.toLowerCase()] || '01'
+    const year = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`
+    return `${year}-${month}-${day.padStart(2, '0')}`
+  }
+  // Try native Date parse as last resort
+  const d = new Date(dateStr)
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().slice(0, 10)
+  }
+  return dateStr
 }
 
 function mapEventType(type: string): V2AuthorityEvent['type'] {
@@ -370,8 +464,11 @@ function mapEventType(type: string): V2AuthorityEvent['type'] {
   if (lower.includes('approved')) return 'approved'
   if (lower.includes('granted')) return 'granted'
   if (lower.includes('renewed') || lower.includes('update')) return 'renewed'
+  if (lower.includes('dismissed') || lower.includes('cancelled') || lower.includes('expired')) return 'cancelled'
   if (lower.includes('warning')) return 'warning'
   if (lower.includes('revoked') || lower.includes('revocation')) return 'revoked'
+  if (lower.includes('new') || lower.includes('created')) return 'new'
+  if (lower.includes('changed') || lower.includes('transfer')) return 'changed'
   return 'filed'
 }
 
@@ -463,7 +560,7 @@ export function mapToV2InspectionRecords(report: any): V2InspectionRecord[] {
   const records = report?.inspections?.records || []
   return records.map((r: any) => ({
     id: r.unique_id || r.id || '',
-    date: r.inspection_date || r.date || '',
+    date: normalizeDate(r.inspection_date || r.date || ''),
     state: r.report_state || r.state || '',
     type: r.inspection_type || r.type || 'Vehicle',
     level: r.level || r.inspection_level || '',
@@ -563,7 +660,7 @@ export function mapToV2CrashRecords(report: any): V2CrashRecord[] {
   const records = report?.crashes?.records || []
   return records.map((r: any) => ({
     id: r.id || r.report_number || '',
-    date: r.crash_date || r.date || '',
+    date: normalizeDate(r.crash_date || r.date || ''),
     state: r.report_state || r.state || '',
     severity: r.severity || r.crash_severity || '',
     fatalities: r.fatalities || r.fatal_count || 0,
@@ -585,8 +682,8 @@ export function mapToV2InsurancePolicies(report: any): V2InsurancePolicy[] {
     coverage: p.coverageAmount || p.coverage || 0,
     required: p.requiredAmount || p.required || 0,
     status: mapInsuranceStatus(p.status),
-    effectiveDate: p.effectiveDate || '',
-    expirationDate: p.expirationDate || p.cancellationDate || '',
+    effectiveDate: normalizeDate(p.effectiveDate || ''),
+    expirationDate: normalizeDate(p.expirationDate || p.cancellationDate || ''),
   }))
 }
 
@@ -610,7 +707,7 @@ export function mapToV2RenewalTimeline(report: any): V2RenewalEvent[] {
   const timeline = report?.insurance?.renewalTimeline || []
   return timeline.map((r: any) => ({
     policyType: r.policyType || r.type || '',
-    date: r.date || r.renewalDate || '',
+    date: normalizeDate(r.date || r.renewalDate || ''),
     daysUntil: r.daysUntil || 0,
     urgency: mapUrgency(r.daysUntil || r.urgency),
   }))
@@ -630,7 +727,7 @@ function mapUrgency(val: number | string): 'low' | 'medium' | 'high' | 'critical
 export function mapToV2PolicyHistory(report: any): V2PolicyEvent[] {
   const history = report?.insurance?.history || []
   return history.map((h: any) => ({
-    date: h.date || h.effectiveDate || '',
+    date: normalizeDate(h.date || h.effectiveDate || ''),
     event: h.event || h.description || '',
     type: (h.type || 'renewed') as V2PolicyEvent['type'],
     policyType: h.policyType || h.insuranceType || '',
