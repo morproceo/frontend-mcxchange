@@ -326,7 +326,7 @@ function HeroHeader() {
               { label: 'DOT Number', value: mockCarrier.dotNumber, accent: false },
               { label: 'Location', value: mockCarrier.location, accent: false },
               { label: 'Authority Age', value: `${mockCarrier.yearsActive} yrs`, accent: false },
-              { label: 'Annual Miles', value: '1.2M mi', accent: true },
+              { label: 'Annual Miles', value: mockCarrier.mcs150Mileage > 0 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M mi` : 'N/A', accent: true },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -1696,7 +1696,7 @@ function FleetTab() {
         <ScoreCard icon={Package} label="Trailers" value={mockTrailers.length} level="good" />
         <ScoreCard icon={Users} label="CDL Drivers" value={mockCarrier.totalDriversCDL} level="good" />
         <ScoreCard icon={Calendar} label="Avg Fleet Year" value={avgYear} level="good" subtitle="model year" />
-        <ScoreCard icon={MapPinned} label="Annual Miles" value="1.2M" level="good" subtitle="mi/yr" />
+        <ScoreCard icon={MapPinned} label="Annual Miles" value={mockCarrier.mcs150Mileage > 0 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M` : 'N/A'} level="good" subtitle="mi/yr" />
       </div>
 
       {/* 2. Fleet Ownership */}

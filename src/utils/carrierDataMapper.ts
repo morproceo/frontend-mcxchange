@@ -305,7 +305,7 @@ export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2C
     cellphone: carrier.cellphone || '',
     primaryContact: carrier.primaryContact || '',
     secondaryContact: carrier.secondaryContact || '',
-    mcs150Mileage: carrier.mcs150Mileage || 0,
+    mcs150Mileage: parseInt(carrier.mcs150Mileage) || 0,
     authorityAgeDays: carrier.authorityAgeDays || 0,
     totalRevocations: carrier.totalRevocations || 0,
     daysSinceLastRevocation: carrier.daysSinceLastRevocation ?? null,
