@@ -3,13 +3,33 @@ import { statusColors, getStatusLevel } from './mockData'
 
 interface SpeedometerGaugeProps {
   name: string
-  score: number
+  score: number | null
   threshold: number
   max?: number
   alert?: boolean
 }
 
 export default function SpeedometerGauge({ name, score, threshold, max = 100, alert }: SpeedometerGaugeProps) {
+  // Handle null/not-scored state
+  if (score == null) {
+    return (
+      <div className="rounded-xl border-2 border-gray-100 bg-white p-4 text-center">
+        <p className="text-sm font-semibold text-gray-700 mb-1">{name}</p>
+        <div className="relative mx-auto flex items-center justify-center" style={{ width: 160, height: 105 }}>
+          <div className="text-center">
+            <p className="text-gray-400 text-sm font-medium">Not Scored</p>
+            <p className="text-[10px] text-gray-300 mt-1">Insufficient data</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-2 -mt-2">
+          <span className="text-lg font-bold text-gray-300">—</span>
+          <span className="text-xs text-gray-300">/ {max}</span>
+        </div>
+        <p className="text-xs text-gray-300 mt-1">Threshold: {threshold}</p>
+      </div>
+    )
+  }
+
   const level = getStatusLevel('basic', score)
   const colors = statusColors[level]
   const aboveThreshold = score >= threshold

@@ -62,9 +62,9 @@ export interface V2AuthorityEvent {
 
 export interface V2BasicScore {
   name: string
-  score: number
+  score: number | null
   threshold: number
-  percentile: number
+  percentile: number | null
   description: string
 }
 

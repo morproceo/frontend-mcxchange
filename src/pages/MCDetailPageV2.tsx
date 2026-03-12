@@ -1040,7 +1040,7 @@ function SafetyTab() {
   const [safetySub, setSafetySub] = useState<'overview' | 'basics' | 'inspections' | 'crashes'>('overview')
   const safetyLevel = getStatusLevel('safety', mockCarrier.safetyRating)
 
-  // Map BASIC names to alert keys
+  // Map BASIC names to alert keys — handle both naming conventions from API
   const alertMap: Record<string, boolean> = {
     'Unsafe Driving': mockBasicAlerts.unsafeDrivingAlert,
     'Hours-of-Service': mockBasicAlerts.hoursOfServiceAlert,
@@ -1048,6 +1048,7 @@ function SafetyTab() {
     'Controlled Substances': mockBasicAlerts.controlledSubstanceAlert,
     'Vehicle Maintenance': mockBasicAlerts.vehicleMaintenanceAlert,
     'HM Compliance': mockBasicAlerts.hazmatAlert,
+    'Hazmat Compliance': mockBasicAlerts.hazmatAlert,
     'Crash Indicator': mockBasicAlerts.crashIndicatorAlert,
   }
 
@@ -1059,14 +1060,19 @@ function SafetyTab() {
     'Controlled Substances': mockViolationBreakdown.controlledSubstance,
     'Vehicle Maintenance': mockViolationBreakdown.vehicleMaintenance,
     'HM Compliance': mockViolationBreakdown.hazardousMaterials,
+    'Hazmat Compliance': mockViolationBreakdown.hazardousMaterials,
     'Crash Indicator': 0,
   }
+
+  // Total violations and inspections for context
+  const totalViolations = Object.values(violationMap).reduce((a, b) => a + b, 0)
+  const totalInspections = mockOperations.totalInspections
 
   // Count active alerts
   const activeAlertCount = Object.values(alertMap).filter(Boolean).length
 
   // BASICs exceeding threshold
-  const exceedingBasics = mockBasicScores.filter(b => b.score >= b.threshold)
+  const exceedingBasics = mockBasicScores.filter(b => b.score != null && b.score >= b.threshold)
 
   const safetySubTabs = [
     { id: 'overview' as const, label: 'Overview' },
@@ -1118,29 +1124,25 @@ function SafetyTab() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-5"
             >
-              {/* Row 1: ISS Score + Safety Rating */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* ISS Score Card */}
+              {/* What is this section - explainer */}
+              <div className="bg-blue-50 rounded-xl border border-blue-200 p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>What is this?</strong> FMCSA tracks every carrier's safety through roadside inspections, violations, and crashes.
+                  Carriers are scored in 7 categories called <strong>BASICs</strong> (Behavior Analysis and Safety Improvement Categories).
+                  A higher percentile means worse performance compared to similar carriers nationally.
+                </p>
+              </div>
+
+              {/* Row 1: Key Safety Metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Total Inspections */}
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">ISS Score</p>
-                  <div className="flex items-end gap-3">
-                    <span className="text-4xl font-black text-gray-900">{mockISSData.issScore}</span>
-                    <span className="text-lg text-gray-400 mb-1">/100</span>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Inspections (24 mo)</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-black text-gray-900">{totalInspections}</span>
                   </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      mockISSData.riskLevel === 'Low' ? 'bg-emerald-100 text-emerald-700' :
-                      mockISSData.riskLevel === 'Moderate' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {mockISSData.riskLevel} Risk
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      mockISSData.issStatus === 'Pass' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {mockISSData.issStatus}
-                    </span>
-                  </div>
+                  <p className="text-xs text-gray-400 mt-2">{totalViolations} violation{totalViolations !== 1 ? 's' : ''} found</p>
+                  <p className="text-[10px] text-gray-400 mt-1">Clean rate: {mockOperations.cleanInspectionRate}%</p>
                 </div>
                 {/* Safety Rating Card */}
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
@@ -1149,9 +1151,30 @@ function SafetyTab() {
                     safetyLevel === 'excellent' ? 'text-emerald-600' :
                     safetyLevel === 'fair' ? 'text-yellow-600' : 'text-red-600'
                   }`}>
-                    {mockCarrier.safetyRating}
+                    {mockCarrier.safetyRating === 'not-rated' ? 'Not Rated' : mockCarrier.safetyRating}
                   </h3>
-                  <p className="text-xs text-gray-400 mt-2">Last updated: {mockCarrier.mcs150Date}</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {mockCarrier.safetyRating === 'not-rated'
+                      ? 'FMCSA has not issued a formal rating'
+                      : mockCarrier.safetyRating === 'satisfactory'
+                        ? 'Meets FMCSA safety standards'
+                        : mockCarrier.safetyRating === 'conditional'
+                          ? 'Deficiencies found — corrective action needed'
+                          : 'Does not meet FMCSA safety standards'}
+                  </p>
+                </div>
+                {/* Crashes */}
+                <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Crashes (24 mo)</p>
+                  <div className="flex items-end gap-2">
+                    <span className={`text-4xl font-black ${mockCrashes.total > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>{mockCrashes.total}</span>
+                  </div>
+                  <div className="mt-2 space-y-0.5">
+                    {mockCrashes.fatal > 0 && <p className="text-xs text-red-600">{mockCrashes.fatal} fatal</p>}
+                    {mockCrashes.injury > 0 && <p className="text-xs text-yellow-600">{mockCrashes.injury} with injuries</p>}
+                    {mockCrashes.towaway > 0 && <p className="text-xs text-gray-500">{mockCrashes.towaway} tow-away</p>}
+                    {mockCrashes.total === 0 && <p className="text-xs text-emerald-600">No crashes on record</p>}
+                  </div>
                 </div>
               </div>
 
@@ -1177,7 +1200,7 @@ function SafetyTab() {
                 {exceedingBasics.length === 0 && mockBasicScores.length > 0 && (
                   <p className="text-xs text-gray-500 mt-1 ml-6">
                     {(() => {
-                      const scored = mockBasicScores.filter(b => b.score > 0).sort((a, b) => (b.score / b.threshold) - (a.score / a.threshold))
+                      const scored = mockBasicScores.filter((b): b is typeof b & { score: number } => b.score != null && b.score > 0).sort((a, b) => (b.score / b.threshold) - (a.score / a.threshold))
                       const top2 = scored.slice(0, 2)
                       return top2.length > 0
                         ? `Closest: ${top2.map(b => `${b.name} (${b.score}/${b.threshold})`).join(', ')}`
@@ -1187,47 +1210,69 @@ function SafetyTab() {
                 )}
               </div>
 
-              {/* Row 3: 4 Summary Stat Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className={`text-2xl font-bold ${safetyLevel === 'excellent' ? 'text-emerald-600' : safetyLevel === 'fair' ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {mockCarrier.safetyRating.charAt(0).toUpperCase() + mockCarrier.safetyRating.slice(1)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Safety Rating</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className={`text-2xl font-bold ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {mockInspections.vehicleOOSRate}%
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Vehicle OOS Rate</p>
-                  <p className="text-[10px] text-gray-400">Nat'l: {mockInspections.nationalVehicleOOSRate}%</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className={`text-2xl font-bold ${mockCrashes.total > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>{mockCrashes.total}</p>
-                  <p className="text-xs text-gray-500 mt-1">Total Crashes</p>
-                  <p className="text-[10px] text-gray-400">24-month period</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
-                  <p className={`text-2xl font-bold ${activeAlertCount > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>
-                    {activeAlertCount}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">BASIC Alerts</p>
+              {/* Row 3: Out-of-Service Rates vs National Average */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-indigo-500" />
+                  Out-of-Service Rates vs National Average
+                </h4>
+                <p className="text-xs text-gray-500 mb-4">
+                  OOS means a vehicle or driver was found so unsafe during an inspection that they were taken off the road immediately.
+                  Lower is better — green means this carrier is below the national average.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-gray-50">
+                    <p className={`text-2xl font-bold ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {mockInspections.vehicleOOSRate}%
+                    </p>
+                    <p className="text-xs font-medium text-gray-700 mt-1">Vehicle OOS Rate</p>
+                    <p className="text-[10px] text-gray-400">National avg: {mockInspections.nationalVehicleOOSRate}%</p>
+                    <p className={`text-[10px] mt-1 font-medium ${mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {mockInspections.vehicleOOSRate <= mockInspections.nationalVehicleOOSRate ? 'Below average — good' : 'Above average — concern'}
+                    </p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-gray-50">
+                    <p className={`text-2xl font-bold ${mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {mockInspections.driverOOSRate}%
+                    </p>
+                    <p className="text-xs font-medium text-gray-700 mt-1">Driver OOS Rate</p>
+                    <p className="text-[10px] text-gray-400">National avg: {mockInspections.nationalDriverOOSRate}%</p>
+                    <p className={`text-[10px] mt-1 font-medium ${mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {mockInspections.driverOOSRate <= mockInspections.nationalDriverOOSRate ? 'Below average — good' : 'Above average — concern'}
+                    </p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-gray-50">
+                    <p className={`text-2xl font-bold ${activeAlertCount > 0 ? 'text-yellow-600' : 'text-emerald-600'}`}>
+                      {activeAlertCount} of 7
+                    </p>
+                    <p className="text-xs font-medium text-gray-700 mt-1">BASIC Alerts Active</p>
+                    <p className="text-[10px] text-gray-400">Flagged for potential issues</p>
+                    <p className={`text-[10px] mt-1 font-medium ${activeAlertCount === 0 ? 'text-emerald-600' : activeAlertCount <= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {activeAlertCount === 0 ? 'No alerts — clean record' : activeAlertCount <= 2 ? 'Monitor these areas' : 'Multiple flags — review carefully'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Row 4: BASIC Scores Quick Table */}
+              {/* Row 4: BASIC Scores Table */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                   <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-indigo-500" />
-                    BASIC Scores Summary
+                    BASIC Scores
                   </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Percentile rank among similar carriers (0-100). Higher = worse.
+                    If a score exceeds the threshold, FMCSA may intervene.
+                    "Not Scored" means FMCSA doesn't have enough inspection data to calculate a percentile.
+                  </p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">BASIC</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Category</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">What It Measures</th>
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Percentile</th>
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Threshold</th>
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Violations</th>
@@ -1236,25 +1281,36 @@ function SafetyTab() {
                     </thead>
                     <tbody>
                       {mockBasicScores.map((basic, i) => {
-                        const ratio = basic.score / basic.threshold
+                        const isScored = basic.score != null
+                        const ratio = isScored ? basic.score! / basic.threshold : 0
                         const hasAlert = alertMap[basic.name] || false
+                        const violations = violationMap[basic.name] ?? 0
                         return (
                           <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                             <td className="py-2.5 px-4 font-medium text-gray-900">{basic.name}</td>
+                            <td className="py-2.5 px-4 text-xs text-gray-500 hidden sm:table-cell">{basic.description}</td>
                             <td className="py-2.5 px-4 text-right">
-                              <span className={`font-bold ${
-                                ratio >= 1 ? 'text-red-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'
-                              }`}>{basic.score}%</span>
+                              {isScored ? (
+                                <span className={`font-bold ${
+                                  ratio >= 1 ? 'text-red-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'
+                                }`}>{basic.score}%</span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">Not Scored</span>
+                              )}
                             </td>
                             <td className="py-2.5 px-4 text-right text-gray-400">{basic.threshold}%</td>
-                            <td className="py-2.5 px-4 text-right text-gray-700">{violationMap[basic.name] ?? 0}</td>
+                            <td className="py-2.5 px-4 text-right text-gray-700">{violations}</td>
                             <td className="py-2.5 px-4 text-right">
                               {hasAlert ? (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Alert</span>
-                              ) : basic.score >= basic.threshold ? (
+                              ) : isScored && basic.score! >= basic.threshold ? (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">Exceeding</span>
-                              ) : (
+                              ) : isScored ? (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">OK</span>
+                              ) : violations > 0 ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">{violations} violation{violations !== 1 ? 's' : ''}</span>
+                              ) : (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">No Data</span>
                               )}
                             </td>
                           </tr>
@@ -1265,16 +1321,38 @@ function SafetyTab() {
                 </div>
               </div>
 
-              {/* Row 5: National Benchmarks */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-indigo-500" />
-                  National Benchmarks
-                </h4>
-                <HorizontalBenchmarkBar label="Vehicle OOS Rate" carrierValue={mockInspections.vehicleOOSRate} nationalAvg={mockInspections.nationalVehicleOOSRate} unit="%" lowerIsBetter />
-                <HorizontalBenchmarkBar label="Driver OOS Rate" carrierValue={mockInspections.driverOOSRate} nationalAvg={mockInspections.nationalDriverOOSRate} unit="%" lowerIsBetter />
-                <HorizontalBenchmarkBar label="HazMat OOS Rate" carrierValue={mockInspections.hazmatOOSRate} nationalAvg={mockInspections.nationalHazmatOOSRate} unit="%" lowerIsBetter />
-              </div>
+              {/* Row 5: Violation Summary by Category */}
+              {totalViolations > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                    Violation Summary
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-3">{totalViolations} total violations across {totalInspections} inspections in the last 24 months</p>
+                  <div className="space-y-2">
+                    {Object.entries(violationMap)
+                      .filter(([, count]) => count > 0)
+                      .filter(([name]) => !name.includes('HM Compliance')) // avoid duplicate with Hazmat Compliance
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([name, count]) => (
+                        <div key={name} className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-700">{name}</span>
+                              <span className="font-bold text-gray-900">{count}</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${alertMap[name] ? 'bg-yellow-400' : 'bg-indigo-400'}`}
+                                style={{ width: `${Math.min((count / totalViolations) * 100, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 

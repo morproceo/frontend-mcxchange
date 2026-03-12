@@ -489,14 +489,17 @@ export function mapToV2AuthorityPending(report: any): V2AuthorityPending {
 // ============================================================
 export function mapToV2BasicScores(report: any): V2BasicScore[] {
   const scores = report?.safety?.basicScores || []
-  return scores.map((b: any) => ({
-    name: b.basicName || b.name || 'Unknown',
-    // score can be null from API — treat null as 0 (not enough data to score)
-    score: b.score ?? b.percentile ?? b.measure ?? 0,
-    threshold: b.threshold ?? b.thresholdPercent ?? 65,
-    percentile: b.score ?? b.percentile ?? b.measure ?? 0,
-    description: b.description || b.basicCode || '',
-  }))
+  return scores.map((b: any) => {
+    const rawScore = b.score ?? b.percentile ?? b.measure;
+    return {
+      name: b.basicName || b.name || 'Unknown',
+      // Preserve null — means FMCSA doesn't have enough data to score this BASIC
+      score: rawScore != null ? Number(rawScore) : null,
+      threshold: b.threshold ?? b.thresholdPercent ?? 65,
+      percentile: rawScore != null ? Number(rawScore) : null,
+      description: b.description || b.basicCode || '',
+    }
+  })
 }
 
 export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
