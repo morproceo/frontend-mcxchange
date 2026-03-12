@@ -259,9 +259,11 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
       }
     }
 
-    // Penalize for high vehicle OOS
-    const summary = inspections.summary || safety.inspectionTotals || {}
-    const vehicleOOSRate = summary.vehicleOOSRate || summary.vehicleOosRate || 0
+    // Penalize for high vehicle OOS — compute from records, not API rates
+    const filteredRecs = filterInspectionRecords(inspections.records || [])
+    const typeCounts = countInspectionsByType(filteredRecs)
+    const vehicleOOSRate = typeCounts.vehicleInsp > 0
+      ? (typeCounts.vehicleOOS / typeCounts.vehicleInsp) * 100 : 0
     if (vehicleOOSRate > 30) fleetScore -= 20
     else if (vehicleOOSRate > 20) fleetScore -= 10
     else if (vehicleOOSRate < 10) fleetScore += 10
@@ -735,20 +737,21 @@ export function mapToV2Operations(report: any): V2OperationsSummary {
   const records = filterInspectionRecords(report?.inspections?.records || [])
 
   const p = (v: any) => parseFloat(v) || 0
-  const totalInspections = p(summary.total_inspections) || p(summary.driverInspections || 0) + p(summary.vehicleInspections || 0) + p(summary.hazmatInspections || 0)
-  const overallOOSRate = p(summary.overall_oos_rate) || 0
-  const totalOOS = overallOOSRate > 0 && totalInspections > 0 ? Math.round(totalInspections * overallOOSRate / 100) : (p(summary.totalOOS) || 0)
 
-  // Build operating states — use API summary if available, else derive from records
+  // Compute everything from filtered records — API summary rates are unreliable
+  const totalInspections = records.length || p(summary.total_inspections) || 0
+  const totalOOS = records.length > 0
+    ? records.filter((r: any) => p(r.oos_total) > 0).length
+    : (p(summary.totalOOS) || 0)
+  const overallOOSRate = totalInspections > 0
+    ? Math.round((totalOOS / totalInspections) * 10000) / 100
+    : 0
+
+  // Build operating states from records (preferred), fall back to API summary
   const apiStates = summary.operating_states || []
   let operatingStates: any[] = []
 
-  if (apiStates.length > 0 && records.length === 0) {
-    // Use API summary operating states (no per-state breakdown available)
-    operatingStates = apiStates.map((s: string) => ({
-      state: s, stateCode: s, inspections: 0, oosCount: 0, oosRate: 0,
-    }))
-  } else {
+  if (records.length > 0) {
     const stateMap: Record<string, { inspections: number; oosCount: number }> = {}
     records.forEach((r: any) => {
       const state = r.report_state || r.state || 'Unknown'
@@ -763,19 +766,21 @@ export function mapToV2Operations(report: any): V2OperationsSummary {
         inspections: data.inspections, oosCount: data.oosCount,
         oosRate: data.inspections > 0 ? Math.round((data.oosCount / data.inspections) * 1000) / 10 : 0,
       }))
+  } else if (apiStates.length > 0) {
+    operatingStates = apiStates.map((s: string) => ({
+      state: s, stateCode: s, inspections: 0, oosCount: 0, oosRate: 0,
+    }))
   }
 
-  // Clean inspection rate — use API value if available
-  const cleanInspectionRate = p(summary.clean_inspection_rate) || (
-    records.length > 0
-      ? Math.round(records.filter((r: any) => p(r.viol_total || r.violations) === 0).length / records.length * 1000) / 10
-      : 0
-  )
+  // Clean inspection rate — compute from records
+  const cleanInspectionRate = records.length > 0
+    ? Math.round(records.filter((r: any) => p(r.total_violations || r.viol_total || r.violations) === 0).length / records.length * 1000) / 10
+    : p(summary.clean_inspection_rate) || 0
 
   const lastRecord = records.length > 0 ? records[0] : null
   const lastInspectionDate = normalizeDate(lastRecord?.inspection_date || lastRecord?.date || '')
 
-  const totalViolations = records.reduce((s: number, r: any) => s + p(r.viol_total || r.violations), 0)
+  const totalViolations = records.reduce((s: number, r: any) => s + p(r.total_violations || r.viol_total || r.violations), 0)
 
   return {
     totalInspections,
