@@ -14,6 +14,96 @@ import type {
 } from '../components/v2/mockData'
 
 // ============================================================
+// INSPECTION RECORD FILTERING — 24-month window + dedup
+// ============================================================
+
+/**
+ * Filters and deduplicates inspection records to match FMCSA SAFER Snapshot.
+ * 1. Date filter: only records within 24 months of today
+ * 2. Dedup: MCMIS can send both original + amended — keep latest by unique_id
+ * 3. Returns filtered records sorted newest-first
+ */
+function filterInspectionRecords(records: any[]): any[] {
+  if (!records || records.length === 0) return []
+
+  const cutoffDate = new Date()
+  cutoffDate.setMonth(cutoffDate.getMonth() - 24)
+
+  // Dedup by unique_id — keep the record that appears later in the array (amended)
+  const byId = new Map<string, any>()
+  for (const r of records) {
+    const id = r.unique_id || r.id
+    if (id) byId.set(String(id), r) // last write wins = amended record
+  }
+  const deduped = byId.size > 0 ? Array.from(byId.values()) : records
+
+  // Date filter: only keep records within 24-month window
+  const filtered = deduped.filter((r: any) => {
+    const dateStr = r.date || r.inspection_date
+    if (!dateStr) return true // include records with no date (let API handle)
+    try {
+      const d = new Date(dateStr)
+      return !isNaN(d.getTime()) && d >= cutoffDate
+    } catch {
+      return true
+    }
+  })
+
+  // Sort newest first
+  filtered.sort((a: any, b: any) => {
+    const da = new Date(a.date || a.inspection_date || 0).getTime()
+    const db = new Date(b.date || b.inspection_date || 0).getTime()
+    return db - da
+  })
+
+  return filtered
+}
+
+/**
+ * Counts inspections by type based on FMCSA inspection levels:
+ * - Level 1 (Full): counts as both vehicle + driver
+ * - Level 2 (Walk-Around): counts as vehicle + driver
+ * - Level 3 (Driver-Only): counts as driver only
+ * - Level 4 (Special): counts as vehicle only
+ * - Level 5 (Terminal): counts as vehicle only
+ * - Level 6 (Enhanced NAS): counts as vehicle + driver
+ */
+function countInspectionsByType(records: any[]): {
+  vehicleInsp: number; driverInsp: number; hazmatInsp: number; iepInsp: number
+  vehicleOOS: number; driverOOS: number; hazmatOOS: number; iepOOS: number
+} {
+  let vehicleInsp = 0, driverInsp = 0, hazmatInsp = 0, iepInsp = 0
+  let vehicleOOS = 0, driverOOS = 0, hazmatOOS = 0, iepOOS = 0
+
+  for (const r of records) {
+    const level = String(r.level || '').trim()
+    const p = (v: any) => parseInt(v) || 0
+
+    // Vehicle inspections: Levels 1, 2, 4, 5, 6
+    if (['1', '2', '4', '5', '6'].includes(level)) {
+      vehicleInsp++
+      vehicleOOS += p(r.vehicle_oos_total) > 0 ? 1 : 0
+    }
+
+    // Driver inspections: Levels 1, 2, 3, 6
+    if (['1', '2', '3', '6'].includes(level)) {
+      driverInsp++
+      driverOOS += p(r.driver_oos_total) > 0 ? 1 : 0
+    }
+
+    // Hazmat: only if hazmat OOS field present and > 0, or marked as hazmat inspection
+    if (p(r.hazmat_oos_total) > 0) {
+      hazmatInsp++
+      hazmatOOS++
+    }
+
+    // IEP: no standard level indicator from API, skip for now
+  }
+
+  return { vehicleInsp, driverInsp, hazmatInsp, iepInsp, vehicleOOS, driverOOS, hazmatOOS, iepOOS }
+}
+
+// ============================================================
 // CARRIER HEALTH SCORE — Computed from real data
 // ============================================================
 export interface HealthCategory {
@@ -548,47 +638,46 @@ export function mapToV2ISSData(_report: any): V2ISSData {
 export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
   const inspSummary = report?.inspections?.summary || {}
   const safetyTotals = report?.safety?.inspectionTotals || {}
-  const records: any[] = report?.inspections?.records || []
+  const rawRecords: any[] = report?.inspections?.records || []
+
+  // Filter to 24-month window + dedup by unique_id
+  const records = filterInspectionRecords(rawRecords)
 
   const p = (v: any) => parseFloat(v) || 0
 
-  // --- Total inspections ---
-  const totalInsp = p(inspSummary.total_inspections) || p(safetyTotals.last24Months) || p(safetyTotals.total) || records.length
-
-  // --- Per-type counts from inspectionTotals (preferred) ---
+  // --- Per-type counts from inspectionTotals (preferred if populated) ---
   let driverInsp = p(safetyTotals.driver)
   let vehicleInsp = p(safetyTotals.vehicle)
   let hazmatInsp = p(safetyTotals.hazmat)
   let iepInsp = p(safetyTotals.iep)
-
-  // --- OOS counts from inspectionTotals (preferred) ---
   let driverOOS = p(safetyTotals.driverOOS)
   let vehicleOOS = p(safetyTotals.vehicleOOS)
   let hazmatOOS = p(safetyTotals.hazmatOOS)
   let iepOOS = p(safetyTotals.iepOOS)
 
-  // --- Fallback: compute from inspection records when inspectionTotals is null ---
-  // Each record has driver_oos_total, vehicle_oos_total, hazmat_oos_total, oos_total
+  // --- Fallback: compute from filtered records by inspection level ---
   if (records.length > 0 && driverInsp === 0 && vehicleInsp === 0) {
-    // All records count as both driver and vehicle inspections (FMCSA counts this way)
-    // unless level indicates otherwise. For simplicity, total = records count for each type.
-    driverInsp = totalInsp
-    vehicleInsp = totalInsp
-    // Hazmat inspections: only if hazmat_oos_total field exists and level indicates hazmat
-    hazmatInsp = records.filter((r: any) => r.hazmat_oos_total != null && r.hazmat_oos_total !== 0).length || 0
-
-    // Sum OOS from individual records
-    driverOOS = records.reduce((sum: number, r: any) => sum + (p(r.driver_oos_total)), 0)
-    vehicleOOS = records.reduce((sum: number, r: any) => sum + (p(r.vehicle_oos_total)), 0)
-    hazmatOOS = records.reduce((sum: number, r: any) => sum + (p(r.hazmat_oos_total)), 0)
+    const counts = countInspectionsByType(records)
+    driverInsp = counts.driverInsp
+    vehicleInsp = counts.vehicleInsp
+    hazmatInsp = counts.hazmatInsp
+    iepInsp = counts.iepInsp
+    driverOOS = counts.driverOOS
+    vehicleOOS = counts.vehicleOOS
+    hazmatOOS = counts.hazmatOOS
+    iepOOS = counts.iepOOS
   }
+
+  // Total from API summary (preferred), else from filtered record count
+  const totalInsp = p(inspSummary.total_inspections) || p(safetyTotals.last24Months) || records.length
 
   // --- OOS RATES (percentages) ---
   // FMCSA formula: OOS Rate % = (OOS Count / Inspection Count) * 100
-  // Prefer pre-calculated rate from inspections.summary, then compute from counts
+  // Prefer API pre-calculated rate, then compute from our counts
   const computeRate = (oos: number, insp: number, apiRate: any): number => {
+    // Only trust API rate if our record count matches API total (same window)
     const preCalc = parseFloat(apiRate)
-    if (!isNaN(preCalc)) return Math.round(preCalc * 100) / 100
+    if (!isNaN(preCalc) && records.length === totalInsp) return Math.round(preCalc * 100) / 100
     if (insp > 0) return Math.round((oos / insp) * 10000) / 100
     return 0
   }
@@ -615,7 +704,7 @@ export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
 }
 
 export function mapToV2InspectionRecords(report: any): V2InspectionRecord[] {
-  const records = report?.inspections?.records || []
+  const records = filterInspectionRecords(report?.inspections?.records || [])
   return records.map((r: any) => ({
     id: r.unique_id || r.id || '',
     date: normalizeDate(r.inspection_date || r.date || ''),
@@ -640,7 +729,7 @@ export function mapToV2InspectionRecords(report: any): V2InspectionRecord[] {
 export function mapToV2Operations(report: any): V2OperationsSummary {
   const summary = report?.inspections?.summary || {}
   const topViolations = report?.inspections?.topViolations || []
-  const records = report?.inspections?.records || []
+  const records = filterInspectionRecords(report?.inspections?.records || [])
 
   const p = (v: any) => parseFloat(v) || 0
   const totalInspections = p(summary.total_inspections) || p(summary.driverInspections || 0) + p(summary.vehicleInspections || 0) + p(summary.hazmatInspections || 0)
