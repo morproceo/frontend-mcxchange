@@ -548,30 +548,48 @@ export function mapToV2ISSData(_report: any): V2ISSData {
 export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
   const inspSummary = report?.inspections?.summary || {}
   const safetyTotals = report?.safety?.inspectionTotals || {}
+  const records: any[] = report?.inspections?.records || []
 
-  // API may return string numbers — parse them
   const p = (v: any) => parseFloat(v) || 0
 
-  // --- Inspection COUNTS (from safety.inspectionTotals or inspections.summary) ---
-  const totalInsp = p(inspSummary.total_inspections) || p(safetyTotals.last24Months) || p(safetyTotals.total) || 0
-  const driverInsp = p(safetyTotals.driver) || 0
-  const vehicleInsp = p(safetyTotals.vehicle) || 0
-  const hazmatInsp = p(safetyTotals.hazmat) || 0
-  const iepInsp = p(safetyTotals.iep) || 0
+  // --- Total inspections ---
+  const totalInsp = p(inspSummary.total_inspections) || p(safetyTotals.last24Months) || p(safetyTotals.total) || records.length
 
-  // --- OOS COUNTS (raw numbers, NOT percentages) ---
-  const driverOOS = p(safetyTotals.driverOOS) || 0
-  const vehicleOOS = p(safetyTotals.vehicleOOS) || 0
-  const hazmatOOS = p(safetyTotals.hazmatOOS) || 0
-  const iepOOS = p(safetyTotals.iepOOS) || 0
+  // --- Per-type counts from inspectionTotals (preferred) ---
+  let driverInsp = p(safetyTotals.driver)
+  let vehicleInsp = p(safetyTotals.vehicle)
+  let hazmatInsp = p(safetyTotals.hazmat)
+  let iepInsp = p(safetyTotals.iep)
+
+  // --- OOS counts from inspectionTotals (preferred) ---
+  let driverOOS = p(safetyTotals.driverOOS)
+  let vehicleOOS = p(safetyTotals.vehicleOOS)
+  let hazmatOOS = p(safetyTotals.hazmatOOS)
+  let iepOOS = p(safetyTotals.iepOOS)
+
+  // --- Fallback: compute from inspection records when inspectionTotals is null ---
+  // Each record has driver_oos_total, vehicle_oos_total, hazmat_oos_total, oos_total
+  if (records.length > 0 && driverInsp === 0 && vehicleInsp === 0) {
+    // All records count as both driver and vehicle inspections (FMCSA counts this way)
+    // unless level indicates otherwise. For simplicity, total = records count for each type.
+    driverInsp = totalInsp
+    vehicleInsp = totalInsp
+    // Hazmat inspections: only if hazmat_oos_total field exists and level indicates hazmat
+    hazmatInsp = records.filter((r: any) => r.hazmat_oos_total != null && r.hazmat_oos_total !== 0).length || 0
+
+    // Sum OOS from individual records
+    driverOOS = records.reduce((sum: number, r: any) => sum + (p(r.driver_oos_total)), 0)
+    vehicleOOS = records.reduce((sum: number, r: any) => sum + (p(r.vehicle_oos_total)), 0)
+    hazmatOOS = records.reduce((sum: number, r: any) => sum + (p(r.hazmat_oos_total)), 0)
+  }
 
   // --- OOS RATES (percentages) ---
   // FMCSA formula: OOS Rate % = (OOS Count / Inspection Count) * 100
-  // Use pre-calculated rate from API if available, otherwise compute from counts
+  // Prefer pre-calculated rate from inspections.summary, then compute from counts
   const computeRate = (oos: number, insp: number, apiRate: any): number => {
     const preCalc = parseFloat(apiRate)
-    if (!isNaN(preCalc) && preCalc > 0) return Math.round(preCalc * 100) / 100
-    if (insp > 0) return Math.round((oos / insp) * 10000) / 100  // e.g. 2/3 = 66.67
+    if (!isNaN(preCalc)) return Math.round(preCalc * 100) / 100
+    if (insp > 0) return Math.round((oos / insp) * 10000) / 100
     return 0
   }
 
