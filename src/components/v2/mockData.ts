@@ -57,7 +57,7 @@ export interface V2AuthorityData {
 export interface V2AuthorityEvent {
   date: string
   event: string
-  type: 'filed' | 'approved' | 'granted' | 'renewed' | 'warning' | 'revoked'
+  type: 'filed' | 'approved' | 'granted' | 'renewed' | 'warning' | 'revoked' | 'cancelled' | 'new' | 'changed'
 }
 
 export interface V2BasicScore {
