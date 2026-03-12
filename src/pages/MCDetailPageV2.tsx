@@ -97,6 +97,8 @@ import {
   mapToV2AvailableDocuments, mapToV2RelatedCarriers, mapToV2Percentiles,
   mapToV2MonitoringAlerts, mapToV2RiskScoreTrend, mapToV2ContactHistory,
   mapToV2ComplianceFinancials,
+  calculateCarrierHealthScore,
+  HealthCategory,
 } from '../utils/carrierDataMapper'
 
 // ============================================================
@@ -137,6 +139,7 @@ interface CarrierDataContextType {
   vinInspections: V2VinInspection[]
   networkSignals: V2NetworkSignal[]
   benchmarks: V2BenchmarkData[]
+  healthCategories: HealthCategory[]
   carrierLoading: boolean
   carrierError: string | null
 }
@@ -407,7 +410,7 @@ function HeroHeader() {
 // ============================================================
 function OverviewTab() {
   const ctx = useCarrierDataContext()
-  const { carrier: mockCarrier, complianceFinancials: mockComplianceFinancials, cargoCapabilities: mockCargoCapabilities, percentiles: mockCarrierPercentiles, networkSignals: mockNetworkSignals, benchmarks: mockBenchmarks } = ctx
+  const { carrier: mockCarrier, complianceFinancials: mockComplianceFinancials, cargoCapabilities: mockCargoCapabilities, percentiles: mockCarrierPercentiles, networkSignals: mockNetworkSignals, benchmarks: mockBenchmarks, healthCategories } = ctx
   const safetyLevel = getStatusLevel('safety', mockCarrier.safetyRating)
   const insuranceLevel = getStatusLevel('insurance', mockCarrier.insuranceStatus)
   const authorityLevel = getStatusLevel('authority', mockCarrier.operatingStatus)
@@ -417,7 +420,7 @@ function OverviewTab() {
   return (
     <div className="space-y-6">
       {/* 1. Carrier Health Score */}
-      <CarrierHealthScore score={mockCarrier.carrierHealthScore} />
+      <CarrierHealthScore score={mockCarrier.carrierHealthScore} categories={healthCategories.length > 0 ? healthCategories : undefined} />
 
       {/* 2. Quick Verdict Banner */}
       <motion.div
@@ -2085,6 +2088,7 @@ export default function MCDetailPageV2() {
         vinInspections: fallbackVinInspections,
         networkSignals: fallbackNetworkSignals,
         benchmarks: fallbackBenchmarks,
+        healthCategories: [],
         carrierLoading: false,
         carrierError: null,
       }
@@ -2127,12 +2131,14 @@ export default function MCDetailPageV2() {
         vinInspections: [],
         networkSignals: [],
         benchmarks: [],
+        healthCategories: [],
         carrierLoading,
         carrierError,
       }
     }
 
     // Map real API data
+    const healthResult = calculateCarrierHealthScore(carrierReport, listing)
     return {
       carrier: mapToV2CarrierData(carrierReport, listing),
       authority: mapToV2AuthorityData(carrierReport),
@@ -2168,6 +2174,7 @@ export default function MCDetailPageV2() {
       vinInspections: [],       // VIN inspections need separate API call — empty for now
       networkSignals: [],       // Mock-only feature — empty for real data
       benchmarks: [],           // Mock-only feature — empty for real data
+      healthCategories: healthResult.categories,
       carrierLoading: false,
       carrierError: null,
     }

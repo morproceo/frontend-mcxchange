@@ -14,6 +14,224 @@ import type {
 } from '../components/v2/mockData'
 
 // ============================================================
+// CARRIER HEALTH SCORE — Computed from real data
+// ============================================================
+export interface HealthCategory {
+  name: string
+  weight: number
+  score: number
+  color: string
+}
+
+export function calculateCarrierHealthScore(report: any, listing?: MCListingExtended): {
+  score: number
+  categories: HealthCategory[]
+} {
+  const carrier = report?.carrier || {}
+  const safety = report?.safety || {}
+  const inspections = report?.inspections || {}
+  const insurance = report?.insurance || {}
+  const fleet = report?.fleet || {}
+  const authority = report?.authority || {}
+  const crashes = report?.crashes || {}
+
+  // === 1. SAFETY SCORE (25% weight) ===
+  // Based on BASIC scores, OOS rates, and crash history
+  let safetyScore = 100
+
+  // Penalize for high BASIC percentiles (higher = worse)
+  const basicScores = safety.basicScores || []
+  if (basicScores.length > 0) {
+    const avgPercentile = basicScores.reduce((s: number, b: any) => s + (b.percentile ?? b.measure ?? 0), 0) / basicScores.length
+    // 0 percentile = best, 100 = worst. Invert for score.
+    safetyScore -= Math.min(avgPercentile * 0.6, 50)
+  }
+
+  // Penalize for BASIC alerts
+  const alerts = safety.basicAlerts || {}
+  const alertCount = Object.values(alerts).filter(Boolean).length
+  safetyScore -= alertCount * 5
+
+  // Penalize for crashes
+  const crashSummary = crashes.summary || {}
+  const totalCrashes = crashSummary.total || crashSummary.totalCrashes || 0
+  const fatalCrashes = crashSummary.fatal || crashSummary.fatalCrashes || 0
+  safetyScore -= totalCrashes * 3
+  safetyScore -= fatalCrashes * 10
+
+  // Safety rating bonus
+  const rawRating = carrier.safetyRating || safety?.safetyRating?.rating
+  if (rawRating) {
+    const lower = String(rawRating).toLowerCase()
+    if (lower === 'satisfactory' || lower === 's') safetyScore += 5
+    else if (lower === 'conditional' || lower === 'c') safetyScore -= 15
+    else if (lower === 'unsatisfactory' || lower === 'u') safetyScore -= 30
+  }
+
+  safetyScore = Math.max(0, Math.min(100, Math.round(safetyScore)))
+
+  // === 2. COMPLIANCE SCORE (25% weight) ===
+  // Based on authority status, MCS-150 filing, BOC-3
+  let complianceScore = 50 // Start at 50, build up
+
+  // Active operating authority
+  const opStatus = carrier.operatingStatus || carrier.allowedToOperate
+  if (opStatus === 'A' || opStatus === 'Y' || opStatus === 'authorized' || opStatus === 'AUTHORIZED') {
+    complianceScore += 20
+  }
+
+  // Authority types active
+  const statuses = authority.statuses || {}
+  const commonActive = String(statuses.commonAuthorityStatus || statuses.common || '').toLowerCase()
+  const contractActive = String(statuses.contractAuthorityStatus || statuses.contract || '').toLowerCase()
+  if (commonActive === 'active' || commonActive === 'a') complianceScore += 10
+  if (contractActive === 'active' || contractActive === 'a') complianceScore += 5
+
+  // MCS-150 filing recency
+  const mcs150Date = carrier.mcs150Date || carrier.mcs150FormDate
+  if (mcs150Date) {
+    const mcsDate = new Date(mcs150Date)
+    const daysSinceMcs = (Date.now() - mcsDate.getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSinceMcs <= 730) complianceScore += 10 // Within 2 years (biennial)
+    else complianceScore -= 10 // Overdue
+  } else {
+    complianceScore -= 5
+  }
+
+  // No revocations
+  const totalRevocations = carrier.totalRevocations || 0
+  complianceScore -= totalRevocations * 10
+
+  // BOC-3 on file
+  const docs = report?.documents || {}
+  if (docs.boc3?.onFile) complianceScore += 5
+
+  complianceScore = Math.max(0, Math.min(100, Math.round(complianceScore)))
+
+  // === 3. INSURANCE SCORE (20% weight) ===
+  // Based on active policies, coverage amounts, gaps
+  let insuranceScore = 30 // Base
+
+  const activePolicies = insurance.activePolicies || []
+  if (activePolicies.length > 0) {
+    insuranceScore += 30 // Has active policies
+
+    // Check BIPD coverage level
+    const bipdPolicy = activePolicies.find((p: any) => {
+      const t = String(p.insuranceType || p.type || '').toLowerCase()
+      return t.includes('bipd') || t.includes('liability') || t.includes('bodily')
+    })
+    if (bipdPolicy) {
+      const coverage = bipdPolicy.coverageAmount || bipdPolicy.coverage || 0
+      if (coverage >= 1000000) insuranceScore += 20
+      else if (coverage >= 750000) insuranceScore += 15
+      else if (coverage >= 300000) insuranceScore += 10
+    }
+
+    // Check cargo coverage
+    const cargoPolicy = activePolicies.find((p: any) => {
+      const t = String(p.insuranceType || p.type || '').toLowerCase()
+      return t.includes('cargo')
+    })
+    if (cargoPolicy) insuranceScore += 10
+
+    // Multiple policies = better coverage
+    if (activePolicies.length >= 3) insuranceScore += 10
+  }
+
+  // Penalize for gaps
+  const gaps = insurance.gaps || []
+  const activeGaps = gaps.filter((g: any) => g.status === 'active')
+  insuranceScore -= activeGaps.length * 15
+
+  insuranceScore = Math.max(0, Math.min(100, Math.round(insuranceScore)))
+
+  // === 4. FLEET SCORE (15% weight) ===
+  // Based on fleet size, OOS rates on vehicles, shared equipment
+  let fleetScore = 60 // Base
+
+  const trucks = fleet.trucks || []
+  const powerUnits = carrier.totalPowerUnits || carrier.powerUnits || listing?.fleetSize || trucks.length || 0
+
+  if (powerUnits > 0) {
+    fleetScore += 10
+
+    // Newer fleet = better
+    if (trucks.length > 0) {
+      const avgYear = trucks.reduce((s: number, t: any) => s + (t.year || t.model_year || 0), 0) / trucks.length
+      const currentYear = new Date().getFullYear()
+      if (avgYear > 0) {
+        const age = currentYear - avgYear
+        if (age <= 3) fleetScore += 15
+        else if (age <= 5) fleetScore += 10
+        else if (age <= 8) fleetScore += 5
+        else if (age > 12) fleetScore -= 10
+      }
+    }
+
+    // Penalize for high vehicle OOS
+    const summary = inspections.summary || safety.inspectionTotals || {}
+    const vehicleOOSRate = summary.vehicleOOSRate || summary.vehicleOosRate || 0
+    if (vehicleOOSRate > 30) fleetScore -= 20
+    else if (vehicleOOSRate > 20) fleetScore -= 10
+    else if (vehicleOOSRate < 10) fleetScore += 10
+  }
+
+  // Penalize for shared equipment (possible chameleon carrier risk)
+  const sharedEquipment = fleet.sharedEquipment || {}
+  const sharedCount = sharedEquipment.countSharedVins || sharedEquipment.totalShared || 0
+  if (sharedCount > 5) fleetScore -= 15
+  else if (sharedCount > 0) fleetScore -= 5
+
+  fleetScore = Math.max(0, Math.min(100, Math.round(fleetScore)))
+
+  // === 5. HISTORY SCORE (15% weight) ===
+  // Based on years active, inspection trend, clean inspection rate
+  let historyScore = 50 // Base
+
+  // Years active bonus
+  const yearsActive = parseFloat(carrier.yearsActive) || listing?.yearsActive || 0
+  if (yearsActive >= 10) historyScore += 25
+  else if (yearsActive >= 5) historyScore += 20
+  else if (yearsActive >= 3) historyScore += 15
+  else if (yearsActive >= 1) historyScore += 5
+  else historyScore -= 10 // Very new carrier
+
+  // Clean inspection rate
+  const records = inspections.records || []
+  if (records.length > 0) {
+    const cleanCount = records.filter((r: any) => (r.viol_total || r.violations || 0) === 0).length
+    const cleanRate = cleanCount / records.length
+    if (cleanRate >= 0.8) historyScore += 15
+    else if (cleanRate >= 0.6) historyScore += 10
+    else if (cleanRate >= 0.4) historyScore += 5
+    else if (cleanRate < 0.2) historyScore -= 10
+  }
+
+  // Authority age
+  const authorityAgeDays = carrier.authorityAgeDays || 0
+  if (authorityAgeDays > 1825) historyScore += 10 // 5+ years
+  else if (authorityAgeDays < 365) historyScore -= 5 // Less than 1 year
+
+  historyScore = Math.max(0, Math.min(100, Math.round(historyScore)))
+
+  // === WEIGHTED COMPOSITE ===
+  const categories: HealthCategory[] = [
+    { name: 'Safety', weight: 25, score: safetyScore, color: '#10b981' },
+    { name: 'Compliance', weight: 25, score: complianceScore, color: '#6366f1' },
+    { name: 'Insurance', weight: 20, score: insuranceScore, color: '#06b6d4' },
+    { name: 'Fleet', weight: 15, score: fleetScore, color: '#f59e0b' },
+    { name: 'History', weight: 15, score: historyScore, color: '#8b5cf6' },
+  ]
+
+  const compositeScore = Math.round(
+    categories.reduce((sum, cat) => sum + (cat.score * cat.weight / 100), 0)
+  )
+
+  return { score: compositeScore, categories }
+}
+
+// ============================================================
 // CORE: Merge API + Listing → V2CarrierData
 // ============================================================
 export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2CarrierData {
@@ -99,7 +317,7 @@ export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2C
     smartwayFlag: false,    // Not available yet
     carbtruFlag: false,     // Not available yet
     phmsaFlag: carrier.phmsaFlag || false,
-    carrierHealthScore: 0,  // Not available yet
+    carrierHealthScore: calculateCarrierHealthScore(report, listing).score,
   }
 }
 
