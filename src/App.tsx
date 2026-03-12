@@ -20,6 +20,7 @@ const SellerVerificationPage = lazy(() => import('./pages/SellerVerificationPage
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const MCDetailPage = lazy(() => import('./pages/MCDetailPage'))
+const MCDetailPageV2 = lazy(() => import('./pages/MCDetailPageV2'))
 const ConsultationSuccessPage = lazy(() => import('./pages/ConsultationSuccessPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -113,7 +114,8 @@ function App() {
               <Route path="seller-verification" element={<SellerVerificationPage />} />
               <Route path="verify-email" element={<VerifyEmailPage />} />
               <Route path="marketplace" element={<MarketplacePage />} />
-              <Route path="mc/:id" element={<VerificationRequiredRoute><MCDetailPage /></VerificationRequiredRoute>} />
+              <Route path="mc/:id" element={<VerificationRequiredRoute><MCDetailPageV2 /></VerificationRequiredRoute>} />
+              <Route path="mc-v2/:id" element={<VerificationRequiredRoute><MCDetailPageV2 /></VerificationRequiredRoute>} />
               <Route path="consultation/success" element={<ConsultationSuccessPage />} />
               {/* Services Routes */}
               <Route path="services" element={<ServicesPage />} />

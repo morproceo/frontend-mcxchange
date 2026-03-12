@@ -682,6 +682,11 @@ class ApiService {
     return this.request<any>(`/listings/${id}`);
   }
 
+  // MorPro Carrier Data endpoint
+  async getCarrierReport(dotNumber: string) {
+    return this.request<{ success: boolean; data: any }>(`/carrier-data/report/${dotNumber}`);
+  }
+
   // FMCSA endpoints
   async fmcsaLookupByMC(mcNumber: string) {
     return this.request<{
