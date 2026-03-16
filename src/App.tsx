@@ -114,8 +114,8 @@ function App() {
               <Route path="seller-verification" element={<SellerVerificationPage />} />
               <Route path="verify-email" element={<VerifyEmailPage />} />
               <Route path="marketplace" element={<MarketplacePage />} />
-              <Route path="mc/:id" element={<VerificationRequiredRoute><MCDetailPageV2 /></VerificationRequiredRoute>} />
-              <Route path="mc-v2/:id" element={<VerificationRequiredRoute><MCDetailPageV2 /></VerificationRequiredRoute>} />
+              <Route path="mc/:id" element={<MCDetailPageV2 />} />
+              <Route path="mc-v2/:id" element={<MCDetailPageV2 />} />
               <Route path="consultation/success" element={<ConsultationSuccessPage />} />
               {/* Services Routes */}
               <Route path="services" element={<ServicesPage />} />

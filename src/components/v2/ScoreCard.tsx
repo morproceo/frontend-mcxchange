@@ -1,39 +1,61 @@
 import { motion } from 'framer-motion'
-import { LucideIcon } from 'lucide-react'
-import clsx from 'clsx'
-import { StatusLevel, statusColors } from './mockData'
+import type { StatusLevel } from './mockData'
 
 interface ScoreCardProps {
-  icon: LucideIcon
+  icon?: any
   label: string
   value: string | number
-  level: StatusLevel
+  level?: StatusLevel | string
+  description?: string
+  color?: string
   subtitle?: string
-  className?: string
 }
 
-export default function ScoreCard({ icon: Icon, label, value, level, subtitle, className }: ScoreCardProps) {
-  const colors = statusColors[level]
+const levelBg: Record<string, string> = {
+  excellent: 'bg-emerald-50 border-emerald-200',
+  good: 'bg-blue-50 border-blue-200',
+  fair: 'bg-yellow-50 border-yellow-200',
+  warning: 'bg-orange-50 border-orange-200',
+  danger: 'bg-red-50 border-red-200',
+  neutral: 'bg-gray-50 border-gray-200',
+}
+
+const levelText: Record<string, string> = {
+  excellent: 'text-emerald-700',
+  good: 'text-blue-700',
+  fair: 'text-yellow-700',
+  warning: 'text-orange-700',
+  danger: 'text-red-700',
+  neutral: 'text-gray-700',
+}
+
+const levelIcon: Record<string, string> = {
+  excellent: 'text-emerald-500',
+  good: 'text-blue-500',
+  fair: 'text-yellow-500',
+  warning: 'text-orange-500',
+  danger: 'text-red-500',
+  neutral: 'text-gray-500',
+}
+
+export default function ScoreCard({ icon: Icon, label, value, level = 'good', description, color, subtitle }: ScoreCardProps) {
+  const bgClass = levelBg[level] || levelBg.neutral
+  const textClass = color || levelText[level] || levelText.neutral
+  const iconClass = levelIcon[level] || levelIcon.neutral
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className={clsx(
-        'rounded-xl border p-4',
-        colors.bg,
-        colors.border,
-        className
-      )}
+      className={`rounded-xl border p-4 ${bgClass}`}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className={clsx('p-2 rounded-lg', colors.bg)}>
-          <Icon className={clsx('w-5 h-5', colors.text)} />
-        </div>
+      <div className="flex items-start justify-between mb-1">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
+        {Icon && <Icon className={`w-4 h-4 ${iconClass}`} />}
       </div>
-      <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">{label}</p>
-      <p className={clsx('text-2xl font-bold', colors.text)}>{value}</p>
-      {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+      <p className={`text-xl font-bold ${textClass}`}>{value}</p>
+      {subtitle && <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>}
+      {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
     </motion.div>
   )
 }

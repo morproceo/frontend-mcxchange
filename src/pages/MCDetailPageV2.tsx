@@ -216,6 +216,87 @@ function CarrierLoadingSkeleton() {
 }
 
 // ============================================================
+// VERIFICATION PREVIEW OVERLAY — shown over tab content when not verified
+// ============================================================
+function VerificationPreviewOverlay() {
+  const [vLoading, setVLoading] = useState(false)
+  const [vError, setVError] = useState<string | null>(null)
+
+  const handleVerify = async () => {
+    setVLoading(true)
+    setVError(null)
+    try {
+      const response = await api.createVerificationSession()
+      if (response.success && response.data?.url) {
+        window.location.href = response.data.url
+      } else {
+        setVError('Failed to start verification. Please try again.')
+      }
+    } catch (err: any) {
+      setVError(err.message || 'Failed to start verification')
+    } finally {
+      setVLoading(false)
+    }
+  }
+
+  return (
+    <div className="relative">
+      {/* Blurred placeholder content behind */}
+      <div className="filter blur-sm opacity-40 pointer-events-none select-none">
+        <CarrierLoadingSkeleton />
+      </div>
+
+      {/* Overlay card */}
+      <div className="absolute inset-0 flex items-start justify-center pt-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-lg mx-4"
+        >
+          <Card padding="lg">
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-7 h-7 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Verify Your Identity</h2>
+              <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                Complete a quick identity verification to access detailed carrier data, safety records, insurance info, and more.
+              </p>
+
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="p-3 rounded-xl bg-gray-50">
+                  <Shield className="w-6 h-6 text-indigo-500 mx-auto mb-1.5" />
+                  <div className="text-xs font-medium text-gray-900">Government ID</div>
+                </div>
+                <div className="p-3 rounded-xl bg-gray-50">
+                  <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
+                  <div className="text-xs font-medium text-gray-900">~2 Minutes</div>
+                </div>
+                <div className="p-3 rounded-xl bg-gray-50">
+                  <Lock className="w-6 h-6 text-purple-500 mx-auto mb-1.5" />
+                  <div className="text-xs font-medium text-gray-900">Secure</div>
+                </div>
+              </div>
+
+              <Button fullWidth size="lg" onClick={handleVerify} loading={vLoading}>
+                <Shield className="w-5 h-5 mr-2" />
+                Verify My Identity
+              </Button>
+
+              {vError && <p className="text-sm text-red-500 mt-3">{vError}</p>}
+
+              <p className="text-xs text-gray-400 mt-4">
+                Powered by Stripe Identity. Your data is never stored on our servers.
+              </p>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
 // HERO HEADER
 // ============================================================
 function HeroHeader() {
@@ -225,8 +306,8 @@ function HeroHeader() {
   const healthCirc = 2 * Math.PI * healthRadius
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pt-6 sm:pt-8">
-      <div className="relative rounded-2xl overflow-hidden" style={{
+    <div className="max-w-7xl mx-auto px-0 sm:px-4 pt-0 sm:pt-8">
+      <div className="relative rounded-none sm:rounded-2xl overflow-hidden" style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)',
       }}>
         {/* Ambient glow orbs */}
@@ -1683,12 +1764,21 @@ function InsuranceTab() {
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`rounded-xl border-2 p-6 text-center ${insLevel === 'excellent' ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}
+        className={`rounded-xl border-2 p-6 text-center ${
+          insLevel === 'excellent' ? 'bg-emerald-50 border-emerald-200'
+          : insLevel === 'warning' ? 'bg-yellow-50 border-yellow-200'
+          : 'bg-red-50 border-red-200'
+        }`}
       >
         <p className="text-sm text-gray-500 mb-1">Insurance Status</p>
         <h2 className={`text-3xl font-black tracking-wide uppercase ${statusColors[insLevel].text}`}>
-          {mockCarrier.insuranceStatus}
+          {mockCarrier.insuranceStatus === 'pending' ? 'CANCELLATION PENDING'
+            : mockCarrier.insuranceStatus === 'expired' ? 'EXPIRED'
+            : 'CURRENT'}
         </h2>
+        {mockCarrier.insuranceStatus === 'pending' && (
+          <p className="text-sm text-yellow-600 mt-1">One or more policies have a pending cancellation or are near expiration</p>
+        )}
       </motion.div>
 
       {/* Coverage Cards */}
@@ -2181,8 +2271,37 @@ export default function MCDetailPageV2() {
   const [activeTab, setActiveTab] = useState('overview')
   const navigate = useNavigate()
   const { id } = useParams()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, isIdentityVerified, isLoading: authLoading } = useAuth()
   const { listing, loading, error, isUnlocked, unlocking, unlock } = useListing(id)
+
+  // Preview mode: logged in but not identity verified (admins bypass)
+  const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin'
+
+  // Not authenticated — show auth prompt
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-4">
+          <Card padding="lg">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-indigo-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h1>
+              <p className="text-gray-500 mb-6">Create an account or sign in to view MC authority listings.</p>
+              <div className="space-y-3">
+                <Link to="/login"><Button fullWidth><Lock className="w-4 h-4 mr-2" />Sign In</Button></Link>
+                <Link to="/register"><Button fullWidth variant="secondary">Create Account</Button></Link>
+              </div>
+              <Link to="/marketplace" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium mt-4">
+                <ArrowLeft className="w-4 h-4" />Back to Marketplace
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   // Carrier intelligence data from MorPro API
   const { carrierReport, loading: carrierLoading, error: carrierError } = useCarrierData(
@@ -2191,8 +2310,8 @@ export default function MCDetailPageV2() {
 
   // Map API data to V2 interfaces (memoized)
   const carrierDataCtx = useMemo<CarrierDataContextType>(() => {
-    // Use mock/fallback data if env var is set
-    if (USE_MOCK) {
+    // Use mock/fallback data if env var is set OR in preview mode (not verified)
+    if (USE_MOCK || isPreviewMode) {
       return {
         carrier: fallbackCarrier,
         authority: fallbackAuthority,
@@ -2318,7 +2437,7 @@ export default function MCDetailPageV2() {
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, listing, carrierLoading, carrierError])
+  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode])
 
   // Credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
@@ -2490,6 +2609,27 @@ export default function MCDetailPageV2() {
         </button>
       </div>
 
+      {/* Preview Mode Banner */}
+      {isPreviewMode && (
+        <div className="max-w-7xl mx-auto px-4 mt-3">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+            <Eye className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-semibold text-amber-800">Preview Mode</span>
+              <span className="text-sm text-amber-600 ml-1">— Verify your identity to see full details, MC/DOT numbers, and carrier data.</span>
+            </div>
+            <Button size="sm" variant="secondary" onClick={async () => {
+              try {
+                const response = await api.createVerificationSession()
+                if (response.success && response.data?.url) window.location.href = response.data.url
+              } catch {}
+            }}>
+              <Shield className="w-3.5 h-3.5 mr-1" />Verify Now
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Header */}
       <HeroHeader />
 
@@ -2574,7 +2714,29 @@ export default function MCDetailPageV2() {
 
               {/* Credits & Actions Card */}
               <Card padding="md">
-                {isPremiumListing && !isUnlocked ? (
+                {isPreviewMode ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Shield className="w-5 h-5 text-amber-500" />
+                      <span className="font-semibold text-gray-900">Identity Verification</span>
+                    </div>
+                    <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center mb-3">
+                      <Shield className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                      <div className="font-bold text-gray-900 mb-1">Preview Mode</div>
+                      <div className="text-xs text-gray-500 mb-1">Verify your identity to unlock full details, make offers, and purchase.</div>
+                    </div>
+                    <Button fullWidth onClick={async () => {
+                      try {
+                        const response = await api.createVerificationSession()
+                        if (response.success && response.data?.url) window.location.href = response.data.url
+                      } catch {}
+                    }}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Verify Identity
+                    </Button>
+                    <p className="text-xs text-gray-400 text-center mt-2">Takes ~2 minutes</p>
+                  </>
+                ) : isPremiumListing && !isUnlocked ? (
                   <>
                     <div className="flex items-center gap-2 mb-4">
                       <Crown className="w-5 h-5 text-yellow-500" />
@@ -2703,7 +2865,16 @@ export default function MCDetailPageV2() {
 
       {/* Mobile Sticky Bottom Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-40 shadow-lg">
-        {isPremiumListing && !isUnlocked ? (
+        {isPreviewMode ? (
+          <Button fullWidth size="sm" onClick={async () => {
+            try {
+              const response = await api.createVerificationSession()
+              if (response.success && response.data?.url) window.location.href = response.data.url
+            } catch {}
+          }}>
+            <Shield className="w-4 h-4 mr-1" />Verify Identity to Unlock
+          </Button>
+        ) : isPremiumListing && !isUnlocked ? (
           <div className="flex gap-3">
             {isAuthenticated && user?.role === 'buyer' && (
               <Link to="/buyer/subscription" className="flex-1">

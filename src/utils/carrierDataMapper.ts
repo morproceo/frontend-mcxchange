@@ -367,11 +367,25 @@ export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2C
   }
 
   // Insurance status: derived from insurance data
+  // Check active policies, renewal urgency, and cancellation status
   const insurance = report?.insurance || {}
   const activePolicies = insurance.activePolicies || []
+  const renewalTimeline = insurance.renewalTimeline || []
   let insuranceStatus: 'current' | 'expired' | 'pending' = 'expired'
-  if (activePolicies.length > 0) insuranceStatus = 'current'
-  else if (listing.insuranceOnFile) insuranceStatus = 'current'
+  if (activePolicies.length > 0) {
+    // Check if any policy has a pending cancellation
+    const hasCancelPending = activePolicies.some((p: any) =>
+      p.cancelDate || p.cancelMethod || String(p.status || '').toLowerCase() === 'cancelled'
+    )
+    // Check renewal urgency
+    const hasExpiredRenewal = renewalTimeline.some((r: any) => r.urgency === 'expired')
+    const hasCriticalRenewal = renewalTimeline.some((r: any) => r.urgency === 'critical')
+    if (hasCancelPending || hasExpiredRenewal) insuranceStatus = 'pending'
+    else if (hasCriticalRenewal) insuranceStatus = 'pending'
+    else insuranceStatus = 'current'
+  } else if (listing.insuranceOnFile) {
+    insuranceStatus = 'current'
+  }
 
   return {
     mcNumber: listing.mcNumber || carrier.mcNumber || '',

@@ -1,73 +1,50 @@
 import { motion } from 'framer-motion'
-import { statusColors, StatusLevel } from './mockData'
+import type { StatusLevel } from './mockData'
 
 interface CircularGaugeProps {
   value: number
   max?: number
+  label?: string
+  color?: string
   size?: number
-  strokeWidth?: number
-  level: StatusLevel
-  label: string
-  sublabel?: string
+  level?: StatusLevel | string
 }
 
-export default function CircularGauge({
-  value,
-  max = 100,
-  size = 120,
-  strokeWidth = 10,
-  level,
-  label,
-  sublabel,
-}: CircularGaugeProps) {
+const levelColors: Record<string, string> = {
+  excellent: '#10b981',
+  good: '#3b82f6',
+  fair: '#f59e0b',
+  warning: '#f97316',
+  danger: '#ef4444',
+  neutral: '#6b7280',
+}
+
+export default function CircularGauge({ value, max = 100, label, color, size = 80, level }: CircularGaugeProps) {
+  const strokeColor = color || (level ? levelColors[level] || '#6366f1' : '#6366f1')
+  const strokeWidth = 8
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
-  const progress = Math.min(value / max, 1)
-  const offset = circumference * (1 - progress)
-  const colors = statusColors[level]
+  const pct = max > 0 ? Math.min(value / max, 1) : 0
+  const offset = circumference - pct * circumference
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center flex-shrink-0">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          {/* Background ring */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={strokeWidth}
-          />
-          {/* Animated progress ring */}
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} />
           <motion.circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={colors.fill}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
+            cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={strokeColor} strokeWidth={strokeWidth}
+            strokeLinecap="round" strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+            transition={{ duration: 1, ease: 'easeOut' }}
           />
         </svg>
-        {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <motion.span
-            className="text-2xl font-bold text-gray-900"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            {value}
-          </motion.span>
+          <span className="text-lg font-black" style={{ color: strokeColor }}>{Math.round(value)}</span>
+          {label && <span className="text-[8px] font-semibold uppercase tracking-widest text-gray-400">{label}</span>}
         </div>
       </div>
-      <p className="mt-2 text-sm font-medium text-gray-700">{label}</p>
-      {sublabel && <p className="text-xs text-gray-400">{sublabel}</p>}
     </div>
   )
 }

@@ -1,85 +1,60 @@
-import { motion } from 'framer-motion'
-import { Link2, AlertTriangle } from 'lucide-react'
-import { V2RelatedCarrier } from './mockData'
+import { Link2 } from 'lucide-react'
+import type { V2RelatedCarrier } from './mockData'
 
 interface RelatedCarriersProps {
   carriers: V2RelatedCarrier[]
 }
 
-const sharedFieldLabels: Record<string, string> = {
-  address: 'Same Address',
-  phone: 'Same Phone',
-  ein: 'Same EIN',
-  contact: 'Same Contact',
-  vin: 'Shared VIN',
-}
-
 export default function RelatedCarriers({ carriers }: RelatedCarriersProps) {
-  if (carriers.length === 0) return null
+  if (!carriers || carriers.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Link2 className="w-5 h-5 text-indigo-500" />
+          <h3 className="text-lg font-semibold text-gray-900">Related Carriers</h3>
+        </div>
+        <p className="text-sm text-gray-400 text-center py-4">No related carriers found</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-    }}>
-      {/* Header */}
-      <div className="px-5 py-4 flex items-center justify-between border-b border-white/[0.06]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-            <Link2 className="w-4 h-4 text-amber-400" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-white">Related Carriers</h3>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider">Shared identifiers detected</p>
-          </div>
-        </div>
-        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold">
-          {carriers.length} Found
-        </span>
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Link2 className="w-5 h-5 text-indigo-500" />
+        <h3 className="text-lg font-semibold text-gray-900">Related Carriers</h3>
+        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{carriers.length}</span>
       </div>
-
-      {/* Carrier rows */}
-      <div className="divide-y divide-white/[0.04]">
-        {carriers.map((carrier, i) => (
-          <motion.div
-            key={carrier.mcNumber}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="px-5 py-3 flex items-center gap-4 hover:bg-white/[0.02] transition-colors"
-          >
-            {/* Status dot */}
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-              carrier.status === 'active' ? 'bg-emerald-400' : carrier.status === 'inactive' ? 'bg-yellow-400' : 'bg-red-400'
-            }`} />
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white/90 truncate">{carrier.legalName}</p>
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="text-[10px] text-white/40 font-mono">{carrier.mcNumber}</span>
-                <span className="text-[10px] text-white/30">{carrier.dotNumber}</span>
+      <div className="space-y-2">
+        {carriers.map((c, i) => {
+          const isActive = c.status === 'active' || c.status === 'A' || (c.status as string) === 'Y'
+          return (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{c.legalName}</p>
+                  <p className="text-xs text-gray-400">
+                    DOT {c.dotNumber}
+                    {c.mcNumber ? ` \u00b7 ${c.mcNumber}` : ''}
+                    {c.powerUnits > 0 ? ` \u00b7 ${c.powerUnits} units` : ''}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {isActive ? 'Active' : c.status === 'revoked' ? 'Revoked' : 'Inactive'}
+                </span>
+                <p className="text-[10px] text-gray-400 mt-0.5">Shared: {c.sharedField}</p>
               </div>
             </div>
-
-            {/* Shared field badge */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                carrier.sharedField === 'vin' || carrier.sharedField === 'ein'
-                  ? 'bg-red-500/15 text-red-400 border border-red-500/20'
-                  : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-              }`}>
-                {sharedFieldLabels[carrier.sharedField]}
-              </span>
-              <span className="text-[10px] text-white/30">{carrier.powerUnits} PU</span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Warning footer */}
-      <div className="px-5 py-3 border-t border-white/[0.06] flex items-center gap-2">
-        <AlertTriangle className="w-3 h-3 text-amber-400" />
-        <p className="text-[10px] text-white/30">Related carriers may indicate shared ownership, leasing, or entity restructuring.</p>
+          )
+        })}
       </div>
     </div>
   )
