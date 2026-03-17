@@ -1720,9 +1720,9 @@ export default function CarrierPulsePage() {
             {/* Back to Search bar */}
             <button
               onClick={handleSearchAnother}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-4 group"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all mb-4 group"
             >
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              <ArrowLeft className="w-4 h-4 text-gray-500 group-hover:-translate-x-0.5 transition-transform" />
               New Search
             </button>
 
