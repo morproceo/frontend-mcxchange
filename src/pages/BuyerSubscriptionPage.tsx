@@ -98,6 +98,8 @@ const BuyerSubscriptionPage = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [plans, setPlans] = useState<DisplayPlan[]>([])
   const [creditPacks, setCreditPacks] = useState<CreditPack[]>([])
+  const [carrierPulseAccess, setCarrierPulseAccess] = useState(false)
+  const [carrierPulseCheckoutLoading, setCarrierPulseCheckoutLoading] = useState(false)
   const [plansLoading, setPlansLoading] = useState(true)
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null)
 
@@ -237,10 +239,16 @@ const BuyerSubscriptionPage = () => {
 
       try {
         setLoading(true)
-        const response = await api.getSubscription()
-        setSubscription(response.data?.subscription || null)
-        if (response.data?.credits) {
-          setCredits(response.data.credits)
+        const [subResponse, pulseResponse] = await Promise.all([
+          api.getSubscription(),
+          api.getCarrierPulseAccess().catch(() => null),
+        ])
+        setSubscription(subResponse.data?.subscription || null)
+        if (subResponse.data?.credits) {
+          setCredits(subResponse.data.credits)
+        }
+        if (pulseResponse?.data) {
+          setCarrierPulseAccess(pulseResponse.data.hasAccess)
         }
       } catch (err: any) {
         console.error('Failed to fetch subscription:', err)
@@ -330,6 +338,27 @@ const BuyerSubscriptionPage = () => {
       setError(err.message || 'Failed to verify subscription')
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  // Purchase CarrierPulse add-on
+  const handleCarrierPulseCheckout = async () => {
+    if (!user) {
+      navigate('/login?redirect=/buyer/subscription')
+      return
+    }
+    setCarrierPulseCheckoutLoading(true)
+    setError(null)
+    try {
+      const response = await api.createCarrierPulseCheckout()
+      if (response.data?.url) {
+        window.location.href = response.data.url
+      }
+    } catch (err: any) {
+      console.error('CarrierPulse checkout error:', err)
+      setError(err.message || 'Failed to start CarrierPulse checkout')
+    } finally {
+      setCarrierPulseCheckoutLoading(false)
     }
   }
 
@@ -792,6 +821,156 @@ const BuyerSubscriptionPage = () => {
             </Card>
           </motion.div>
           )
+        })()}
+
+        {/* CarrierPulse Add-On */}
+        {(() => {
+          const planLower = subscription?.plan?.toLowerCase()
+          const hasHigherPlan = planLower === 'premium' || planLower === 'enterprise' || planLower === 'vip_access'
+          // Show add-on card if: user doesn't have CarrierPulse AND doesn't have a plan that includes it
+          if (!carrierPulseAccess && !hasHigherPlan) {
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-16"
+              >
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 mb-4">
+                    <Zap className="w-4 h-4 text-indigo-600" />
+                    <span className="text-sm font-medium text-indigo-700">Add-On</span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">CarrierPulse</h2>
+                  <p className="text-gray-600">Instant carrier intelligence — look up any carrier by DOT number</p>
+                </div>
+
+                <div className="max-w-lg mx-auto">
+                  <Card className="relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                    <div className="flex items-start gap-5 pt-2">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <Zap className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900">CarrierPulse</h3>
+                        <p className="text-sm text-gray-500 mt-1 mb-3">
+                          Full safety reports, authority history, insurance, fleet data & more for any DOT number.
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {['Safety & BASICs', 'Authority History', 'Insurance Coverage', 'Fleet Inventory', 'Crash Records'].map(f => (
+                            <span key={f} className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full">
+                              <CheckCircle className="w-3 h-3" />
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-2xl font-black text-gray-900">$12.99</span>
+                            <span className="text-gray-500 text-sm">/month</span>
+                          </div>
+                          <Button
+                            onClick={handleCarrierPulseCheckout}
+                            loading={carrierPulseCheckoutLoading}
+                            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                          >
+                            <Zap className="w-4 h-4 mr-1.5" />
+                            Add CarrierPulse
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {!subscription && (
+                  <p className="text-center text-xs text-gray-400 mt-3">
+                    Or upgrade to <span className="font-medium text-indigo-600">Professional</span> or higher to get CarrierPulse included
+                  </p>
+                )}
+              </motion.div>
+            )
+          }
+
+          // Show "included" badge if user has access via their plan
+          if (hasHigherPlan) {
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-16"
+              >
+                <div className="max-w-lg mx-auto">
+                  <Card className="relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-green-500" />
+                    <div className="flex items-center gap-4 pt-2">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <Zap className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-gray-900">CarrierPulse</h3>
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <CheckCircle className="w-3 h-3" />
+                            Included
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-0.5">Carrier intelligence is included in your {subscription?.plan} plan</p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => navigate('/buyer/carrier-pulse')}
+                      >
+                        Open
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              </motion.div>
+            )
+          }
+
+          // Show "active" badge if user has standalone access
+          if (carrierPulseAccess) {
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-16"
+              >
+                <div className="max-w-lg mx-auto">
+                  <Card className="relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                    <div className="flex items-center gap-4 pt-2">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <Zap className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-gray-900">CarrierPulse</h3>
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                            <CheckCircle className="w-3 h-3" />
+                            Active
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-0.5">$12.99/mo add-on — unlimited carrier lookups</p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => navigate('/buyer/carrier-pulse')}
+                      >
+                        Open
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              </motion.div>
+            )
+          }
+
+          return null
         })()}
 
         {/* Credit Packs Section - One-Time Purchases */}
