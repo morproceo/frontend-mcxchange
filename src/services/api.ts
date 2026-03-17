@@ -1914,11 +1914,47 @@ class ApiService {
   /**
    * Get full Creditsafe credit report by connectId (requires unlocked listing)
    */
-  async buyerCreditsafeReport(connectId: string, listingId: string) {
+  async buyerCreditsafeReport(connectId: string, listingId?: string) {
+    const query = listingId ? `?listingId=${listingId}` : '';
     return this.request<{
       success: boolean;
       data: any;
-    }>(`/buyer/creditsafe/companies/${encodeURIComponent(connectId)}?listingId=${listingId}`);
+    }>(`/buyer/creditsafe/companies/${encodeURIComponent(connectId)}${query}`);
+  }
+
+  /**
+   * VIP-only: Free-form Creditsafe company search (no listing required)
+   */
+  async buyerCreditsafeFreeSearch(params: { name?: string; state?: string; city?: string; regNo?: string }) {
+    const searchParams = new URLSearchParams();
+    if (params.name) searchParams.set('name', params.name);
+    if (params.state) searchParams.set('state', params.state);
+    if (params.city) searchParams.set('city', params.city);
+    if (params.regNo) searchParams.set('regNo', params.regNo);
+    return this.request<{
+      success: boolean;
+      data: {
+        companies: Array<{
+          id: string;
+          connectId?: string;
+          name: string;
+          regNo?: string;
+          vatNo?: string;
+          address?: {
+            simpleValue?: string;
+            street?: string;
+            city?: string;
+            postCode?: string;
+            province?: string;
+            country?: string;
+          };
+          status?: string;
+          type?: string;
+          safeNumber?: string;
+        }>;
+        totalResults: number;
+      };
+    }>(`/buyer/creditsafe/search?${searchParams.toString()}`);
   }
 
   // ===== AI Due Diligence =====

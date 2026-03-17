@@ -275,6 +275,7 @@ const BuyerCreditsafePage = () => {
   const { user } = useAuth()
   const [accessLoading, setAccessLoading] = useState(true)
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false)
+  const [isVip, setIsVip] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -295,8 +296,10 @@ const BuyerCreditsafePage = () => {
         const planLower = subscription?.plan?.toLowerCase()
         const isPremium =
           (planLower === 'premium' || planLower === 'enterprise' || planLower === 'vip_access') && subscription?.status === 'ACTIVE'
+        const isVipPlan = planLower === 'vip_access' && subscription?.status === 'ACTIVE'
         if (isActive) {
           setHasPremiumAccess(Boolean(isPremium))
+          setIsVip(Boolean(isVipPlan))
         }
       } catch (error) {
         if (isActive) {
@@ -320,6 +323,11 @@ const BuyerCreditsafePage = () => {
   const [unlockedMCs, setUnlockedMCs] = useState<UnlockedMC[]>([])
   const [loadingMCs, setLoadingMCs] = useState(true)
   const [selectedMCId, setSelectedMCId] = useState<string>('')
+
+  // VIP free search state
+  const [freeSearchName, setFreeSearchName] = useState('')
+  const [freeSearchState, setFreeSearchState] = useState('')
+  const [freeSearchCity, setFreeSearchCity] = useState('')
 
   // Search state
   const [isSearching, setIsSearching] = useState(false)
@@ -430,6 +438,40 @@ const BuyerCreditsafePage = () => {
     }
   }
 
+  const handleFreeSearch = async () => {
+    if (!freeSearchName.trim()) {
+      toast.error('Please enter a company name')
+      return
+    }
+
+    setSelectedMCId('')
+    setSearchResults([])
+    setTotalResults(0)
+    setSelectedCompany(null)
+    setFullReport(null)
+    setIsSearching(true)
+
+    try {
+      const response = await api.buyerCreditsafeFreeSearch({
+        name: freeSearchName.trim(),
+        state: freeSearchState.trim() || undefined,
+        city: freeSearchCity.trim() || undefined,
+      })
+      setSearchResults(response.data.companies)
+      setTotalResults(response.data.totalResults)
+
+      if (response.data.companies.length === 0) {
+        toast('No Creditsafe matches found', { icon: '🔍' })
+      } else if (response.data.companies.length === 1) {
+        handleSelectCompany(response.data.companies[0])
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Search failed')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
   const handleSelectCompany = async (company: CompanySearchResult, overrideListingId?: string) => {
     const connectId = company.connectId || company.id
     if (!connectId) {
@@ -443,7 +485,7 @@ const BuyerCreditsafePage = () => {
     setFullReport(null)
 
     try {
-      const response = await api.buyerCreditsafeReport(connectId, listingId)
+      const response = await api.buyerCreditsafeReport(connectId, listingId || undefined)
       setFullReport(response.data)
     } catch (error: any) {
       toast.error(error?.message || 'Failed to load credit report')
@@ -587,7 +629,7 @@ const BuyerCreditsafePage = () => {
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                   Credit Reports
                 </h1>
-                <p className="text-gray-500">Pull comprehensive credit reports on your unlocked MCs</p>
+                <p className="text-gray-500">{isVip ? 'Search any company and pull comprehensive credit reports' : 'Pull comprehensive credit reports on your unlocked MCs'}</p>
               </div>
             </div>
           </motion.div>
@@ -599,6 +641,77 @@ const BuyerCreditsafePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
+            {isVip && (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">VIP Company Search</h2>
+                    <p className="text-sm text-gray-500">Search any company freely — no unlock required</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <input
+                      type="text"
+                      value={freeSearchName}
+                      onChange={(e) => setFreeSearchName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleFreeSearch()}
+                      placeholder="Enter company name..."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State (Optional)</label>
+                    <input
+                      type="text"
+                      value={freeSearchState}
+                      onChange={(e) => setFreeSearchState(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleFreeSearch()}
+                      placeholder="e.g. TX, CA, NY..."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City (Optional)</label>
+                    <input
+                      type="text"
+                      value={freeSearchCity}
+                      onChange={(e) => setFreeSearchCity(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleFreeSearch()}
+                      placeholder="e.g. Dallas, Houston..."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleFreeSearch}
+                  disabled={isSearching || !freeSearchName.trim()}
+                  className="w-full md:w-auto"
+                >
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Searching...
+                    </>
+                  ) : (
+                    'Search Creditsafe'
+                  )}
+                </Button>
+
+                <div className="my-6 flex items-center gap-4">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-sm text-gray-400 font-medium">or select from unlocked MCs</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+              </>
+            )}
+
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
                 <Truck className="w-5 h-5 text-white" />
@@ -621,7 +734,7 @@ const BuyerCreditsafePage = () => {
                 </div>
                 <p className="text-gray-500 font-medium">No Unlocked MCs</p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Unlock MC authorities from the marketplace to pull credit reports
+                  {isVip ? 'Use the search above to find any company' : 'Unlock MC authorities from the marketplace to pull credit reports'}
                 </p>
               </div>
             ) : (
