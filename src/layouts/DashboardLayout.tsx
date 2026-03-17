@@ -142,6 +142,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Handshake, label: 'Transactions', path: '/seller/transactions' },
           { icon: DollarSign, label: 'Earnings', path: '/seller/earnings' },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
+          { icon: Activity, label: 'CarrierPulse', path: '/seller/carrier-pulse' },
         ]
       case 'buyer':
         return [
@@ -158,6 +159,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           ...(hasPremiumAccess && !buyerSubscriptionLoading
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
             : []),
+          { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse' },
         ]
       case 'admin':
         return [
@@ -204,6 +206,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               { icon: CreditCard, label: 'Credit Reports', path: '/admin/creditsafe' },
               { icon: Send, label: 'Telegram Channel', path: '/admin/telegram' },
               { icon: Users, label: 'Facebook Groups', path: '/admin/facebook' },
+              { icon: Activity, label: 'CarrierPulse', path: '/admin/carrier-pulse' },
             ]
           },
           // Management category

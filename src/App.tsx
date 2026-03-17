@@ -80,6 +80,9 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'))
 const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
 
+// CarrierPulse
+const CarrierPulsePage = lazy(() => import('./pages/CarrierPulsePage'))
+
 // Shared pages
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
@@ -153,6 +156,8 @@ function App() {
               <Route path="earnings" element={<SellerEarningsPage />} />
               <Route path="documents" element={<SellerDocumentsPage />} />
               <Route path="transactions" element={<SellerTransactionsPage />} />
+              <Route path="carrier-pulse" element={<CarrierPulsePage />} />
+              <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
             </Route>
 
             {/* Buyer Welcome (standalone, no DashboardLayout) */}
@@ -184,6 +189,8 @@ function App() {
               <Route path="unlocked" element={<BuyerUnlockedMCsPage />} />
               <Route path="deposit/:offerId" element={<BuyerDepositPage />} />
               <Route path="transactions" element={<BuyerTransactionsPage />} />
+              <Route path="carrier-pulse" element={<CarrierPulsePage />} />
+              <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
             </Route>
 
             {/* Admin Dashboard Routes */}
@@ -218,6 +225,8 @@ function App() {
               <Route path="listing/:id" element={<AdminListingDetailPage />} />
               <Route path="offers" element={<AdminOffersPage />} />
               <Route path="reports" element={<div className="p-8"><h1 className="text-2xl font-bold">Reports</h1></div>} />
+              <Route path="carrier-pulse" element={<CarrierPulsePage />} />
+              <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
             </Route>
 
             {/* Public Dispute Page - No auth required */}

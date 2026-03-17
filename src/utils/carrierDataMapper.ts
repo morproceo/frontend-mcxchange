@@ -334,18 +334,18 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
 // ============================================================
 // CORE: Merge API + Listing → V2CarrierData
 // ============================================================
-export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2CarrierData {
+export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2CarrierData {
   const carrier = report?.carrier || {}
   const safety = report?.safety || {}
   const fleet = report?.fleet || {}
 
   const location = carrier.location
     ? `${carrier.location.city || ''}, ${carrier.location.state || ''}`.replace(/^, |, $/, '')
-    : `${listing.city || ''}, ${listing.state || ''}`.replace(/^, |, $/, '')
+    : `${listing?.city || ''}, ${listing?.state || ''}`.replace(/^, |, $/, '')
 
   const address = carrier.location
     ? `${carrier.location.street || ''}, ${carrier.location.city || ''}, ${carrier.location.state || ''} ${carrier.location.zip || ''}`.trim()
-    : listing.address || ''
+    : listing?.address || ''
 
   // Derive operatingStatus from API
   const opStatus = carrier.operatingStatus || carrier.allowedToOperate
@@ -383,36 +383,36 @@ export function mapToV2CarrierData(report: any, listing: MCListingExtended): V2C
     if (hasCancelPending || hasExpiredRenewal) insuranceStatus = 'pending'
     else if (hasCriticalRenewal) insuranceStatus = 'pending'
     else insuranceStatus = 'current'
-  } else if (listing.insuranceOnFile) {
+  } else if (listing?.insuranceOnFile) {
     insuranceStatus = 'current'
   }
 
   return {
-    mcNumber: listing.mcNumber || carrier.mcNumber || '',
-    dotNumber: listing.dotNumber || String(carrier.dotNumber || ''),
-    legalName: carrier.legalName || listing.legalName || '',
-    dbaName: carrier.dbaName || listing.dbaName || '',
+    mcNumber: listing?.mcNumber || carrier.mcNumber || '',
+    dotNumber: listing?.dotNumber || String(carrier.dotNumber || ''),
+    legalName: carrier.legalName || listing?.legalName || '',
+    dbaName: carrier.dbaName || listing?.dbaName || '',
     location,
     address,
-    phone: carrier.phone || listing.contactPhone || '',
-    yearsActive: parseFloat(carrier.yearsActive) || listing.yearsActive || 0,
-    powerUnits: carrier.totalPowerUnits || carrier.powerUnits || listing.fleetSize || 0,
-    drivers: carrier.totalDrivers || listing.totalDrivers || 0,
+    phone: carrier.phone || listing?.contactPhone || '',
+    yearsActive: parseFloat(carrier.yearsActive) || listing?.yearsActive || 0,
+    powerUnits: carrier.totalPowerUnits || carrier.powerUnits || listing?.fleetSize || 0,
+    drivers: carrier.totalDrivers || listing?.totalDrivers || 0,
     mcs150Date: normalizeDate(carrier.mcs150Date || carrier.mcs150FormDate || ''),
     registrantDate: normalizeDate(carrier.registrantDate || carrier.applicationDate || ''),
     trustScore: 0,          // Not available yet from API
     riskScore: 0,           // Not available yet from API
     safetyRating,
     insuranceStatus,
-    listingPrice: listing.askingPrice || listing.price || 0,
-    description: listing.description || '',
+    listingPrice: listing?.askingPrice || listing?.price || 0,
+    description: listing?.description || '',
     operatingStatus,
     entityType: carrier.entityType || carrier.carrierOperation || 'Carrier',
-    cargoTypes: listing.operationType || [],
-    amazonRelayScore: listing.amazonRelayScore || '',
-    highwaySetup: listing.highwaySetup || false,
-    sellingWithEmail: listing.sellingWithEmail || false,
-    sellingWithPhone: listing.sellingWithPhone || false,
+    cargoTypes: listing?.operationType || [],
+    amazonRelayScore: listing?.amazonRelayScore || '',
+    highwaySetup: listing?.highwaySetup || false,
+    sellingWithEmail: listing?.sellingWithEmail || false,
+    sellingWithPhone: listing?.sellingWithPhone || false,
     ein: carrier.ein ? String(carrier.ein) : '',
     emailDomain: carrier.emailDomain || '',
     fax: carrier.fax || '',
@@ -1182,11 +1182,11 @@ export function mapToV2ContactHistory(_report: any): V2ContactHistory {
 // ============================================================
 // COMPLIANCE (from Listing model, not API)
 // ============================================================
-export function mapToV2ComplianceFinancials(listing: MCListingExtended, carrierReport?: any): V2ComplianceFinancials {
+export function mapToV2ComplianceFinancials(listing?: MCListingExtended, carrierReport?: any): V2ComplianceFinancials {
   // Determine entry audit status from multiple sources:
   // 1. Listing field (admin-set): 'yes', 'no', 'scheduled', 'not-required'
   // 2. FMCSA authority data: commonAuthorityStatus === 'A' means active/passed
-  const listingAudit = (listing as any).entryAuditCompleted
+  const listingAudit = (listing as any)?.entryAuditCompleted
   let entryAuditCompleted = false
 
   if (listingAudit) {
