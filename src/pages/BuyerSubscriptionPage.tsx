@@ -87,7 +87,7 @@ interface Subscription {
 const BuyerSubscriptionPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, isIdentityVerified } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<string | null>('premium')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -182,7 +182,6 @@ const BuyerSubscriptionPage = () => {
       // NOTE: Credits are granted via webhook (customer.subscription.created), not via this endpoint
       // We just refresh the subscription data to show updated credits from the webhook
       if (searchParams.get('success') === 'true' && user) {
-        setSuccessMessage('Subscription activated successfully! Your credits have been added.')
         // Refresh subscription data to show updated credits (granted via webhook)
         try {
           const subResponse = await api.getSubscription()
@@ -193,6 +192,23 @@ const BuyerSubscriptionPage = () => {
         } catch (err) {
           console.error('Failed to fetch subscription:', err)
         }
+
+        // Auto-trigger Stripe Identity verification if not yet verified
+        if (!isIdentityVerified) {
+          try {
+            const verifyResponse = await api.createVerificationSession()
+            if (verifyResponse.success && verifyResponse.data?.url) {
+              // Redirect straight to Stripe Identity — seamless post-payment flow
+              window.location.href = verifyResponse.data.url
+              return
+            }
+          } catch (err) {
+            console.error('Failed to auto-start identity verification:', err)
+            // Fall through to show success message — user can verify later from settings
+          }
+        }
+
+        setSuccessMessage('Subscription activated successfully! Your credits have been added.')
         // Clear the success param from URL to prevent re-fetch on refresh
         window.history.replaceState({}, '', '/buyer/subscription')
       }
