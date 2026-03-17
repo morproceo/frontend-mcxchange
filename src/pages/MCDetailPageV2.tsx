@@ -2428,7 +2428,7 @@ export default function MCDetailPageV2() {
       documents: mapToV2Documents(carrierReport),
       verificationChecks: mapToV2VerificationChecks(carrierReport),
       availableDocuments: mapToV2AvailableDocuments(carrierReport),
-      complianceFinancials: mapToV2ComplianceFinancials(listing),
+      complianceFinancials: mapToV2ComplianceFinancials(listing, carrierReport),
       relatedCarriers: mapToV2RelatedCarriers(carrierReport),
       percentiles: mapToV2Percentiles(carrierReport),
       monitoringAlerts: mapToV2MonitoringAlerts(carrierReport),

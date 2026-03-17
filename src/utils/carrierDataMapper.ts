@@ -1182,9 +1182,24 @@ export function mapToV2ContactHistory(_report: any): V2ContactHistory {
 // ============================================================
 // COMPLIANCE (from Listing model, not API)
 // ============================================================
-export function mapToV2ComplianceFinancials(listing: MCListingExtended): V2ComplianceFinancials {
+export function mapToV2ComplianceFinancials(listing: MCListingExtended, carrierReport?: any): V2ComplianceFinancials {
+  // Determine entry audit status from multiple sources:
+  // 1. Listing field (admin-set): 'yes', 'no', 'scheduled', 'not-required'
+  // 2. FMCSA authority data: commonAuthorityStatus === 'A' means active/passed
+  const listingAudit = (listing as any).entryAuditCompleted
+  let entryAuditCompleted = false
+
+  if (listingAudit) {
+    entryAuditCompleted = listingAudit === 'yes'
+  } else if (carrierReport) {
+    const authority = carrierReport.authority || carrierReport.authorityHistory || {}
+    const statuses = authority.statuses || authority
+    const commonStatus = String(statuses.commonAuthorityStatus || statuses.common?.status || '').toUpperCase()
+    entryAuditCompleted = commonStatus === 'A' || commonStatus === 'ACTIVE'
+  }
+
   return {
-    entryAuditCompleted: false,
+    entryAuditCompleted,
     hasFactoring: false,
     factoringCompany: '',
     factoringRate: 0,
