@@ -897,6 +897,16 @@ class ApiService {
     });
   }
 
+  async getCarrierPulseAccess() {
+    return this.request<ApiResponse<{ hasAccess: boolean; reason: string; currentPlan: string | null; isActive: boolean }>>('/buyer/carrier-pulse/access');
+  }
+
+  async createCarrierPulseCheckout() {
+    return this.request<ApiResponse<CheckoutSessionResponse>>('/buyer/carrier-pulse/checkout', {
+      method: 'POST',
+    });
+  }
+
   async verifySubscription() {
     return this.request<ApiResponse<{
       fulfilled: boolean;

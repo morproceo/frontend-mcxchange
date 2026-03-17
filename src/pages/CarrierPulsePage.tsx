@@ -20,8 +20,11 @@ import {
   BarChart3, Eye, Zap, ChevronRight, ChevronDown, ChevronUp, MapPinned,
   Coins, Search, Loader2, AlertCircle,
 } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import { useAuth } from '../context/AuthContext'
+import api from '../services/api'
 
 import TabNav, { TabItem } from '../components/v2/TabNav'
 import CircularGauge from '../components/v2/CircularGauge'
@@ -1504,10 +1507,72 @@ function FullReportTab() {
 export default function CarrierPulsePage() {
   const navigate = useNavigate()
   const { dotNumber: urlDotNumber } = useParams()
+  const [searchParams] = useSearchParams()
+  const { user } = useAuth()
   const [dotInput, setDotInput] = useState('')
   const [activeDot, setActiveDot] = useState<string | undefined>(urlDotNumber)
   const [activeTab, setActiveTab] = useState('overview')
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(getRecentSearches())
+
+  // Access gating
+  const [accessChecked, setAccessChecked] = useState(false)
+  const [hasAccess, setHasAccess] = useState(false)
+  const [accessReason, setAccessReason] = useState<string>('none')
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false)
+
+  // Check access on mount
+  useEffect(() => {
+    // Admin and seller always have access (no buyer subscription check needed)
+    if (user?.role === 'admin' || user?.role === 'seller') {
+      setHasAccess(true)
+      setAccessReason('admin')
+      setAccessChecked(true)
+      return
+    }
+
+    async function checkAccess() {
+      try {
+        const res = await api.getCarrierPulseAccess()
+        if (res.success && res.data) {
+          setHasAccess(res.data.hasAccess)
+          setAccessReason(res.data.reason)
+          setCurrentPlan(res.data.currentPlan)
+        }
+      } catch {
+        // If API fails (e.g. seller/admin role), allow access
+        setHasAccess(true)
+      } finally {
+        setAccessChecked(true)
+      }
+    }
+    checkAccess()
+  }, [user?.role])
+
+  // Handle purchase success return
+  useEffect(() => {
+    if (searchParams.get('purchase') === 'success') {
+      setPurchaseSuccess(true)
+      setHasAccess(true)
+      setAccessReason('standalone')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [searchParams])
+
+  const handleCarrierPulseCheckout = async () => {
+    setCheckoutLoading(true)
+    try {
+      const res = await api.createCarrierPulseCheckout()
+      if (res.data?.url) {
+        window.location.href = res.data.url
+      }
+    } catch (err: any) {
+      console.error('CarrierPulse checkout error:', err)
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
 
   // Sync URL param
   useEffect(() => {
@@ -1609,12 +1674,104 @@ export default function CarrierPulsePage() {
   const showSkeleton = carrierLoading && !carrierReport
 
   // ==========================================
+  // ACCESS CHECK — loading state
+  // ==========================================
+  if (!accessChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    )
+  }
+
+  // ==========================================
+  // PAYWALL — no access
+  // ==========================================
+  if (!hasAccess) {
+    const isStarter = currentPlan === 'STARTER'
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
+            <Zap className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">CarrierPulse</h1>
+          <p className="text-gray-500 mt-2 mb-8">Instant carrier intelligence by DOT number</p>
+
+          <Card padding="lg">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold mb-4">
+                <Zap className="w-4 h-4" />
+                {isStarter ? 'Add to Your Plan' : 'Unlock CarrierPulse'}
+              </div>
+
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                {isStarter ? 'Add CarrierPulse to your Starter plan' : 'Get CarrierPulse access'}
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Look up any carrier by DOT number. Get safety scores, authority history, insurance status, fleet details, and more — instantly.
+              </p>
+
+              <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-3xl font-black text-gray-900">$12.99</span>
+                  <span className="text-gray-500 text-sm">/month</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Cancel anytime</p>
+              </div>
+
+              <div className="space-y-2 text-left mb-6">
+                {[
+                  'Unlimited carrier lookups by DOT number',
+                  'Full safety & inspection reports',
+                  'Authority history & compliance data',
+                  'Insurance coverage analysis',
+                  'Fleet & equipment inventory',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span className="text-gray-700">{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Button fullWidth size="lg" onClick={handleCarrierPulseCheckout} loading={checkoutLoading}>
+                <Zap className="w-5 h-5 mr-2" />
+                {isStarter ? 'Add CarrierPulse — $12.99/mo' : 'Get CarrierPulse — $12.99/mo'}
+              </Button>
+
+              {!currentPlan && (
+                <p className="text-xs text-gray-400 mt-4">
+                  Or <Link to="/buyer/subscription" className="text-indigo-600 hover:text-indigo-700 font-medium">upgrade to Professional</Link> to get CarrierPulse included
+                </p>
+              )}
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // ==========================================
   // SEARCH VIEW — no DOT entered
   // ==========================================
   if (!activeDot) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg text-center">
+          {/* Purchase success banner */}
+          {purchaseSuccess && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3"
+            >
+              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">CarrierPulse activated!</p>
+                <p className="text-xs text-emerald-600">You now have unlimited carrier lookups. Start searching below.</p>
+              </div>
+            </motion.div>
+          )}
+
           {/* Branding */}
           <div className="mb-8">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
