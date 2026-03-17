@@ -1,7 +1,7 @@
 import type { V2AuthorityEvent } from './mockData'
 
 interface AuthorityTimelineProps {
-  events: V2AuthorityEvent[]
+  events: (V2AuthorityEvent | { date: string; event: string; type: string })[]
 }
 
 const eventColors: Record<string, string> = {

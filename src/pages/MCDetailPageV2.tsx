@@ -1844,10 +1844,13 @@ function InsuranceTab() {
           {/* Horizontal timeline */}
           <div className="flex items-center gap-1 overflow-x-auto pb-2">
             {mockRenewalTimeline.map((renewal, i) => {
-              const urgencyColors = {
+              const urgencyColors: Record<string, string> = {
+                ok: 'bg-emerald-100 border-emerald-300 text-emerald-700',
                 low: 'bg-emerald-100 border-emerald-300 text-emerald-700',
                 medium: 'bg-yellow-100 border-yellow-300 text-yellow-700',
+                warning: 'bg-yellow-100 border-yellow-300 text-yellow-700',
                 high: 'bg-orange-100 border-orange-300 text-orange-700',
+                expired: 'bg-gray-100 border-gray-300 text-gray-700',
                 critical: 'bg-red-100 border-red-300 text-red-700',
               }
               return (
@@ -2230,8 +2233,9 @@ function FullReportTab() {
             </thead>
             <tbody>
               {mockVinInspections.map((insp, i) => {
-                const resultColors = {
+                const resultColors: Record<string, string> = {
                   pass: 'bg-emerald-50 text-emerald-700',
+                  fail: 'bg-red-50 text-red-700',
                   oos: 'bg-red-50 text-red-700',
                   warning: 'bg-yellow-50 text-yellow-700',
                 }

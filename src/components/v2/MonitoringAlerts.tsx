@@ -47,7 +47,7 @@ export default function MonitoringAlerts({ alerts }: MonitoringAlertsProps) {
           const desc = (a as any).detail || (a as any).description || ''
           return (
             <div
-              key={a.id || i}
+              key={i}
               className={`rounded-lg border p-3 ${colors[a.severity] || colors.info} ${a.resolved ? 'opacity-50' : ''}`}
             >
               <div className="flex items-start gap-2">

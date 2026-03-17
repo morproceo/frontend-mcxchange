@@ -1141,6 +1141,7 @@ export function mapToV2RelatedCarriers(report: any): V2RelatedCarrier[] {
     sharedField: (r.sharedField || r.shared_field || 'address') as V2RelatedCarrier['sharedField'],
     status: mapRelatedStatus(r.operatingStatus || r.status),
     powerUnits: r.powerUnits || r.total_power_units || 0,
+    location: r.location || r.city_state || '',
   }))
 }
 
@@ -1159,7 +1160,9 @@ export function mapToV2Percentiles(report: any): V2CarrierPercentile[] {
     metric: p.metric || p.name || '',
     carrierValue: p.carrierValue || p.value || 0,
     percentile: p.percentile || p.rank || 0,
-    category: (p.category || 'safety') as V2CarrierPercentile['category'],
+    category: (p.category || 'unknown') as V2CarrierPercentile['category'],
+    unit: p.unit || '',
+    lowerIsBetter: p.lowerIsBetter ?? false,
   }))
 }
 
