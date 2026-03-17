@@ -1717,6 +1717,15 @@ export default function CarrierPulsePage() {
         {/* Loading + Hero + Tabs */}
         {(!carrierError || carrierReport) && (
           <>
+            {/* Back to Search bar */}
+            <button
+              onClick={handleSearchAnother}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-4 group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              New Search
+            </button>
+
             {/* Hero Header */}
             {carrierReport && <PulseHeroHeader onSearchAnother={handleSearchAnother} />}
             {showSkeleton && !carrierReport && (
