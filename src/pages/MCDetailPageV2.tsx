@@ -297,6 +297,112 @@ function VerificationPreviewOverlay() {
 }
 
 // ============================================================
+// LOCKED TAB OVERLAY — shown when user clicks a tab that requires unlock
+// ============================================================
+function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, userCredits, unlocking, userRole, onUnlock, onPremiumRequest, onNavigate }: {
+  tabLabel: string
+  isAuthenticated: boolean
+  isPremium: boolean
+  userCredits: number
+  unlocking: boolean
+  userRole?: string
+  onUnlock: () => void
+  onPremiumRequest: () => void
+  onNavigate: (path: string) => void
+}) {
+  return (
+    <div className="relative">
+      {/* Blurred skeleton behind */}
+      <div className="filter blur-sm opacity-30 pointer-events-none select-none">
+        <CarrierLoadingSkeleton />
+      </div>
+
+      {/* Overlay */}
+      <div className="absolute inset-0 flex items-start justify-center pt-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md mx-4"
+        >
+          <Card padding="lg">
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-7 h-7 text-indigo-500" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Unlock {tabLabel}</h2>
+              <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                Unlock this MC to access {tabLabel.toLowerCase()}, along with all other detailed carrier data sections.
+              </p>
+
+              {/* Feature preview pills */}
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                {['Authority & Compliance', 'Safety & Inspections', 'Insurance', 'Fleet & Drivers', 'Documents', 'Full Report'].map(name => (
+                  <span key={name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                    <Lock className="w-2.5 h-2.5" />
+                    {name}
+                  </span>
+                ))}
+              </div>
+
+              {!isAuthenticated ? (
+                <div className="space-y-2">
+                  <Button fullWidth onClick={() => onNavigate('/login')}>
+                    <Lock className="w-4 h-4 mr-2" />Sign In to Unlock
+                  </Button>
+                  <Button fullWidth variant="secondary" onClick={() => onNavigate('/register')}>
+                    Create Account
+                  </Button>
+                </div>
+              ) : isPremium ? (
+                <div className="space-y-3">
+                  <Button
+                    fullWidth
+                    onClick={onPremiumRequest}
+                    className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    Unlock Premium MC
+                  </Button>
+                  <p className="text-xs text-gray-400">Reviewed by admin within 24-48 hours</p>
+                </div>
+              ) : userRole === 'buyer' ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Coins className="w-4 h-4 text-yellow-500" />
+                    <span className="text-sm text-gray-600">Cost: <strong className="text-gray-900">1 Credit</strong></span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-sm text-gray-600">You have: <strong className={userCredits > 0 ? 'text-emerald-600' : 'text-red-500'}>{userCredits}</strong></span>
+                  </div>
+                  <Button
+                    fullWidth
+                    size="lg"
+                    onClick={onUnlock}
+                    disabled={userCredits < 1 || unlocking}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  >
+                    {unlocking ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
+                    ) : (
+                      <><Unlock className="w-4 h-4 mr-2" />Unlock Full MC — 1 Credit</>
+                    )}
+                  </Button>
+                  {userCredits < 1 && (
+                    <Button fullWidth variant="secondary" size="sm" onClick={() => onNavigate('/buyer/subscription')}>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      {(userCredits === 0) ? 'Get a Subscription' : 'Buy More Credits'}
+                    </Button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
 // HERO HEADER
 // ============================================================
 function HeroHeader() {
@@ -1899,7 +2005,8 @@ function InsuranceTab() {
 // ============================================================
 function FleetTab() {
   const { carrier: mockCarrier, trucks: mockTrucks, trailers: mockTrailers, sharedEquipment: mockSharedEquipment } = useCarrierDataContext()
-  const avgYear = mockTrucks.length > 0 ? Math.round(mockTrucks.reduce((s, t) => s + t.year, 0) / mockTrucks.length) : 0
+  const rawAvgYear = mockTrucks.length > 0 ? Math.round(mockTrucks.filter(t => t.year >= 1900 && t.year <= 2100).reduce((s, t, _, a) => s + t.year / a.length, 0)) : 0
+  const avgYear = rawAvgYear >= 1900 && rawAvgYear <= 2100 ? rawAvgYear : 'N/A'
 
   // Fleet composition by make for donut chart
   const makeCount: Record<string, number> = {}
@@ -1923,7 +2030,7 @@ function FleetTab() {
         <ScoreCard icon={Package} label="Trailers" value={mockTrailers.length} level="good" />
         <ScoreCard icon={Users} label="CDL Drivers" value={mockCarrier.totalDriversCDL} level="good" />
         <ScoreCard icon={Calendar} label="Avg Fleet Year" value={avgYear} level="good" subtitle="model year" />
-        <ScoreCard icon={MapPinned} label="Annual Miles" value={mockCarrier.mcs150Mileage > 0 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M` : 'N/A'} level="good" subtitle="mi/yr" />
+        <ScoreCard icon={MapPinned} label="Annual Miles" value={mockCarrier.mcs150Mileage > 0 ? (mockCarrier.mcs150Mileage >= 1000000 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M` : fmtNumber(mockCarrier.mcs150Mileage)) : 'N/A'} level="good" subtitle="mi/yr" />
       </div>
 
       {/* 2. Fleet Ownership */}
@@ -2281,9 +2388,12 @@ export default function MCDetailPageV2() {
   // Preview mode: logged in but not identity verified (admins bypass)
   const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin'
 
-  // Only show Overview tab until listing is unlocked (admins bypass)
+  // Mark non-overview tabs as locked until listing is unlocked (admins bypass)
   const canAccessAllTabs = isUnlocked || user?.role === 'admin'
-  const visibleTabs = canAccessAllTabs ? tabs : tabs.filter(t => t.id === 'overview')
+  const visibleTabs = tabs.map(t => ({
+    ...t,
+    locked: !canAccessAllTabs && t.id !== 'overview',
+  }))
 
   // Not authenticated — show auth prompt
   if (!authLoading && !isAuthenticated) {
@@ -2642,10 +2752,7 @@ export default function MCDetailPageV2() {
       <HeroHeader />
 
       {/* Tab Navigation */}
-      <TabNav tabs={visibleTabs} activeTab={canAccessAllTabs ? activeTab : 'overview'} onTabChange={(id) => {
-        if (!canAccessAllTabs && id !== 'overview') return
-        setActiveTab(id)
-      }} />
+      <TabNav tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Tab Content + Action Sidebar */}
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -2660,7 +2767,19 @@ export default function MCDetailPageV2() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                {tabContent[canAccessAllTabs ? activeTab : 'overview']}
+                {!canAccessAllTabs && activeTab !== 'overview' ? (
+                  <LockedTabOverlay
+                    tabLabel={tabs.find(t => t.id === activeTab)?.label || ''}
+                    isAuthenticated={isAuthenticated}
+                    isPremium={isPremiumListing}
+                    userCredits={userCredits}
+                    unlocking={unlocking}
+                    userRole={user?.role}
+                    onUnlock={handleUnlockWithCredit}
+                    onPremiumRequest={handlePremiumRequest}
+                    onNavigate={navigate}
+                  />
+                ) : tabContent[activeTab]}
               </motion.div>
             </AnimatePresence>
           </div>

@@ -966,7 +966,7 @@ export function mapToV2Trucks(report: any): V2TruckData[] {
   const trucks = report?.fleet?.trucks || []
   return trucks.map((t: any) => ({
     vin: t.vin || '',
-    year: t.year || t.model_year || 0,
+    year: (() => { const y = Number(t.year || t.model_year || 0); return y >= 1900 && y <= 2100 ? y : 0 })(),
     make: t.make || '',
     model: t.model || '',
     bodyClass: t.bodyClass || t.body_class || '',
@@ -980,7 +980,7 @@ export function mapToV2Trailers(report: any): V2TrailerData[] {
   const trailers = report?.fleet?.trailers || []
   return trailers.map((t: any) => ({
     vin: t.vin || '',
-    year: t.year || t.model_year || 0,
+    year: (() => { const y = Number(t.year || t.model_year || 0); return y >= 1900 && y <= 2100 ? y : 0 })(),
     make: t.make || '',
     model: t.model || '',
     type: t.type || t.body_class || '',

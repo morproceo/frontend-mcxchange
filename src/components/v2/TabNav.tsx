@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Lock } from 'lucide-react'
 
 export interface TabItem {
   id: string
   label: string
   icon?: any
+  locked?: boolean
 }
 
 interface TabNavProps {
@@ -32,12 +33,17 @@ export default function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={`relative flex items-center gap-1.5 px-4 py-2.5 rounded-t-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  isActive ? 'text-indigo-600 bg-indigo-50/60' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  isActive
+                    ? 'text-indigo-600 bg-indigo-50/60'
+                    : tab.locked
+                      ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50/50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                {Icon && <Icon className="w-4 h-4" />}
-                {tab.label}
-                {isActive && (
+                {Icon && <Icon className={`w-4 h-4 ${tab.locked ? 'opacity-50' : ''}`} />}
+                <span className={tab.locked ? 'opacity-70' : ''}>{tab.label}</span>
+                {tab.locked && <Lock className="w-3 h-3 text-gray-400 ml-0.5" />}
+                {isActive && !tab.locked && (
                   <motion.div
                     layoutId="tab-underline"
                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"
@@ -96,11 +102,13 @@ export default function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
                             : 'bg-white/5 hover:bg-white/10 active:bg-white/15 border border-transparent'
                         }`}
                       >
-                        {Icon && <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-300' : 'text-indigo-400/60'}`} />}
-                        <span className={`text-sm ${isActive ? 'font-bold text-white' : 'font-medium text-white/70'}`}>{tab.label}</span>
-                        {isActive && (
+                        {Icon && <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-300' : tab.locked ? 'text-indigo-400/40' : 'text-indigo-400/60'}`} />}
+                        <span className={`text-sm ${isActive ? 'font-bold text-white' : tab.locked ? 'font-medium text-white/50' : 'font-medium text-white/70'}`}>{tab.label}</span>
+                        {tab.locked ? (
+                          <Lock className="ml-auto w-3.5 h-3.5 text-indigo-400/50" />
+                        ) : isActive ? (
                           <div className="ml-auto w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.6)]" />
-                        )}
+                        ) : null}
                       </button>
                     )
                   })}
