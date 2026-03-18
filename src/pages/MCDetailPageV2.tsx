@@ -2281,6 +2281,10 @@ export default function MCDetailPageV2() {
   // Preview mode: logged in but not identity verified (admins bypass)
   const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin'
 
+  // Only show Overview tab until listing is unlocked (admins bypass)
+  const canAccessAllTabs = isUnlocked || user?.role === 'admin'
+  const visibleTabs = canAccessAllTabs ? tabs : tabs.filter(t => t.id === 'overview')
+
   // Not authenticated — show auth prompt
   if (!authLoading && !isAuthenticated) {
     return (
@@ -2638,7 +2642,10 @@ export default function MCDetailPageV2() {
       <HeroHeader />
 
       {/* Tab Navigation */}
-      <TabNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabNav tabs={visibleTabs} activeTab={canAccessAllTabs ? activeTab : 'overview'} onTabChange={(id) => {
+        if (!canAccessAllTabs && id !== 'overview') return
+        setActiveTab(id)
+      }} />
 
       {/* Tab Content + Action Sidebar */}
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -2653,7 +2660,7 @@ export default function MCDetailPageV2() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                {tabContent[activeTab]}
+                {tabContent[canAccessAllTabs ? activeTab : 'overview']}
               </motion.div>
             </AnimatePresence>
           </div>
