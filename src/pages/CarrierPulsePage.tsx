@@ -954,14 +954,6 @@ function SafetyTab() {
                 <p className="text-sm text-blue-800"><strong>What are BASICs?</strong> FMCSA's SMS scores carriers in 7 categories. Each score is a percentile (0–100) — higher means worse. When a score crosses the threshold, FMCSA may intervene.</p>
               </div>
 
-              {activeAlertCount > 0 && (
-                <div className="bg-yellow-50 rounded-xl border border-yellow-200 p-4 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-yellow-700">{activeAlertCount} of 7 BASICs flagged for alert</p>
-                  </div>
-                </div>
-              )}
 
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
