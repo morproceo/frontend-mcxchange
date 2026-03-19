@@ -2796,6 +2796,38 @@ class ApiService {
       body: JSON.stringify({ threadId, message }),
     });
   }
+
+  // ===== CarrierPulse Creditsafe =====
+
+  async carrierPulseCreditsafeSearch(params: { name: string; state?: string }) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('name', params.name);
+    if (params.state) searchParams.set('state', params.state);
+    return this.request<{
+      success: boolean;
+      data: {
+        companies: Array<{
+          id: string;
+          connectId?: string;
+          name: string;
+          regNo?: string;
+          address?: {
+            simpleValue?: string;
+            city?: string;
+            province?: string;
+          };
+          status?: string;
+        }>;
+        totalResults: number;
+      };
+    }>(`/buyer/carrier-pulse/creditsafe/search?${searchParams.toString()}`);
+  }
+
+  async carrierPulseCreditsafeReport(connectId: string) {
+    return this.request<{ success: boolean; data: any }>(
+      `/buyer/carrier-pulse/creditsafe/report/${connectId}`
+    );
+  }
 }
 
 export const api = new ApiService();

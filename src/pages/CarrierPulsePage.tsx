@@ -26,6 +26,7 @@ import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
+import CreditReportView from '../components/v2/CreditReportView'
 import TabNav, { TabItem } from '../components/v2/TabNav'
 import CircularGauge from '../components/v2/CircularGauge'
 import SpeedometerGauge from '../components/v2/SpeedometerGauge'
@@ -155,6 +156,7 @@ const tabs: TabItem[] = [
   { id: 'safety', label: 'Safety & Inspections', icon: Activity },
   { id: 'insurance', label: 'Insurance', icon: Umbrella },
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
+  { id: 'credit', label: 'Credit Report', icon: DollarSign },
   { id: 'full-report', label: 'Full Report', icon: BarChart3 },
 ]
 
@@ -1431,7 +1433,121 @@ function DocumentsTab() {
 }
 
 // ============================================================
-// TAB 7: FULL REPORT
+// TAB 7: CREDIT REPORT (Creditsafe)
+// ============================================================
+function CreditReportTab() {
+  const { carrier: c } = useCarrierDataContext()
+  const [companies, setCompanies] = useState<any[]>([])
+  const [selectedCompany, setSelectedCompany] = useState<any>(null)
+  const [fullReport, setFullReport] = useState<any>(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
+
+  // Auto-search on mount using carrier's legal name + state
+  useEffect(() => {
+    if (!c.legalName || hasSearched) return
+    const state = c.location?.split(',').pop()?.trim() || ''
+    setSearchLoading(true)
+    setSearchError(null)
+    setHasSearched(true)
+    api.carrierPulseCreditsafeSearch({ name: c.legalName, state })
+      .then(res => {
+        const results = res.data?.companies || []
+        setCompanies(results)
+        // Auto-select if only one result
+        if (results.length === 1) {
+          handleSelectCompany(results[0])
+        }
+      })
+      .catch(() => setSearchError('Failed to search Creditsafe. Please try again.'))
+      .finally(() => setSearchLoading(false))
+  }, [c.legalName])
+
+  const handleSelectCompany = async (company: any) => {
+    const connectId = company.connectId || company.id
+    setSelectedCompany(company)
+    setReportLoading(true)
+    try {
+      const res = await api.carrierPulseCreditsafeReport(connectId)
+      setFullReport(res.data)
+    } catch {
+      setSearchError('Failed to load credit report.')
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  if (searchLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Searching Creditsafe for "{c.legalName}"...</p>
+      </div>
+    )
+  }
+
+  if (searchError && !companies.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <AlertCircle className="w-10 h-10 text-amber-500 mb-4" />
+        <p className="text-gray-700 font-semibold mb-2">Could not find credit data</p>
+        <p className="text-gray-500 text-sm max-w-md">{searchError}</p>
+      </div>
+    )
+  }
+
+  // Multiple results — let user pick
+  if (companies.length > 1 && !selectedCompany) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-blue-50 rounded-xl border border-blue-200 p-4">
+          <p className="text-sm text-blue-800">
+            <strong>{companies.length} companies</strong> found matching "{c.legalName}". Select the correct one below.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {companies.map((company: any, i: number) => (
+            <button
+              key={company.id || i}
+              onClick={() => handleSelectCompany(company)}
+              className="w-full text-left bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all"
+            >
+              <p className="font-semibold text-gray-900">{company.name}</p>
+              <p className="text-sm text-gray-500">{company.address?.simpleValue || company.address?.city || ''}</p>
+              <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                {company.regNo && <span>Reg: {company.regNo}</span>}
+                {company.status && (
+                  <span className={`px-2 py-0.5 rounded-full ${company.status?.toLowerCase().includes('active') ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {company.status}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!companies.length && hasSearched) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <AlertCircle className="w-10 h-10 text-gray-400 mb-4" />
+        <p className="text-gray-700 font-semibold mb-2">No credit data found</p>
+        <p className="text-gray-500 text-sm max-w-md">
+          Creditsafe does not have a record for "{c.legalName}". This is common for smaller or newer carriers.
+        </p>
+      </div>
+    )
+  }
+
+  return <CreditReportView fullReport={fullReport} isLoading={reportLoading} />
+}
+
+// ============================================================
+// TAB 8: FULL REPORT
 // ============================================================
 function FullReportTab() {
   const { contactHistory, riskScoreTrend, vinInspections, monitoringAlerts, relatedCarriers, percentiles } = useCarrierDataContext()
@@ -1887,6 +2003,7 @@ export default function CarrierPulsePage() {
     safety: showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyTab />,
     insurance: showSkeleton ? <CarrierLoadingSkeleton /> : <InsuranceTab />,
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
+    credit: showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
     'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
   }
 
