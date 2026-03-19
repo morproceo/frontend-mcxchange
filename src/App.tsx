@@ -22,6 +22,7 @@ const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const MCDetailPage = lazy(() => import('./pages/MCDetailPage'))
 const MCDetailPageV2 = lazy(() => import('./pages/MCDetailPageV2'))
 const ConsultationSuccessPage = lazy(() => import('./pages/ConsultationSuccessPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const DriversLandingPage = lazy(() => import('./pages/DriversLandingPage'))
@@ -111,6 +112,7 @@ function App() {
               <Route index element={<HomePage />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<RegisterPage />} />
+              <Route path="pricing" element={<PricingPage />} />
               <Route path="terms" element={<TermsPage />} />
               <Route path="privacy" element={<PrivacyPage />} />
               <Route path="admin-register" element={<AdminRegisterPage />} />
