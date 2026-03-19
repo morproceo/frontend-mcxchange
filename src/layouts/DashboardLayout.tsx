@@ -50,6 +50,7 @@ interface MenuItem {
   icon: LucideIcon
   label: string
   path: string
+  badge?: string
 }
 
 interface MenuCategory {
@@ -265,8 +266,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
         {!isCollapsed && (
           <>
             <span className={clsx('font-medium text-inherit', indented ? 'text-sm' : '')}>{item.label}</span>
-            {(item as any).badge && (
-              <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-500 text-white leading-none">{(item as any).badge}</span>
+            {item.badge && (
+              <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-500 text-white leading-none">{item.badge}</span>
             )}
           </>
         )}
