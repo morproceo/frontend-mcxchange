@@ -307,11 +307,11 @@ function PulseHeroHeader({ onSearchAnother }: { onSearchAnother: () => void }) {
           {/* Key metrics */}
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mt-6">
             {[
-              { label: 'MC Number', value: c.mcNumber, accent: false },
+              { label: 'MC Number', value: c.mcNumber || 'N/A', accent: false },
               { label: 'DOT Number', value: c.dotNumber, accent: false },
               { label: 'Location', value: c.location, accent: false },
               { label: 'Authority Age', value: `${c.yearsActive} yrs`, accent: false },
-              { label: 'Annual Miles', value: c.mcs150Mileage > 0 ? `${(c.mcs150Mileage / 1000000).toFixed(1)}M mi` : 'N/A', accent: true },
+              { label: 'Annual Miles', value: c.mcs150Mileage >= 1000000 ? `${(c.mcs150Mileage / 1000000).toFixed(1)}M mi` : c.mcs150Mileage > 0 ? `${c.mcs150Mileage.toLocaleString()} mi` : 'N/A', accent: true },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
