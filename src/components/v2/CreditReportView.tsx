@@ -896,11 +896,26 @@ const CreditReportView = ({ fullReport, isLoading }: CreditReportViewProps) => {
                             <p className="text-sm text-gray-700">{ucc.collateralDescription}</p>
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-400">
-                          {ucc.jurisdiction && <span>Jurisdiction: {ucc.jurisdiction}</span>}
-                          {ucc.filingOffice && <span>Filing Office: {ucc.filingOffice}</span>}
-                          {ucc.relatedDocumentNumber && <span>Related Doc: {ucc.relatedDocumentNumber}</span>}
+                        <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                          {ucc.jurisdiction && (
+                            <div className="bg-indigo-50 rounded-lg p-3">
+                              <p className="text-xs text-indigo-600 uppercase tracking-wide font-semibold mb-1">Jurisdiction</p>
+                              <p className="text-sm font-medium text-gray-900">{ucc.jurisdiction}</p>
+                            </div>
+                          )}
+                          {ucc.filingOffice && (
+                            <div className="bg-purple-50 rounded-lg p-3">
+                              <p className="text-xs text-purple-600 uppercase tracking-wide font-semibold mb-1">Filing Agency / Office</p>
+                              <p className="text-sm font-medium text-gray-900">{ucc.filingOffice}</p>
+                            </div>
+                          )}
                         </div>
+                        {ucc.relatedDocumentNumber && (
+                          <div className="mt-3 bg-gray-50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1">Related Document Number</p>
+                            <p className="text-sm font-mono font-medium text-gray-900">{ucc.relatedDocumentNumber}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
