@@ -848,9 +848,10 @@ function SafetyTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">FMCSA Safety Rating</p>
-                  <h3 className={`text-3xl font-black tracking-wide uppercase ${safetyLevel === 'excellent' ? 'text-emerald-600' : safetyLevel === 'fair' ? 'text-yellow-600' : 'text-red-600'}`}>
+                  <h3 className={`text-3xl font-black tracking-wide uppercase ${safetyLevel === 'excellent' ? 'text-emerald-600' : safetyLevel === 'fair' ? 'text-amber-500' : safetyLevel === 'danger' ? 'text-red-600' : 'text-gray-500'}`}>
                     {c.safetyRating === 'not-rated' ? 'Not Rated' : c.safetyRating}
                   </h3>
+                  {c.safetyRating === 'not-rated' && <p className="text-xs text-gray-400 mt-1">Most carriers are not formally rated by FMCSA</p>}
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Operating Status</p>
@@ -892,20 +893,20 @@ function SafetyTab() {
                       </tr>
                       <tr className="border-b border-gray-100">
                         <td className="py-2.5 px-4 font-medium text-gray-700">Out of Service</td>
-                        <td className={`py-2.5 px-4 text-center font-semibold ${inspections.vehicleOOS > 0 ? 'text-red-600' : 'text-blue-600'}`}>{inspections.vehicleOOS}</td>
-                        <td className={`py-2.5 px-4 text-center font-semibold ${inspections.driverOOS > 0 ? 'text-red-600' : 'text-blue-600'}`}>{inspections.driverOOS}</td>
-                        <td className={`py-2.5 px-4 text-center font-semibold ${inspections.hazmatOOS > 0 ? 'text-red-600' : 'text-blue-600'}`}>{inspections.hazmatOOS}</td>
+                        <td className={`py-2.5 px-4 text-center font-semibold ${inspections.vehicleOOS > 0 ? 'text-amber-600' : 'text-blue-600'}`}>{inspections.vehicleOOS}</td>
+                        <td className={`py-2.5 px-4 text-center font-semibold ${inspections.driverOOS > 0 ? 'text-amber-600' : 'text-blue-600'}`}>{inspections.driverOOS}</td>
+                        <td className={`py-2.5 px-4 text-center font-semibold ${inspections.hazmatOOS > 0 ? 'text-amber-600' : 'text-blue-600'}`}>{inspections.hazmatOOS}</td>
                         <td className="py-2.5 px-4 text-center text-blue-600 font-semibold">{inspections.iepOOS}</td>
                       </tr>
                       <tr className="border-b border-gray-100">
                         <td className="py-2.5 px-4 font-medium text-gray-700">Out of Service %</td>
-                        <td className={`py-2.5 px-4 text-center font-bold ${inspections.vehicleInspections > 0 && inspections.vehicleOOSRate > inspections.nationalVehicleOOSRate ? 'text-red-600' : 'text-blue-600'}`}>{inspections.vehicleInspections > 0 ? `${inspections.vehicleOOSRate}%` : '%'}</td>
-                        <td className={`py-2.5 px-4 text-center font-bold ${inspections.driverInspections > 0 && inspections.driverOOSRate > inspections.nationalDriverOOSRate ? 'text-red-600' : 'text-blue-600'}`}>{inspections.driverInspections > 0 ? `${inspections.driverOOSRate}%` : '%'}</td>
+                        <td className={`py-2.5 px-4 text-center font-bold ${inspections.vehicleInspections > 0 && inspections.vehicleOOSRate > inspections.nationalVehicleOOSRate ? 'text-amber-600' : 'text-blue-600'}`}>{inspections.vehicleInspections > 0 ? `${inspections.vehicleOOSRate}%` : '%'}</td>
+                        <td className={`py-2.5 px-4 text-center font-bold ${inspections.driverInspections > 0 && inspections.driverOOSRate > inspections.nationalDriverOOSRate ? 'text-amber-600' : 'text-blue-600'}`}>{inspections.driverInspections > 0 ? `${inspections.driverOOSRate}%` : '%'}</td>
                         <td className="py-2.5 px-4 text-center text-blue-600 font-bold">{inspections.hazmatInspections > 0 ? `${inspections.hazmatOOSRate}%` : '%'}</td>
                         <td className="py-2.5 px-4 text-center text-blue-600 font-bold">{inspections.iepInspections > 0 ? `${inspections.iepOOSRate}%` : '0%'}</td>
                       </tr>
                       <tr className="bg-blue-50/50">
-                        <td className="py-2.5 px-4 font-medium text-red-600 text-xs">Nat'l Average %</td>
+                        <td className="py-2.5 px-4 font-medium text-gray-500 text-xs">Nat'l Average %</td>
                         <td className="py-2.5 px-4 text-center text-gray-700 font-medium">{inspections.nationalVehicleOOSRate}%</td>
                         <td className="py-2.5 px-4 text-center text-gray-700 font-medium">{inspections.nationalDriverOOSRate}%</td>
                         <td className="py-2.5 px-4 text-center text-gray-700 font-medium">{inspections.nationalHazmatOOSRate}%</td>
@@ -914,7 +915,7 @@ function SafetyTab() {
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[10px] text-red-500 px-4 py-2 border-t border-gray-100">*OOS rates calculated based on the most recent 24 months of inspection data per the latest monthly SAFER Snapshot.</p>
+                <p className="text-[10px] text-gray-400 px-4 py-2 border-t border-gray-100">*OOS rates calculated based on the most recent 24 months of inspection data per the latest monthly SAFER Snapshot.</p>
               </div>
 
               {/* Crashes table */}
@@ -937,9 +938,9 @@ function SafetyTab() {
                       <tr>
                         <td className="py-2.5 px-4 font-medium text-gray-700">Crashes</td>
                         <td className={`py-2.5 px-4 text-center font-bold ${crashes.fatal > 0 ? 'text-red-600' : 'text-blue-600'}`}>{crashes.fatal}</td>
-                        <td className={`py-2.5 px-4 text-center font-bold ${crashes.injury > 0 ? 'text-yellow-600' : 'text-blue-600'}`}>{crashes.injury}</td>
-                        <td className={`py-2.5 px-4 text-center font-bold ${crashes.towaway > 0 ? 'text-orange-600' : 'text-blue-600'}`}>{crashes.towaway}</td>
-                        <td className={`py-2.5 px-4 text-center font-black ${crashes.total > 0 ? 'text-gray-900' : 'text-blue-600'}`}>{crashes.total}</td>
+                        <td className={`py-2.5 px-4 text-center font-bold ${crashes.injury > 0 ? 'text-amber-500' : 'text-blue-600'}`}>{crashes.injury}</td>
+                        <td className={`py-2.5 px-4 text-center font-bold ${crashes.towaway > 0 ? 'text-amber-500' : 'text-blue-600'}`}>{crashes.towaway}</td>
+                        <td className="py-2.5 px-4 text-center font-black text-gray-900">{crashes.total}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -989,12 +990,12 @@ function SafetyTab() {
                           <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${hasAlert ? 'bg-yellow-50/50' : ''}`}>
                             <td className="py-2.5 px-4 font-medium text-gray-900">{basic.name}{hasAlert && <span className="ml-1.5 inline-flex w-2 h-2 rounded-full bg-yellow-400" />}</td>
                             <td className="py-2.5 px-4 text-xs text-gray-500 hidden sm:table-cell">{basic.description}</td>
-                            <td className="py-2.5 px-4 text-right">{isScored ? <span className={`font-bold ${ratio >= 1 ? 'text-red-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'}`}>{basic.score}%</span> : <span className="text-gray-400 text-xs">Not Scored</span>}</td>
+                            <td className="py-2.5 px-4 text-right">{isScored ? <span className={`font-bold ${ratio >= 1 ? 'text-amber-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'}`}>{basic.score}%</span> : <span className="text-gray-400 text-xs">Not Scored</span>}</td>
                             <td className="py-2.5 px-4 text-right text-gray-400">{basic.threshold}%</td>
                             <td className="py-2.5 px-4 text-right text-gray-700">{violations}</td>
                             <td className="py-2.5 px-4 text-right">
-                              {hasAlert ? <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Alert</span>
-                                : isScored && basic.score! >= basic.threshold ? <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">Exceeding</span>
+                              {hasAlert ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Alert</span>
+                                : isScored && basic.score! >= basic.threshold ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Exceeding</span>
                                 : isScored ? <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">OK</span>
                                 : violations > 0 ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">{violations} viol.</span>
                                 : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">No Data</span>}
