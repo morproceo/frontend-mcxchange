@@ -155,7 +155,6 @@ const tabs: TabItem[] = [
   { id: 'safety', label: 'Safety & Inspections', icon: Activity },
   { id: 'insurance', label: 'Insurance', icon: Umbrella },
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
-  { id: 'documents', label: 'Documents & Verification', icon: FileText },
   { id: 'full-report', label: 'Full Report', icon: BarChart3 },
 ]
 
@@ -1888,7 +1887,6 @@ export default function CarrierPulsePage() {
     safety: showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyTab />,
     insurance: showSkeleton ? <CarrierLoadingSkeleton /> : <InsuranceTab />,
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
-    documents: showSkeleton ? <CarrierLoadingSkeleton /> : <DocumentsTab />,
     'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
   }
 
