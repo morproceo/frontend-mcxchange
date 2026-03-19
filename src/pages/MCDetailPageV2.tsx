@@ -2295,9 +2295,22 @@ function CreditReportTab() {
   const [reportLoading, setReportLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
+  const [accessState, setAccessState] = useState<'checking' | 'locked' | 'unlocked'>('checking')
+  const [unlocking, setUnlocking] = useState(false)
 
+  // Step 1: Check if credit report is unlocked for this DOT
   useEffect(() => {
-    if (!c.legalName || hasSearched) return
+    if (!c.dotNumber) return
+    api.checkCreditReportAccess(c.dotNumber, 'check')
+      .then(res => {
+        setAccessState(res.data?.unlocked ? 'unlocked' : 'locked')
+      })
+      .catch(() => setAccessState('locked'))
+  }, [c.dotNumber])
+
+  // Step 2: Once unlocked, auto-search Creditsafe
+  useEffect(() => {
+    if (accessState !== 'unlocked' || !c.legalName || hasSearched) return
     const state = c.location?.split(',').pop()?.trim() || ''
     setSearchLoading(true)
     setSearchError(null)
@@ -2310,7 +2323,6 @@ function CreditReportTab() {
           setSearchLoading(false)
           return
         }
-        // Auto-select best match by cross-referencing carrier location
         const carrierCity = (c.location?.split(',')[0]?.trim() || '').toLowerCase()
         const carrierState = state.toLowerCase()
         let best = results[0]
@@ -2330,7 +2342,6 @@ function CreditReportTab() {
           scored.sort((a: any, b: any) => b.score - a.score)
           best = scored[0].co
         }
-        // Fetch report for best match
         const connectId = best.connectId || best.id
         setSearchLoading(false)
         setReportLoading(true)
@@ -2341,7 +2352,57 @@ function CreditReportTab() {
       })
       .catch(() => setSearchError('Failed to load credit report.'))
       .finally(() => { setSearchLoading(false); setReportLoading(false) })
-  }, [c.legalName])
+  }, [accessState, c.legalName])
+
+  const handleUnlock = async () => {
+    if (!c.dotNumber) return
+    setUnlocking(true)
+    try {
+      const res = await api.checkCreditReportAccess(c.dotNumber, 'unlock')
+      if (res.data?.unlocked) {
+        setAccessState('unlocked')
+      }
+    } catch (err: any) {
+      setSearchError(err.message?.includes('Insufficient') ? 'Not enough credits. You need 2 credits to unlock this report.' : 'Failed to unlock credit report.')
+    } finally {
+      setUnlocking(false)
+    }
+  }
+
+  // Checking access
+  if (accessState === 'checking') {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Checking access...</p>
+      </div>
+    )
+  }
+
+  // Locked — show unlock prompt
+  if (accessState === 'locked') {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/25">
+          <Lock className="w-10 h-10 text-white" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Unlock Credit Report</h3>
+        <p className="text-gray-500 text-sm max-w-md mb-1">
+          Get the full business credit report for <strong>{c.legalName}</strong> including UCC filings, liens, judgments, bankruptcy status, financial statements, and more.
+        </p>
+        <p className="text-indigo-600 font-semibold text-sm mb-6">Cost: 2 credits</p>
+        {searchError && <p className="text-red-500 text-sm mb-4">{searchError}</p>}
+        <button
+          onClick={handleUnlock}
+          disabled={unlocking}
+          className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold transition-colors flex items-center gap-2"
+        >
+          {unlocking ? <Loader2 className="w-5 h-5 animate-spin" /> : <Unlock className="w-5 h-5" />}
+          {unlocking ? 'Unlocking...' : 'Unlock for 2 Credits'}
+        </button>
+      </div>
+    )
+  }
 
   if (searchLoading) {
     return (

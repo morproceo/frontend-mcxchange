@@ -2823,6 +2823,13 @@ class ApiService {
     }>(`/buyer/carrier-pulse/creditsafe/search?${searchParams.toString()}`);
   }
 
+  async checkCreditReportAccess(dotNumber: string, action: 'check' | 'unlock' = 'check') {
+    return this.request<{
+      success: boolean;
+      data: { unlocked: boolean; free: boolean; cost?: number; newBalance?: number };
+    }>(`/buyer/carrier-pulse/credit-report/${dotNumber}?action=${action}`);
+  }
+
   async carrierPulseCreditsafeReport(connectId: string) {
     return this.request<{ success: boolean; data: any }>(
       `/buyer/carrier-pulse/creditsafe/report/${connectId}`
