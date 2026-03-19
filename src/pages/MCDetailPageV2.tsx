@@ -29,6 +29,7 @@ import { useAuth } from '../context/AuthContext'
 import { useListing } from '../hooks/useListing'
 import { api } from '../services/api'
 
+import CreditReportView from '../components/v2/CreditReportView'
 import TabNav, { TabItem } from '../components/v2/TabNav'
 import CircularGauge from '../components/v2/CircularGauge'
 import SpeedometerGauge from '../components/v2/SpeedometerGauge'
@@ -161,6 +162,7 @@ const tabs: TabItem[] = [
   { id: 'insurance', label: 'Insurance', icon: Umbrella },
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
   { id: 'documents', label: 'Documents & Verification', icon: FileText },
+  { id: 'credit', label: 'Credit Report', icon: DollarSign },
   { id: 'full-report', label: 'Full Report', icon: BarChart3 },
 ]
 
@@ -2284,7 +2286,87 @@ function DocumentsTab() {
 }
 
 // ============================================================
-// TAB 7: FULL REPORT
+// TAB 7: CREDIT REPORT (Creditsafe)
+// ============================================================
+function CreditReportTab() {
+  const { carrier: c } = useCarrierDataContext()
+  const [fullReport, setFullReport] = useState<any>(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
+
+  useEffect(() => {
+    if (!c.legalName || hasSearched) return
+    const state = c.location?.split(',').pop()?.trim() || ''
+    setSearchLoading(true)
+    setSearchError(null)
+    setHasSearched(true)
+    api.carrierPulseCreditsafeSearch({ name: c.legalName, state })
+      .then(res => {
+        const results = res.data?.companies || []
+        if (!results.length) {
+          setSearchError('No credit data found for this carrier.')
+          setSearchLoading(false)
+          return
+        }
+        // Auto-select best match by cross-referencing carrier location
+        const carrierCity = (c.location?.split(',')[0]?.trim() || '').toLowerCase()
+        const carrierState = state.toLowerCase()
+        let best = results[0]
+        if (results.length > 1) {
+          const scored = results.map((co: any) => {
+            let score = 0
+            const addr = co.address || {}
+            const addrStr = (addr.simpleValue || '').toLowerCase()
+            const coCity = (addr.city || '').toLowerCase()
+            const coProvince = (addr.province || '').toLowerCase()
+            if (carrierState && (coProvince === carrierState || addrStr.includes(carrierState))) score += 1
+            if (carrierCity && (coCity === carrierCity || addrStr.includes(carrierCity))) score += 2
+            if (co.status?.toLowerCase().includes('active')) score += 1
+            if (co.name?.toLowerCase() === c.legalName.toLowerCase()) score += 3
+            return { co, score }
+          })
+          scored.sort((a: any, b: any) => b.score - a.score)
+          best = scored[0].co
+        }
+        // Fetch report for best match
+        const connectId = best.connectId || best.id
+        setSearchLoading(false)
+        setReportLoading(true)
+        return api.carrierPulseCreditsafeReport(connectId)
+      })
+      .then(res => {
+        if (res?.data) setFullReport(res.data)
+      })
+      .catch(() => setSearchError('Failed to load credit report.'))
+      .finally(() => { setSearchLoading(false); setReportLoading(false) })
+  }, [c.legalName])
+
+  if (searchLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Searching Creditsafe for "{c.legalName}"...</p>
+      </div>
+    )
+  }
+
+  if (searchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <AlertCircle className="w-10 h-10 text-gray-400 mb-4" />
+        <p className="text-gray-700 font-semibold mb-2">No credit data found</p>
+        <p className="text-gray-500 text-sm max-w-md">{searchError}</p>
+      </div>
+    )
+  }
+
+  return <CreditReportView fullReport={fullReport} isLoading={reportLoading} />
+}
+
+// ============================================================
+// TAB 8: FULL REPORT
 // ============================================================
 function FullReportTab() {
   const { contactHistory: mockContactHistory, riskScoreTrend: mockRiskScoreTrend, vinInspections: mockVinInspections, monitoringAlerts: mockMonitoringAlerts, relatedCarriers: mockRelatedCarriers, percentiles: mockCarrierPercentiles } = useCarrierDataContext()
@@ -2711,6 +2793,7 @@ export default function MCDetailPageV2() {
     insurance: showSkeleton ? <CarrierLoadingSkeleton /> : <InsuranceTab />,
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
     documents: showSkeleton ? <CarrierLoadingSkeleton /> : <DocumentsTab />,
+    credit: showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
     'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
   }
 
