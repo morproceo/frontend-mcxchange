@@ -142,7 +142,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Handshake, label: 'Transactions', path: '/seller/transactions' },
           { icon: DollarSign, label: 'Earnings', path: '/seller/earnings' },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
-          { icon: Activity, label: 'CarrierPulse', path: '/seller/carrier-pulse' },
+          { icon: Activity, label: 'CarrierPulse', path: '/seller/carrier-pulse', badge: 'New' },
         ]
       case 'buyer':
         return [
@@ -157,9 +157,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: MessageSquare, label: 'Messages', path: '/buyer/messages' },
           { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
           ...(hasPremiumAccess && !buyerSubscriptionLoading
-            ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
+            ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe', badge: 'New' }]
             : []),
-          { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse' },
+          { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' },
         ]
       case 'admin':
         return [
@@ -263,7 +263,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
       >
         <Icon className={clsx('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-gray-500')} />
         {!isCollapsed && (
-          <span className={clsx('font-medium text-inherit', indented ? 'text-sm' : '')}>{item.label}</span>
+          <>
+            <span className={clsx('font-medium text-inherit', indented ? 'text-sm' : '')}>{item.label}</span>
+            {(item as any).badge && (
+              <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-500 text-white leading-none">{(item as any).badge}</span>
+            )}
+          </>
         )}
       </Link>
     )
