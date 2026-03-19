@@ -1233,8 +1233,8 @@ export function mapToV2ComplianceFinancials(listing?: MCListingExtended, carrier
 
   return {
     entryAuditCompleted,
-    hasFactoring: false,
-    factoringCompany: '',
-    factoringRate: 0,
+    hasFactoring: (listing as any)?.hasFactoring || false,
+    factoringCompany: (listing as any)?.factoringCompany || '',
+    factoringRate: parseFloat((listing as any)?.factoringRate) || 0,
   }
 }
