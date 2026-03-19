@@ -2355,15 +2355,28 @@ function CreditReportTab() {
   }, [accessState, c.legalName])
 
   const handleUnlock = async () => {
-    if (!c.dotNumber) return
+    if (!c.dotNumber || !c.legalName) return
     setUnlocking(true)
+    setSearchError(null)
     try {
-      const res = await api.checkCreditReportAccess(c.dotNumber, 'unlock')
-      if (res.data?.unlocked) {
+      // Step 1: Search Creditsafe FIRST to verify data exists before charging
+      const state = c.location?.split(',').pop()?.trim() || ''
+      const searchRes = await api.carrierPulseCreditsafeSearch({ name: c.legalName, state })
+      const results = searchRes.data?.companies || []
+      if (!results.length) {
+        setSearchError('No credit data found for this carrier in Creditsafe. You were not charged.')
+        setUnlocking(false)
+        return
+      }
+
+      // Step 2: Data exists — now charge credits
+      const unlockRes = await api.checkCreditReportAccess(c.dotNumber, 'unlock')
+      if (unlockRes.data?.unlocked) {
         setAccessState('unlocked')
       }
     } catch (err: any) {
-      setSearchError(err.message?.includes('Insufficient') ? 'Not enough credits. You need 2 credits to unlock this report.' : 'Failed to unlock credit report.')
+      const msg = err.message || ''
+      setSearchError(msg.includes('Insufficient') ? 'Not enough credits. You need 2 credits to unlock this report.' : 'Failed to unlock credit report.')
     } finally {
       setUnlocking(false)
     }
