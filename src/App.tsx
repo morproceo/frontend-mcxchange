@@ -180,17 +180,17 @@ function App() {
               }
             >
               <Route path="dashboard" element={<BuyerDashboard />} />
-              <Route path="offers" element={<BuyerOffersPage />} />
-              <Route path="purchases" element={<BuyerPurchasesPage />} />
-              <Route path="messages" element={<BuyerMessagesPage />} />
               <Route path="subscription" element={<BuyerSubscriptionPage />} />
-              <Route path="creditsafe" element={<BuyerCreditsafePage />} />
-              <Route path="vip-marketplace" element={<VipMarketplacePage />} />
-              <Route path="unlocked" element={<BuyerUnlockedMCsPage />} />
-              <Route path="deposit/:offerId" element={<BuyerDepositPage />} />
-              <Route path="transactions" element={<BuyerTransactionsPage />} />
-              <Route path="carrier-pulse" element={<CarrierPulsePage />} />
-              <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
+              <Route path="offers" element={<VerificationRequiredRoute><BuyerOffersPage /></VerificationRequiredRoute>} />
+              <Route path="purchases" element={<VerificationRequiredRoute><BuyerPurchasesPage /></VerificationRequiredRoute>} />
+              <Route path="messages" element={<VerificationRequiredRoute><BuyerMessagesPage /></VerificationRequiredRoute>} />
+              <Route path="creditsafe" element={<VerificationRequiredRoute><BuyerCreditsafePage /></VerificationRequiredRoute>} />
+              <Route path="vip-marketplace" element={<VerificationRequiredRoute><VipMarketplacePage /></VerificationRequiredRoute>} />
+              <Route path="unlocked" element={<VerificationRequiredRoute><BuyerUnlockedMCsPage /></VerificationRequiredRoute>} />
+              <Route path="deposit/:offerId" element={<VerificationRequiredRoute><BuyerDepositPage /></VerificationRequiredRoute>} />
+              <Route path="transactions" element={<VerificationRequiredRoute><BuyerTransactionsPage /></VerificationRequiredRoute>} />
+              <Route path="carrier-pulse" element={<VerificationRequiredRoute><CarrierPulsePage /></VerificationRequiredRoute>} />
+              <Route path="carrier-pulse/:dotNumber" element={<VerificationRequiredRoute><CarrierPulsePage /></VerificationRequiredRoute>} />
             </Route>
 
             {/* Admin Dashboard Routes */}
