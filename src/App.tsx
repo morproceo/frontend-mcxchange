@@ -191,8 +191,8 @@ function App() {
               <Route path="unlocked" element={<VerificationRequiredRoute><BuyerUnlockedMCsPage /></VerificationRequiredRoute>} />
               <Route path="deposit/:offerId" element={<VerificationRequiredRoute><BuyerDepositPage /></VerificationRequiredRoute>} />
               <Route path="transactions" element={<VerificationRequiredRoute><BuyerTransactionsPage /></VerificationRequiredRoute>} />
-              <Route path="carrier-pulse" element={<VerificationRequiredRoute><CarrierPulsePage /></VerificationRequiredRoute>} />
-              <Route path="carrier-pulse/:dotNumber" element={<VerificationRequiredRoute><CarrierPulsePage /></VerificationRequiredRoute>} />
+              <Route path="carrier-pulse" element={<CarrierPulsePage />} />
+              <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
             </Route>
 
             {/* Admin Dashboard Routes */}
