@@ -61,7 +61,7 @@ export default function PricingPage() {
       if (plansRes.data?.length) {
         setPlans(plansRes.data.map(plan => {
           const key = plan.id.toLowerCase() as keyof typeof planStyles
-          return { id: key, ...plan, ...(planStyles[key] || planStyles.starter) }
+          return { ...plan, ...(planStyles[key] || planStyles.starter), id: key }
         }))
       }
       if (packsRes.data) setCreditPacks(packsRes.data)
