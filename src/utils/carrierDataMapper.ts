@@ -1197,9 +1197,12 @@ export function mapToV2ContactHistory(_report: any): V2ContactHistory {
 // COMPLIANCE (from Listing model, not API)
 // ============================================================
 export function mapToV2ComplianceFinancials(listing?: MCListingExtended, carrierReport?: any): V2ComplianceFinancials {
-  // Determine entry audit status from multiple sources:
-  // 1. Listing field (admin-set): 'yes', 'no', 'scheduled', 'not-required'
-  // 2. FMCSA authority data: commonAuthorityStatus === 'A' means active/passed
+  // Determine entry audit status from multiple sources (priority order):
+  // 1. Listing field (admin/seller-set): 'yes', 'no', 'scheduled', 'not-required'
+  // 2. Authority statuses: common.status === 'A' or 'ACTIVE'
+  // 3. Authority timeline: has a 'GRANTED' event
+  // 4. Documents verificationChecks: Operating Authority status === 'active'
+  // 5. Carrier allowedToOperate === 'Y'
   const listingAudit = (listing as any)?.entryAuditCompleted
   let entryAuditCompleted = false
 
@@ -1209,7 +1212,23 @@ export function mapToV2ComplianceFinancials(listing?: MCListingExtended, carrier
     const authority = carrierReport.authority || carrierReport.authorityHistory || {}
     const statuses = authority.statuses || authority
     const commonStatus = String(statuses.commonAuthorityStatus || statuses.common?.status || '').toUpperCase()
-    entryAuditCompleted = commonStatus === 'A' || commonStatus === 'ACTIVE'
+
+    if (commonStatus === 'A' || commonStatus === 'ACTIVE') {
+      entryAuditCompleted = true
+    }
+    // Fallback: check timeline for GRANTED events
+    else if (Array.isArray(authority.timeline) && authority.timeline.some((t: any) => t.event === 'GRANTED')) {
+      entryAuditCompleted = true
+    }
+    // Fallback: check documents verificationChecks
+    else if (Array.isArray(carrierReport.documents?.verificationChecks)) {
+      const authCheck = carrierReport.documents.verificationChecks.find((c: any) => c.name === 'Operating Authority')
+      if (authCheck?.status === 'active') entryAuditCompleted = true
+    }
+    // Fallback: carrier allowedToOperate
+    else if (carrierReport.carrier?.allowedToOperate === 'Y') {
+      entryAuditCompleted = true
+    }
   }
 
   return {

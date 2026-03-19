@@ -709,8 +709,14 @@ function OverviewTab() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge level="excellent" label="Active" size="sm" />
-            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">Score: {mockCarrier.amazonRelayScore}</span>
+            {mockCarrier.amazonRelayScore ? (
+              <>
+                <StatusBadge level="excellent" label="Active" size="sm" />
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">Score: {mockCarrier.amazonRelayScore}</span>
+              </>
+            ) : (
+              <StatusBadge level="fair" label="Not Registered" size="sm" />
+            )}
           </div>
         </Card>
         <Card padding="md">
