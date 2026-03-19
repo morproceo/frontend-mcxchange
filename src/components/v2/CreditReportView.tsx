@@ -850,6 +850,62 @@ const CreditReportView = ({ fullReport, isLoading }: CreditReportViewProps) => {
                   </div>
                 </div>
               )}
+
+              {/* Detailed UCC Filing Records */}
+              {reportData.negativeInfo.uccFilings && reportData.negativeInfo.uccFilings.length > 0 && (
+                <div className="mt-4">
+                  <h6 className="font-semibold text-gray-700 mb-3">UCC Filing Details</h6>
+                  <div className="space-y-3">
+                    {reportData.negativeInfo.uccFilings.map((ucc: any, i: number) => (
+                      <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {ucc.filingType || 'UCC Filing'} {ucc.filingNumber && <span className="text-gray-400 font-normal text-sm ml-2">#{ucc.filingNumber}</span>}
+                            </p>
+                            {ucc.status && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${ucc.status?.toLowerCase() === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {ucc.status}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right text-sm text-gray-500">
+                            {ucc.filedDate && <p>Filed: {formatDate(ucc.filedDate)}</p>}
+                            {ucc.expirationDate && <p>Expires: {formatDate(ucc.expirationDate)}</p>}
+                          </div>
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                          {ucc.securedParty?.name && (
+                            <div className="bg-blue-50 rounded-lg p-3">
+                              <p className="text-xs text-blue-600 uppercase tracking-wide font-semibold mb-1">Secured Party (Lien Holder)</p>
+                              <p className="font-medium text-gray-900">{ucc.securedParty.name}</p>
+                              {ucc.securedParty.address && <p className="text-gray-500 text-xs mt-0.5">{ucc.securedParty.address}</p>}
+                            </div>
+                          )}
+                          {ucc.debtorName && (
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1">Debtor</p>
+                              <p className="font-medium text-gray-900">{ucc.debtorName}</p>
+                              {ucc.debtorAddress?.simpleValue && <p className="text-gray-500 text-xs mt-0.5">{ucc.debtorAddress.simpleValue}</p>}
+                            </div>
+                          )}
+                        </div>
+                        {ucc.collateralDescription && (
+                          <div className="mt-3 bg-amber-50 rounded-lg p-3">
+                            <p className="text-xs text-amber-600 uppercase tracking-wide font-semibold mb-1">Collateral Description</p>
+                            <p className="text-sm text-gray-700">{ucc.collateralDescription}</p>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-400">
+                          {ucc.jurisdiction && <span>Jurisdiction: {ucc.jurisdiction}</span>}
+                          {ucc.filingOffice && <span>Filing Office: {ucc.filingOffice}</span>}
+                          {ucc.relatedDocumentNumber && <span>Related Doc: {ucc.relatedDocumentNumber}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Judgments / Tax Liens Summary */}
@@ -886,6 +942,109 @@ const CreditReportView = ({ fullReport, isLoading }: CreditReportViewProps) => {
                 </div>
               </div>
             </div>
+
+            {/* Detailed Judgment Records */}
+            {reportData.negativeInfo.judgments && reportData.negativeInfo.judgments.length > 0 && (
+              <div className="mt-4">
+                <h6 className="font-semibold text-gray-700 mb-3">Judgment Details</h6>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Filed Date</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Case #</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Plaintiff</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportData.negativeInfo.judgments.map((j: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 px-4 text-gray-700">{formatDate(j.filedDate)}</td>
+                          <td className="py-2.5 px-4 text-gray-700 font-mono text-xs">{j.caseNumber || 'N/A'}</td>
+                          <td className="py-2.5 px-4 font-medium text-gray-900">{j.plaintiff || 'N/A'}</td>
+                          <td className="py-2.5 px-4 text-right font-semibold text-red-600">{formatCurrency(j.amount, j.currency)}</td>
+                          <td className="py-2.5 px-4 text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${j.status?.toLowerCase() === 'satisfied' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                              {j.status || 'Open'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Detailed Tax Lien Records */}
+            {reportData.negativeInfo.taxLiens && reportData.negativeInfo.taxLiens.length > 0 && (
+              <div className="mt-4">
+                <h6 className="font-semibold text-gray-700 mb-3">Tax Lien Details</h6>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Filed Date</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Jurisdiction</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportData.negativeInfo.taxLiens.map((lien: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 px-4 text-gray-700">{formatDate(lien.filedDate)}</td>
+                          <td className="py-2.5 px-4 text-gray-700">{lien.jurisdiction || 'N/A'}</td>
+                          <td className="py-2.5 px-4 text-right font-semibold text-amber-600">{formatCurrency(lien.amount, lien.currency)}</td>
+                          <td className="py-2.5 px-4 text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${lien.status?.toLowerCase() === 'released' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {lien.status || 'Open'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Detailed Suit Records */}
+            {reportData.negativeInfo.suits && reportData.negativeInfo.suits.length > 0 && (
+              <div className="mt-4">
+                <h6 className="font-semibold text-gray-700 mb-3">Suit Details</h6>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Filed Date</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Case #</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Plaintiff</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportData.negativeInfo.suits.map((s: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 px-4 text-gray-700">{formatDate(s.filedDate)}</td>
+                          <td className="py-2.5 px-4 text-gray-700 font-mono text-xs">{s.caseNumber || 'N/A'}</td>
+                          <td className="py-2.5 px-4 font-medium text-gray-900">{s.plaintiff || 'N/A'}</td>
+                          <td className="py-2.5 px-4 text-right font-semibold text-orange-600">{formatCurrency(s.amount, s.currency)}</td>
+                          <td className="py-2.5 px-4 text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${s.status?.toLowerCase() === 'closed' || s.status?.toLowerCase() === 'dismissed' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {s.status || 'Open'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Bankruptcy Status */}
             <div>
