@@ -1456,9 +1456,27 @@ function CreditReportTab() {
       .then(res => {
         const results = res.data?.companies || []
         setCompanies(results)
-        // Auto-select if only one result
+        // Auto-select best match by cross-referencing carrier location
         if (results.length === 1) {
           handleSelectCompany(results[0])
+        } else if (results.length > 1) {
+          const carrierCity = (c.location?.split(',')[0]?.trim() || '').toLowerCase()
+          const carrierState = state.toLowerCase()
+          // Score each company: state match = 1pt, city match = 2pts, active status = 1pt, name exact match = 3pts
+          const scored = results.map((co: any) => {
+            let score = 0
+            const addr = co.address || {}
+            const addrStr = (addr.simpleValue || '').toLowerCase()
+            const coCity = (addr.city || '').toLowerCase()
+            const coProvince = (addr.province || '').toLowerCase()
+            if (carrierState && (coProvince === carrierState || addrStr.includes(carrierState))) score += 1
+            if (carrierCity && (coCity === carrierCity || addrStr.includes(carrierCity))) score += 2
+            if (co.status?.toLowerCase().includes('active')) score += 1
+            if (co.name?.toLowerCase() === c.legalName.toLowerCase()) score += 3
+            return { co, score }
+          })
+          scored.sort((a: any, b: any) => b.score - a.score)
+          handleSelectCompany(scored[0].co)
         }
       })
       .catch(() => setSearchError('Failed to search Creditsafe. Please try again.'))
@@ -1498,38 +1516,6 @@ function CreditReportTab() {
     )
   }
 
-  // Multiple results — let user pick
-  if (companies.length > 1 && !selectedCompany) {
-    return (
-      <div className="space-y-4">
-        <div className="bg-blue-50 rounded-xl border border-blue-200 p-4">
-          <p className="text-sm text-blue-800">
-            <strong>{companies.length} companies</strong> found matching "{c.legalName}". Select the correct one below.
-          </p>
-        </div>
-        <div className="space-y-2">
-          {companies.map((company: any, i: number) => (
-            <button
-              key={company.id || i}
-              onClick={() => handleSelectCompany(company)}
-              className="w-full text-left bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all"
-            >
-              <p className="font-semibold text-gray-900">{company.name}</p>
-              <p className="text-sm text-gray-500">{company.address?.simpleValue || company.address?.city || ''}</p>
-              <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                {company.regNo && <span>Reg: {company.regNo}</span>}
-                {company.status && (
-                  <span className={`px-2 py-0.5 rounded-full ${company.status?.toLowerCase().includes('active') ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {company.status}
-                  </span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    )
-  }
 
   if (!companies.length && hasSearched) {
     return (
