@@ -1595,17 +1595,13 @@ export default function CarrierPulsePage() {
 
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchMode, setSearchMode] = useState<'dot' | 'mc'>('dot')
 
   const handleSearch = async () => {
-    const raw = dotInput.trim()
-    const cleaned = raw.replace(/\D/g, '')
+    const cleaned = dotInput.trim().replace(/\D/g, '')
     if (!cleaned) return
 
-    // Detect MC vs DOT: MC numbers are typically 6-7 digits, DOT numbers 7-8+
-    // If user prefixes with "MC" or input is <= 7 digits, try MC lookup first
-    const isMC = /^mc\s*/i.test(raw)
-
-    if (isMC) {
+    if (searchMode === 'mc') {
       setSearchLoading(true)
       setSearchError(null)
       try {
@@ -1814,6 +1810,24 @@ export default function CarrierPulsePage() {
             <p className="text-gray-500 mt-2">Instant carrier intelligence by DOT or MC number</p>
           </div>
 
+          {/* Search Mode Toggle */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex rounded-lg bg-gray-100 p-1">
+              <button
+                onClick={() => { setSearchMode('dot'); setSearchError(null) }}
+                className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${searchMode === 'dot' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                DOT Number
+              </button>
+              <button
+                onClick={() => { setSearchMode('mc'); setSearchError(null) }}
+                className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${searchMode === 'mc' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                MC Number
+              </button>
+            </div>
+          </div>
+
           {/* Search Box */}
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -1823,7 +1837,7 @@ export default function CarrierPulsePage() {
                 value={dotInput}
                 onChange={e => setDotInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="Enter DOT or MC number (e.g. MC123456)..."
+                placeholder={searchMode === 'dot' ? 'Enter DOT number...' : 'Enter MC number...'}
                 className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-lg font-medium transition-all outline-none"
                 autoFocus
               />
@@ -1841,8 +1855,6 @@ export default function CarrierPulsePage() {
           {searchError && (
             <p className="mt-3 text-sm text-red-600">{searchError}</p>
           )}
-
-          <p className="mt-2 text-xs text-gray-400">Prefix with "MC" for MC number lookups (e.g. MC123456)</p>
 
           {/* Recent Searches */}
           {recentSearches.length > 0 && (
