@@ -852,11 +852,11 @@ const CreditReportView = ({ fullReport, isLoading }: CreditReportViewProps) => {
               )}
 
               {/* Detailed UCC Filing Records */}
-              {reportData.negativeInfo.uccFilings && reportData.negativeInfo.uccFilings.length > 0 && (
+              {((reportData.negativeInfo.uccDetails && reportData.negativeInfo.uccDetails.length > 0) || (reportData.negativeInfo.uccFilings && reportData.negativeInfo.uccFilings.length > 0)) && (
                 <div className="mt-4">
                   <h6 className="font-semibold text-gray-700 mb-3">UCC Filing Details</h6>
                   <div className="space-y-3">
-                    {reportData.negativeInfo.uccFilings.map((ucc: any, i: number) => (
+                    {(reportData.negativeInfo.uccDetails || reportData.negativeInfo.uccFilings || []).map((ucc: any, i: number) => (
                       <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -942,6 +942,49 @@ const CreditReportView = ({ fullReport, isLoading }: CreditReportViewProps) => {
                 </div>
               </div>
             </div>
+
+            {/* Detailed Legal Filing Records (from mostRecentLegalFilings or individual arrays) */}
+            {reportData.negativeInfo.mostRecentLegalFilings && reportData.negativeInfo.mostRecentLegalFilings.length > 0 && (
+              <div className="mt-4">
+                <h6 className="font-semibold text-gray-700 mb-3">Recent Legal Filings</h6>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Filed Date</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Type</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Case / Filing #</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportData.negativeInfo.mostRecentLegalFilings.map((f: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2.5 px-4 text-gray-700">{formatDate(f.filedDate)}</td>
+                          <td className="py-2.5 px-4">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              f.legalFilingType === 'UCC' ? 'bg-blue-100 text-blue-700' :
+                              f.legalFilingType === 'Judgment' ? 'bg-red-100 text-red-700' :
+                              f.legalFilingType === 'Tax Lien' ? 'bg-amber-100 text-amber-700' :
+                              f.legalFilingType === 'Suit' ? 'bg-orange-100 text-orange-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>{f.legalFilingType || 'Filing'}</span>
+                          </td>
+                          <td className="py-2.5 px-4 text-gray-700 font-mono text-xs">{f.case || f.caseNumber || 'N/A'}</td>
+                          <td className="py-2.5 px-4 text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              f.status?.toLowerCase() === 'active' ? 'bg-amber-100 text-amber-700' :
+                              f.status?.toLowerCase() === 'satisfied' || f.status?.toLowerCase() === 'released' || f.status?.toLowerCase() === 'terminated' ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>{f.status || 'N/A'}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Detailed Judgment Records */}
             {reportData.negativeInfo.judgments && reportData.negativeInfo.judgments.length > 0 && (
