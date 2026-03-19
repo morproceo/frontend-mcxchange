@@ -509,7 +509,7 @@ const BuyerSubscriptionPage = () => {
           >
             <Sparkles className="w-4 h-4 text-yellow-600" />
             <span className="text-sm font-medium text-yellow-700">
-              {hasActiveSubscription ? 'Upgrade Your Plan' : 'Unlock More MC Authorities'}
+              {hasActiveSubscription ? 'Upgrade Your Plan' : 'Unlock More Listings'}
             </span>
           </motion.div>
 
@@ -528,7 +528,7 @@ const BuyerSubscriptionPage = () => {
             transition={{ delay: 0.2 }}
             className="text-xl text-gray-600 max-w-2xl mx-auto"
           >
-            Get credits to unlock full MC details and find the perfect authority for your business
+            Get credits to unlock full listing details and find the perfect business for you
           </motion.p>
 
           {/* Current Credits */}
@@ -658,7 +658,7 @@ const BuyerSubscriptionPage = () => {
                         <Sparkles className="w-8 h-8 text-amber-500 flex-shrink-0" />
                         <div>
                           <div className="text-lg font-bold text-amber-600">Unlimited Access</div>
-                          <div className="text-sm text-gray-600">Browse & unlock every MC until you buy</div>
+                          <div className="text-sm text-gray-600">Browse & unlock every listing until you buy</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
@@ -681,7 +681,7 @@ const BuyerSubscriptionPage = () => {
                       <Coins className="w-8 h-8 text-yellow-500" />
                       <div>
                         <div className="text-2xl font-bold text-yellow-600">{plan.credits}</div>
-                        <div className="text-sm text-gray-600">MC unlock credits</div>
+                        <div className="text-sm text-gray-600">Listing unlock credits</div>
                       </div>
                     </div>
                   )}
@@ -788,7 +788,7 @@ const BuyerSubscriptionPage = () => {
                   <Sparkles className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-semibold text-amber-700 mb-1">Your $399 goes toward your MC purchase</p>
-                    <p className="text-gray-600">Enjoy unlimited access to browse, unlock, and research every MC on the platform. Includes a free consultation call with Maria. When you're ready to buy, your $399 VIP fee is credited toward the final purchase price.</p>
+                    <p className="text-gray-600">Enjoy unlimited access to browse, unlock, and research every listing on the platform. Includes a free consultation call with Maria. When you're ready to buy, your $399 VIP fee is credited toward the final purchase price.</p>
                   </div>
                 </div>
               )}
