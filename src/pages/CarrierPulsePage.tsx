@@ -851,7 +851,6 @@ function SafetyTab() {
                   <h3 className={`text-3xl font-black tracking-wide uppercase ${safetyLevel === 'excellent' ? 'text-emerald-600' : safetyLevel === 'fair' ? 'text-amber-500' : safetyLevel === 'danger' ? 'text-red-600' : 'text-gray-500'}`}>
                     {c.safetyRating === 'not-rated' ? 'Not Rated' : c.safetyRating}
                   </h3>
-                  {c.safetyRating === 'not-rated' && <p className="text-xs text-gray-400 mt-1">Most carriers are not formally rated by FMCSA</p>}
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Operating Status</p>
