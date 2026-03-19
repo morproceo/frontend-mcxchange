@@ -331,6 +331,20 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   return { score: compositeScore, categories }
 }
 
+// Extract MC number from documents (BOC-3 docket or dockets array)
+function extractMCFromDocs(docs: any): string {
+  if (!docs) return ''
+  // Check dockets array first
+  if (Array.isArray(docs.dockets)) {
+    const mc = docs.dockets.find((d: any) => d.prefix === 'MC' || (d.docket_number || '').startsWith('MC'))
+    if (mc) return String(mc.docket_number || mc.number || '').replace(/^MC/, '')
+  }
+  // Fall back to BOC-3 docket_number
+  const boc3Docket = docs.boc3?.data?.docket_number || ''
+  if (boc3Docket.startsWith('MC')) return boc3Docket.replace(/^MC/, '')
+  return ''
+}
+
 // ============================================================
 // CORE: Merge API + Listing → V2CarrierData
 // ============================================================
@@ -388,7 +402,7 @@ export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2
   }
 
   return {
-    mcNumber: listing?.mcNumber || carrier.mcNumber || '',
+    mcNumber: listing?.mcNumber || carrier.mcNumber || extractMCFromDocs(report?.documents) || '',
     dotNumber: listing?.dotNumber || String(carrier.dotNumber || ''),
     legalName: carrier.legalName || listing?.legalName || '',
     dbaName: carrier.dbaName || listing?.dbaName || '',
