@@ -1593,14 +1593,47 @@ export default function CarrierPulsePage() {
     }
   }, [carrierReport, activeDot])
 
-  const handleSearch = () => {
-    const cleaned = dotInput.replace(/\D/g, '')
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+
+  const handleSearch = async () => {
+    const raw = dotInput.trim()
+    const cleaned = raw.replace(/\D/g, '')
     if (!cleaned) return
-    setActiveDot(cleaned)
-    setActiveTab('overview')
-    // Update URL without full navigation
-    const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse')
-    window.history.pushState(null, '', `${basePath}/${cleaned}`)
+
+    // Detect MC vs DOT: MC numbers are typically 6-7 digits, DOT numbers 7-8+
+    // If user prefixes with "MC" or input is <= 7 digits, try MC lookup first
+    const isMC = /^mc\s*/i.test(raw)
+
+    if (isMC) {
+      setSearchLoading(true)
+      setSearchError(null)
+      try {
+        const response = await api.fmcsaLookupByMC(cleaned)
+        const dotNumber = response.data?.dotNumber
+        if (!dotNumber) {
+          setSearchError(`No carrier found for MC# ${cleaned}. Try using a DOT number instead.`)
+          setSearchLoading(false)
+          return
+        }
+        const dot = String(dotNumber)
+        setActiveDot(dot)
+        setDotInput(dot)
+        setActiveTab('overview')
+        const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse')
+        window.history.pushState(null, '', `${basePath}/${dot}`)
+      } catch (err: any) {
+        setSearchError(`Could not resolve MC# ${cleaned}. Try using a DOT number instead.`)
+      } finally {
+        setSearchLoading(false)
+      }
+    } else {
+      setSearchError(null)
+      setActiveDot(cleaned)
+      setActiveTab('overview')
+      const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse')
+      window.history.pushState(null, '', `${basePath}/${cleaned}`)
+    }
   }
 
   const handleSearchAnother = () => {
@@ -1778,7 +1811,7 @@ export default function CarrierPulsePage() {
               <Zap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">CarrierPulse</h1>
-            <p className="text-gray-500 mt-2">Instant carrier intelligence by DOT number</p>
+            <p className="text-gray-500 mt-2">Instant carrier intelligence by DOT or MC number</p>
           </div>
 
           {/* Search Box */}
@@ -1790,20 +1823,26 @@ export default function CarrierPulsePage() {
                 value={dotInput}
                 onChange={e => setDotInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="Enter DOT number..."
+                placeholder="Enter DOT or MC number (e.g. MC123456)..."
                 className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-lg font-medium transition-all outline-none"
                 autoFocus
               />
             </div>
             <button
               onClick={handleSearch}
-              disabled={!dotInput.replace(/\D/g, '')}
+              disabled={!dotInput.trim() || searchLoading}
               className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold transition-colors flex items-center gap-2"
             >
-              <Search className="w-5 h-5" />
-              Search
+              {searchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+              {searchLoading ? 'Looking up...' : 'Search'}
             </button>
           </div>
+
+          {searchError && (
+            <p className="mt-3 text-sm text-red-600">{searchError}</p>
+          )}
+
+          <p className="mt-2 text-xs text-gray-400">Prefix with "MC" for MC number lookups (e.g. MC123456)</p>
 
           {/* Recent Searches */}
           {recentSearches.length > 0 && (
