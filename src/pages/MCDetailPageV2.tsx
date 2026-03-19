@@ -509,11 +509,11 @@ function HeroHeader() {
             className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mt-6"
           >
             {[
-              { label: 'MC Number', value: mockCarrier.mcNumber, accent: false },
+              { label: 'MC Number', value: mockCarrier.mcNumber || 'N/A', accent: false },
               { label: 'DOT Number', value: mockCarrier.dotNumber, accent: false },
               { label: 'Location', value: mockCarrier.location, accent: false },
               { label: 'Authority Age', value: `${mockCarrier.yearsActive} yrs`, accent: false },
-              { label: 'Annual Miles', value: mockCarrier.mcs150Mileage > 0 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M mi` : 'N/A', accent: true },
+              { label: 'Annual Miles', value: mockCarrier.mcs150Mileage >= 1000000 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M mi` : mockCarrier.mcs150Mileage > 0 ? `${mockCarrier.mcs150Mileage.toLocaleString()} mi` : 'N/A', accent: true },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -1317,7 +1317,8 @@ function SafetyTab() {
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">FMCSA Safety Rating</p>
                   <h3 className={`text-3xl font-black tracking-wide uppercase ${
                     safetyLevel === 'excellent' ? 'text-emerald-600' :
-                    safetyLevel === 'fair' ? 'text-yellow-600' : 'text-red-600'
+                    safetyLevel === 'fair' ? 'text-amber-500' :
+                    safetyLevel === 'danger' ? 'text-red-600' : 'text-gray-500'
                   }`}>
                     {mockCarrier.safetyRating === 'not-rated' ? 'Not Rated' : mockCarrier.safetyRating}
                   </h3>
@@ -1376,17 +1377,17 @@ function SafetyTab() {
                       </tr>
                       <tr className="border-b border-gray-100">
                         <td className="py-2.5 px-4 font-medium text-gray-700">Out of Service</td>
-                        <td className={`py-2.5 px-4 text-center font-semibold ${mockInspections.vehicleOOS > 0 ? 'text-red-600' : 'text-blue-600'}`}>{mockInspections.vehicleOOS}</td>
-                        <td className={`py-2.5 px-4 text-center font-semibold ${mockInspections.driverOOS > 0 ? 'text-red-600' : 'text-blue-600'}`}>{mockInspections.driverOOS}</td>
-                        <td className={`py-2.5 px-4 text-center font-semibold ${mockInspections.hazmatOOS > 0 ? 'text-red-600' : 'text-blue-600'}`}>{mockInspections.hazmatOOS}</td>
+                        <td className={`py-2.5 px-4 text-center font-semibold ${mockInspections.vehicleOOS > 0 ? 'text-amber-600' : 'text-blue-600'}`}>{mockInspections.vehicleOOS}</td>
+                        <td className={`py-2.5 px-4 text-center font-semibold ${mockInspections.driverOOS > 0 ? 'text-amber-600' : 'text-blue-600'}`}>{mockInspections.driverOOS}</td>
+                        <td className={`py-2.5 px-4 text-center font-semibold ${mockInspections.hazmatOOS > 0 ? 'text-amber-600' : 'text-blue-600'}`}>{mockInspections.hazmatOOS}</td>
                         <td className="py-2.5 px-4 text-center text-blue-600 font-semibold">{mockInspections.iepOOS}</td>
                       </tr>
                       <tr className="border-b border-gray-100">
                         <td className="py-2.5 px-4 font-medium text-gray-700">Out of Service %</td>
-                        <td className={`py-2.5 px-4 text-center font-bold ${mockInspections.vehicleInspections > 0 && mockInspections.vehicleOOSRate > mockInspections.nationalVehicleOOSRate ? 'text-red-600' : 'text-blue-600'}`}>
+                        <td className={`py-2.5 px-4 text-center font-bold ${mockInspections.vehicleInspections > 0 && mockInspections.vehicleOOSRate > mockInspections.nationalVehicleOOSRate ? 'text-amber-600' : 'text-blue-600'}`}>
                           {mockInspections.vehicleInspections > 0 ? `${mockInspections.vehicleOOSRate}%` : '%'}
                         </td>
-                        <td className={`py-2.5 px-4 text-center font-bold ${mockInspections.driverInspections > 0 && mockInspections.driverOOSRate > mockInspections.nationalDriverOOSRate ? 'text-red-600' : 'text-blue-600'}`}>
+                        <td className={`py-2.5 px-4 text-center font-bold ${mockInspections.driverInspections > 0 && mockInspections.driverOOSRate > mockInspections.nationalDriverOOSRate ? 'text-amber-600' : 'text-blue-600'}`}>
                           {mockInspections.driverInspections > 0 ? `${mockInspections.driverOOSRate}%` : '%'}
                         </td>
                         <td className="py-2.5 px-4 text-center text-blue-600 font-bold">
@@ -1397,7 +1398,7 @@ function SafetyTab() {
                         </td>
                       </tr>
                       <tr className="bg-blue-50/50">
-                        <td className="py-2.5 px-4 font-medium text-red-600 text-xs">Nat'l Average %</td>
+                        <td className="py-2.5 px-4 font-medium text-gray-500 text-xs">Nat'l Average %</td>
                         <td className="py-2.5 px-4 text-center text-gray-700 font-medium">{mockInspections.nationalVehicleOOSRate}%</td>
                         <td className="py-2.5 px-4 text-center text-gray-700 font-medium">{mockInspections.nationalDriverOOSRate}%</td>
                         <td className="py-2.5 px-4 text-center text-gray-700 font-medium">{mockInspections.nationalHazmatOOSRate}%</td>
@@ -1554,7 +1555,7 @@ function SafetyTab() {
                             <td className="py-2.5 px-4 text-right">
                               {isScored ? (
                                 <span className={`font-bold ${
-                                  ratio >= 1 ? 'text-red-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'
+                                  ratio >= 1 ? 'text-amber-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'
                                 }`}>{basic.score}%</span>
                               ) : (
                                 <span className="text-gray-400 text-xs">Not Scored</span>
@@ -1564,9 +1565,9 @@ function SafetyTab() {
                             <td className="py-2.5 px-4 text-right text-gray-700">{violations}</td>
                             <td className="py-2.5 px-4 text-right">
                               {hasAlert ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Alert</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Alert</span>
                               ) : isScored && basic.score! >= basic.threshold ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">Exceeding</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Exceeding</span>
                               ) : isScored ? (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">OK</span>
                               ) : violations > 0 ? (
