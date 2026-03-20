@@ -376,12 +376,39 @@ const AdminMessagesPage = () => {
     try {
       setCancellingSubscription(true)
       await api.cancelUserSubscription(userId)
-      // Update conversation's subscription status
-      setConversations(prev => prev.map(conv =>
-        conv.participantId === userId
-          ? { ...conv, hasActiveSubscription: false }
-          : conv
-      ))
+
+      // Send cancellation notice in the chat
+      const conv = conversations.find(c => c.participantId === userId)
+      if (conv) {
+        try {
+          const msgResponse = await api.sendMessage(
+            userId,
+            'Your subscription has been cancelled. If you believe this was done in error or have any questions, please reply here.',
+            conv.listingId
+          )
+          const newMessage = msgResponse.data as Message
+          setMessages(prev => [...prev, newMessage])
+          setConversations(prev => prev.map(c =>
+            c.participantId === userId
+              ? { ...c, lastMessage: newMessage.content, lastMessageAt: newMessage.createdAt, hasActiveSubscription: false }
+              : c
+          ))
+        } catch {
+          // Message send failed, still update subscription status
+          setConversations(prev => prev.map(c =>
+            c.participantId === userId
+              ? { ...c, hasActiveSubscription: false }
+              : c
+          ))
+        }
+      } else {
+        setConversations(prev => prev.map(c =>
+          c.participantId === userId
+            ? { ...c, hasActiveSubscription: false }
+            : c
+        ))
+      }
+
       // Update quick info if loaded
       if (userQuickInfo && userQuickInfo.id === userId) {
         setUserQuickInfo(prev => prev ? {
