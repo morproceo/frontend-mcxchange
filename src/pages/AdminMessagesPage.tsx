@@ -21,7 +21,8 @@ import {
   Plus,
   Minus,
   ArrowLeft,
-  X
+  X,
+  Ban
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Card from '../components/ui/Card'
@@ -121,6 +122,10 @@ const AdminMessagesPage = () => {
   const [creditAmount, setCreditAmount] = useState<string>('')
   const [creditReason, setCreditReason] = useState<string>('')
   const [creditAdjusting, setCreditAdjusting] = useState(false)
+
+  // Cancel subscription state
+  const [cancellingSubscription, setCancellingSubscription] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState<string | null>(null)
 
   // Mobile view state - show detail view on mobile
   const [showMobileDetail, setShowMobileDetail] = useState(false)
@@ -365,6 +370,32 @@ const AdminMessagesPage = () => {
     ))
 
     setShowStatusDropdown(null)
+  }
+
+  const handleCancelSubscription = async (userId: string) => {
+    try {
+      setCancellingSubscription(true)
+      await api.cancelUserSubscription(userId)
+      // Update conversation's subscription status
+      setConversations(prev => prev.map(conv =>
+        conv.participantId === userId
+          ? { ...conv, hasActiveSubscription: false }
+          : conv
+      ))
+      // Update quick info if loaded
+      if (userQuickInfo && userQuickInfo.id === userId) {
+        setUserQuickInfo(prev => prev ? {
+          ...prev,
+          subscription: prev.subscription ? { ...prev.subscription, status: 'CANCELLED' } : null
+        } : null)
+      }
+      setShowCancelConfirm(null)
+    } catch (err) {
+      console.error('Failed to cancel subscription:', err)
+      setError('Failed to cancel subscription')
+    } finally {
+      setCancellingSubscription(false)
+    }
   }
 
   const handleShowUserQuickInfo = async (userId: string) => {
@@ -693,6 +724,42 @@ void statusConfig[conversation.status].icon
                       </div>
                     )}
                   </div>
+
+                  {/* Cancel Subscription Button */}
+                  {selectedConversation.hasActiveSubscription && (
+                    <div className="relative">
+                      {showCancelConfirm === selectedConversation.participantId ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleCancelSubscription(selectedConversation.participantId)}
+                            disabled={cancellingSubscription}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {cancellingSubscription ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Ban className="w-3.5 h-3.5" />
+                            )}
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setShowCancelConfirm(null)}
+                            className="px-2 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowCancelConfirm(selectedConversation.participantId)}
+                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 border border-red-200 flex items-center gap-1"
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                          Cancel Sub
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Contact Info - Mobile-friendly grid */}

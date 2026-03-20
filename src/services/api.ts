@@ -327,6 +327,12 @@ class ApiService {
     });
   }
 
+  async cancelUserSubscription(userId: string) {
+    return this.request<ApiResponse<{ message: string; subscription: any }>>(`/admin/users/${userId}/cancel-subscription`, {
+      method: 'POST',
+    });
+  }
+
   async adjustUserCredits(userId: string, amount: number, reason: string) {
     return this.request<{
       userId: string;
