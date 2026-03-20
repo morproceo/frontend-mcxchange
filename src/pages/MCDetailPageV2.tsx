@@ -754,32 +754,8 @@ function OverviewTab() {
         <p className="text-sm text-gray-600 leading-relaxed">{mockCarrier.description}</p>
       </Card>
 
-      {/* 11. Industry Percentile Ranking — Preview + Unlock */}
-      <div className="relative rounded-xl overflow-hidden">
-        {/* Preview — show first few bars then blur */}
-        <div className="pointer-events-none">
-          <CarrierComparison percentiles={mockCarrierPercentiles.slice(0, 3)} />
-        </div>
-
-        {/* Blur overlay + CTA */}
-        <div className="absolute inset-0 flex flex-col items-center justify-end rounded-xl"
-          style={{ background: 'linear-gradient(to bottom, transparent 10%, rgba(15,23,42,0.85) 50%, rgba(15,23,42,0.98) 100%)' }}
-        >
-          <div className="text-center pb-8 px-6">
-            <Lock className="w-8 h-8 text-indigo-400 mx-auto mb-3" />
-            <h4 className="text-white font-bold text-lg mb-1">Unlock Full Percentile Report</h4>
-            <p className="text-white/50 text-sm mb-4 max-w-xs mx-auto">
-              See how this carrier ranks across safety, compliance, fleet, and financials compared to the national average.
-            </p>
-            <Link to="/register">
-              <Button size="md" className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                Get Full Report
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      {/* 11. Industry Percentile Ranking — Full Report */}
+      <CarrierComparison percentiles={mockCarrierPercentiles} />
     </div>
   )
 }
