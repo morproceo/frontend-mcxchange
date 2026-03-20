@@ -2560,6 +2560,80 @@ export default function MCDetailPageV2() {
     )
   }
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-indigo-500 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-500">Loading listing details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // VIP listing — buyer does not have Enterprise/VIP subscription
+  if (error === 'ENTERPRISE_REQUIRED') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-4">
+          <Card padding="lg">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">VIP Listing</h1>
+              <p className="text-gray-500 mb-6">
+                This is an exclusive VIP listing. Upgrade to an <span className="font-semibold text-amber-600">Enterprise</span> or <span className="font-semibold text-amber-600">VIP Access</span> plan to view VIP listings.
+              </p>
+              <div className="space-y-3">
+                <Link to="/buyer/subscription">
+                  <Button fullWidth className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Upgrade Your Plan
+                  </Button>
+                </Link>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Generic error state
+  if (error && !listing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-4">
+          <Card padding="lg">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-400" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Listing</h1>
+              <p className="text-gray-500 mb-6">{error}</p>
+              <button
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Go Back
+              </button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   // Carrier intelligence data from MorPro API
   const { carrierReport, loading: carrierLoading, error: carrierError } = useCarrierData(
     USE_MOCK ? undefined : listing?.dotNumber
