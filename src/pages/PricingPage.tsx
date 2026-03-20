@@ -231,48 +231,13 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* Credit Packs */}
-      {creditPacks.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4 pb-16">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Need more credits?</h2>
-            <p className="text-gray-500 mt-2">Purchase additional credits anytime — no subscription required.</p>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {creditPacks.map((pack, i) => (
-              <motion.div
-                key={pack.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + i * 0.1 }}
-                className="bg-white rounded-2xl border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow"
-              >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <ShoppingBag className="w-6 h-6 text-white" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{pack.credits}</p>
-                <p className="text-sm text-gray-500 mb-3">credits</p>
-                <p className="text-2xl font-bold text-gray-900 mb-1">${pack.price.toFixed(2)}</p>
-                <p className="text-xs text-gray-400 mb-4">${(pack.price / pack.credits).toFixed(2)} per credit</p>
-                <button
-                  onClick={handleGetStarted}
-                  className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-colors"
-                >
-                  Buy Credits
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Add-Ons */}
       <div className="max-w-4xl mx-auto px-4 pb-16">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Add-Ons</h2>
           <p className="text-gray-500 mt-2">Enhance your experience with powerful tools.</p>
         </div>
-        <div className="grid sm:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
@@ -318,6 +283,41 @@ export default function PricingPage() {
               Get Started
             </button>
           </div>
+
+          {/* Credit Packs */}
+          {creditPacks.length > 0 && creditPacks.map((pack, i) => (
+            <motion.div
+              key={pack.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 + i * 0.1 }}
+              className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
+                  <ShoppingBag className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">{pack.credits} Credits</h3>
+                  <p className="text-sm text-gray-500">One-time credit pack</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Purchase additional credits anytime — no subscription required. Use them to unlock listings and run reports.
+              </p>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-2xl font-bold text-gray-900">${pack.price.toFixed(2)}</span>
+                <span className="text-gray-500">one-time</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-4">${(pack.price / pack.credits).toFixed(2)} per credit</p>
+              <button
+                onClick={handleGetStarted}
+                className="w-full py-2.5 rounded-xl bg-yellow-500 text-white font-semibold hover:bg-yellow-600 transition-colors"
+              >
+                Buy Credits
+              </button>
+            </motion.div>
+          ))}
         </div>
       </div>
 

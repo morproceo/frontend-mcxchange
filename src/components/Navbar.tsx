@@ -15,7 +15,11 @@ import {
   FileText,
   Search,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  FileSearch,
+  Bot,
+  DollarSign,
 } from 'lucide-react'
 import { useState } from 'react'
 import Button from './ui/Button'
@@ -26,6 +30,13 @@ const Navbar = () => {
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false)
+  const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false)
+
+  const toolLinks = [
+    { name: 'CarrierPulse', href: '/services', icon: Activity, desc: 'Carrier intelligence platform', comingSoon: false },
+    { name: 'Credit Reports', href: '/services', icon: FileSearch, desc: 'Business credit intelligence', comingSoon: false },
+    { name: 'Eva AI', href: '#', icon: Bot, desc: 'AI compliance management', comingSoon: true },
+  ]
 
   const serviceLinks = [
     { name: 'Fuel Program', href: '/services/fuel-program', icon: Fuel, desc: 'Save on fuel costs' },
@@ -76,6 +87,65 @@ const Navbar = () => {
               className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
             >
               Marketplace
+            </Link>
+
+            {/* Tools Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setToolsDropdownOpen(true)}
+              onMouseLeave={() => setToolsDropdownOpen(false)}
+            >
+              <button
+                className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+              >
+                <span>Tools</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${toolsDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {toolsDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-1/2 -translate-x-1/2 pt-4 w-80"
+                  >
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                      <div className="p-2">
+                        {toolLinks.map((tool) => (
+                          <Link
+                            key={tool.name}
+                            to={tool.href}
+                            className={`flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group ${tool.comingSoon ? 'opacity-60 pointer-events-none' : ''}`}
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-gray-900 transition-colors">
+                              <tool.icon className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">{tool.name}</span>
+                                {tool.comingSoon && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-600">Coming Soon</span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500">{tool.desc}</div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Pricing Link */}
+            <Link
+              to="/pricing"
+              className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+              Pricing
             </Link>
 
             {/* Services Dropdown */}
@@ -220,6 +290,36 @@ const Navbar = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Marketplace
+              </Link>
+
+              {/* Mobile Tools */}
+              <div className="px-2">
+                <span className="text-gray-600 font-medium py-1 block">Tools</span>
+                <div className="mt-2 space-y-1 pl-4 border-l-2 border-gray-100">
+                  {toolLinks.map((tool) => (
+                    <Link
+                      key={tool.name}
+                      to={tool.href}
+                      className={`flex items-center gap-2 py-2 text-sm text-gray-500 hover:text-gray-900 ${tool.comingSoon ? 'opacity-60 pointer-events-none' : ''}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <tool.icon className="w-4 h-4" />
+                      {tool.name}
+                      {tool.comingSoon && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-600">Soon</span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile Pricing */}
+              <Link
+                to="/pricing"
+                className="text-gray-600 hover:text-gray-900 font-medium px-2 py-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
               </Link>
 
               {/* Carrier Search CTA - Mobile */}
