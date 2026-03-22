@@ -84,6 +84,9 @@ const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
 // CarrierPulse
 const CarrierPulsePage = lazy(() => import('./pages/CarrierPulsePage'))
 
+// Chameleon Check
+const ChameleonCheckPage = lazy(() => import('./pages/ChameleonCheckPage'))
+
 // Shared pages
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
@@ -160,6 +163,8 @@ function App() {
               <Route path="transactions" element={<SellerTransactionsPage />} />
               <Route path="carrier-pulse" element={<CarrierPulsePage />} />
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
+              <Route path="chameleon-check" element={<ChameleonCheckPage />} />
+              <Route path="chameleon-check/:dotNumber" element={<ChameleonCheckPage />} />
             </Route>
 
             {/* Buyer Welcome (standalone, no DashboardLayout) */}
@@ -193,6 +198,8 @@ function App() {
               <Route path="transactions" element={<VerificationRequiredRoute><BuyerTransactionsPage /></VerificationRequiredRoute>} />
               <Route path="carrier-pulse" element={<CarrierPulsePage />} />
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
+              <Route path="chameleon-check" element={<ChameleonCheckPage />} />
+              <Route path="chameleon-check/:dotNumber" element={<ChameleonCheckPage />} />
             </Route>
 
             {/* Admin Dashboard Routes */}
@@ -229,6 +236,8 @@ function App() {
               <Route path="reports" element={<div className="p-8"><h1 className="text-2xl font-bold">Reports</h1></div>} />
               <Route path="carrier-pulse" element={<CarrierPulsePage />} />
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
+              <Route path="chameleon-check" element={<ChameleonCheckPage />} />
+              <Route path="chameleon-check/:dotNumber" element={<ChameleonCheckPage />} />
             </Route>
 
             {/* Public Dispute Page - No auth required */}
