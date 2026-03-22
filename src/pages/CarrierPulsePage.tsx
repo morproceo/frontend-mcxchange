@@ -18,7 +18,7 @@ import {
   Calendar, Users, Hash, Phone, Building2, Package, DollarSign,
   TrendingUp, TrendingDown, Clock, ExternalLink, Mail,
   BarChart3, Eye, Zap, ChevronRight, ChevronDown, ChevronUp, MapPinned,
-  Coins, Search, Loader2, AlertCircle,
+  Coins, Search, Loader2, AlertCircle, ShieldAlert, Info,
 } from 'lucide-react'
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import Card from '../components/ui/Card'
@@ -38,6 +38,7 @@ import CarrierHealthScore from '../components/v2/CarrierHealthScore'
 import CertificationBadges from '../components/v2/CertificationBadges'
 import ViolationBreakdownChart from '../components/v2/ViolationBreakdownChart'
 import SharedEquipmentAlert from '../components/v2/SharedEquipmentAlert'
+import ChameleonAlert from '../components/v2/ChameleonAlert'
 import DriverBreakdown from '../components/v2/DriverBreakdown'
 import FleetOwnershipBar from '../components/v2/FleetOwnershipBar'
 import DonutChart from '../components/v2/DonutChart'
@@ -79,7 +80,7 @@ import {
   V2ContactHistory, V2CargoCapabilities, V2ComplianceFinancials,
   V2AvailableDocument, V2MonitoringAlert, V2RiskScoreTrend,
   V2InsuranceGap, V2ViolationTrend, V2RelatedCarrier, V2CarrierPercentile,
-  V2NetworkSignal, V2BenchmarkData, V2DocumentItem,
+  V2NetworkSignal, V2BenchmarkData, V2DocumentItem, V2ChameleonAnalysis,
 } from '../components/v2/mockData'
 
 import { useCarrierData } from '../hooks/useCarrierData'
@@ -94,7 +95,8 @@ import {
   mapToV2CargoCapabilities, mapToV2Documents, mapToV2VerificationChecks,
   mapToV2AvailableDocuments, mapToV2RelatedCarriers, mapToV2Percentiles,
   mapToV2MonitoringAlerts, mapToV2RiskScoreTrend, mapToV2ContactHistory,
-  mapToV2ComplianceFinancials,
+  mapToV2ComplianceFinancials, mapToV2VinInspections, mapToV2NetworkSignals,
+  mapToV2Benchmarks, detectChameleonCarrier,
   calculateCarrierHealthScore,
   HealthCategory,
 } from '../utils/carrierDataMapper'
@@ -137,6 +139,7 @@ interface CarrierDataContextType {
   vinInspections: V2VinInspection[]
   networkSignals: V2NetworkSignal[]
   benchmarks: V2BenchmarkData[]
+  chameleonAnalysis: V2ChameleonAnalysis
   healthCategories: HealthCategory[]
   carrierLoading: boolean
   carrierError: string | null
@@ -157,6 +160,7 @@ const tabs: TabItem[] = [
   { id: 'insurance', label: 'Insurance', icon: Umbrella },
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
   { id: 'credit', label: 'Credit Report', icon: DollarSign },
+  { id: 'chameleon', label: 'Chameleon Check', icon: ShieldAlert },
   { id: 'full-report', label: 'Full Report', icon: BarChart3 },
 ]
 
@@ -1533,7 +1537,87 @@ function CreditReportTab() {
 }
 
 // ============================================================
-// TAB 8: FULL REPORT
+// TAB 8: CHAMELEON CHECK
+// ============================================================
+function ChameleonTab() {
+  const { chameleonAnalysis, carrier, relatedCarriers } = useCarrierDataContext()
+  return (
+    <div className="space-y-6">
+      <ChameleonAlert analysis={chameleonAnalysis} />
+
+      <Card padding="md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Info className="w-5 h-5 text-indigo-500" />
+          What is a Chameleon Carrier?
+        </h3>
+        <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+          <p>
+            A <strong>chameleon carrier</strong> is a motor carrier shut down by FMCSA for safety violations that reopens under a new name, MC, or DOT number to evade their prior safety record.
+          </p>
+          <p>
+            FMCSA tracks chameleon carriers through their <strong>New Entrant Safety Audit</strong> program by cross-referencing shared addresses, officers, EINs, phone numbers, and vehicle VINs.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 mt-4">
+            <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+              <p className="text-xs font-semibold text-red-800 mb-1">Why it matters</p>
+              <p className="text-xs text-red-700">Chameleon carriers carry hidden safety risks. Their prior violations, crashes, and OOS rates don't appear on the new authority.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+              <p className="text-xs font-semibold text-blue-800 mb-1">How we detect it</p>
+              <p className="text-xs text-blue-700">We analyze shared EINs, officers, addresses, phone numbers, vehicle VINs, authority timelines, and revocation history.</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card padding="md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-indigo-500" />
+          Carrier Identity
+        </h3>
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Authority Age</span>
+            <span className="font-medium text-gray-900">
+              {carrier.authorityAgeDays > 0
+                ? carrier.authorityAgeDays >= 365
+                  ? `${Math.round(carrier.authorityAgeDays / 365)} years`
+                  : `${Math.round(carrier.authorityAgeDays / 30)} months`
+                : 'Unknown'}
+            </span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Revocations</span>
+            <span className={`font-medium ${carrier.totalRevocations > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {carrier.totalRevocations}
+            </span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">EIN</span>
+            <span className="font-medium font-mono text-gray-900">{carrier.ein || 'Not available'}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Related Carriers</span>
+            <span className="font-medium text-gray-900">{relatedCarriers.length}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Entity Type</span>
+            <span className="font-medium text-gray-900">{carrier.entityType}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Days Since Last Revocation</span>
+            <span className="font-medium text-gray-900">
+              {carrier.daysSinceLastRevocation != null ? fmtNumber(carrier.daysSinceLastRevocation) : 'N/A'}
+            </span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ============================================================
+// TAB 9: FULL REPORT
 // ============================================================
 function FullReportTab() {
   const { contactHistory, riskScoreTrend, vinInspections, monitoringAlerts, relatedCarriers, percentiles } = useCarrierDataContext()
@@ -1747,7 +1831,8 @@ export default function CarrierPulsePage() {
         availableDocuments: [], complianceFinancials: fallbackComplianceFinancials,
         relatedCarriers: [], percentiles: [], monitoringAlerts: [], riskScoreTrend: [],
         contactHistory: fallbackContactHistory, vinInspections: [], networkSignals: [],
-        benchmarks: [], healthCategories: [], carrierLoading, carrierError,
+        benchmarks: [], chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
+        healthCategories: [], carrierLoading, carrierError,
       }
     }
 
@@ -1784,9 +1869,10 @@ export default function CarrierPulsePage() {
       monitoringAlerts: mapToV2MonitoringAlerts(carrierReport),
       riskScoreTrend: mapToV2RiskScoreTrend(carrierReport),
       contactHistory: mapToV2ContactHistory(carrierReport),
-      vinInspections: [],
-      networkSignals: [],
-      benchmarks: [],
+      vinInspections: mapToV2VinInspections(carrierReport),
+      networkSignals: mapToV2NetworkSignals(carrierReport),
+      benchmarks: mapToV2Benchmarks(carrierReport),
+      chameleonAnalysis: detectChameleonCarrier(carrierReport),
       healthCategories: healthResult.categories,
       carrierLoading: false,
       carrierError: null,
@@ -1990,6 +2076,7 @@ export default function CarrierPulsePage() {
     insurance: showSkeleton ? <CarrierLoadingSkeleton /> : <InsuranceTab />,
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
     credit: showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
+    chameleon: showSkeleton ? <CarrierLoadingSkeleton /> : <ChameleonTab />,
     'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
   }
 

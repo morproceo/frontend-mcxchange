@@ -446,6 +446,32 @@ export interface V2BenchmarkData {
 }
 
 // ============================================================
+// CHAMELEON CARRIER DETECTION
+// ============================================================
+export type ChameleonSeverity = 'critical' | 'high' | 'medium' | 'low'
+
+export interface V2ChameleonFlag {
+  signal: string              // Short label: "Shared EIN with revoked carrier"
+  severity: ChameleonSeverity
+  points: number              // Weighted score contribution
+  detail: string              // Human-readable explanation of WHY this is a red flag
+  evidence: string            // Specific data that triggered this flag
+}
+
+export interface V2ChameleonAnalysis {
+  riskScore: number           // 0-100 composite score
+  riskLevel: 'none' | 'low' | 'moderate' | 'high' | 'critical'
+  flags: V2ChameleonFlag[]
+  summary: string             // One-sentence verdict
+  relatedRevokedCarriers: Array<{
+    dotNumber: string
+    legalName: string
+    sharedField: string       // What they share: address, EIN, officer, phone, VIN
+    status: string
+  }>
+}
+
+// ============================================================
 // MOCK / FALLBACK DATA
 // ============================================================
 

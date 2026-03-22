@@ -11,6 +11,8 @@ import type {
   V2CargoCapabilities, V2ComplianceFinancials, V2AvailableDocument,
   V2MonitoringAlert, V2RiskScoreTrend, V2InsuranceGap, V2ViolationTrend,
   V2RelatedCarrier, V2CarrierPercentile, V2DocumentItem,
+  V2VinInspection, V2NetworkSignal, V2BenchmarkData,
+  V2ChameleonAnalysis, V2ChameleonFlag, ChameleonSeverity,
 } from '../components/v2/mockData'
 
 // ============================================================
@@ -1181,6 +1183,271 @@ export function mapToV2Percentiles(report: any): V2CarrierPercentile[] {
   }))
 }
 
+// ============================================================
+// VIN INSPECTIONS — cross-reference fleet VINs with inspection records
+// ============================================================
+export function mapToV2VinInspections(report: any): V2VinInspection[] {
+  const records = filterInspectionRecords(report?.inspections?.records || [])
+  const trucks = report?.fleet?.trucks || []
+  const trailers = report?.fleet?.trailers || []
+
+  // Build a set of known fleet VINs for fast lookup
+  const fleetVins = new Set<string>()
+  for (const t of [...trucks, ...trailers]) {
+    if (t.vin) fleetVins.add(String(t.vin).toUpperCase())
+  }
+
+  // Extract VIN-level inspection data from inspection records
+  // MorPro records may have: vin, vehicle_id_number, vehicles[], unit_vin
+  const vinInspections: V2VinInspection[] = []
+
+  for (const r of records) {
+    const vins: string[] = []
+
+    // Direct VIN field
+    if (r.vin) vins.push(String(r.vin))
+    if (r.vehicle_id_number) vins.push(String(r.vehicle_id_number))
+    if (r.unit_vin) vins.push(String(r.unit_vin))
+
+    // Nested vehicles array (common FMCSA format)
+    if (Array.isArray(r.vehicles)) {
+      for (const v of r.vehicles) {
+        if (v.vin) vins.push(String(v.vin))
+        if (v.vehicle_id_number) vins.push(String(v.vehicle_id_number))
+      }
+    }
+
+    const oosTotal = parseInt(r.oos_total || r.oosViolations) || 0
+    const violTotal = parseInt(r.viol_total || r.violations) || 0
+    const date = normalizeDate(r.inspection_date || r.date || '')
+    const state = r.report_state || r.state || ''
+    const level = r.level || r.inspection_level || ''
+
+    // Determine result
+    let result: 'pass' | 'fail' | 'oos' | 'warning' = 'pass'
+    if (oosTotal > 0) result = 'oos'
+    else if (violTotal > 0) result = 'warning'
+
+    for (const rawVin of vins) {
+      const vin = rawVin.toUpperCase().trim()
+      if (!vin || vin.length < 5) continue
+      // Only include VINs that belong to this carrier's fleet
+      if (fleetVins.size > 0 && !fleetVins.has(vin)) continue
+
+      vinInspections.push({
+        vin,
+        date,
+        location: state,
+        type: level ? `Level ${level}` : 'Vehicle',
+        result,
+        violations: violTotal,
+        oosViolations: oosTotal,
+      })
+    }
+  }
+
+  // If no VIN data in inspection records, build from fleet data with inspection counts
+  if (vinInspections.length === 0) {
+    for (const t of trucks) {
+      if (!t.vin) continue
+      const inspCount = t.inspectionCount || t.inspections || 0
+      const oosCount = t.totalOOS || t.oosCount || 0
+      if (inspCount > 0) {
+        vinInspections.push({
+          vin: String(t.vin).toUpperCase(),
+          date: t.lastSeen || t.last_inspection_date || '',
+          location: '',
+          type: 'Vehicle',
+          result: oosCount > 0 ? 'oos' : 'pass',
+          violations: oosCount,
+          oosViolations: oosCount,
+        })
+      }
+    }
+  }
+
+  // Sort by date descending
+  vinInspections.sort((a, b) => {
+    const da = new Date(a.date || 0).getTime()
+    const db = new Date(b.date || 0).getTime()
+    return db - da
+  })
+
+  return vinInspections
+}
+
+// ============================================================
+// NETWORK SIGNALS — derived from carrier + authority data
+// ============================================================
+export function mapToV2NetworkSignals(report: any, listing?: MCListingExtended): V2NetworkSignal[] {
+  const carrier = report?.carrier || {}
+  const authority = report?.authority || {}
+  const insurance = report?.insurance || {}
+  const signals: V2NetworkSignal[] = []
+
+  // Authority age
+  const yearsActive = parseFloat(carrier.yearsActive) || listing?.yearsActive || 0
+  if (yearsActive > 0) {
+    signals.push({
+      name: 'Authority Age',
+      value: yearsActive >= 1 ? `${Math.round(yearsActive)}+ Years` : `${Math.round(yearsActive * 12)} Months`,
+      status: yearsActive >= 5 ? 'positive' : yearsActive >= 2 ? 'neutral' : 'negative',
+      detail: yearsActive >= 5
+        ? 'Well-established operating history'
+        : yearsActive >= 2
+          ? 'Moderate operating history'
+          : 'Relatively new authority',
+    })
+  }
+
+  // Revocation history
+  const totalRevocations = carrier.totalRevocations || 0
+  signals.push({
+    name: 'Clean Record',
+    value: `${totalRevocations} Revocations`,
+    status: totalRevocations === 0 ? 'positive' : 'negative',
+    detail: totalRevocations === 0
+      ? 'No authority revocations on file'
+      : `${totalRevocations} revocation(s) found on record`,
+  })
+
+  // Operating status
+  const opStatus = carrier.operatingStatus || carrier.allowedToOperate
+  const isAuthorized = opStatus === 'A' || opStatus === 'Y' || opStatus === 'authorized' || opStatus === 'AUTHORIZED'
+  signals.push({
+    name: 'Operating Status',
+    value: isAuthorized ? 'Authorized' : 'Not Authorized',
+    status: isAuthorized ? 'positive' : 'negative',
+    detail: isAuthorized ? 'Carrier is authorized to operate' : 'Carrier is not currently authorized',
+  })
+
+  // Insurance coverage
+  const activePolicies = insurance.activePolicies || []
+  if (activePolicies.length > 0) {
+    signals.push({
+      name: 'Insurance Status',
+      value: `${activePolicies.length} Active`,
+      status: 'positive',
+      detail: `${activePolicies.length} active insurance ${activePolicies.length === 1 ? 'policy' : 'policies'} on file`,
+    })
+  } else {
+    signals.push({
+      name: 'Insurance Status',
+      value: 'None Found',
+      status: 'negative',
+      detail: 'No active insurance policies on file',
+    })
+  }
+
+  // Amazon Relay
+  const amazonStatus = listing?.amazonStatus
+  if (amazonStatus && amazonStatus !== 'none') {
+    signals.push({
+      name: 'Amazon Relay',
+      value: amazonStatus === 'active' ? 'Active' : 'Pending',
+      status: amazonStatus === 'active' ? 'positive' : 'neutral',
+      detail: amazonStatus === 'active' ? 'Active on Amazon Relay platform' : 'Amazon Relay setup pending',
+    })
+  }
+
+  // Highway setup
+  if (listing?.highwaySetup) {
+    signals.push({
+      name: 'Highway Setup',
+      value: 'Complete',
+      status: 'positive',
+      detail: 'Highway platform setup is complete',
+    })
+  }
+
+  return signals
+}
+
+// ============================================================
+// BENCHMARKS — carrier OOS rates vs national averages
+// ============================================================
+export function mapToV2Benchmarks(report: any): V2BenchmarkData[] {
+  const records = filterInspectionRecords(report?.inspections?.records || [])
+  const safetyTotals = report?.safety?.inspectionTotals || {}
+  const benchmarks: V2BenchmarkData[] = []
+
+  const p = (v: any) => parseFloat(v) || 0
+
+  // Use inspectionTotals if available, fall back to records
+  const hasApiTotals = p(safetyTotals.total) > 0
+  let vehicleInsp = 0, driverInsp = 0, hazmatInsp = 0
+  let vehicleOOS = 0, driverOOS = 0, hazmatOOS = 0
+
+  if (hasApiTotals) {
+    vehicleInsp = p(safetyTotals.vehicleInspections) || p(safetyTotals.vehicle)
+    driverInsp = p(safetyTotals.driverInspections) || p(safetyTotals.driver)
+    hazmatInsp = p(safetyTotals.hazmatInspections) || p(safetyTotals.hazmat)
+    vehicleOOS = p(safetyTotals.vehicleOOS)
+    driverOOS = p(safetyTotals.driverOOS)
+    hazmatOOS = p(safetyTotals.hazmatOOS)
+  } else if (records.length > 0) {
+    const counts = countInspectionsByType(records)
+    vehicleInsp = counts.vehicleInsp
+    driverInsp = counts.driverInsp
+    hazmatInsp = counts.hazmatInsp
+    vehicleOOS = counts.vehicleOOS
+    driverOOS = counts.driverOOS
+    hazmatOOS = counts.hazmatOOS
+  }
+
+  const rate = (oos: number, insp: number): number =>
+    insp > 0 ? Math.round((oos / insp) * 10000) / 100 : 0
+
+  // Vehicle OOS Rate
+  if (vehicleInsp > 0) {
+    benchmarks.push({
+      metric: 'Vehicle OOS Rate',
+      carrierValue: rate(vehicleOOS, vehicleInsp),
+      industryAvg: 22.26,
+      unit: '%',
+      lowerIsBetter: true,
+    })
+  }
+
+  // Driver OOS Rate
+  if (driverInsp > 0) {
+    benchmarks.push({
+      metric: 'Driver OOS Rate',
+      carrierValue: rate(driverOOS, driverInsp),
+      industryAvg: 6.67,
+      unit: '%',
+      lowerIsBetter: true,
+    })
+  }
+
+  // Hazmat OOS Rate (only if carrier has hazmat inspections)
+  if (hazmatInsp > 0) {
+    benchmarks.push({
+      metric: 'Hazmat OOS Rate',
+      carrierValue: rate(hazmatOOS, hazmatInsp),
+      industryAvg: 4.44,
+      unit: '%',
+      lowerIsBetter: true,
+    })
+  }
+
+  // Clean Inspection Rate
+  const totalInsp = records.length
+  if (totalInsp > 0) {
+    const cleanCount = records.filter((r: any) => (parseInt(r.viol_total || r.violations) || 0) === 0).length
+    const cleanRate = Math.round((cleanCount / totalInsp) * 10000) / 100
+    benchmarks.push({
+      metric: 'Clean Inspection Rate',
+      carrierValue: cleanRate,
+      industryAvg: 55.0,
+      unit: '%',
+      lowerIsBetter: false,
+    })
+  }
+
+  return benchmarks
+}
+
 // Future — return empty arrays/objects
 export function mapToV2MonitoringAlerts(_report: any): V2MonitoringAlert[] {
   return []
@@ -1237,5 +1504,313 @@ export function mapToV2ComplianceFinancials(listing?: MCListingExtended, carrier
     hasFactoring: (listing as any)?.hasFactoring || false,
     factoringCompany: (listing as any)?.factoringCompany || '',
     factoringRate: parseFloat((listing as any)?.factoringRate) || 0,
+  }
+}
+
+// ============================================================
+// CHAMELEON CARRIER DETECTION
+// ============================================================
+
+/**
+ * Analyzes carrier data for chameleon carrier indicators.
+ *
+ * A chameleon carrier is a motor carrier that has been shut down by FMCSA
+ * for safety violations and reopens under a new name, MC, or DOT number
+ * to evade their prior safety record. FMCSA specifically tracks these
+ * through shared addresses, officers, EINs, phone numbers, and equipment.
+ *
+ * This function scores multiple weighted signals and returns a composite
+ * risk assessment with detailed explanations for each flag.
+ */
+export function detectChameleonCarrier(report: any, listing?: MCListingExtended): V2ChameleonAnalysis {
+  const carrier = report?.carrier || {}
+  const authority = report?.authority || {}
+  const fleet = report?.fleet || {}
+  const related = report?.related?.relatedCarriers || report?.related || []
+  const timeline = authority.timeline || []
+  const sharedEquipment = fleet.sharedEquipment || {}
+
+  const flags: V2ChameleonFlag[] = []
+  const relatedRevokedCarriers: V2ChameleonAnalysis['relatedRevokedCarriers'] = []
+
+  // Normalize related carriers array
+  const relatedList: any[] = Array.isArray(related) ? related : []
+
+  // ------------------------------------------------------------------
+  // 1. RELATED CARRIERS WITH REVOKED STATUS
+  //    The strongest chameleon signal: another carrier sharing identity
+  //    markers that has been revoked by FMCSA.
+  // ------------------------------------------------------------------
+  for (const r of relatedList) {
+    const status = String(r.operatingStatus || r.status || '').toLowerCase()
+    const isRevoked = status === 'revoked' || status === 'r' || status === 'inactive-revoked'
+    const isInactive = status === 'inactive' || status === 'n' || status === 'not authorized'
+    const sharedField = (r.sharedField || r.shared_field || 'unknown').toLowerCase()
+    const otherName = r.legalName || r.legal_name || 'Unknown carrier'
+    const otherDot = String(r.dotNumber || r.dot_number || '')
+
+    if (isRevoked || isInactive) {
+      relatedRevokedCarriers.push({
+        dotNumber: otherDot,
+        legalName: otherName,
+        sharedField,
+        status: isRevoked ? 'revoked' : 'inactive',
+      })
+    }
+
+    if (isRevoked) {
+      // Shared EIN with revoked carrier — strongest signal
+      if (sharedField === 'ein') {
+        flags.push({
+          signal: 'Shared EIN with revoked carrier',
+          severity: 'critical',
+          points: 35,
+          detail: 'This carrier shares an Employer Identification Number (EIN) with a carrier whose authority was revoked by FMCSA. A shared EIN means the same legal entity is operating under a different MC number — a primary indicator of chameleon carrier behavior.',
+          evidence: `Shares EIN with ${otherName} (DOT ${otherDot}), status: REVOKED`,
+        })
+      }
+
+      // Shared officer/principal with revoked carrier
+      if (sharedField === 'officer' || sharedField === 'principal') {
+        flags.push({
+          signal: 'Shared officer with revoked carrier',
+          severity: 'critical',
+          points: 30,
+          detail: 'An officer or principal of this carrier is also listed on a carrier whose authority was revoked. FMCSA tracks beneficial ownership to prevent individuals from circumventing safety enforcement by opening new companies.',
+          evidence: `Shares officer/principal with ${otherName} (DOT ${otherDot}), status: REVOKED`,
+        })
+      }
+
+      // Shared address with revoked carrier
+      if (sharedField === 'address') {
+        flags.push({
+          signal: 'Shared address with revoked carrier',
+          severity: 'high',
+          points: 20,
+          detail: 'This carrier operates from the same physical address as a carrier whose authority was revoked. While shared addresses can occur legitimately (e.g., shared warehouses), combined with other signals this is a strong chameleon indicator.',
+          evidence: `Shares address with ${otherName} (DOT ${otherDot}), status: REVOKED`,
+        })
+      }
+
+      // Shared phone with revoked carrier
+      if (sharedField === 'phone') {
+        flags.push({
+          signal: 'Shared phone with revoked carrier',
+          severity: 'high',
+          points: 15,
+          detail: 'This carrier uses the same phone number as a carrier whose authority was revoked. Reuse of contact information across entities is a common chameleon carrier pattern tracked by FMCSA.',
+          evidence: `Shares phone number with ${otherName} (DOT ${otherDot}), status: REVOKED`,
+        })
+      }
+
+      // Shared VIN with revoked carrier
+      if (sharedField === 'vin' || sharedField === 'vehicle') {
+        flags.push({
+          signal: 'Shared vehicles with revoked carrier',
+          severity: 'high',
+          points: 20,
+          detail: 'Vehicles (VINs) registered to this carrier were also registered to a revoked carrier. Equipment transfers from a shut-down operation to a new MC number is a hallmark of chameleon carriers trying to continue operating the same fleet.',
+          evidence: `Shares vehicle VINs with ${otherName} (DOT ${otherDot}), status: REVOKED`,
+        })
+      }
+
+      // Generic shared field with revoked carrier (catch-all)
+      if (!['ein', 'officer', 'principal', 'address', 'phone', 'vin', 'vehicle'].includes(sharedField)) {
+        flags.push({
+          signal: `Related to revoked carrier (${sharedField})`,
+          severity: 'medium',
+          points: 10,
+          detail: `This carrier shares a "${sharedField}" connection with a carrier whose authority was revoked. FMCSA flags related entities to identify carriers attempting to evade safety enforcement.`,
+          evidence: `Related via "${sharedField}" to ${otherName} (DOT ${otherDot}), status: REVOKED`,
+        })
+      }
+    }
+
+    // Inactive related carriers are a weaker signal but still worth flagging
+    if (isInactive && !isRevoked) {
+      if (['ein', 'officer', 'principal'].includes(sharedField)) {
+        flags.push({
+          signal: `Shared ${sharedField} with inactive carrier`,
+          severity: 'low',
+          points: 5,
+          detail: `This carrier shares an identity marker with an inactive carrier. While inactive status alone is not evidence of chameleon behavior, it warrants review if combined with other signals.`,
+          evidence: `Shares ${sharedField} with ${otherName} (DOT ${otherDot}), status: INACTIVE`,
+        })
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // 2. SHARED EQUIPMENT — VINs shared with ANY other carrier
+  //    Even without knowing the other carrier's status, shared VINs
+  //    between distinct DOT numbers are a red flag.
+  // ------------------------------------------------------------------
+  const sharedVinCount = sharedEquipment.countSharedVins || sharedEquipment.totalShared || 0
+  const sharedPowerUnits = sharedEquipment.countSharedPowerUnits || 0
+  const sharedTrailers = sharedEquipment.countSharedTrailers || 0
+  const sharedVinDetails = sharedEquipment.sharedVins || sharedEquipment.details || []
+
+  if (sharedVinCount > 0) {
+    let severity: ChameleonSeverity = 'medium'
+    let points = 10
+    if (sharedVinCount > 10) { severity = 'high'; points = 20 }
+    else if (sharedVinCount > 5) { severity = 'high'; points = 15 }
+
+    const otherCarriers = Array.isArray(sharedVinDetails)
+      ? sharedVinDetails.slice(0, 3).map((s: any) =>
+          `${s.sharedWithName || s.otherLegalName || 'Unknown'} (DOT ${s.sharedWithDot || s.otherDotNumber || '?'})`
+        ).join(', ')
+      : ''
+
+    flags.push({
+      signal: `${sharedVinCount} vehicle${sharedVinCount > 1 ? 's' : ''} shared with other carriers`,
+      severity,
+      points,
+      detail: `${sharedPowerUnits > 0 ? sharedPowerUnits + ' power units' : ''}${sharedPowerUnits > 0 && sharedTrailers > 0 ? ' and ' : ''}${sharedTrailers > 0 ? sharedTrailers + ' trailers' : ''} registered to this carrier are also registered under other DOT numbers. Shared equipment between carriers can indicate the same operation running under multiple authorities to distribute safety risk or evade enforcement.`,
+      evidence: otherCarriers ? `Shared with: ${otherCarriers}` : `${sharedVinCount} VINs shared across carriers`,
+    })
+  }
+
+  // ------------------------------------------------------------------
+  // 3. REVOCATION HISTORY — this carrier's own past revocations
+  //    A carrier that has been revoked and then re-granted authority
+  //    may be operating as its own chameleon.
+  // ------------------------------------------------------------------
+  const totalRevocations = parseInt(carrier.totalRevocations) || 0
+  const daysSinceLastRevocation = carrier.daysSinceLastRevocation != null
+    ? parseInt(carrier.daysSinceLastRevocation)
+    : null
+
+  if (totalRevocations > 0) {
+    let severity: ChameleonSeverity = 'medium'
+    let points = 10
+    if (totalRevocations > 2) { severity = 'high'; points = 20 }
+    else if (totalRevocations > 1) { severity = 'high'; points = 15 }
+
+    const recentText = daysSinceLastRevocation != null && daysSinceLastRevocation < 730
+      ? ` Most recent revocation was ${daysSinceLastRevocation} days ago.`
+      : daysSinceLastRevocation != null
+        ? ` Last revocation was ${Math.round(daysSinceLastRevocation / 365)} years ago.`
+        : ''
+
+    flags.push({
+      signal: `${totalRevocations} prior authority revocation${totalRevocations > 1 ? 's' : ''}`,
+      severity,
+      points,
+      detail: `This carrier has had its operating authority revoked ${totalRevocations} time${totalRevocations > 1 ? 's' : ''} by FMCSA.${recentText} Carriers with revocation history may have been forced to cease operations due to safety violations, insurance lapses, or compliance failures.`,
+      evidence: `${totalRevocations} revocation${totalRevocations > 1 ? 's' : ''} on record${daysSinceLastRevocation != null ? `, last ${daysSinceLastRevocation} days ago` : ''}`,
+    })
+  }
+
+  // ------------------------------------------------------------------
+  // 4. YOUNG AUTHORITY + REVOCATION SIGNALS
+  //    A very new authority combined with revocation-related signals
+  //    is the classic chameleon pattern: shut down, then reopen quickly.
+  // ------------------------------------------------------------------
+  const authorityAgeDays = parseInt(carrier.authorityAgeDays) || 0
+  const isYoungAuthority = authorityAgeDays > 0 && authorityAgeDays < 730 // < 2 years
+
+  if (isYoungAuthority && (relatedRevokedCarriers.length > 0 || totalRevocations > 0)) {
+    flags.push({
+      signal: 'New authority with revocation connections',
+      severity: 'high',
+      points: 15,
+      detail: `This carrier's authority is only ${authorityAgeDays < 365 ? 'less than a year' : 'less than 2 years'} old and has connections to revoked carriers or its own revocation history. New authorities established shortly after revocations are a primary pattern FMCSA uses to identify chameleon carriers.`,
+      evidence: `Authority age: ${authorityAgeDays} days (~${Math.round(authorityAgeDays / 30)} months), ${relatedRevokedCarriers.length} revoked related carrier${relatedRevokedCarriers.length !== 1 ? 's' : ''}`,
+    })
+  }
+
+  // ------------------------------------------------------------------
+  // 5. QUICK RESTART — revoked then re-granted in short time
+  //    Check the authority timeline for revocation → grant patterns.
+  // ------------------------------------------------------------------
+  if (Array.isArray(timeline) && timeline.length > 0) {
+    const sorted = [...timeline].sort((a: any, b: any) => {
+      const da = new Date(a.date || 0).getTime()
+      const db = new Date(b.date || 0).getTime()
+      return da - db
+    })
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const curr = sorted[i]
+      const next = sorted[i + 1]
+      const currEvent = String(curr.event || '').toLowerCase()
+      const nextEvent = String(next.event || '').toLowerCase()
+
+      if ((currEvent.includes('revok') || currEvent.includes('cancel')) &&
+          (nextEvent.includes('grant') || nextEvent.includes('approv') || nextEvent.includes('filed'))) {
+        const revokeDate = new Date(curr.date || 0)
+        const grantDate = new Date(next.date || 0)
+        const daysBetween = Math.round((grantDate.getTime() - revokeDate.getTime()) / (1000 * 60 * 60 * 24))
+
+        if (daysBetween >= 0 && daysBetween < 365) {
+          flags.push({
+            signal: 'Quick restart after revocation',
+            severity: daysBetween < 90 ? 'critical' : 'high',
+            points: daysBetween < 90 ? 25 : 15,
+            detail: `Authority was revoked and then re-established ${daysBetween} days later. FMCSA considers a quick turnaround between revocation and new authority as a strong indicator that the carrier is attempting to circumvent safety enforcement. Legitimate carriers typically take longer to resolve the underlying issues.`,
+            evidence: `Revoked ${normalizeDate(curr.date)}, re-granted ${normalizeDate(next.date)} (${daysBetween} days gap)`,
+          })
+          break // Only flag the most recent instance
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // 6. MULTIPLE RELATED CARRIERS (volume signal)
+  //    Having many related carriers in itself isn't conclusive, but
+  //    a high count amplifies other signals.
+  // ------------------------------------------------------------------
+  const relatedCount = relatedList.length
+  if (relatedCount > 5) {
+    flags.push({
+      signal: `${relatedCount} related carrier entities`,
+      severity: relatedCount > 10 ? 'medium' : 'low',
+      points: relatedCount > 10 ? 10 : 5,
+      detail: `This carrier is linked to ${relatedCount} other carrier entities through shared addresses, officers, equipment, or contact information. A high number of related entities can indicate a network of carriers under common control, which FMCSA monitors for chameleon activity and safety evasion patterns.`,
+      evidence: `${relatedCount} related carriers found; ${relatedRevokedCarriers.length} with revoked/inactive status`,
+    })
+  }
+
+  // ------------------------------------------------------------------
+  // SCORE CALCULATION
+  // ------------------------------------------------------------------
+  // Sort flags by severity (critical first) then by points (highest first)
+  const severityOrder: Record<ChameleonSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+  flags.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity] || b.points - a.points)
+
+  // Cap at 100
+  const rawScore = flags.reduce((sum, f) => sum + f.points, 0)
+  const riskScore = Math.min(rawScore, 100)
+
+  // Determine risk level
+  let riskLevel: V2ChameleonAnalysis['riskLevel'] = 'none'
+  if (riskScore >= 70) riskLevel = 'critical'
+  else if (riskScore >= 45) riskLevel = 'high'
+  else if (riskScore >= 25) riskLevel = 'moderate'
+  else if (riskScore > 0) riskLevel = 'low'
+
+  // Build summary
+  const hasCritical = flags.some(f => f.severity === 'critical')
+  let summary = ''
+  if (riskLevel === 'none') {
+    summary = 'No chameleon carrier indicators detected. This carrier shows no signs of reincarnated authority or evasion patterns.'
+  } else if (riskLevel === 'critical') {
+    summary = `Critical chameleon carrier risk detected. ${flags.length} red flag${flags.length > 1 ? 's' : ''} found including ${hasCritical ? 'direct identity links to revoked carriers' : 'multiple high-severity indicators'}. This carrier requires thorough due diligence before any transaction.`
+  } else if (riskLevel === 'high') {
+    summary = `High chameleon carrier risk. ${flags.length} indicator${flags.length > 1 ? 's' : ''} found linking this carrier to revoked or inactive entities. Additional investigation is strongly recommended.`
+  } else if (riskLevel === 'moderate') {
+    summary = `Moderate chameleon carrier indicators present. ${flags.length} signal${flags.length > 1 ? 's' : ''} detected that may warrant further review before proceeding.`
+  } else {
+    summary = `Low-level chameleon indicators detected. ${flags.length} minor signal${flags.length > 1 ? 's' : ''} found — likely benign but noted for awareness.`
+  }
+
+  return {
+    riskScore,
+    riskLevel,
+    flags,
+    summary,
+    relatedRevokedCarriers,
   }
 }

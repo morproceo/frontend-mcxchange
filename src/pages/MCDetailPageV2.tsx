@@ -18,7 +18,7 @@ import {
   TrendingUp, TrendingDown, Star, Clock, ExternalLink, Mail,
   BarChart3, Eye, Zap, CircleDot, ChevronRight, ChevronDown, ChevronUp, MapPinned,
   Lock, Unlock, Coins, CreditCard, ShoppingCart, Send, Search,
-  MessageSquare, Crown, Loader2, X, AlertCircle, Sparkles,
+  MessageSquare, Crown, Loader2, X, AlertCircle, Sparkles, ShieldAlert, Info,
 } from 'lucide-react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Card from '../components/ui/Card'
@@ -42,6 +42,7 @@ import CertificationBadges from '../components/v2/CertificationBadges'
 import HorizontalBenchmarkBar from '../components/v2/HorizontalBenchmarkBar'
 import ViolationBreakdownChart from '../components/v2/ViolationBreakdownChart'
 import SharedEquipmentAlert from '../components/v2/SharedEquipmentAlert'
+import ChameleonAlert from '../components/v2/ChameleonAlert'
 import DriverBreakdown from '../components/v2/DriverBreakdown'
 import FleetOwnershipBar from '../components/v2/FleetOwnershipBar'
 import DonutChart from '../components/v2/DonutChart'
@@ -83,7 +84,7 @@ import {
   V2ContactHistory, V2CargoCapabilities, V2ComplianceFinancials,
   V2AvailableDocument, V2MonitoringAlert, V2RiskScoreTrend,
   V2InsuranceGap, V2ViolationTrend, V2RelatedCarrier, V2CarrierPercentile,
-  V2NetworkSignal, V2BenchmarkData, V2DocumentItem,
+  V2NetworkSignal, V2BenchmarkData, V2DocumentItem, V2ChameleonAnalysis,
 } from '../components/v2/mockData'
 import { useCarrierData } from '../hooks/useCarrierData'
 import {
@@ -97,7 +98,8 @@ import {
   mapToV2CargoCapabilities, mapToV2Documents, mapToV2VerificationChecks,
   mapToV2AvailableDocuments, mapToV2RelatedCarriers, mapToV2Percentiles,
   mapToV2MonitoringAlerts, mapToV2RiskScoreTrend, mapToV2ContactHistory,
-  mapToV2ComplianceFinancials,
+  mapToV2ComplianceFinancials, mapToV2VinInspections, mapToV2NetworkSignals,
+  mapToV2Benchmarks, detectChameleonCarrier,
   calculateCarrierHealthScore,
   HealthCategory,
 } from '../utils/carrierDataMapper'
@@ -140,6 +142,7 @@ interface CarrierDataContextType {
   vinInspections: V2VinInspection[]
   networkSignals: V2NetworkSignal[]
   benchmarks: V2BenchmarkData[]
+  chameleonAnalysis: V2ChameleonAnalysis
   healthCategories: HealthCategory[]
   carrierLoading: boolean
   carrierError: string | null
@@ -163,6 +166,7 @@ const tabs: TabItem[] = [
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
   { id: 'documents', label: 'Documents & Verification', icon: FileText },
   { id: 'credit', label: 'Credit Report', icon: DollarSign },
+  { id: 'chameleon', label: 'Chameleon Check', icon: ShieldAlert },
   { id: 'full-report', label: 'Full Report', icon: BarChart3 },
 ]
 
@@ -748,13 +752,80 @@ function OverviewTab() {
         </div>
       </Card>
 
-      {/* 10. Description */}
+      {/* 10. Network Signals */}
+      {mockNetworkSignals.length > 0 && (
+        <Card padding="md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-indigo-500" />
+            Network Signals
+          </h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {mockNetworkSignals.map((signal, i) => {
+              const bgColors = { positive: 'bg-emerald-50 border-emerald-200', neutral: 'bg-amber-50 border-amber-200', negative: 'bg-red-50 border-red-200' }
+              const textColors = { positive: 'text-emerald-700', neutral: 'text-amber-700', negative: 'text-red-700' }
+              const icons = { positive: <CheckCircle className="w-4 h-4 text-emerald-500" />, neutral: <AlertTriangle className="w-4 h-4 text-amber-500" />, negative: <XCircle className="w-4 h-4 text-red-500" /> }
+              return (
+                <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${bgColors[signal.status]}`}>
+                  <div className="mt-0.5">{icons[signal.status]}</div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{signal.name}</span>
+                      <span className={`text-xs font-bold ${textColors[signal.status]}`}>{signal.value}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{signal.detail}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* 11. Industry Benchmarks */}
+      {mockBenchmarks.length > 0 && (
+        <Card padding="md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-indigo-500" />
+            Industry Benchmarks
+          </h3>
+          <div className="space-y-4">
+            {mockBenchmarks.map((b, i) => {
+              const isBetter = b.lowerIsBetter ? b.carrierValue <= b.industryAvg : b.carrierValue >= b.industryAvg
+              const barColor = isBetter ? 'bg-emerald-500' : 'bg-red-400'
+              const avgBarColor = 'bg-gray-300'
+              const maxVal = Math.max(b.carrierValue, b.industryAvg) * 1.2 || 100
+              return (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium text-gray-700">{b.metric}</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={`font-bold ${isBetter ? 'text-emerald-600' : 'text-red-500'}`}>{b.carrierValue}{b.unit}</span>
+                      <span className="text-gray-400">vs</span>
+                      <span className="text-gray-500">{b.industryAvg}{b.unit} avg</span>
+                    </div>
+                  </div>
+                  <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`absolute inset-y-0 left-0 rounded-full ${barColor}`} style={{ width: `${Math.min((b.carrierValue / maxVal) * 100, 100)}%` }} />
+                    <div className={`absolute top-0 bottom-0 w-0.5 ${avgBarColor}`} style={{ left: `${Math.min((b.industryAvg / maxVal) * 100, 100)}%` }} title={`Industry Avg: ${b.industryAvg}${b.unit}`} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className={`text-[10px] font-medium ${isBetter ? 'text-emerald-600' : 'text-red-500'}`}>{isBetter ? (b.lowerIsBetter ? 'Below avg' : 'Above avg') : (b.lowerIsBetter ? 'Above avg' : 'Below avg')}</span>
+                    <span className="text-[10px] text-gray-400">National average</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* 12. Description */}
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
         <p className="text-sm text-gray-600 leading-relaxed">{mockCarrier.description}</p>
       </Card>
 
-      {/* 11. Industry Percentile Ranking — Full Report */}
+      {/* 13. Industry Percentile Ranking — Full Report */}
       <CarrierComparison percentiles={mockCarrierPercentiles} />
     </div>
   )
@@ -2422,7 +2493,90 @@ function CreditReportTab() {
 }
 
 // ============================================================
-// TAB 8: FULL REPORT
+// TAB 8: CHAMELEON CHECK
+// ============================================================
+function ChameleonTab() {
+  const { chameleonAnalysis, carrier, relatedCarriers } = useCarrierDataContext()
+  return (
+    <div className="space-y-6">
+      {/* Main analysis panel */}
+      <ChameleonAlert analysis={chameleonAnalysis} />
+
+      {/* Educational context */}
+      <Card padding="md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Info className="w-5 h-5 text-indigo-500" />
+          What is a Chameleon Carrier?
+        </h3>
+        <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+          <p>
+            A <strong>chameleon carrier</strong> is a motor carrier that has been shut down by the Federal Motor Carrier Safety Administration (FMCSA) for safety violations, insurance lapses, or compliance failures — and then reopens under a new name, MC number, or DOT number to evade their prior safety record.
+          </p>
+          <p>
+            FMCSA actively tracks chameleon carriers through their <strong>New Entrant Safety Audit</strong> program by cross-referencing shared addresses, officers, EINs, phone numbers, and vehicle VINs across carrier registrations.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 mt-4">
+            <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+              <p className="text-xs font-semibold text-red-800 mb-1">Why it matters for buyers</p>
+              <p className="text-xs text-red-700">Chameleon carriers carry hidden safety risks. Their prior violations, crashes, and OOS rates don't appear on the new authority — making it look clean when it isn't.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+              <p className="text-xs font-semibold text-blue-800 mb-1">How we detect it</p>
+              <p className="text-xs text-blue-700">We analyze shared EINs, officers, addresses, phone numbers, vehicle VINs, authority timelines, and revocation history across all FMCSA-registered carriers.</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Carrier identity snapshot */}
+      <Card padding="md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-indigo-500" />
+          Carrier Identity
+        </h3>
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Authority Age</span>
+            <span className="font-medium text-gray-900">
+              {carrier.authorityAgeDays > 0
+                ? carrier.authorityAgeDays >= 365
+                  ? `${Math.round(carrier.authorityAgeDays / 365)} years`
+                  : `${Math.round(carrier.authorityAgeDays / 30)} months`
+                : 'Unknown'}
+            </span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Revocations</span>
+            <span className={`font-medium ${carrier.totalRevocations > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {carrier.totalRevocations}
+            </span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">EIN</span>
+            <span className="font-medium font-mono text-gray-900">{carrier.ein || 'Not available'}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Related Carriers</span>
+            <span className="font-medium text-gray-900">{relatedCarriers.length}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Entity Type</span>
+            <span className="font-medium text-gray-900">{carrier.entityType}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-gray-100">
+            <span className="text-gray-500">Days Since Last Revocation</span>
+            <span className="font-medium text-gray-900">
+              {carrier.daysSinceLastRevocation != null ? fmtNumber(carrier.daysSinceLastRevocation) : 'N/A'}
+            </span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ============================================================
+// TAB 9: FULL REPORT
 // ============================================================
 function FullReportTab() {
   const { contactHistory: mockContactHistory, riskScoreTrend: mockRiskScoreTrend, vinInspections: mockVinInspections, monitoringAlerts: mockMonitoringAlerts, relatedCarriers: mockRelatedCarriers, percentiles: mockCarrierPercentiles } = useCarrierDataContext()
@@ -2463,46 +2617,55 @@ function FullReportTab() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Eye className="w-5 h-5 text-indigo-500" />
           VIN Inspection History
-          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">CarrierOk</span>
+          {mockVinInspections.length > 0 && (
+            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{mockVinInspections.length} records</span>
+          )}
         </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">VIN</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Location</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Result</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Violations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockVinInspections.map((insp, i) => {
-                const resultColors: Record<string, string> = {
-                  pass: 'bg-emerald-50 text-emerald-700',
-                  fail: 'bg-red-50 text-red-700',
-                  oos: 'bg-red-50 text-red-700',
-                  warning: 'bg-yellow-50 text-yellow-700',
-                }
-                return (
-                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2 px-3 font-mono text-xs">{insp.vin}</td>
-                    <td className="py-2 px-3 text-gray-600">{safeFmtDate(insp.date)}</td>
-                    <td className="py-2 px-3 text-gray-600">{insp.location}</td>
-                    <td className="py-2 px-3">
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full capitalize">{insp.type}</span>
-                    </td>
-                    <td className="py-2 px-3">
-                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full uppercase ${resultColors[insp.result]}`}>{insp.result}</span>
-                    </td>
-                    <td className="py-2 px-3 text-center">{insp.violations}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        {mockVinInspections.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">VIN</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Location</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Result</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Violations</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mockVinInspections.map((insp, i) => {
+                  const resultColors: Record<string, string> = {
+                    pass: 'bg-emerald-50 text-emerald-700',
+                    fail: 'bg-red-50 text-red-700',
+                    oos: 'bg-red-50 text-red-700',
+                    warning: 'bg-yellow-50 text-yellow-700',
+                  }
+                  return (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2 px-3 font-mono text-xs">{insp.vin}</td>
+                      <td className="py-2 px-3 text-gray-600">{safeFmtDate(insp.date)}</td>
+                      <td className="py-2 px-3 text-gray-600">{insp.location}</td>
+                      <td className="py-2 px-3">
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full capitalize">{insp.type}</span>
+                      </td>
+                      <td className="py-2 px-3">
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full uppercase ${resultColors[insp.result]}`}>{insp.result}</span>
+                      </td>
+                      <td className="py-2 px-3 text-center">{insp.violations}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <Eye className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">No VIN-level inspection data available for this carrier</p>
+          </div>
+        )}
       </Card>
 
       {/* Carrier Monitoring */}
@@ -2578,6 +2741,7 @@ export default function MCDetailPageV2() {
         vinInspections: fallbackVinInspections,
         networkSignals: fallbackNetworkSignals,
         benchmarks: fallbackBenchmarks,
+        chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
         healthCategories: [],
         carrierLoading: false,
         carrierError: null,
@@ -2621,6 +2785,7 @@ export default function MCDetailPageV2() {
         vinInspections: [],
         networkSignals: [],
         benchmarks: [],
+        chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
         healthCategories: [],
         carrierLoading,
         carrierError,
@@ -2661,9 +2826,10 @@ export default function MCDetailPageV2() {
       monitoringAlerts: mapToV2MonitoringAlerts(carrierReport),
       riskScoreTrend: mapToV2RiskScoreTrend(carrierReport),
       contactHistory: mapToV2ContactHistory(carrierReport),
-      vinInspections: [],       // VIN inspections need separate API call — empty for now
-      networkSignals: [],       // Mock-only feature — empty for real data
-      benchmarks: [],           // Mock-only feature — empty for real data
+      vinInspections: mapToV2VinInspections(carrierReport),
+      networkSignals: mapToV2NetworkSignals(carrierReport, listing),
+      benchmarks: mapToV2Benchmarks(carrierReport),
+      chameleonAnalysis: detectChameleonCarrier(carrierReport, listing),
       healthCategories: healthResult.categories,
       carrierLoading: false,
       carrierError: null,
@@ -2924,6 +3090,7 @@ export default function MCDetailPageV2() {
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
     documents: showSkeleton ? <CarrierLoadingSkeleton /> : <DocumentsTab />,
     credit: showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
+    chameleon: showSkeleton ? <CarrierLoadingSkeleton /> : <ChameleonTab />,
     'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
   }
 
