@@ -153,6 +153,16 @@ export interface MCListing {
 
   // Location
   state: string
+  city?: string
+
+  // FMCSA Safety Snapshot (parsed from fmcsaData)
+  totalInspections?: number
+  driverOosInsp?: number
+  driverOosRate?: number
+  vehicleOosInsp?: number
+  vehicleOosRate?: number
+  crashTotal?: number
+  fatalCrash?: number
 
   // Platform Integrations
   amazonStatus: AmazonStatus

@@ -115,45 +115,62 @@ const MarketplacePage = () => {
         })
 
         // Transform backend data to frontend format
-        const transformedListings: MCListing[] = (response.data || response.listings || []).map((listing: any) => ({
-          id: listing.id,
-          mcNumber: listing.mcNumber,
-          sellerId: listing.sellerId,
-          seller: listing.seller || { id: listing.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
-          title: listing.title,
-          description: listing.description || '',
-          price: parseFloat(listing.listingPrice || listing.askingPrice || listing.price) || 0,
-          askingPrice: parseFloat(listing.askingPrice || listing.price) || 0,
-          listingPrice: listing.listingPrice ? parseFloat(listing.listingPrice) : undefined,
-          trustScore: listing.seller?.trustScore || 50,
-          trustLevel: (listing.seller?.trustScore || 50) >= 80 ? 'high' : (listing.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
-          verified: listing.seller?.verified || false,
-          verificationBadges: [],
-          yearsActive: listing.yearsActive || 0,
-          operationType: (() => {
-            if (!listing.cargoTypes) return [];
-            if (Array.isArray(listing.cargoTypes)) return listing.cargoTypes;
-            try { return JSON.parse(listing.cargoTypes); } catch { return []; }
-          })(),
-          fleetSize: listing.fleetSize || 0,
-          safetyRating: (listing.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
-          insuranceStatus: listing.insuranceOnFile ? 'active' : 'pending',
-          state: listing.state,
-          amazonStatus: (listing.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
-          amazonRelayScore: listing.amazonRelayScore,
-          highwaySetup: listing.highwaySetup || false,
-          sellingWithEmail: listing.sellingWithEmail || false,
-          sellingWithPhone: listing.sellingWithPhone || false,
-          isPremium: listing.isPremium || false,
-          isVip: listing.isVip || false,
-          documents: [],
-          status: (listing.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
-          visibility: (listing.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
-          views: listing.views || 0,
-          saves: listing.saves || 0,
-          createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
-          updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
-        }))
+        const transformedListings: MCListing[] = (response.data || response.listings || []).map((listing: any) => {
+          // Parse FMCSA data if available
+          let fmcsa: any = null
+          if (listing.fmcsaData) {
+            try { fmcsa = typeof listing.fmcsaData === 'string' ? JSON.parse(listing.fmcsaData) : listing.fmcsaData } catch {}
+          }
+
+          return {
+            id: listing.id,
+            mcNumber: listing.mcNumber,
+            sellerId: listing.sellerId,
+            seller: listing.seller || { id: listing.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
+            title: listing.title,
+            description: listing.description || '',
+            price: parseFloat(listing.listingPrice || listing.askingPrice || listing.price) || 0,
+            askingPrice: parseFloat(listing.askingPrice || listing.price) || 0,
+            listingPrice: listing.listingPrice ? parseFloat(listing.listingPrice) : undefined,
+            trustScore: listing.seller?.trustScore || 50,
+            trustLevel: (listing.seller?.trustScore || 50) >= 80 ? 'high' : (listing.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
+            verified: listing.seller?.verified || false,
+            verificationBadges: [],
+            yearsActive: listing.yearsActive || 0,
+            operationType: (() => {
+              if (!listing.cargoTypes) return [];
+              if (Array.isArray(listing.cargoTypes)) return listing.cargoTypes;
+              try { return JSON.parse(listing.cargoTypes); } catch { return []; }
+            })(),
+            fleetSize: listing.fleetSize || 0,
+            safetyRating: (listing.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
+            insuranceStatus: listing.insuranceOnFile ? 'active' : 'pending',
+            state: listing.state,
+            city: listing.city || undefined,
+            amazonStatus: (listing.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
+            amazonRelayScore: listing.amazonRelayScore,
+            highwaySetup: listing.highwaySetup || false,
+            sellingWithEmail: listing.sellingWithEmail || false,
+            sellingWithPhone: listing.sellingWithPhone || false,
+            isPremium: listing.isPremium || false,
+            isVip: listing.isVip || false,
+            documents: [],
+            status: (listing.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
+            visibility: (listing.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
+            views: listing.views || 0,
+            saves: listing.saves || 0,
+            createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
+            updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
+            // FMCSA safety snapshot
+            totalInspections: fmcsa?.totalInspections ?? (fmcsa?.driverInsp != null && fmcsa?.vehicleInsp != null ? (fmcsa.driverInsp + fmcsa.vehicleInsp) : undefined),
+            driverOosInsp: fmcsa?.driverOosInsp ?? fmcsa?.driverOosInspections ?? undefined,
+            driverOosRate: fmcsa?.driverOosRate ?? undefined,
+            vehicleOosInsp: fmcsa?.vehicleOosInsp ?? fmcsa?.vehicleOosInspections ?? undefined,
+            vehicleOosRate: fmcsa?.vehicleOosRate ?? undefined,
+            crashTotal: fmcsa?.crashTotal ?? fmcsa?.totalCrashes ?? undefined,
+            fatalCrash: fmcsa?.fatalCrash ?? fmcsa?.fatalCrashes ?? undefined,
+          }
+        })
 
         setListings(transformedListings)
       } catch (err) {

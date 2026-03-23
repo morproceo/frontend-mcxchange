@@ -10,7 +10,8 @@ import {
   Crown,
   Sparkles,
   Shield,
-  Truck
+  Truck,
+  AlertTriangle
 } from 'lucide-react'
 import { MCListing } from '../types'
 import TrustBadge from './ui/TrustBadge'
@@ -82,6 +83,11 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
     }
   }
 
+  // Format location: "City, ST" or just "ST"
+  const locationDisplay = listing.city
+    ? `${listing.city}, ${listing.state}`
+    : listing.state
+
   return (
     <Card hover className={clsx('group relative overflow-hidden', tier.cardBorder, tier.glowClass)}>
       {/* Tier Badge */}
@@ -95,8 +101,8 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
       )}
 
       <div className="relative z-10">
-        {/* Header with tier-colored background */}
-        <div className={clsx('rounded-xl -mx-2 -mt-2 mb-4 px-4 py-3', tier.headerBg)}>
+        {/* Header */}
+        <div className={clsx('rounded-xl -mx-2 -mt-2 mb-3 px-4 py-3', tier.headerBg)}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <Link to={`/mc/${listing.id}`}>
@@ -104,21 +110,9 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
                   MC #{getPartialMCNumber(listing.mcNumber)}
                 </h3>
               </Link>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/70 border border-gray-200/50">
-                  <MapPin className="w-3 h-3 text-gray-600" />
-                  <span className="font-semibold text-gray-700">{listing.state}</span>
-                </div>
-                <div className="flex items-center gap-1 text-gray-500">
-                  <Calendar className="w-3 h-3" />
-                  <span>{listing.yearsActive} yrs</span>
-                </div>
-                {listing.fleetSize > 0 && (
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <Truck className="w-3 h-3" />
-                    <span>{listing.fleetSize}</span>
-                  </div>
-                )}
+              <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                <span className="font-medium truncate">{locationDisplay}</span>
               </div>
             </div>
 
@@ -138,91 +132,96 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
           </div>
         </div>
 
-        {/* Price */}
-        <div className="mb-4">
-          <div className={clsx('text-2xl font-bold', tier.priceColor)}>
-            ${(listing.listingPrice || listing.askingPrice || listing.price || 0).toLocaleString()}
+        {/* Price + Key Stats Row */}
+        <div className="flex items-end justify-between mb-3">
+          <div>
+            <div className={clsx('text-2xl font-bold', tier.priceColor)}>
+              ${(listing.listingPrice || listing.askingPrice || listing.price || 0).toLocaleString()}
+            </div>
           </div>
-          {isStandard && (
-            <p className="text-xs text-gray-400 mt-0.5">Great value MC authority</p>
-          )}
-          {isPremium && (
-            <p className="text-xs text-violet-400 mt-0.5">Verified & established authority</p>
-          )}
-          {isVip && (
-            <p className="text-xs text-amber-400 mt-0.5">Top-tier exclusive authority</p>
-          )}
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <div className="flex items-center gap-1" title="Years Active">
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="font-medium">{listing.yearsActive} yrs</span>
+            </div>
+            {listing.fleetSize > 0 && (
+              <div className="flex items-center gap-1" title="Fleet Size">
+                <Truck className="w-3.5 h-3.5" />
+                <span className="font-medium">{listing.fleetSize}</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Quick Info Badges */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {/* Amazon Status */}
+        {/* Platform Badges */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {listing.amazonStatus === 'active' && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
-              <span className="text-lg">📦</span>
-              <span className="text-xs font-medium text-emerald-700">Amazon</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200">
+              <span className="text-xs">📦</span>
+              <span className="text-[11px] font-semibold text-emerald-700">Amazon</span>
               {listing.amazonRelayScore && (
-                <span className={clsx('text-xs font-bold', getAmazonScoreColor(listing.amazonRelayScore))}>
+                <span className={clsx('text-[11px] font-bold', getAmazonScoreColor(listing.amazonRelayScore))}>
                   {listing.amazonRelayScore}
                 </span>
               )}
             </div>
           )}
           {listing.amazonStatus === 'pending' && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200">
-              <span className="text-lg">📦</span>
-              <span className="text-xs font-medium text-amber-700">Pending</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 border border-amber-200">
+              <span className="text-xs">📦</span>
+              <span className="text-[11px] font-semibold text-amber-700">Pending</span>
             </div>
           )}
-
-          {/* Highway Setup */}
           {listing.highwaySetup && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200">
-              <span className="text-lg">🛣️</span>
-              <span className="text-xs font-medium text-blue-700">Highway</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 border border-blue-200">
+              <span className="text-xs">🛣️</span>
+              <span className="text-[11px] font-semibold text-blue-700">Highway</span>
             </div>
           )}
-
-          {/* Safety Rating for Standard - show it as a positive */}
-          {isStandard && listing.safetyRating === 'satisfactory' && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-200">
-              <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-              <span className="text-xs font-medium text-green-700">Clean Record</span>
+          {listing.safetyRating === 'satisfactory' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 border border-green-200">
+              <CheckCircle className="w-3 h-3 text-green-600" />
+              <span className="text-[11px] font-semibold text-green-700">Satisfactory</span>
+            </div>
+          )}
+          {listing.safetyRating === 'conditional' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 border border-amber-200">
+              <AlertTriangle className="w-3 h-3 text-amber-600" />
+              <span className="text-[11px] font-semibold text-amber-700">Conditional</span>
+            </div>
+          )}
+          {listing.safetyRating === 'unsatisfactory' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-200">
+              <XCircle className="w-3 h-3 text-red-600" />
+              <span className="text-[11px] font-semibold text-red-700">Unsatisfactory</span>
             </div>
           )}
         </div>
 
-        {/* What's Included in Sale */}
-        <div className="mb-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
-          <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 font-medium">Included in Sale</div>
-          <div className="flex items-center gap-4">
+
+        {/* Included in Sale */}
+        <div className="mb-3 flex items-center gap-3">
+          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Includes</div>
+          <div className="flex items-center gap-3">
             <div className={clsx(
-              'flex items-center gap-1.5 text-xs font-medium',
-              listing.sellingWithEmail ? 'text-emerald-600' : 'text-gray-400'
+              'flex items-center gap-1 text-xs font-medium',
+              listing.sellingWithEmail ? 'text-emerald-600' : 'text-gray-300'
             )}>
-              {listing.sellingWithEmail ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                <XCircle className="w-4 h-4" />
-              )}
+              {listing.sellingWithEmail ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
               <span>Email</span>
             </div>
             <div className={clsx(
-              'flex items-center gap-1.5 text-xs font-medium',
-              listing.sellingWithPhone ? 'text-emerald-600' : 'text-gray-400'
+              'flex items-center gap-1 text-xs font-medium',
+              listing.sellingWithPhone ? 'text-emerald-600' : 'text-gray-300'
             )}>
-              {listing.sellingWithPhone ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                <XCircle className="w-4 h-4" />
-              )}
+              {listing.sellingWithPhone ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
               <span>Phone</span>
             </div>
           </div>
         </div>
 
         {/* Trust Badge */}
-        <div className="mb-4">
+        <div className="mb-3">
           <TrustBadge
             score={listing.trustScore}
             level={getTrustLevel(listing.trustScore)}
@@ -232,8 +231,8 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-4 text-xs text-gray-400">
             <div className="flex items-center gap-1">
               <Eye className="w-3.5 h-3.5" />
               <span>{listing.views}</span>
@@ -244,18 +243,18 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
             </div>
           </div>
 
-          <div className="text-xs text-gray-500">
+          <div className="text-[11px] text-gray-400">
             {formatDistanceToNow(listing.createdAt, { addSuffix: true })}
           </div>
         </div>
 
-        {/* View Details Button - tier-colored */}
+        {/* View Details Button */}
         <Link to={`/mc/${listing.id}`}>
           <motion.div
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             className={clsx(
-              'mt-4 w-full text-white text-center py-2.5 rounded-xl font-medium transition-colors text-sm',
+              'mt-3 w-full text-white text-center py-2.5 rounded-xl font-medium transition-colors text-sm',
               tier.buttonBg
             )}
           >
