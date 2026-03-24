@@ -640,12 +640,6 @@ function OverviewTab() {
         </div>
       </div>
 
-      {/* 4. Certification Badges */}
-      <Card padding="md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Certifications</h3>
-        <CertificationBadges smartway={mockCarrier.smartwayFlag} carbtru={mockCarrier.carbtruFlag} phmsa={mockCarrier.phmsaFlag} />
-      </Card>
-
       {/* 7. Compliance & Financials */}
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
