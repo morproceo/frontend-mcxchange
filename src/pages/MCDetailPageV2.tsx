@@ -167,10 +167,8 @@ const tabs: TabItem[] = [
   { id: 'safety', label: 'Safety & Inspections', icon: Activity },
   { id: 'insurance', label: 'Insurance', icon: Umbrella },
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
-  { id: 'documents', label: 'Documents & Verification', icon: FileText },
   { id: 'credit', label: 'Credit Report', icon: DollarSign },
   { id: 'chameleon', label: 'Chameleon Check', icon: ShieldAlert },
-  { id: 'full-report', label: 'Full Report', icon: BarChart3 },
   { id: 'safety-improvement', label: 'Safety Improvement Report', icon: Zap },
 ]
 
@@ -346,7 +344,7 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, userCredits, u
 
               {/* Feature preview pills */}
               <div className="flex flex-wrap justify-center gap-2 mb-6">
-                {['Authority & Compliance', 'Safety & Inspections', 'Insurance', 'Fleet & Drivers', 'Documents', 'Full Report'].map(name => (
+                {['Authority & Compliance', 'Safety & Inspections', 'Insurance', 'Fleet & Drivers', 'Credit Report', 'Chameleon Check'].map(name => (
                   <span key={name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
                     <Lock className="w-2.5 h-2.5" />
                     {name}
@@ -3788,10 +3786,8 @@ export default function MCDetailPageV2() {
     safety: showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyTab />,
     insurance: showSkeleton ? <CarrierLoadingSkeleton /> : <InsuranceTab />,
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
-    documents: showSkeleton ? <CarrierLoadingSkeleton /> : <DocumentsTab />,
     credit: showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
     chameleon: showSkeleton ? <CarrierLoadingSkeleton /> : <ChameleonTab />,
-    'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
     'safety-improvement': showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyImprovementReportTab />,
   }
 
