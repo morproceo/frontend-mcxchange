@@ -1053,21 +1053,25 @@ export function mapToV2ViolationTrend(report: any): V2ViolationTrend[] {
 // CRASHES
 // ============================================================
 export function mapToV2CrashData(report: any, smsData?: FMCSASMSData | null): V2CrashData {
+  // MorPro may return crashes as: report.crashes.summary.{field}, report.crashes.{field}, or report.carrier.{field}
   const summary = report?.crashes?.summary || {}
-  const p = (v: any) => parseInt(v) || 0
+  const crashes = report?.crashes || {}
+  const carrier = report?.carrier || {}
+  const pi = (v: any): number => { const n = parseInt(v); return isNaN(n) ? 0 : n }
 
-  const morProFatal = p(summary.fatal) || p(summary.fatalCrashes)
-  const morProInjury = p(summary.injury) || p(summary.injuryCrashes)
-  const morProTow = p(summary.towaway) || p(summary.towCrashes)
-  const morProTotal = p(summary.total) || p(summary.totalCrashes)
+  // Check multiple MorPro paths for each field
+  const morProFatal = pi(summary.fatal ?? summary.fatalCrashes ?? crashes.fatal ?? crashes.fatalCrashes ?? carrier.fatalCrash)
+  const morProInjury = pi(summary.injury ?? summary.injuryCrashes ?? crashes.injury ?? crashes.injuryCrashes ?? carrier.injuryCrash)
+  const morProTow = pi(summary.towaway ?? summary.towCrashes ?? crashes.towaway ?? crashes.towCrashes ?? carrier.towCrash)
+  const morProTotal = pi(summary.total ?? summary.totalCrashes ?? crashes.total ?? crashes.totalCrashes ?? carrier.crashTotal)
 
-  // Use FMCSA SMS as source of truth when available, fall back to MorPro
-  if (smsData && (smsData.totalCrashes > 0 || morProTotal === 0)) {
+  // FMCSA SMS is source of truth — use ?? (not ||) so 0 is preserved correctly
+  if (smsData && smsData.totalInspections > 0) {
     return {
-      fatal: smsData.fatalCrashes || morProFatal,
-      injury: smsData.injuryCrashes || morProInjury,
-      towaway: smsData.towCrashes || morProTow,
-      total: smsData.totalCrashes || morProTotal,
+      fatal: smsData.fatalCrashes ?? morProFatal,
+      injury: smsData.injuryCrashes ?? morProInjury,
+      towaway: smsData.towCrashes ?? morProTow,
+      total: smsData.totalCrashes ?? morProTotal,
     }
   }
 
