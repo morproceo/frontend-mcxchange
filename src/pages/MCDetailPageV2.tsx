@@ -104,7 +104,7 @@ import {
   mapSMSToV2BasicScores, mapSMSToV2BasicAlerts,
   HealthCategory,
 } from '../utils/carrierDataMapper'
-import type { FMCSASMSData } from '../types'
+import type { FMCSASMSData, FMCSAAuthorityHistory } from '../types'
 
 // ============================================================
 // CARRIER DATA CONTEXT — provides mapped data to all sub-components
@@ -3351,21 +3351,25 @@ export default function MCDetailPageV2() {
     USE_MOCK ? undefined : listing?.dotNumber
   )
 
-  // FMCSA SMS data (source of truth for BASIC scores) + cargo carried
+  // FMCSA data (source of truth for BASIC scores, cargo, authority)
   const [smsData, setSmsData] = useState<FMCSASMSData | null>(null)
   const [fmcsaCargoTypes, setFmcsaCargoTypes] = useState<string[]>([])
+  const [fmcsaAuthority, setFmcsaAuthority] = useState<FMCSAAuthorityHistory | null>(null)
   const fmcsaFetchedRef = useRef<string | null>(null)
   useEffect(() => {
     const dot = listing?.dotNumber?.replace(/\D/g, '')
     if (!dot || USE_MOCK || isPreviewMode) return
     if (fmcsaFetchedRef.current === dot) return
     fmcsaFetchedRef.current = dot
-    // Fetch SMS + cargo in parallel
+    // Fetch SMS + cargo + authority in parallel
     api.fmcsaGetSMSData(dot)
       .then(res => { if (res.success && res.data) setSmsData(res.data) })
       .catch(() => {})
     api.fmcsaGetCargoCarried(dot)
       .then(res => { if (res.success && res.data) setFmcsaCargoTypes(res.data) })
+      .catch(() => {})
+    api.fmcsaGetAuthorityHistory(dot)
+      .then(res => { if (res.success && res.data) setFmcsaAuthority(res.data) })
       .catch(() => {})
   }, [listing?.dotNumber, isPreviewMode])
 
@@ -3465,7 +3469,7 @@ export default function MCDetailPageV2() {
     const healthResult = calculateCarrierHealthScore(carrierReport, listing, smsData)
     return {
       carrier: mapToV2CarrierData(carrierReport, listing),
-      authority: mapToV2AuthorityData(carrierReport),
+      authority: mapToV2AuthorityData(carrierReport, fmcsaAuthority),
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
       // FMCSA SMS = gate (which BASICs are scored), MorPro = fresher values
@@ -3506,7 +3510,7 @@ export default function MCDetailPageV2() {
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode, smsData, fmcsaCargoTypes])
+  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode, smsData, fmcsaCargoTypes, fmcsaAuthority])
 
   // Credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0

@@ -498,7 +498,7 @@ export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2
 // ============================================================
 // AUTHORITY
 // ============================================================
-export function mapToV2AuthorityData(report: any): V2AuthorityData {
+export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityData {
   const auth = report?.authority || {}
   const statuses = auth.statuses || {}
   const timeline = auth.timeline || []
@@ -509,6 +509,27 @@ export function mapToV2AuthorityData(report: any): V2AuthorityData {
     if (lower === 'active' || lower === 'a') return 'active'
     if (lower === 'revoked' || lower === 'r') return 'revoked'
     return 'inactive'
+  }
+
+  // If we have FMCSA authority data (source of truth), use it directly
+  if (fmcsaAuth) {
+    return {
+      common: {
+        status: mapStatus(fmcsaAuth.commonAuthorityStatus),
+        grantedDate: normalizeDate(fmcsaAuth.commonAuthorityGrantDate || fmcsaAuth.grantDate || ''),
+        effectiveDate: normalizeDate(fmcsaAuth.effectiveDate || fmcsaAuth.commonAuthorityGrantDate || ''),
+      },
+      contract: {
+        status: mapStatus(fmcsaAuth.contractAuthorityStatus),
+        grantedDate: normalizeDate(fmcsaAuth.contractAuthorityGrantDate || ''),
+        effectiveDate: normalizeDate(fmcsaAuth.contractAuthorityGrantDate || ''),
+      },
+      broker: {
+        status: mapStatus(fmcsaAuth.brokerAuthorityStatus),
+        grantedDate: normalizeDate(fmcsaAuth.brokerAuthorityGrantDate || ''),
+        effectiveDate: normalizeDate(fmcsaAuth.brokerAuthorityGrantDate || ''),
+      },
+    }
   }
 
   // The API returns statuses as nested objects: statuses.common.status
