@@ -995,15 +995,21 @@ export function mapToV2Operations(report: any): V2OperationsSummary {
     }))
   }
 
+  // Parse violation count from a record — use ?? to handle 0 correctly (|| treats 0 as falsy)
+  const getViolCount = (r: any): number => {
+    const raw = r.total_violations ?? r.viol_total ?? r.violations
+    return raw != null ? (parseFloat(raw) || 0) : 0
+  }
+
   // Clean inspection rate — compute from records
   const cleanInspectionRate = records.length > 0
-    ? Math.round(records.filter((r: any) => p(r.total_violations || r.viol_total || r.violations) === 0).length / records.length * 1000) / 10
+    ? Math.round(records.filter((r: any) => getViolCount(r) === 0).length / records.length * 1000) / 10
     : p(summary.clean_inspection_rate) || 0
 
   const lastRecord = records.length > 0 ? records[0] : null
   const lastInspectionDate = normalizeDate(lastRecord?.inspection_date || lastRecord?.date || '')
 
-  const totalViolations = records.reduce((s: number, r: any) => s + p(r.total_violations || r.viol_total || r.violations), 0)
+  const totalViolations = records.reduce((s: number, r: any) => s + getViolCount(r), 0)
 
   return {
     totalInspections,
