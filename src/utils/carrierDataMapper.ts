@@ -675,10 +675,10 @@ function normalizeBasicName(name: string): string {
  * If a BASIC isn't in the FMCSA SMS response, it's not scored — period.
  */
 export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any): V2BasicScore[] {
-  // Build lookup from FMCSA basics array — only includes scored BASICs
+  // Build lookup from FMCSA basics array using normalized names for matching
   const smsLookup = new Map<string, FMCSASMSBasic>()
   for (const b of smsData.basics) {
-    smsLookup.set(b.basicName, b)
+    smsLookup.set(normalizeBasicName(b.basicName), b)
   }
 
   // Build lookup from MorPro basic scores (if available) for fresher values
@@ -690,7 +690,8 @@ export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any)
   }
 
   return ALL_BASICS.map(def => {
-    const sms = smsLookup.get(def.name)
+    const normalized = normalizeBasicName(def.name)
+    const sms = smsLookup.get(normalized)
     if (!sms || sms.percentile <= 0) {
       // FMCSA says this BASIC is not scored — no data, period
       return {
@@ -703,7 +704,6 @@ export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any)
     }
 
     // This BASIC IS scored by FMCSA — check MorPro for a fresher value
-    const normalized = normalizeBasicName(def.name)
     const morPro = morProLookup.get(normalized)
     const morProScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
     // Use MorPro value if it's a real score, otherwise use FMCSA's
@@ -726,16 +726,17 @@ export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any)
 export function mapSMSToV2BasicAlerts(smsData: FMCSASMSData): V2BasicAlerts {
   const lookup = new Map<string, FMCSASMSBasic>()
   for (const b of smsData.basics) {
-    lookup.set(b.basicName, b)
+    lookup.set(normalizeBasicName(b.basicName), b)
   }
+  const find = (name: string) => lookup.get(normalizeBasicName(name))
   return {
-    unsafeDrivingAlert: lookup.get('Unsafe Driving')?.exceedsThreshold || false,
-    hoursOfServiceAlert: lookup.get('Hours-of-Service Compliance')?.exceedsThreshold || false,
-    driverFitnessAlert: lookup.get('Driver Fitness')?.exceedsThreshold || false,
-    controlledSubstanceAlert: lookup.get('Controlled Substances/Alcohol')?.exceedsThreshold || false,
-    vehicleMaintenanceAlert: lookup.get('Vehicle Maintenance')?.exceedsThreshold || false,
-    hazmatAlert: lookup.get('Hazardous Materials Compliance')?.exceedsThreshold || false,
-    crashIndicatorAlert: lookup.get('Crash Indicator')?.exceedsThreshold || false,
+    unsafeDrivingAlert: find('Unsafe Driving')?.exceedsThreshold || false,
+    hoursOfServiceAlert: find('Hours-of-Service Compliance')?.exceedsThreshold || false,
+    driverFitnessAlert: find('Driver Fitness')?.exceedsThreshold || false,
+    controlledSubstanceAlert: find('Controlled Substances/Alcohol')?.exceedsThreshold || false,
+    vehicleMaintenanceAlert: find('Vehicle Maintenance')?.exceedsThreshold || false,
+    hazmatAlert: find('Hazardous Materials Compliance')?.exceedsThreshold || false,
+    crashIndicatorAlert: find('Crash Indicator')?.exceedsThreshold || false,
     unsafeDrivingOOSAlert: false,
     hoursOfServiceOOSAlert: false,
     vehicleMaintenanceOOSAlert: false,

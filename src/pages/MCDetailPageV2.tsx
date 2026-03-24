@@ -3496,8 +3496,9 @@ export default function MCDetailPageV2() {
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
       // FMCSA SMS = gate (which BASICs are scored), MorPro = fresher values
-      basicScores: smsData ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
-      basicAlerts: smsData ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
+      // Only use SMS if it actually returned scored basics — otherwise fall back to MorPro
+      basicScores: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
+      basicAlerts: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
       inspections: mapToV2InspectionSummary(carrierReport),
