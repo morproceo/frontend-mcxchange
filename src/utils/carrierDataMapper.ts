@@ -851,7 +851,7 @@ export function mapToV2ISSData(_report: any): V2ISSData {
 // ============================================================
 // INSPECTIONS
 // ============================================================
-export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
+export function mapToV2InspectionSummary(report: any, smsData?: FMCSASMSData | null): V2InspectionSummary {
   const inspSummary = report?.inspections?.summary || {}
   const safetyTotals = report?.safety?.inspectionTotals || {}
   const rawRecords: any[] = report?.inspections?.records || []
@@ -861,16 +861,22 @@ export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
 
   const p = (v: any) => parseFloat(v) || 0
 
-  // --- Use inspectionTotals from API as source of truth (populated from census/computed) ---
-  // Fall back to record-based counting only when inspectionTotals is empty
-  const hasApiTotals = p(safetyTotals.total) > 0 || p(safetyTotals.driver) > 0 || p(safetyTotals.vehicle) > 0
-
   let driverInsp: number, vehicleInsp: number, hazmatInsp: number, iepInsp: number
   let driverOOS: number, vehicleOOS: number, hazmatOOS: number, iepOOS: number
   let totalInsp: number
 
-  if (hasApiTotals) {
-    // API inspectionTotals is populated — use it (matches FMCSA census)
+  // Priority: FMCSA SMS → inspectionTotals → records
+  if (smsData && smsData.totalInspections > 0) {
+    totalInsp = smsData.totalInspections
+    driverInsp = smsData.totalDriverInspections
+    vehicleInsp = smsData.totalVehicleInspections
+    hazmatInsp = smsData.totalHazmatInspections
+    iepInsp = smsData.totalIepInspections || 0
+    driverOOS = smsData.driverOosInspections
+    vehicleOOS = smsData.vehicleOosInspections
+    hazmatOOS = 0 // SMS doesn't break out hazmat OOS
+    iepOOS = 0
+  } else if (p(safetyTotals.total) > 0 || p(safetyTotals.driver) > 0 || p(safetyTotals.vehicle) > 0) {
     totalInsp = p(safetyTotals.total) || p(safetyTotals.last24Months) || 0
     driverInsp = p(safetyTotals.driver)
     vehicleInsp = p(safetyTotals.vehicle)
@@ -881,7 +887,6 @@ export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
     hazmatOOS = p(safetyTotals.hazmatOOS)
     iepOOS = p(safetyTotals.iepOOS)
   } else if (records.length > 0) {
-    // No API totals — compute from filtered records by inspection level
     const counts = countInspectionsByType(records)
     totalInsp = records.length
     driverInsp = counts.driverInsp
@@ -893,7 +898,6 @@ export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
     hazmatOOS = counts.hazmatOOS
     iepOOS = counts.iepOOS
   } else {
-    // Nothing available
     totalInsp = 0
     driverInsp = 0; vehicleInsp = 0; hazmatInsp = 0; iepInsp = 0
     driverOOS = 0; vehicleOOS = 0; hazmatOOS = 0; iepOOS = 0
@@ -1048,14 +1052,30 @@ export function mapToV2ViolationTrend(report: any): V2ViolationTrend[] {
 // ============================================================
 // CRASHES
 // ============================================================
-export function mapToV2CrashData(report: any): V2CrashData {
+export function mapToV2CrashData(report: any, smsData?: FMCSASMSData | null): V2CrashData {
   const summary = report?.crashes?.summary || {}
   const p = (v: any) => parseInt(v) || 0
+
+  const morProFatal = p(summary.fatal) || p(summary.fatalCrashes)
+  const morProInjury = p(summary.injury) || p(summary.injuryCrashes)
+  const morProTow = p(summary.towaway) || p(summary.towCrashes)
+  const morProTotal = p(summary.total) || p(summary.totalCrashes)
+
+  // Use FMCSA SMS as source of truth when available, fall back to MorPro
+  if (smsData && (smsData.totalCrashes > 0 || morProTotal === 0)) {
+    return {
+      fatal: smsData.fatalCrashes || morProFatal,
+      injury: smsData.injuryCrashes || morProInjury,
+      towaway: smsData.towCrashes || morProTow,
+      total: smsData.totalCrashes || morProTotal,
+    }
+  }
+
   return {
-    fatal: p(summary.fatal) || p(summary.fatalCrashes),
-    injury: p(summary.injury) || p(summary.injuryCrashes),
-    towaway: p(summary.towaway) || p(summary.towCrashes),
-    total: p(summary.total) || p(summary.totalCrashes),
+    fatal: morProFatal,
+    injury: morProInjury,
+    towaway: morProTow,
+    total: morProTotal,
   }
 }
 
