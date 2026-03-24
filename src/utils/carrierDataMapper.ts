@@ -1132,10 +1132,50 @@ export function mapToV2SharedEquipment(report: any): V2SharedEquipment {
 // ============================================================
 // CARGO
 // ============================================================
-export function mapToV2CargoCapabilities(report: any): V2CargoCapabilities {
+// Map FMCSA cargo-carried descriptions to V2CargoCapabilities boolean keys
+const CARGO_DESC_MAP: Record<string, keyof V2CargoCapabilities> = {
+  'general freight': 'generalFreight',
+  'household goods': 'householdGoods',
+  'metal: sheets, coils, rolls': 'metalSheets',
+  'motor vehicles': 'motorVehicles',
+  'drive/tow away': 'drivewayTowaway',
+  'driveaway/towaway': 'drivewayTowaway',
+  'logs, poles, beams, lumber': 'logsPolesBeams',
+  'building materials': 'buildingMaterials',
+  'mobile homes': 'mobileHomes',
+  'machinery, large objects': 'machineryLargeObjects',
+  'fresh produce': 'freshProduce',
+  'liquids/gases': 'liquids',
+  'grain, feed, hay': 'grainFeedHay',
+  'coal/coke': 'coalCoke',
+  'meat': 'meat',
+  'garbage/refuse': 'garbageRefuse',
+  'us mail': 'usMailSeparate',
+  'chemicals': 'chemicals',
+  'commodities dry bulk': 'commoditiesDryBulk',
+  'dry bulk': 'commoditiesDryBulk',
+  'refrigerated food': 'refrigeratedFood',
+  'beverages': 'beverages',
+  'paper products': 'paperProducts',
+  'utilities': 'utilities',
+  'agricultural/farm supplies': 'farmSupplies',
+  'farm supplies': 'farmSupplies',
+  'construction': 'construction',
+  'water well': 'waterWell',
+  'intermodal cont.': 'intermodalContainers',
+  'intermodal containers': 'intermodalContainers',
+  'oilfield equipment': 'oilFieldEquipment',
+  'oil field equipment': 'oilFieldEquipment',
+  'livestock': 'livestock',
+  'passengers': 'passengers',
+}
+
+export function mapToV2CargoCapabilities(report: any, fmcsaCargoTypes?: string[]): V2CargoCapabilities {
   const cargo = report?.cargo || {}
   const carrier = report?.carrier || {}
-  return {
+
+  // Start with MorPro data
+  const result: V2CargoCapabilities = {
     generalFreight: cargo.generalFreight || cargo.general_freight || carrier.general_freight || false,
     householdGoods: cargo.householdGoods || cargo.household_goods || carrier.household || false,
     metalSheets: cargo.metalSheets || cargo.metal_sheets || carrier.metal_sheet_coils_rolls || false,
@@ -1168,6 +1208,18 @@ export function mapToV2CargoCapabilities(report: any): V2CargoCapabilities {
     coalCoke2: cargo.coalCoke2 || carrier.coal_coke || false,
     passengers: cargo.passengers || carrier.passengers || false,
   }
+
+  // Overlay FMCSA cargo-carried data (source of truth)
+  if (fmcsaCargoTypes && fmcsaCargoTypes.length > 0) {
+    for (const desc of fmcsaCargoTypes) {
+      const key = CARGO_DESC_MAP[desc.toLowerCase().trim()]
+      if (key) {
+        result[key] = true
+      }
+    }
+  }
+
+  return result
 }
 
 // ============================================================

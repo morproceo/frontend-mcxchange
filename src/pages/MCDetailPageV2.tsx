@@ -3383,17 +3383,22 @@ export default function MCDetailPageV2() {
     USE_MOCK ? undefined : listing?.dotNumber
   )
 
-  // FMCSA SMS data (source of truth for BASIC scores)
+  // FMCSA SMS data (source of truth for BASIC scores) + cargo carried
   const [smsData, setSmsData] = useState<FMCSASMSData | null>(null)
-  const smsFetchedRef = useRef<string | null>(null)
+  const [fmcsaCargoTypes, setFmcsaCargoTypes] = useState<string[]>([])
+  const fmcsaFetchedRef = useRef<string | null>(null)
   useEffect(() => {
     const dot = listing?.dotNumber?.replace(/\D/g, '')
     if (!dot || USE_MOCK || isPreviewMode) return
-    if (smsFetchedRef.current === dot) return
-    smsFetchedRef.current = dot
+    if (fmcsaFetchedRef.current === dot) return
+    fmcsaFetchedRef.current = dot
+    // Fetch SMS + cargo in parallel
     api.fmcsaGetSMSData(dot)
       .then(res => { if (res.success && res.data) setSmsData(res.data) })
-      .catch(() => { /* SMS is supplementary — fall back to MorPro */ })
+      .catch(() => {})
+    api.fmcsaGetCargoCarried(dot)
+      .then(res => { if (res.success && res.data) setFmcsaCargoTypes(res.data) })
+      .catch(() => {})
   }, [listing?.dotNumber, isPreviewMode])
 
   // Map API data to V2 interfaces (memoized)
@@ -3514,7 +3519,7 @@ export default function MCDetailPageV2() {
       trucks: mapToV2Trucks(carrierReport),
       trailers: mapToV2Trailers(carrierReport),
       sharedEquipment: mapToV2SharedEquipment(carrierReport),
-      cargoCapabilities: mapToV2CargoCapabilities(carrierReport),
+      cargoCapabilities: mapToV2CargoCapabilities(carrierReport, fmcsaCargoTypes),
       documents: mapToV2Documents(carrierReport),
       verificationChecks: mapToV2VerificationChecks(carrierReport),
       availableDocuments: mapToV2AvailableDocuments(carrierReport),
@@ -3533,7 +3538,7 @@ export default function MCDetailPageV2() {
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode, smsData])
+  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode, smsData, fmcsaCargoTypes])
 
   // Credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0

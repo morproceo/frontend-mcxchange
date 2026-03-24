@@ -740,6 +740,13 @@ class ApiService {
     }>(`/fmcsa/sms/${dotNumber}`);
   }
 
+  async fmcsaGetCargoCarried(dotNumber: string) {
+    return this.request<{
+      success: boolean;
+      data: string[];
+    }>(`/fmcsa/cargo-carried/${dotNumber}`);
+  }
+
   // Health check
   async healthCheck() {
     return this.request<{ status: string; timestamp: string }>('/health');
