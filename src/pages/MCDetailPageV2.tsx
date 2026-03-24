@@ -1395,12 +1395,25 @@ function SafetyTab() {
     'Crash Indicator': 0,
   }
 
-  // Total violations and inspections for context
-  const totalViolations = Object.values(violationMap).reduce((a, b) => a + b, 0)
+  // Total violations and inspections for context — use deduplicated values
+  const totalViolations = (mockViolationBreakdown.unsafeDriving || 0) +
+    (mockViolationBreakdown.hoursOfService || 0) +
+    (mockViolationBreakdown.driverFitness || 0) +
+    (mockViolationBreakdown.controlledSubstance || 0) +
+    (mockViolationBreakdown.vehicleMaintenance || 0) +
+    (mockViolationBreakdown.hazardousMaterials || 0)
   const totalInspections = mockOperations.totalInspections
 
-  // Count active alerts
-  const activeAlertCount = Object.values(alertMap).filter(Boolean).length
+  // Count active alerts — deduplicate (alertMap has multiple name variants per BASIC)
+  const activeAlertCount = [
+    mockBasicAlerts.unsafeDrivingAlert,
+    mockBasicAlerts.hoursOfServiceAlert,
+    mockBasicAlerts.driverFitnessAlert,
+    mockBasicAlerts.controlledSubstanceAlert,
+    mockBasicAlerts.vehicleMaintenanceAlert,
+    mockBasicAlerts.hazmatAlert,
+    mockBasicAlerts.crashIndicatorAlert,
+  ].filter(Boolean).length
 
   // BASICs exceeding threshold
   const exceedingBasics = mockBasicScores.filter(b => b.score != null && b.score >= b.threshold)
