@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useMemo } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, isValid } from 'date-fns'
 
@@ -98,8 +98,10 @@ import {
   mapToV2ComplianceFinancials, mapToV2VinInspections, mapToV2NetworkSignals,
   mapToV2Benchmarks, detectChameleonCarrier,
   calculateCarrierHealthScore,
+  mapSMSToV2BasicScores, mapSMSToV2BasicAlerts,
   HealthCategory,
 } from '../utils/carrierDataMapper'
+import type { FMCSASMSData, FMCSAAuthorityHistory } from '../types'
 
 // ============================================================
 // CARRIER DATA CONTEXT
@@ -1761,6 +1763,22 @@ export default function CarrierPulsePage() {
   // Fetch carrier data
   const { carrierReport, loading: carrierLoading, error: carrierError } = useCarrierData(activeDot)
 
+  // FMCSA data (source of truth for BASICs, crashes, authority, cargo)
+  const [smsData, setSmsData] = useState<FMCSASMSData | null>(null)
+  const [fmcsaCargoTypes, setFmcsaCargoTypes] = useState<string[]>([])
+  const [fmcsaAuthority, setFmcsaAuthority] = useState<FMCSAAuthorityHistory | null>(null)
+  const fmcsaFetchedRef = useRef<string | null>(null)
+  useEffect(() => {
+    const dot = activeDot?.replace(/\D/g, '')
+    if (!dot) return
+    if (fmcsaFetchedRef.current === dot) return
+    fmcsaFetchedRef.current = dot
+    setSmsData(null); setFmcsaCargoTypes([]); setFmcsaAuthority(null)
+    api.fmcsaGetSMSData(dot).then(res => { if (res.success && res.data) setSmsData(res.data) }).catch(() => {})
+    api.fmcsaGetCargoCarried(dot).then(res => { if (res.success && res.data) setFmcsaCargoTypes(res.data) }).catch(() => {})
+    api.fmcsaGetAuthorityHistory(dot).then(res => { if (res.success && res.data) setFmcsaAuthority(res.data) }).catch(() => {})
+  }, [activeDot])
+
   // Save to recent searches when data loads
   useEffect(() => {
     if (carrierReport && activeDot) {
@@ -1836,21 +1854,21 @@ export default function CarrierPulsePage() {
       }
     }
 
-    const healthResult = calculateCarrierHealthScore(carrierReport)
+    const healthResult = calculateCarrierHealthScore(carrierReport, undefined, smsData)
     return {
       carrier: mapToV2CarrierData(carrierReport),
-      authority: mapToV2AuthorityData(carrierReport),
+      authority: mapToV2AuthorityData(carrierReport, fmcsaAuthority),
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
-      basicScores: mapToV2BasicScores(carrierReport),
-      basicAlerts: mapToV2BasicAlerts(carrierReport),
+      basicScores: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
+      basicAlerts: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
-      inspections: mapToV2InspectionSummary(carrierReport),
+      inspections: mapToV2InspectionSummary(carrierReport, smsData),
       inspectionRecords: mapToV2InspectionRecords(carrierReport),
       operations: mapToV2Operations(carrierReport),
       violationTrend: mapToV2ViolationTrend(carrierReport),
-      crashes: mapToV2CrashData(carrierReport),
+      crashes: mapToV2CrashData(carrierReport, smsData),
       crashRecords: mapToV2CrashRecords(carrierReport),
       insurancePolicies: mapToV2InsurancePolicies(carrierReport),
       renewalTimeline: mapToV2RenewalTimeline(carrierReport),
@@ -1859,7 +1877,7 @@ export default function CarrierPulsePage() {
       trucks: mapToV2Trucks(carrierReport),
       trailers: mapToV2Trailers(carrierReport),
       sharedEquipment: mapToV2SharedEquipment(carrierReport),
-      cargoCapabilities: mapToV2CargoCapabilities(carrierReport),
+      cargoCapabilities: mapToV2CargoCapabilities(carrierReport, fmcsaCargoTypes),
       documents: mapToV2Documents(carrierReport),
       verificationChecks: mapToV2VerificationChecks(carrierReport),
       availableDocuments: mapToV2AvailableDocuments(carrierReport),
@@ -1871,13 +1889,13 @@ export default function CarrierPulsePage() {
       contactHistory: mapToV2ContactHistory(carrierReport),
       vinInspections: mapToV2VinInspections(carrierReport),
       networkSignals: mapToV2NetworkSignals(carrierReport),
-      benchmarks: mapToV2Benchmarks(carrierReport),
+      benchmarks: mapToV2Benchmarks(carrierReport, smsData),
       chameleonAnalysis: detectChameleonCarrier(carrierReport),
       healthCategories: healthResult.categories,
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, carrierLoading, carrierError])
+  }, [carrierReport, carrierLoading, carrierError, smsData, fmcsaCargoTypes, fmcsaAuthority])
 
   const showSkeleton = carrierLoading && !carrierReport
 
