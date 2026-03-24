@@ -614,29 +614,39 @@ function OverviewTab() {
       {/* 1. Carrier Health Score */}
       <CarrierHealthScore score={mockCarrier.carrierHealthScore} categories={healthCategories.length > 0 ? healthCategories : undefined} />
 
-      {/* 2. Quick Verdict Banner */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="rounded-xl bg-emerald-50 border-2 border-emerald-200 p-5 flex items-center gap-4"
-      >
-        <div className="p-3 bg-emerald-100 rounded-full">
-          <CheckCircle className="w-8 h-8 text-emerald-600" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-emerald-800">Good Standing</h3>
-          <p className="text-sm text-emerald-600">This MC authority has a clean record with active insurance and no major violations.</p>
-        </div>
-      </motion.div>
+      {/* 2. Quick Verdict Banner — driven by health score */}
+      {(() => {
+        const hs = mockCarrier.carrierHealthScore
+        const verdict = hs >= 80
+          ? { title: 'Good Standing', desc: 'This carrier scores well across safety, compliance, insurance, and fleet categories.', bg: 'bg-emerald-50 border-emerald-200', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', titleColor: 'text-emerald-800', descColor: 'text-emerald-600', Icon: CheckCircle }
+          : hs >= 60
+          ? { title: 'Fair Standing — Review Recommended', desc: 'Some areas need attention. Review the category breakdown above for details.', bg: 'bg-yellow-50 border-yellow-200', iconBg: 'bg-yellow-100', iconColor: 'text-yellow-600', titleColor: 'text-yellow-800', descColor: 'text-yellow-600', Icon: AlertTriangle }
+          : { title: 'Needs Attention — Elevated Risk', desc: 'This carrier has significant issues in one or more categories. Review safety, compliance, and insurance details carefully before proceeding.', bg: 'bg-red-50 border-red-200', iconBg: 'bg-red-100', iconColor: 'text-red-600', titleColor: 'text-red-800', descColor: 'text-red-600', Icon: AlertCircle }
+        return (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`rounded-xl border-2 p-5 flex items-center gap-4 ${verdict.bg}`}
+          >
+            <div className={`p-3 rounded-full ${verdict.iconBg}`}>
+              <verdict.Icon className={`w-8 h-8 ${verdict.iconColor}`} />
+            </div>
+            <div>
+              <h3 className={`text-lg font-bold ${verdict.titleColor}`}>{verdict.title}</h3>
+              <p className={`text-sm ${verdict.descColor}`}>{verdict.desc}</p>
+            </div>
+          </motion.div>
+        )
+      })()}
 
       {/* 3. Score Summary Grid — enhanced with Trust & Risk row */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Score Summary</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ScoreCard icon={Activity} label="Safety" value="Satisfactory" level={safetyLevel} />
-          <ScoreCard icon={Umbrella} label="Insurance" value="Current" level={insuranceLevel} />
-          <ScoreCard icon={Truck} label="Fleet Size" value={`${mockCarrier.powerUnits} Units`} level="good" />
-          <ScoreCard icon={CheckCircle} label="Authority" value="Active" level={authorityLevel} />
+          <ScoreCard icon={Activity} label="Safety" value={mockCarrier.safetyRating === 'not-rated' ? 'Not Rated' : mockCarrier.safetyRating || 'Not Rated'} level={safetyLevel} />
+          <ScoreCard icon={Umbrella} label="Insurance" value={mockCarrier.insuranceStatus === 'current' ? 'Current' : mockCarrier.insuranceStatus === 'pending' ? 'Pending' : mockCarrier.insuranceStatus === 'expired' ? 'Expired' : 'Unknown'} level={insuranceLevel} />
+          <ScoreCard icon={Truck} label="Fleet Size" value={`${mockCarrier.powerUnits} Units`} level={mockCarrier.powerUnits > 0 ? 'good' : 'neutral'} />
+          <ScoreCard icon={CheckCircle} label="Authority" value={mockCarrier.operatingStatus === 'authorized' ? 'Active' : mockCarrier.operatingStatus || 'Unknown'} level={authorityLevel} />
         </div>
       </div>
 
