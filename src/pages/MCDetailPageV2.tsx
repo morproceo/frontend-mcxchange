@@ -1924,7 +1924,71 @@ function SafetyTab() {
                 </div>
               </div>
 
-              {/* Row 3: Inspections by State */}
+              {/* Row 3: Inspections by Level */}
+              {mockInspectionRecords.length > 0 && (() => {
+                const levelData: Record<string, { total: number; clean: number; violations: number; oos: number; description: string }> = {}
+                const LEVEL_DESC: Record<string, string> = {
+                  '1': 'Full inspection — driver + vehicle + cargo',
+                  '2': 'Walk-around — driver + vehicle exterior',
+                  '3': 'Driver-only — credentials, logbook, medical',
+                  '4': 'Special study — one specific item',
+                  '5': 'Vehicle-only — no driver present',
+                  '6': 'Radioactive materials — Level 1 enhanced',
+                }
+                mockInspectionRecords.forEach(rec => {
+                  const match = rec.level.match(/(\d)/)
+                  const num = match ? match[1] : '?'
+                  if (!levelData[num]) levelData[num] = { total: 0, clean: 0, violations: 0, oos: 0, description: LEVEL_DESC[num] || '' }
+                  levelData[num].total++
+                  if (rec.violations === 0) levelData[num].clean++
+                  else if (rec.oos) levelData[num].oos++
+                  else levelData[num].violations++
+                })
+                const sortedLevels = Object.entries(levelData).sort(([a], [b]) => a.localeCompare(b))
+                return (
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                      <h4 className="text-sm font-semibold text-gray-900">Inspections by Level</h4>
+                      <p className="text-[10px] text-gray-400 mt-0.5">DOT roadside inspections are classified into levels based on scope. Level 1 is the most comprehensive.</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Level</th>
+                            <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Description</th>
+                            <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Total</th>
+                            <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Clean</th>
+                            <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Violations</th>
+                            <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">OOS</th>
+                            <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Clean Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedLevels.map(([num, d]) => {
+                            const cleanRate = d.total > 0 ? Math.round((d.clean / d.total) * 100) : 0
+                            return (
+                              <tr key={num} className="border-b border-gray-50 hover:bg-gray-50">
+                                <td className="py-2.5 px-4 font-bold text-gray-900">Level {num}</td>
+                                <td className="py-2.5 px-4 text-xs text-gray-500 hidden sm:table-cell">{d.description}</td>
+                                <td className="py-2.5 px-4 text-right font-semibold text-gray-700">{d.total}</td>
+                                <td className="py-2.5 px-4 text-right text-emerald-600 font-semibold">{d.clean}</td>
+                                <td className="py-2.5 px-4 text-right text-yellow-600 font-semibold">{d.violations}</td>
+                                <td className="py-2.5 px-4 text-right text-red-600 font-semibold">{d.oos}</td>
+                                <td className="py-2.5 px-4 text-right">
+                                  <span className={`font-bold ${cleanRate >= 80 ? 'text-emerald-600' : cleanRate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>{cleanRate}%</span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Row 4: Inspections by State */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                   <h4 className="text-sm font-semibold text-gray-900">Inspections by State</h4>
