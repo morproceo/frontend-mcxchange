@@ -1573,19 +1573,26 @@ export function mapToV2NetworkSignals(report: any, listing?: MCListingExtended):
 // ============================================================
 // BENCHMARKS — carrier OOS rates vs national averages
 // ============================================================
-export function mapToV2Benchmarks(report: any): V2BenchmarkData[] {
+export function mapToV2Benchmarks(report: any, smsData?: FMCSASMSData | null): V2BenchmarkData[] {
   const records = filterInspectionRecords(report?.inspections?.records || [])
   const safetyTotals = report?.safety?.inspectionTotals || {}
   const benchmarks: V2BenchmarkData[] = []
 
   const p = (v: any) => parseFloat(v) || 0
 
-  // Use inspectionTotals if available, fall back to records
-  const hasApiTotals = p(safetyTotals.total) > 0
+  // Priority: FMCSA SMS → inspectionTotals → records
   let vehicleInsp = 0, driverInsp = 0, hazmatInsp = 0
   let vehicleOOS = 0, driverOOS = 0, hazmatOOS = 0
 
-  if (hasApiTotals) {
+  if (smsData && smsData.totalInspections > 0) {
+    // FMCSA SMS is source of truth
+    vehicleInsp = smsData.totalVehicleInspections
+    driverInsp = smsData.totalDriverInspections
+    hazmatInsp = smsData.totalHazmatInspections
+    vehicleOOS = smsData.vehicleOosInspections
+    driverOOS = smsData.driverOosInspections
+    hazmatOOS = 0 // SMS doesn't break out hazmat OOS separately
+  } else if (p(safetyTotals.total) > 0) {
     vehicleInsp = p(safetyTotals.vehicleInspections) || p(safetyTotals.vehicle)
     driverInsp = p(safetyTotals.driverInspections) || p(safetyTotals.driver)
     hazmatInsp = p(safetyTotals.hazmatInspections) || p(safetyTotals.hazmat)
@@ -1627,8 +1634,8 @@ export function mapToV2Benchmarks(report: any): V2BenchmarkData[] {
     })
   }
 
-  // Hazmat OOS Rate (only if carrier has hazmat inspections)
-  if (hazmatInsp > 0) {
+  // Hazmat OOS Rate
+  if (hazmatInsp > 0 && hazmatOOS >= 0) {
     benchmarks.push({
       metric: 'Hazmat OOS Rate',
       carrierValue: rate(hazmatOOS, hazmatInsp),
@@ -1638,18 +1645,24 @@ export function mapToV2Benchmarks(report: any): V2BenchmarkData[] {
     })
   }
 
-  // Clean Inspection Rate
-  const totalInsp = records.length
-  if (totalInsp > 0) {
-    const cleanCount = records.filter((r: any) => (parseInt(r.viol_total || r.violations) || 0) === 0).length
-    const cleanRate = Math.round((cleanCount / totalInsp) * 10000) / 100
-    benchmarks.push({
-      metric: 'Clean Inspection Rate',
-      carrierValue: cleanRate,
-      industryAvg: 55.0,
-      unit: '%',
-      lowerIsBetter: false,
-    })
+  // Clean Inspection Rate — from records (need individual violation counts)
+  if (records.length > 0) {
+    const cleanCount = records.filter((r: any) => {
+      const v = r.viol_total ?? r.violations
+      return v === 0 || v === '0' || v === null || v === undefined
+    }).length
+    // Only count as clean if viol_total is explicitly 0, not just missing
+    const hasViolData = records.some((r: any) => r.viol_total != null || r.violations != null)
+    if (hasViolData) {
+      const cleanRate = Math.round((cleanCount / records.length) * 10000) / 100
+      benchmarks.push({
+        metric: 'Clean Inspection Rate',
+        carrierValue: cleanRate,
+        industryAvg: 55.0,
+        unit: '%',
+        lowerIsBetter: false,
+      })
+    }
   }
 
   return benchmarks

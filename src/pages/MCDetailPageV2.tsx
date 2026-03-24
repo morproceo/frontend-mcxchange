@@ -3499,7 +3499,7 @@ export default function MCDetailPageV2() {
       contactHistory: mapToV2ContactHistory(carrierReport),
       vinInspections: mapToV2VinInspections(carrierReport),
       networkSignals: mapToV2NetworkSignals(carrierReport, listing),
-      benchmarks: mapToV2Benchmarks(carrierReport),
+      benchmarks: mapToV2Benchmarks(carrierReport, smsData),
       chameleonAnalysis: detectChameleonCarrier(carrierReport, listing),
       healthCategories: healthResult.categories,
       smsSnapshotDate: smsData?.snapshotDate || null,
