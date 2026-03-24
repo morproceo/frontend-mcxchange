@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { statusColors, getStatusLevel } from './mockData'
+import { statusColors } from './mockData'
+import type { StatusLevel } from './mockData'
 
 interface SpeedometerGaugeProps {
   name: string
@@ -7,6 +8,14 @@ interface SpeedometerGaugeProps {
   threshold: number
   max?: number
   alert?: boolean
+}
+
+/** Determine status level relative to THIS basic's threshold, not hardcoded breakpoints */
+function getBasicLevel(score: number, threshold: number): StatusLevel {
+  if (score >= threshold) return 'danger'
+  if (score >= threshold * 0.85) return 'warning'
+  if (score >= threshold * 0.6) return 'good'
+  return 'excellent'
 }
 
 export default function SpeedometerGauge({ name, score, threshold, max = 100, alert }: SpeedometerGaugeProps) {
@@ -29,9 +38,12 @@ export default function SpeedometerGauge({ name, score, threshold, max = 100, al
     )
   }
 
-  const level = getStatusLevel('basic', score)
-  const colors = statusColors[level]
   const aboveThreshold = score >= threshold
+  // Use the actual threshold to determine status — not hardcoded breakpoints
+  const level = getBasicLevel(score, threshold)
+  const colors = statusColors[level]
+  // Flash red when score exceeds threshold OR when the API explicitly flags an alert
+  const shouldFlash = aboveThreshold || !!alert
   const size = 160
   const strokeWidth = 14
   const cx = size / 2
@@ -65,8 +77,8 @@ export default function SpeedometerGauge({ name, score, threshold, max = 100, al
   const thresholdY2 = cy + (radius + strokeWidth / 2 + 2) * Math.sin(thresholdRad)
 
   return (
-    <div className={`rounded-xl border-2 p-4 text-center relative ${alert ? 'border-red-400 bg-red-50/50 ring-2 ring-red-300 animate-pulse' : aboveThreshold ? 'border-red-200 bg-red-50/50' : 'border-gray-100 bg-white'}`}>
-      {alert && (
+    <div className={`rounded-xl border-2 p-4 text-center relative ${shouldFlash ? 'border-red-400 bg-red-50/50 ring-2 ring-red-300 animate-pulse' : aboveThreshold ? 'border-red-200 bg-red-50/50' : `${colors.border} bg-white`}`}>
+      {shouldFlash && (
         <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow">!</span>
       )}
       <p className="text-sm font-semibold text-gray-700 mb-1">{name}</p>

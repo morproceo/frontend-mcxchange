@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useMemo } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, isValid } from 'date-fns'
 
@@ -101,8 +101,10 @@ import {
   mapToV2ComplianceFinancials, mapToV2VinInspections, mapToV2NetworkSignals,
   mapToV2Benchmarks, detectChameleonCarrier,
   calculateCarrierHealthScore,
+  mapSMSToV2BasicScores, mapSMSToV2BasicAlerts,
   HealthCategory,
 } from '../utils/carrierDataMapper'
+import type { FMCSASMSData } from '../types'
 
 // ============================================================
 // CARRIER DATA CONTEXT — provides mapped data to all sub-components
@@ -144,6 +146,7 @@ interface CarrierDataContextType {
   benchmarks: V2BenchmarkData[]
   chameleonAnalysis: V2ChameleonAnalysis
   healthCategories: HealthCategory[]
+  smsSnapshotDate: string | null
   carrierLoading: boolean
   carrierError: string | null
 }
@@ -1007,6 +1010,22 @@ function AuthorityTab() {
 // ============================================================
 // INSPECTION RECORDS PANEL (Light Theme)
 // ============================================================
+// Inspection level metadata
+const INSPECTION_LEVELS: Record<string, { label: string; description: string; scope: string; color: string }> = {
+  '1': { label: 'Level 1', description: 'North American Standard', scope: 'Full inspection — driver credentials, vehicle mechanical, cargo securement', color: 'bg-indigo-600' },
+  '2': { label: 'Level 2', description: 'Walk-Around Driver/Vehicle', scope: 'Driver credentials + walk-around vehicle exterior — no crawling under', color: 'bg-blue-500' },
+  '3': { label: 'Level 3', description: 'Driver-Only', scope: 'Driver credentials, logbook, medical card, seatbelt, substance check', color: 'bg-sky-500' },
+  '4': { label: 'Level 4', description: 'Special Study', scope: 'One-time examination on a specific item (e.g., recall)', color: 'bg-gray-500' },
+  '5': { label: 'Level 5', description: 'Vehicle-Only', scope: 'Vehicle inspection without driver present (terminal/roadside)', color: 'bg-gray-500' },
+  '6': { label: 'Level 6', description: 'Radioactive Materials', scope: 'Level 1 + enhanced radioactive materials requirements', color: 'bg-gray-500' },
+}
+
+function parseLevel(raw: string): { num: string; meta: typeof INSPECTION_LEVELS[string] } {
+  const match = raw.match(/(\d)/)
+  const num = match ? match[1] : '0'
+  return { num, meta: INSPECTION_LEVELS[num] || { label: raw, description: '', scope: '', color: 'bg-gray-400' } }
+}
+
 function InspectionRecordsPanel() {
   const { inspectionRecords: mockInspectionRecords } = useCarrierDataContext()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -1039,13 +1058,27 @@ function InspectionRecordsPanel() {
   // Summary stats
   const totalInspections = mockInspectionRecords.length
   const cleanCount = mockInspectionRecords.filter(r => r.violations === 0).length
+  const violationsOnlyCount = mockInspectionRecords.filter(r => r.violations > 0 && !r.oos).length
   const oosCount = mockInspectionRecords.filter(r => r.oos).length
-  const cleanRate = Math.round((cleanCount / totalInspections) * 100)
+  const cleanRate = totalInspections > 0 ? Math.round((cleanCount / totalInspections) * 100) : 0
+
+  // Level breakdown
+  const levelCounts: Record<string, number> = {}
+  mockInspectionRecords.forEach(r => {
+    const { num } = parseLevel(r.level)
+    levelCounts[num] = (levelCounts[num] || 0) + 1
+  })
 
   const severityColor = (severity: number) => {
     if (severity >= 8) return 'bg-red-500'
     if (severity >= 5) return 'bg-yellow-500'
     return 'bg-blue-500'
+  }
+
+  const resultBadge = (rec: typeof mockInspectionRecords[0]) => {
+    if (rec.oos) return { label: 'Out of Service', abbr: 'OOS', bg: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500' }
+    if (rec.violations > 0) return { label: 'Violations Found', abbr: 'VIOL', bg: 'bg-yellow-100 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500' }
+    return { label: 'Clean — No Violations', abbr: 'CLEAN', bg: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' }
   }
 
   return (
@@ -1055,35 +1088,60 @@ function InspectionRecordsPanel() {
         <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
           <MapPin className="w-4 h-4 text-indigo-500" />
           Inspection Records
-          <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">CarrierOk</span>
+          <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">24 months</span>
         </h4>
       </div>
 
       {/* Summary Stats Bar */}
       <div className="px-5 pb-4">
-        <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-white rounded-lg border border-gray-200 px-3 py-1.5">
-              <span className="text-[10px] text-gray-400 uppercase font-semibold">Inspections</span>
-              <span className="flex items-center gap-1 text-xs"><span className="w-2 h-2 rounded-full bg-gray-400" /> Clean <span className="font-semibold text-gray-700">{cleanCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><span className="w-2 h-2 rounded-full bg-yellow-500" /> Violations <span className="font-semibold text-gray-700">{totalInspections - cleanCount - oosCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><span className="w-2 h-2 rounded-full bg-red-500" /> OOS <span className="font-semibold text-gray-700">{oosCount}</span></span>
+        <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Result breakdown */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-emerald-50 rounded-lg border border-emerald-200 px-3 py-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-xs font-semibold text-emerald-700">{cleanCount} Clean</span>
+              </div>
+              <div className="flex items-center gap-2 bg-yellow-50 rounded-lg border border-yellow-200 px-3 py-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />
+                <span className="text-xs font-semibold text-yellow-700">{violationsOnlyCount} Violations</span>
+              </div>
+              <div className="flex items-center gap-2 bg-red-50 rounded-lg border border-red-200 px-3 py-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-600" />
+                <span className="text-xs font-semibold text-red-700">{oosCount} OOS</span>
+              </div>
+            </div>
+            {/* Totals */}
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-lg font-bold text-indigo-600">{totalInspections}</p>
+                <p className="text-[9px] text-gray-400 uppercase">Total</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-emerald-600">{cleanRate}%</p>
+                <p className="text-[9px] text-gray-400 uppercase">Clean Rate</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <p className="text-lg font-bold text-indigo-600">{totalInspections}</p>
-              <p className="text-[9px] text-gray-400 uppercase">Total</p>
+          {/* Level breakdown bar */}
+          {totalInspections > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">By Inspection Level</p>
+              <div className="flex gap-3 flex-wrap">
+                {Object.entries(levelCounts).sort(([a], [b]) => a.localeCompare(b)).map(([num, count]) => {
+                  const meta = INSPECTION_LEVELS[num]
+                  return (
+                    <div key={num} className="flex items-center gap-1.5 text-xs">
+                      <span className={`w-2 h-2 rounded-full ${meta?.color || 'bg-gray-400'}`} />
+                      <span className="font-medium text-gray-700">Level {num}</span>
+                      <span className="text-gray-400">({count})</span>
+                      <span className="text-[10px] text-gray-400 hidden sm:inline">— {meta?.description || ''}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-lg font-bold text-emerald-600">{cleanRate}%</p>
-              <p className="text-[9px] text-gray-400 uppercase">Clean Rate</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-bold text-red-600">{oosCount}</p>
-              <p className="text-[9px] text-gray-400 uppercase">OOS</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -1094,10 +1152,10 @@ function InspectionRecordsPanel() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Enter violation code, catego..."
+            placeholder="Search report #, state, violation..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 pl-8 pr-3 py-2 w-52 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+            className="bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 pl-8 pr-3 py-2 w-60 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
           />
         </div>
 
@@ -1117,98 +1175,95 @@ function InspectionRecordsPanel() {
                     : 'bg-gray-50 text-gray-500 border border-gray-200 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {f === 'clean' ? 'Clean' : f === 'violations' ? 'Violations' : 'OOS'}
+                {f === 'clean' ? `Clean (${cleanCount})` : f === 'violations' ? `Violations (${violationsOnlyCount})` : `OOS (${oosCount})`}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Type Filter */}
+        {/* Level Filter */}
         <div>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Type</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Level</p>
           <div className="flex gap-1.5">
-            {['Level 1', 'Level 2', 'Level 3'].map(lvl => (
-              <button
-                key={lvl}
-                onClick={() => setTypeFilter(typeFilter === lvl ? null : lvl)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                  typeFilter === lvl
-                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
-                    : 'bg-gray-50 text-gray-500 border border-gray-200 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
+            {['Level 1', 'Level 2', 'Level 3'].map(lvl => {
+              const num = lvl.replace('Level ', '')
+              const count = levelCounts[num] || 0
+              return (
+                <button
+                  key={lvl}
+                  onClick={() => setTypeFilter(typeFilter === lvl ? null : lvl)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    typeFilter === lvl
+                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                      : 'bg-gray-50 text-gray-500 border border-gray-200 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {lvl} ({count})
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
 
       {/* Count */}
       <div className="px-5 pb-3">
-        <p className="text-xs text-gray-400">{filtered.length} inspection{filtered.length !== 1 ? 's' : ''}</p>
+        <p className="text-xs text-gray-400">{filtered.length} of {totalInspections} inspection{totalInspections !== 1 ? 's' : ''}{resultFilter !== 'all' || typeFilter ? ' (filtered)' : ''}</p>
       </div>
 
       {/* Records */}
       <div className="px-5 pb-5 space-y-3">
         {filtered.map(rec => {
           const isExpanded = expandedId === rec.id
-          const hasViolations = rec.violations > 0
+          const { num: levelNum, meta: levelMeta } = parseLevel(rec.level)
+          const badge = resultBadge(rec)
 
           return (
             <div
               key={rec.id}
-              className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
+              className={`rounded-xl overflow-hidden border ${rec.oos ? 'border-red-200 bg-red-50/30' : rec.violations > 0 ? 'border-yellow-200 bg-yellow-50/20' : 'border-gray-200 bg-gray-50'}`}
             >
-              {/* Inspection Header Row */}
+              {/* Inspection Header */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : rec.id)}
-                className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                className="w-full px-4 py-3.5 hover:bg-white/50 transition-colors"
               >
-                <div className="flex items-center gap-4 text-left flex-wrap">
-                  <span className="text-sm font-bold text-gray-900 min-w-[100px]">
-                    {safeFmtDate(rec.date)}
-                  </span>
-                  <span className="text-sm font-medium text-gray-500">{rec.state}</span>
-                  <span className="text-sm text-gray-700">{rec.level}</span>
-                  <a
-                    href={`https://ai.fmcsa.dot.gov/SMS/Event/Inspection/${rec.fmcsaId}.aspx`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 hover:border-indigo-300 transition-colors"
-                  >
-                    {rec.reportNumber}
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {!hasViolations && (
-                    <span className="text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium">
-                      Clean
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 text-left flex-wrap min-w-0">
+                    {/* Date */}
+                    <span className="text-sm font-bold text-gray-900 min-w-[90px]">
+                      {safeFmtDate(rec.date)}
                     </span>
-                  )}
-                  {rec.violations > 0 && (
-                    <span className="text-xs px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 font-medium">
-                      {rec.violations} Violation{rec.violations > 1 ? 's' : ''}
+                    {/* State */}
+                    <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                      {rec.state}
                     </span>
-                  )}
-                  {rec.oosViolations > 0 && (
-                    <span className="text-xs px-3 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 font-medium">
-                      {rec.oosViolations} OOS
+                    {/* Level badge */}
+                    <span className={`text-[10px] text-white font-bold px-2 py-0.5 rounded ${levelMeta.color}`}>
+                      L{levelNum}
                     </span>
-                  )}
-                  {hasViolations ? (
-                    isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
-                  ) : (
-                    <div className="w-4" />
-                  )}
+                    {/* Type */}
+                    <span className="text-xs text-gray-500">{rec.type}</span>
+                    {/* Report number */}
+                    <span className="text-[11px] text-gray-400 font-mono">{rec.reportNumber}</span>
+                  </div>
+                  {/* Result badge + chevron */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-xs px-3 py-1 rounded-full border font-semibold ${badge.bg}`}>
+                      {rec.oos
+                        ? `OOS — ${rec.oosViolations} of ${rec.violations} violation${rec.violations > 1 ? 's' : ''}`
+                        : rec.violations > 0
+                        ? `${rec.violations} Violation${rec.violations > 1 ? 's' : ''}`
+                        : 'Clean'}
+                    </span>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
                 </div>
               </button>
 
-              {/* Expanded Violation Details */}
+              {/* Expanded Detail Panel */}
               <AnimatePresence>
-                {isExpanded && hasViolations && (
+                {isExpanded && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -1216,47 +1271,86 @@ function InspectionRecordsPanel() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="border-t border-gray-200">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-white">
-                            <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Violation</th>
-                            <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Group</th>
-                            <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Description</th>
-                            <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Severity</th>
-                            <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">OOS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rec.violationDetails.map((v, vi) => (
-                            <tr key={vi} className="border-b border-gray-100 last:border-b-0 hover:bg-white bg-gray-50/50">
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${v.oos ? 'bg-red-500' : 'bg-indigo-500'}`} />
-                                  <span className="text-gray-800 font-medium">{v.category}</span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-gray-500">{v.group}</td>
-                              <td className="py-3 px-4 text-gray-600 max-w-xs">{v.description}</td>
-                              <td className="py-3 px-4 text-center">
-                                <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-800">
-                                  <span className={`w-2 h-2 rounded-full ${severityColor(v.severity)}`} />
-                                  {v.severity}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                {v.oos ? (
-                                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 font-bold">
-                                    OOS
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-300">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="border-t border-gray-200 bg-white">
+                      {/* Inspection Detail Header */}
+                      <div className="px-4 py-3 bg-gray-50/50 border-b border-gray-100">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <p className="text-[10px] text-gray-400 uppercase mb-0.5">Inspection Level</p>
+                            <p className="font-semibold text-gray-800">{levelMeta.label} — {levelMeta.description}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{levelMeta.scope}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 uppercase mb-0.5">Inspection Type</p>
+                            <p className="font-semibold text-gray-800">{rec.type}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 uppercase mb-0.5">Result</p>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full ${badge.dot}`} />
+                              <p className="font-semibold text-gray-800">{badge.label}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Violations Table or Clean confirmation */}
+                      {rec.violations === 0 ? (
+                        <div className="px-4 py-5 text-center">
+                          <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                          <p className="text-sm font-semibold text-emerald-700">Clean Inspection</p>
+                          <p className="text-xs text-gray-400 mt-1">No violations found during this {levelMeta.description.toLowerCase()} inspection</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="px-4 pt-3 pb-1">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
+                              {rec.violations} Violation{rec.violations > 1 ? 's' : ''} Found
+                              {rec.oosViolations > 0 && <span className="text-red-500 ml-1">({rec.oosViolations} Out of Service)</span>}
+                            </p>
+                          </div>
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-gray-200">
+                                <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">BASIC Category</th>
+                                <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Group</th>
+                                <th className="text-left py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Description</th>
+                                <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Severity</th>
+                                <th className="text-center py-2.5 px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">OOS</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rec.violationDetails.map((v, vi) => (
+                                <tr key={vi} className={`border-b border-gray-100 last:border-b-0 ${v.oos ? 'bg-red-50/50' : 'hover:bg-gray-50'}`}>
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${v.oos ? 'bg-red-500' : 'bg-indigo-500'}`} />
+                                      <span className="text-gray-800 font-medium">{v.category}</span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-4 text-gray-500">{v.group}</td>
+                                  <td className="py-3 px-4 text-gray-600 max-w-xs">{v.description}</td>
+                                  <td className="py-3 px-4 text-center">
+                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-800">
+                                      <span className={`w-2 h-2 rounded-full ${severityColor(v.severity)}`} />
+                                      {v.severity}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    {v.oos ? (
+                                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 font-bold">
+                                        OOS
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-300">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -1279,31 +1373,43 @@ function InspectionRecordsPanel() {
 // TAB 3: SAFETY & INSPECTIONS
 // ============================================================
 function SafetyTab() {
-  const { carrier: mockCarrier, basicScores: mockBasicScores, basicAlerts: mockBasicAlerts, violationBreakdown: mockViolationBreakdown, issData: mockISSData, inspections: mockInspections, inspectionRecords: mockInspectionRecords, operations: mockOperations, crashes: mockCrashes, crashRecords: mockCrashRecords, violationTrend: mockViolationTrend } = useCarrierDataContext()
+  const { carrier: mockCarrier, basicScores: mockBasicScores, basicAlerts: mockBasicAlerts, violationBreakdown: mockViolationBreakdown, issData: mockISSData, inspections: mockInspections, inspectionRecords: mockInspectionRecords, operations: mockOperations, crashes: mockCrashes, crashRecords: mockCrashRecords, violationTrend: mockViolationTrend, smsSnapshotDate } = useCarrierDataContext()
   const [safetySub, setSafetySub] = useState<'overview' | 'basics' | 'inspections' | 'crashes'>('overview')
   const safetyLevel = getStatusLevel('safety', mockCarrier.safetyRating)
 
-  // Map BASIC names to alert keys — handle both naming conventions from API
+  // Map BASIC names to alert keys — handle ALL naming conventions (FMCSA, MorPro, legacy)
   const alertMap: Record<string, boolean> = {
     'Unsafe Driving': mockBasicAlerts.unsafeDrivingAlert,
     'Hours-of-Service': mockBasicAlerts.hoursOfServiceAlert,
+    'Hours-of-Service Compliance': mockBasicAlerts.hoursOfServiceAlert,
+    'Hours of Service': mockBasicAlerts.hoursOfServiceAlert,
     'Driver Fitness': mockBasicAlerts.driverFitnessAlert,
     'Controlled Substances': mockBasicAlerts.controlledSubstanceAlert,
+    'Controlled Substances/Alcohol': mockBasicAlerts.controlledSubstanceAlert,
+    'Controlled Substance': mockBasicAlerts.controlledSubstanceAlert,
     'Vehicle Maintenance': mockBasicAlerts.vehicleMaintenanceAlert,
     'HM Compliance': mockBasicAlerts.hazmatAlert,
     'Hazmat Compliance': mockBasicAlerts.hazmatAlert,
+    'Hazardous Materials Compliance': mockBasicAlerts.hazmatAlert,
+    'Hazardous Materials': mockBasicAlerts.hazmatAlert,
     'Crash Indicator': mockBasicAlerts.crashIndicatorAlert,
   }
 
-  // Map BASIC names to violation counts
+  // Map BASIC names to violation counts — handle ALL naming conventions
   const violationMap: Record<string, number> = {
     'Unsafe Driving': mockViolationBreakdown.unsafeDriving,
     'Hours-of-Service': mockViolationBreakdown.hoursOfService,
+    'Hours-of-Service Compliance': mockViolationBreakdown.hoursOfService,
+    'Hours of Service': mockViolationBreakdown.hoursOfService,
     'Driver Fitness': mockViolationBreakdown.driverFitness,
     'Controlled Substances': mockViolationBreakdown.controlledSubstance,
+    'Controlled Substances/Alcohol': mockViolationBreakdown.controlledSubstance,
+    'Controlled Substance': mockViolationBreakdown.controlledSubstance,
     'Vehicle Maintenance': mockViolationBreakdown.vehicleMaintenance,
     'HM Compliance': mockViolationBreakdown.hazardousMaterials,
     'Hazmat Compliance': mockViolationBreakdown.hazardousMaterials,
+    'Hazardous Materials Compliance': mockViolationBreakdown.hazardousMaterials,
+    'Hazardous Materials': mockViolationBreakdown.hazardousMaterials,
     'Crash Indicator': 0,
   }
 
@@ -1558,6 +1664,19 @@ function SafetyTab() {
                   Each score is a <strong>percentile</strong> (0–100) — higher means worse compared to peer carriers.
                   When a score crosses the <strong>threshold</strong>, FMCSA may intervene. "Not Scored" means insufficient inspection data.
                 </p>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-blue-700">
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-blue-400" />
+                    <strong>Percentile scores</strong> — FMCSA SMS, updated monthly{smsSnapshotDate ? ` (${safeFmtDate(smsSnapshotDate, 'MMM yyyy')})` : ''}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
+                    <strong>Inspections &amp; violations</strong> — updated daily
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[11px] text-blue-600/80">
+                  New inspections may appear in the Inspections tab before the percentile scores are recalculated by FMCSA.
+                </p>
               </div>
 
               {/* Alert summary */}
@@ -1577,11 +1696,16 @@ function SafetyTab() {
 
               {/* BASIC Scores Table */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-indigo-500" />
                     BASIC Scores
                   </h4>
+                  {smsSnapshotDate && (
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      FMCSA SMS as of {safeFmtDate(smsSnapshotDate, 'MMM d, yyyy')}
+                    </span>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -1598,20 +1722,21 @@ function SafetyTab() {
                     <tbody>
                       {mockBasicScores.map((basic, i) => {
                         const isScored = basic.score != null
-                        const ratio = isScored ? basic.score! / basic.threshold : 0
-                        const hasAlert = alertMap[basic.name] || false
+                        const exceedsThreshold = isScored && basic.score! >= basic.threshold
+                        const apiAlert = alertMap[basic.name] || false
+                        const hasAlert = exceedsThreshold || apiAlert
                         const violations = violationMap[basic.name] ?? 0
                         return (
-                          <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${hasAlert ? 'bg-yellow-50/50' : ''}`}>
+                          <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${hasAlert ? 'bg-red-50/50' : ''}`}>
                             <td className="py-2.5 px-4 font-medium text-gray-900">
                               {basic.name}
-                              {hasAlert && <span className="ml-1.5 inline-flex w-2 h-2 rounded-full bg-yellow-400" />}
+                              {hasAlert && <span className="ml-1.5 inline-flex w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
                             </td>
                             <td className="py-2.5 px-4 text-xs text-gray-500 hidden sm:table-cell">{basic.description}</td>
                             <td className="py-2.5 px-4 text-right">
                               {isScored ? (
                                 <span className={`font-bold ${
-                                  ratio >= 1 ? 'text-amber-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'
+                                  exceedsThreshold ? 'text-red-600' : basic.score! >= basic.threshold * 0.85 ? 'text-orange-600' : 'text-emerald-600'
                                 }`}>{basic.score}%</span>
                               ) : (
                                 <span className="text-gray-400 text-xs">Not Scored</span>
@@ -1620,10 +1745,10 @@ function SafetyTab() {
                             <td className="py-2.5 px-4 text-right text-gray-400">{basic.threshold}%</td>
                             <td className="py-2.5 px-4 text-right text-gray-700">{violations}</td>
                             <td className="py-2.5 px-4 text-right">
-                              {hasAlert ? (
+                              {exceedsThreshold ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium animate-pulse">Exceeding</span>
+                              ) : apiAlert ? (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Alert</span>
-                              ) : isScored && basic.score! >= basic.threshold ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Exceeding</span>
                               ) : isScored ? (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">OK</span>
                               ) : violations > 0 ? (
@@ -1642,27 +1767,39 @@ function SafetyTab() {
 
               {/* 7 BASIC Gauge Cards */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  BASIC Percentile Gauges
-                  <span className="text-[10px] text-gray-400 font-normal">Higher = worse. Red zone = above threshold.</span>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    BASIC Percentile Gauges
+                    <span className="text-[10px] text-gray-400 font-normal">Higher = worse. Red zone = above threshold.</span>
+                  </span>
+                  {smsSnapshotDate && (
+                    <span className="text-[10px] text-gray-400 font-normal">
+                      SMS {safeFmtDate(smsSnapshotDate, 'MMM yyyy')}
+                    </span>
+                  )}
                 </h4>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {mockBasicScores.map((basic, i) => (
-                    <motion.div
-                      key={basic.name}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.06 }}
-                      className="bg-gray-50 rounded-xl border border-gray-200 p-3"
-                    >
-                      <SpeedometerGauge
-                        name={basic.name}
-                        score={basic.score}
-                        threshold={basic.threshold}
-                        alert={alertMap[basic.name] || false}
-                      />
-                    </motion.div>
-                  ))}
+                  {mockBasicScores.map((basic, i) => {
+                    // Determine alert: score exceeds threshold OR API flagged an alert
+                    const exceedsThreshold = basic.score != null && basic.score >= basic.threshold
+                    const apiAlert = alertMap[basic.name] || false
+                    return (
+                      <motion.div
+                        key={basic.name}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.06 }}
+                        className="bg-gray-50 rounded-xl border border-gray-200 p-3"
+                      >
+                        <SpeedometerGauge
+                          name={basic.name}
+                          score={basic.score}
+                          threshold={basic.threshold}
+                          alert={exceedsThreshold || apiAlert}
+                        />
+                      </motion.div>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -1707,6 +1844,7 @@ function SafetyTab() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-5"
             >
+              <p className="text-[11px] text-gray-400 -mb-2">Inspection and violation data is updated daily. BASIC percentile scores (BASICs tab) are recalculated monthly by FMCSA.</p>
               {/* Row 1: 4 Summary Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
@@ -2963,29 +3101,40 @@ function SafetyImprovementReportTab() {
           </h3>
           <div className="space-y-3">
             {basicScores.map((bs, i) => {
+              const isScored = bs.score != null
               const pct = bs.percentile ?? 0
-              const isAboveThreshold = pct >= bs.threshold
+              const isAboveThreshold = isScored && pct >= bs.threshold
               return (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-40 text-sm font-medium text-gray-700 truncate">{bs.name}</div>
-                  <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        pct >= 80 ? 'bg-red-500' : pct >= 65 ? 'bg-orange-400' : pct >= 50 ? 'bg-yellow-400' : 'bg-emerald-400'
-                      }`}
-                      style={{ width: `${Math.max(pct, 2)}%` }}
-                    />
-                    {/* Threshold marker */}
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-gray-800"
-                      style={{ left: `${bs.threshold}%` }}
-                      title={`Intervention threshold: ${bs.threshold}%`}
-                    />
-                  </div>
+                  {isScored ? (
+                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          pct >= bs.threshold ? 'bg-red-500' : pct >= bs.threshold * 0.85 ? 'bg-orange-400' : 'bg-emerald-400'
+                        }`}
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                      />
+                      {/* Threshold marker */}
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-gray-800"
+                        style={{ left: `${bs.threshold}%` }}
+                        title={`Intervention threshold: ${bs.threshold}%`}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex-1 h-6 bg-gray-50 rounded-full flex items-center justify-center">
+                      <span className="text-xs text-gray-400">Not Scored — Insufficient Data</span>
+                    </div>
+                  )}
                   <div className="w-16 text-right">
-                    <span className={`text-sm font-bold ${
-                      pct >= 80 ? 'text-red-600' : pct >= 65 ? 'text-orange-600' : pct >= 50 ? 'text-yellow-600' : 'text-emerald-600'
-                    }`}>{pct}%</span>
+                    {isScored ? (
+                      <span className={`text-sm font-bold ${
+                        pct >= bs.threshold ? 'text-red-600' : pct >= bs.threshold * 0.85 ? 'text-orange-600' : 'text-emerald-600'
+                      }`}>{pct}%</span>
+                    ) : (
+                      <span className="text-sm text-gray-300">—</span>
+                    )}
                   </div>
                   {isAboveThreshold && (
                     <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -3236,6 +3385,19 @@ export default function MCDetailPageV2() {
     USE_MOCK ? undefined : listing?.dotNumber
   )
 
+  // FMCSA SMS data (source of truth for BASIC scores)
+  const [smsData, setSmsData] = useState<FMCSASMSData | null>(null)
+  const smsFetchedRef = useRef<string | null>(null)
+  useEffect(() => {
+    const dot = listing?.dotNumber?.replace(/\D/g, '')
+    if (!dot || USE_MOCK || isPreviewMode) return
+    if (smsFetchedRef.current === dot) return
+    smsFetchedRef.current = dot
+    api.fmcsaGetSMSData(dot)
+      .then(res => { if (res.success && res.data) setSmsData(res.data) })
+      .catch(() => { /* SMS is supplementary — fall back to MorPro */ })
+  }, [listing?.dotNumber, isPreviewMode])
+
   // Map API data to V2 interfaces (memoized)
   const carrierDataCtx = useMemo<CarrierDataContextType>(() => {
     // Use mock/fallback data if env var is set OR in preview mode (not verified)
@@ -3277,6 +3439,7 @@ export default function MCDetailPageV2() {
         benchmarks: fallbackBenchmarks,
         chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
         healthCategories: [],
+        smsSnapshotDate: null,
         carrierLoading: false,
         carrierError: null,
       }
@@ -3321,6 +3484,7 @@ export default function MCDetailPageV2() {
         benchmarks: [],
         chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
         healthCategories: [],
+        smsSnapshotDate: null,
         carrierLoading,
         carrierError,
       }
@@ -3333,8 +3497,9 @@ export default function MCDetailPageV2() {
       authority: mapToV2AuthorityData(carrierReport),
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
-      basicScores: mapToV2BasicScores(carrierReport),
-      basicAlerts: mapToV2BasicAlerts(carrierReport),
+      // FMCSA SMS = gate (which BASICs are scored), MorPro = fresher values
+      basicScores: smsData ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
+      basicAlerts: smsData ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
       inspections: mapToV2InspectionSummary(carrierReport),
@@ -3365,10 +3530,11 @@ export default function MCDetailPageV2() {
       benchmarks: mapToV2Benchmarks(carrierReport),
       chameleonAnalysis: detectChameleonCarrier(carrierReport, listing),
       healthCategories: healthResult.categories,
+      smsSnapshotDate: smsData?.snapshotDate || null,
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode])
+  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode, smsData])
 
   // Credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0

@@ -1,7 +1,7 @@
 // Maps MorPro Carrier API response → V2 TypeScript interfaces
 // Handles null/missing data gracefully with sensible defaults
 
-import type { MCListingExtended } from '../types'
+import type { MCListingExtended, FMCSASMSData, FMCSASMSBasic } from '../types'
 import type {
   V2CarrierData, V2AuthorityData, V2AuthorityEvent, V2BasicScore,
   V2InspectionSummary, V2CrashData, V2InsurancePolicy, V2RenewalEvent,
@@ -630,6 +630,116 @@ export function mapToV2BasicScores(report: any): V2BasicScore[] {
       description: b.description || b.basicCode || '',
     }
   })
+}
+
+// FMCSA BASIC description lookup
+const BASIC_DESCRIPTIONS: Record<string, string> = {
+  'Unsafe Driving': 'Operations of CMVs in a dangerous or careless manner',
+  'Hours-of-Service Compliance': 'Operating CMVs when ill, fatigued, or not complying with HOS',
+  'Driver Fitness': 'Operating CMVs by drivers who are unfit due to lack of training, experience, or medical qualifications',
+  'Controlled Substances/Alcohol': 'Operation of CMVs by drivers impaired by alcohol or controlled substances',
+  'Vehicle Maintenance': 'Failure to properly maintain CMVs and required equipment',
+  'Hazardous Materials Compliance': 'Unsafe handling of hazardous materials on a CMV',
+  'Crash Indicator': 'Histories or patterns of high crash involvement',
+}
+
+// All 7 FMCSA BASIC categories — displayed even when not scored
+const ALL_BASICS = [
+  { name: 'Unsafe Driving', threshold: 65 },
+  { name: 'Hours-of-Service Compliance', threshold: 65 },
+  { name: 'Driver Fitness', threshold: 80 },
+  { name: 'Controlled Substances/Alcohol', threshold: 80 },
+  { name: 'Vehicle Maintenance', threshold: 80 },
+  { name: 'Hazardous Materials Compliance', threshold: 80 },
+  { name: 'Crash Indicator', threshold: 65 },
+]
+
+// Normalize BASIC names for cross-source matching
+// FMCSA uses "Hours-of-Service Compliance", MorPro might use "Hours of Service", etc.
+function normalizeBasicName(name: string): string {
+  return name.toLowerCase()
+    .replace(/[-/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*compliance\s*/g, '')
+    .replace(/\s*alcohol\s*/g, '')
+    .replace(/\s*substance\s*/g, ' substance')
+    .trim()
+}
+
+/**
+ * Map BASIC scores using FMCSA SMS as the gate (which BASICs are scored)
+ * and MorPro for fresher values when available.
+ *
+ * FMCSA SMS updates monthly — it decides WHICH BASICs a carrier is scored on.
+ * MorPro updates daily — it may have fresher percentile values.
+ * If a BASIC isn't in the FMCSA SMS response, it's not scored — period.
+ */
+export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any): V2BasicScore[] {
+  // Build lookup from FMCSA basics array — only includes scored BASICs
+  const smsLookup = new Map<string, FMCSASMSBasic>()
+  for (const b of smsData.basics) {
+    smsLookup.set(b.basicName, b)
+  }
+
+  // Build lookup from MorPro basic scores (if available) for fresher values
+  const morProLookup = new Map<string, any>()
+  const morProScores = morProReport?.safety?.basicScores || []
+  for (const b of morProScores) {
+    const name = b.basicName || b.name || ''
+    if (name) morProLookup.set(normalizeBasicName(name), b)
+  }
+
+  return ALL_BASICS.map(def => {
+    const sms = smsLookup.get(def.name)
+    if (!sms || sms.percentile <= 0) {
+      // FMCSA says this BASIC is not scored — no data, period
+      return {
+        name: def.name,
+        score: null,
+        threshold: def.threshold,
+        percentile: null,
+        description: BASIC_DESCRIPTIONS[def.name] || '',
+      }
+    }
+
+    // This BASIC IS scored by FMCSA — check MorPro for a fresher value
+    const normalized = normalizeBasicName(def.name)
+    const morPro = morProLookup.get(normalized)
+    const morProScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
+    // Use MorPro value if it's a real score, otherwise use FMCSA's
+    const bestScore = (morProScore != null && morProScore > 0) ? Number(morProScore) : sms.percentile
+
+    return {
+      name: def.name,
+      score: bestScore,
+      threshold: sms.thresholdPercent || def.threshold,
+      percentile: bestScore,
+      description: BASIC_DESCRIPTIONS[def.name] || sms.basicCode || '',
+    }
+  })
+}
+
+/**
+ * Build BASIC alerts from FMCSA SMS data (source of truth).
+ * Only flag alerts for BASICs that FMCSA actually says exceed threshold.
+ */
+export function mapSMSToV2BasicAlerts(smsData: FMCSASMSData): V2BasicAlerts {
+  const lookup = new Map<string, FMCSASMSBasic>()
+  for (const b of smsData.basics) {
+    lookup.set(b.basicName, b)
+  }
+  return {
+    unsafeDrivingAlert: lookup.get('Unsafe Driving')?.exceedsThreshold || false,
+    hoursOfServiceAlert: lookup.get('Hours-of-Service Compliance')?.exceedsThreshold || false,
+    driverFitnessAlert: lookup.get('Driver Fitness')?.exceedsThreshold || false,
+    controlledSubstanceAlert: lookup.get('Controlled Substances/Alcohol')?.exceedsThreshold || false,
+    vehicleMaintenanceAlert: lookup.get('Vehicle Maintenance')?.exceedsThreshold || false,
+    hazmatAlert: lookup.get('Hazardous Materials Compliance')?.exceedsThreshold || false,
+    crashIndicatorAlert: lookup.get('Crash Indicator')?.exceedsThreshold || false,
+    unsafeDrivingOOSAlert: false,
+    hoursOfServiceOOSAlert: false,
+    vehicleMaintenanceOOSAlert: false,
+  }
 }
 
 export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
