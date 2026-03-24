@@ -929,25 +929,30 @@ export function mapToV2InspectionSummary(report: any): V2InspectionSummary {
 
 export function mapToV2InspectionRecords(report: any): V2InspectionRecord[] {
   const records = filterInspectionRecords(report?.inspections?.records || [])
-  return records.map((r: any) => ({
-    id: r.unique_id || r.id || '',
-    date: normalizeDate(r.inspection_date || r.date || ''),
-    state: r.report_state || r.state || '',
-    type: r.inspection_type || r.type || 'Vehicle',
-    level: r.level || r.inspection_level || '',
-    violations: r.viol_total || r.violations || 0,
-    oosViolations: r.oos_total || r.oosViolations || 0,
-    oos: (r.oos_total || r.oosViolations || 0) > 0,
-    reportNumber: r.report_number || r.reportNumber || '',
-    fmcsaId: r.unique_id || r.fmcsaId || '',
-    violationDetails: (r.violations_list || r.violationDetails || []).map((v: any) => ({
-      category: v.basic_desc || v.category || '',
-      group: v.group_desc || v.group || '',
-      description: v.description || v.violation_description || '',
-      severity: v.severity_weight || v.severity || 0,
-      oos: v.oos === true || v.oos === 'Y',
-    })),
-  }))
+  const pInt = (v: any): number => { const n = parseInt(v); return isNaN(n) ? 0 : n }
+  return records.map((r: any) => {
+    const violations = pInt(r.viol_total ?? r.violations)
+    const oosViolations = pInt(r.oos_total ?? r.oosViolations)
+    return {
+      id: r.unique_id || r.id || '',
+      date: normalizeDate(r.inspection_date || r.date || ''),
+      state: r.report_state || r.state || '',
+      type: r.inspection_type || r.type || 'Vehicle',
+      level: r.level || r.inspection_level || '',
+      violations,
+      oosViolations,
+      oos: oosViolations > 0,
+      reportNumber: r.report_number || r.reportNumber || '',
+      fmcsaId: r.unique_id || r.fmcsaId || '',
+      violationDetails: (r.violations_list || r.violationDetails || []).map((v: any) => ({
+        category: v.basic_desc || v.category || '',
+        group: v.group_desc || v.group || '',
+        description: v.description || v.violation_description || '',
+        severity: v.severity_weight || v.severity || 0,
+        oos: v.oos === true || v.oos === 'Y',
+      })),
+    }
+  })
 }
 
 export function mapToV2Operations(report: any): V2OperationsSummary {
