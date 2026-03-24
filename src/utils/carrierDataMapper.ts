@@ -115,7 +115,11 @@ export interface HealthCategory {
   color: string
 }
 
-export function calculateCarrierHealthScore(report: any, listing?: MCListingExtended): {
+export function calculateCarrierHealthScore(
+  report: any,
+  listing?: MCListingExtended,
+  smsData?: FMCSASMSData | null,
+): {
   score: number
   categories: HealthCategory[]
 } {
@@ -131,18 +135,33 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   // Based on BASIC scores, OOS rates, and crash history
   let safetyScore = 100
 
-  // Penalize for high BASIC percentiles (higher = worse)
-  const basicScores = safety.basicScores || []
-  if (basicScores.length > 0) {
-    const avgPercentile = basicScores.reduce((s: number, b: any) => s + (b.percentile ?? b.measure ?? 0), 0) / basicScores.length
-    // 0 percentile = best, 100 = worst. Invert for score.
-    safetyScore -= Math.min(avgPercentile * 0.6, 50)
+  // Use FMCSA SMS basics (source of truth) when available, fall back to MorPro
+  const smsBasics = (smsData && smsData.basics.length > 0) ? smsData.basics : null
+  if (smsBasics) {
+    // Only scored BASICs count — FMCSA only returns BASICs with enough data
+    const scoredBasics = smsBasics.filter(b => b.percentile > 0)
+    if (scoredBasics.length > 0) {
+      const avgPercentile = scoredBasics.reduce((s, b) => s + b.percentile, 0) / scoredBasics.length
+      safetyScore -= Math.min(avgPercentile * 0.6, 50)
+    }
+    // Penalize for BASICs exceeding threshold
+    const exceedCount = smsBasics.filter(b => b.exceedsThreshold).length
+    safetyScore -= exceedCount * 5
+  } else {
+    // Fall back to MorPro
+    const basicScores = safety.basicScores || []
+    if (basicScores.length > 0) {
+      // Only count non-zero scores (0 likely means not scored)
+      const scored = basicScores.filter((b: any) => (b.percentile ?? b.measure ?? 0) > 0)
+      if (scored.length > 0) {
+        const avgPercentile = scored.reduce((s: number, b: any) => s + (b.percentile ?? b.measure ?? 0), 0) / scored.length
+        safetyScore -= Math.min(avgPercentile * 0.6, 50)
+      }
+    }
+    const alerts = safety.basicAlerts || {}
+    const alertCount = Object.values(alerts).filter(Boolean).length
+    safetyScore -= alertCount * 5
   }
-
-  // Penalize for BASIC alerts
-  const alerts = safety.basicAlerts || {}
-  const alertCount = Object.values(alerts).filter(Boolean).length
-  safetyScore -= alertCount * 5
 
   // Penalize for crashes
   const crashSummary = crashes.summary || {}
@@ -150,6 +169,12 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   const fatalCrashes = crashSummary.fatal || crashSummary.fatalCrashes || 0
   safetyScore -= totalCrashes * 3
   safetyScore -= fatalCrashes * 10
+
+  // Use SMS crash data as alternative source
+  if (totalCrashes === 0 && smsData) {
+    safetyScore -= (smsData.totalCrashes || 0) * 3
+    safetyScore -= (smsData.fatalCrashes || 0) * 10
+  }
 
   // Safety rating bonus
   const rawRating = carrier.safetyRating || safety?.safetyRating?.rating
@@ -163,8 +188,7 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   safetyScore = Math.max(0, Math.min(100, Math.round(safetyScore)))
 
   // === 2. COMPLIANCE SCORE (25% weight) ===
-  // Based on authority status, MCS-150 filing, BOC-3
-  let complianceScore = 50 // Start at 50, build up
+  let complianceScore = 50
 
   // Active operating authority
   const opStatus = carrier.operatingStatus || carrier.allowedToOperate
@@ -184,13 +208,13 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   if (mcs150Date) {
     const mcsDate = new Date(mcs150Date)
     const daysSinceMcs = (Date.now() - mcsDate.getTime()) / (1000 * 60 * 60 * 24)
-    if (daysSinceMcs <= 730) complianceScore += 10 // Within 2 years (biennial)
-    else complianceScore -= 10 // Overdue
+    if (daysSinceMcs <= 730) complianceScore += 10
+    else complianceScore -= 10
   } else {
     complianceScore -= 5
   }
 
-  // No revocations
+  // Revocations
   const totalRevocations = carrier.totalRevocations || 0
   complianceScore -= totalRevocations * 10
 
@@ -201,14 +225,11 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   complianceScore = Math.max(0, Math.min(100, Math.round(complianceScore)))
 
   // === 3. INSURANCE SCORE (20% weight) ===
-  // Based on active policies, coverage amounts, gaps
-  let insuranceScore = 30 // Base
+  let insuranceScore = 30
 
   const activePolicies = insurance.activePolicies || []
   if (activePolicies.length > 0) {
-    insuranceScore += 30 // Has active policies
-
-    // Check BIPD coverage level
+    insuranceScore += 30
     const bipdPolicy = activePolicies.find((p: any) => {
       const t = String(p.insuranceType || p.type || '').toLowerCase()
       return t.includes('bipd') || t.includes('liability') || t.includes('bodily')
@@ -219,16 +240,26 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
       else if (coverage >= 750000) insuranceScore += 15
       else if (coverage >= 300000) insuranceScore += 10
     }
-
-    // Check cargo coverage
     const cargoPolicy = activePolicies.find((p: any) => {
       const t = String(p.insuranceType || p.type || '').toLowerCase()
       return t.includes('cargo')
     })
     if (cargoPolicy) insuranceScore += 10
-
-    // Multiple policies = better coverage
     if (activePolicies.length >= 3) insuranceScore += 10
+  } else {
+    // Fall back to FMCSA/listing data when MorPro has no policy details
+    const hasInsurance = listing?.insuranceOnFile || carrier.insuranceOnFile
+    if (hasInsurance) {
+      insuranceScore += 30 // Insurance is on file with FMCSA
+      const bipdOnFile = carrier.bipdOnFile || listing?.bipdCoverage || 0
+      const bipdAmount = typeof bipdOnFile === 'string' ? parseFloat(bipdOnFile) : bipdOnFile
+      if (bipdAmount >= 1000000) insuranceScore += 20
+      else if (bipdAmount >= 750000) insuranceScore += 15
+      else if (bipdAmount >= 300000) insuranceScore += 10
+      const cargoOnFile = carrier.cargoOnFile || listing?.cargoCoverage || 0
+      const cargoAmount = typeof cargoOnFile === 'string' ? parseFloat(cargoOnFile) : cargoOnFile
+      if (cargoAmount > 0) insuranceScore += 10
+    }
   }
 
   // Penalize for gaps
@@ -239,16 +270,13 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   insuranceScore = Math.max(0, Math.min(100, Math.round(insuranceScore)))
 
   // === 4. FLEET SCORE (15% weight) ===
-  // Based on fleet size, OOS rates on vehicles, shared equipment
-  let fleetScore = 60 // Base
+  let fleetScore = 60
 
   const trucks = fleet.trucks || []
   const powerUnits = carrier.totalPowerUnits || carrier.powerUnits || listing?.fleetSize || trucks.length || 0
 
   if (powerUnits > 0) {
     fleetScore += 10
-
-    // Newer fleet = better
     if (trucks.length > 0) {
       const avgYear = trucks.reduce((s: number, t: any) => s + (t.year || t.model_year || 0), 0) / trucks.length
       const currentYear = new Date().getFullYear()
@@ -261,25 +289,28 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
       }
     }
 
-    // Penalize for high vehicle OOS — prefer inspectionTotals, fall back to records
-    const inspTotals = safety.inspectionTotals || {}
-    const hasInspTotals = parseFloat(inspTotals.vehicle) > 0
+    // Vehicle OOS rate — use SMS data, inspectionTotals, or records
     let vehicleOOSRate = 0
-    if (hasInspTotals) {
-      vehicleOOSRate = parseFloat(inspTotals.vehicle) > 0
-        ? (parseFloat(inspTotals.vehicleOOS) || 0) / parseFloat(inspTotals.vehicle) * 100 : 0
+    if (smsData && smsData.totalVehicleInspections > 0) {
+      vehicleOOSRate = (smsData.vehicleOosInspections / smsData.totalVehicleInspections) * 100
     } else {
-      const filteredRecs = filterInspectionRecords(inspections.records || [])
-      const typeCounts = countInspectionsByType(filteredRecs)
-      vehicleOOSRate = typeCounts.vehicleInsp > 0
-        ? (typeCounts.vehicleOOS / typeCounts.vehicleInsp) * 100 : 0
+      const inspTotals = safety.inspectionTotals || {}
+      if (parseFloat(inspTotals.vehicle) > 0) {
+        vehicleOOSRate = (parseFloat(inspTotals.vehicleOOS) || 0) / parseFloat(inspTotals.vehicle) * 100
+      } else {
+        const filteredRecs = filterInspectionRecords(inspections.records || [])
+        const typeCounts = countInspectionsByType(filteredRecs)
+        if (typeCounts.vehicleInsp > 0) {
+          vehicleOOSRate = (typeCounts.vehicleOOS / typeCounts.vehicleInsp) * 100
+        }
+      }
     }
     if (vehicleOOSRate > 30) fleetScore -= 20
     else if (vehicleOOSRate > 20) fleetScore -= 10
     else if (vehicleOOSRate < 10) fleetScore += 10
   }
 
-  // Penalize for shared equipment (possible chameleon carrier risk)
+  // Shared equipment risk
   const sharedEquipment = fleet.sharedEquipment || {}
   const sharedCount = sharedEquipment.countSharedVins || sharedEquipment.totalShared || 0
   if (sharedCount > 5) fleetScore -= 15
@@ -288,32 +319,45 @@ export function calculateCarrierHealthScore(report: any, listing?: MCListingExte
   fleetScore = Math.max(0, Math.min(100, Math.round(fleetScore)))
 
   // === 5. HISTORY SCORE (15% weight) ===
-  // Based on years active, inspection trend, clean inspection rate
-  let historyScore = 50 // Base
+  let historyScore = 50
 
-  // Years active bonus
   const yearsActive = parseFloat(carrier.yearsActive) || listing?.yearsActive || 0
   if (yearsActive >= 10) historyScore += 25
   else if (yearsActive >= 5) historyScore += 20
   else if (yearsActive >= 3) historyScore += 15
   else if (yearsActive >= 1) historyScore += 5
-  else historyScore -= 10 // Very new carrier
+  else historyScore -= 10
 
-  // Clean inspection rate
-  const records = inspections.records || []
-  if (records.length > 0) {
-    const cleanCount = records.filter((r: any) => (r.viol_total || r.violations || 0) === 0).length
-    const cleanRate = cleanCount / records.length
-    if (cleanRate >= 0.8) historyScore += 15
-    else if (cleanRate >= 0.6) historyScore += 10
-    else if (cleanRate >= 0.4) historyScore += 5
-    else if (cleanRate < 0.2) historyScore -= 10
+  // Clean inspection rate — use SMS totals or records
+  const totalInsp = smsData?.totalInspections || 0
+  if (totalInsp > 0 && smsData) {
+    // SMS gives us total inspections and OOS counts but not clean count directly
+    // Use records if available for clean rate
+    const records = filterInspectionRecords(inspections.records || [])
+    if (records.length > 0) {
+      const cleanCount = records.filter((r: any) => (r.viol_total || r.violations || 0) === 0).length
+      const cleanRate = cleanCount / records.length
+      if (cleanRate >= 0.8) historyScore += 15
+      else if (cleanRate >= 0.6) historyScore += 10
+      else if (cleanRate >= 0.4) historyScore += 5
+      else if (cleanRate < 0.2) historyScore -= 10
+    }
+  } else {
+    const records = inspections.records || []
+    if (records.length > 0) {
+      const cleanCount = records.filter((r: any) => (r.viol_total || r.violations || 0) === 0).length
+      const cleanRate = cleanCount / records.length
+      if (cleanRate >= 0.8) historyScore += 15
+      else if (cleanRate >= 0.6) historyScore += 10
+      else if (cleanRate >= 0.4) historyScore += 5
+      else if (cleanRate < 0.2) historyScore -= 10
+    }
   }
 
   // Authority age
   const authorityAgeDays = carrier.authorityAgeDays || 0
-  if (authorityAgeDays > 1825) historyScore += 10 // 5+ years
-  else if (authorityAgeDays < 365) historyScore -= 5 // Less than 1 year
+  if (authorityAgeDays > 1825) historyScore += 10
+  else if (authorityAgeDays < 365) historyScore -= 5
 
   historyScore = Math.max(0, Math.min(100, Math.round(historyScore)))
 

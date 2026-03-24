@@ -3452,7 +3452,7 @@ export default function MCDetailPageV2() {
     }
 
     // Map real API data
-    const healthResult = calculateCarrierHealthScore(carrierReport, listing)
+    const healthResult = calculateCarrierHealthScore(carrierReport, listing, smsData)
     return {
       carrier: mapToV2CarrierData(carrierReport, listing),
       authority: mapToV2AuthorityData(carrierReport),
