@@ -609,9 +609,6 @@ function OverviewTab() {
   const safetyLevel = getStatusLevel('safety', mockCarrier.safetyRating)
   const insuranceLevel = getStatusLevel('insurance', mockCarrier.insuranceStatus)
   const authorityLevel = getStatusLevel('authority', mockCarrier.operatingStatus)
-  const trustLevel = getStatusLevel('trust', mockCarrier.trustScore)
-  const riskLevel = getStatusLevel('risk', mockCarrier.riskScore)
-
   return (
     <div className="space-y-6">
       {/* 1. Carrier Health Score */}
@@ -640,23 +637,6 @@ function OverviewTab() {
           <ScoreCard icon={Umbrella} label="Insurance" value="Current" level={insuranceLevel} />
           <ScoreCard icon={Truck} label="Fleet Size" value={`${mockCarrier.powerUnits} Units`} level="good" />
           <ScoreCard icon={CheckCircle} label="Authority" value="Active" level={authorityLevel} />
-        </div>
-        {/* Second row: Trust + Risk circular gauges */}
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <Card padding="md" className="flex items-center gap-4">
-            <CircularGauge value={mockCarrier.trustScore} max={100} size={70} label="Trust" level={trustLevel} />
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Trust Score</p>
-              <p className="text-xs text-gray-400">Composite carrier reliability</p>
-            </div>
-          </Card>
-          <Card padding="md" className="flex items-center gap-4">
-            <CircularGauge value={mockCarrier.riskScore} max={100} size={70} label="Risk" level={riskLevel} />
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Risk Score</p>
-              <p className="text-xs text-gray-400">Lower is better</p>
-            </div>
-          </Card>
         </div>
       </div>
 
@@ -3275,22 +3255,6 @@ function FullReportTab() {
           type: 'changed' as const,
           policyType: c.changeType,
         }))} />
-      </Card>
-
-      {/* Risk Score Trend */}
-      <Card padding="md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-indigo-500" />
-          Risk Score Trend
-          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">12 months</span>
-        </h3>
-        <SparklineChart
-          data={mockRiskScoreTrend.map(d => ({ label: d.month, value: d.riskScore }))}
-          height={100}
-          color="#6366f1"
-          label="Risk Score"
-          currentValue={mockRiskScoreTrend[mockRiskScoreTrend.length - 1].riskScore}
-        />
       </Card>
 
       {/* VIN Inspection History */}
