@@ -28,14 +28,12 @@ import api from '../services/api'
 
 import CreditReportView from '../components/v2/CreditReportView'
 import TabNav, { TabItem } from '../components/v2/TabNav'
-import CircularGauge from '../components/v2/CircularGauge'
 import SpeedometerGauge from '../components/v2/SpeedometerGauge'
 import CoverageBar from '../components/v2/CoverageBar'
 import StatusBadge from '../components/v2/StatusBadge'
 import ScoreCard from '../components/v2/ScoreCard'
 import AuthorityTimeline from '../components/v2/AuthorityTimeline'
 import CarrierHealthScore from '../components/v2/CarrierHealthScore'
-import CertificationBadges from '../components/v2/CertificationBadges'
 import ViolationBreakdownChart from '../components/v2/ViolationBreakdownChart'
 import SharedEquipmentAlert from '../components/v2/SharedEquipmentAlert'
 import ChameleonAlert from '../components/v2/ChameleonAlert'
@@ -43,12 +41,9 @@ import DriverBreakdown from '../components/v2/DriverBreakdown'
 import FleetOwnershipBar from '../components/v2/FleetOwnershipBar'
 import DonutChart from '../components/v2/DonutChart'
 import InfoGrid from '../components/v2/InfoGrid'
-import MonitoringAlerts from '../components/v2/MonitoringAlerts'
-import SparklineChart from '../components/v2/SparklineChart'
 import InsuranceGapTimeline from '../components/v2/InsuranceGapTimeline'
 import FleetAgeHistogram from '../components/v2/FleetAgeHistogram'
 import ViolationTrendChart from '../components/v2/ViolationTrendChart'
-import RelatedCarriers from '../components/v2/RelatedCarriers'
 import CarrierComparison from '../components/v2/CarrierComparison'
 
 import {
@@ -163,7 +158,7 @@ const tabs: TabItem[] = [
   { id: 'fleet', label: 'Fleet & Drivers', icon: Truck },
   { id: 'credit', label: 'Credit Report', icon: DollarSign },
   { id: 'chameleon', label: 'Chameleon Check', icon: ShieldAlert },
-  { id: 'full-report', label: 'Full Report', icon: BarChart3 },
+  { id: 'safety-improvement', label: 'Safety Improvement Report', icon: Zap },
 ]
 
 function fmtCurrency(n: number) {
@@ -381,64 +376,53 @@ function PulseHeroHeader({ onSearchAnother }: { onSearchAnother: () => void }) {
 // ============================================================
 function OverviewTab() {
   const ctx = useCarrierDataContext()
-  const { carrier: c, complianceFinancials, cargoCapabilities, percentiles, healthCategories } = ctx
+  const { carrier: c, complianceFinancials, percentiles, networkSignals, benchmarks, healthCategories } = ctx
   const safetyLevel = getStatusLevel('safety', c.safetyRating)
   const insuranceLevel = getStatusLevel('insurance', c.insuranceStatus)
   const authorityLevel = getStatusLevel('authority', c.operatingStatus)
-  const trustLevel = getStatusLevel('trust', c.trustScore)
-  const riskLevel = getStatusLevel('risk', c.riskScore)
 
   return (
     <div className="space-y-6">
+      {/* 1. Carrier Health Score */}
       <CarrierHealthScore score={c.carrierHealthScore} categories={healthCategories.length > 0 ? healthCategories : undefined} />
 
-      {/* Quick Verdict */}
-      <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-        className="rounded-xl bg-emerald-50 border-2 border-emerald-200 p-5 flex items-center gap-4"
-      >
-        <div className="p-3 bg-emerald-100 rounded-full">
-          <CheckCircle className="w-8 h-8 text-emerald-600" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-emerald-800">Good Standing</h3>
-          <p className="text-sm text-emerald-600">This MC authority has a clean record with active insurance and no major violations.</p>
-        </div>
-      </motion.div>
+      {/* 2. Quick Verdict Banner — driven by health score */}
+      {(() => {
+        const hs = c.carrierHealthScore
+        const verdict = hs >= 80
+          ? { title: 'Good Standing', desc: 'This carrier scores well across safety, compliance, insurance, and fleet categories.', bg: 'bg-emerald-50 border-emerald-200', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', titleColor: 'text-emerald-800', descColor: 'text-emerald-600', Icon: CheckCircle }
+          : hs >= 60
+          ? { title: 'Fair Standing — Review Recommended', desc: 'Some areas need attention. Review the category breakdown above for details.', bg: 'bg-yellow-50 border-yellow-200', iconBg: 'bg-yellow-100', iconColor: 'text-yellow-600', titleColor: 'text-yellow-800', descColor: 'text-yellow-600', Icon: AlertTriangle }
+          : { title: 'Needs Attention — Elevated Risk', desc: 'This carrier has significant issues in one or more categories. Review safety, compliance, and insurance details carefully before proceeding.', bg: 'bg-red-50 border-red-200', iconBg: 'bg-red-100', iconColor: 'text-red-600', titleColor: 'text-red-800', descColor: 'text-red-600', Icon: AlertCircle }
+        return (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`rounded-xl border-2 p-5 flex items-center gap-4 ${verdict.bg}`}
+          >
+            <div className={`p-3 rounded-full ${verdict.iconBg}`}>
+              <verdict.Icon className={`w-8 h-8 ${verdict.iconColor}`} />
+            </div>
+            <div>
+              <h3 className={`text-lg font-bold ${verdict.titleColor}`}>{verdict.title}</h3>
+              <p className={`text-sm ${verdict.descColor}`}>{verdict.desc}</p>
+            </div>
+          </motion.div>
+        )
+      })()}
 
-      {/* Score Summary */}
+      {/* 3. Score Summary Grid */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Score Summary</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ScoreCard icon={Activity} label="Safety" value="Satisfactory" level={safetyLevel} />
-          <ScoreCard icon={Umbrella} label="Insurance" value="Current" level={insuranceLevel} />
-          <ScoreCard icon={Truck} label="Fleet Size" value={`${c.powerUnits} Units`} level="good" />
-          <ScoreCard icon={CheckCircle} label="Authority" value="Active" level={authorityLevel} />
-        </div>
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <Card padding="md" className="flex items-center gap-4">
-            <CircularGauge value={c.trustScore} max={100} size={70} label="Trust" level={trustLevel} />
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Trust Score</p>
-              <p className="text-xs text-gray-400">Composite carrier reliability</p>
-            </div>
-          </Card>
-          <Card padding="md" className="flex items-center gap-4">
-            <CircularGauge value={c.riskScore} max={100} size={70} label="Risk" level={riskLevel} />
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Risk Score</p>
-              <p className="text-xs text-gray-400">Lower is better</p>
-            </div>
-          </Card>
+          <ScoreCard icon={Activity} label="Safety" value={c.safetyRating === 'not-rated' ? 'Not Rated' : c.safetyRating || 'Not Rated'} level={safetyLevel} />
+          <ScoreCard icon={Umbrella} label="Insurance" value={c.insuranceStatus === 'current' ? 'Current' : c.insuranceStatus === 'pending' ? 'Pending' : c.insuranceStatus === 'expired' ? 'Expired' : 'Unknown'} level={insuranceLevel} />
+          <ScoreCard icon={Truck} label="Fleet Size" value={`${c.powerUnits} Units`} level={c.powerUnits > 0 ? 'good' : 'neutral'} />
+          <ScoreCard icon={CheckCircle} label="Authority" value={c.operatingStatus === 'authorized' ? 'Active' : c.operatingStatus || 'Unknown'} level={authorityLevel} />
         </div>
       </div>
 
-      {/* Certifications */}
-      <Card padding="md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Certifications</h3>
-        <CertificationBadges smartway={c.smartwayFlag} carbtru={c.carbtruFlag} phmsa={c.phmsaFlag} />
-      </Card>
-
-      {/* Compliance & Financials */}
+      {/* 4. Compliance & Financials */}
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-indigo-500" />
@@ -466,8 +450,81 @@ function OverviewTab() {
         </div>
       </Card>
 
-      {/* Industry Percentile Ranking — full access */}
-      {percentiles.length > 0 && <CarrierComparison percentiles={percentiles} />}
+      {/* 5. Network Signals */}
+      {networkSignals.length > 0 && (
+        <Card padding="md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-indigo-500" />
+            Network Signals
+          </h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {networkSignals.map((signal, i) => {
+              const bgColors = { positive: 'bg-emerald-50 border-emerald-200', neutral: 'bg-amber-50 border-amber-200', negative: 'bg-red-50 border-red-200' }
+              const textColors = { positive: 'text-emerald-700', neutral: 'text-amber-700', negative: 'text-red-700' }
+              const icons = { positive: <CheckCircle className="w-4 h-4 text-emerald-500" />, neutral: <AlertTriangle className="w-4 h-4 text-amber-500" />, negative: <XCircle className="w-4 h-4 text-red-500" /> }
+              return (
+                <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${bgColors[signal.status]}`}>
+                  <div className="mt-0.5">{icons[signal.status]}</div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{signal.name}</span>
+                      <span className={`text-xs font-bold ${textColors[signal.status]}`}>{signal.value}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{signal.detail}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* 6. Industry Benchmarks */}
+      {benchmarks.length > 0 && (
+        <Card padding="md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-indigo-500" />
+            Industry Benchmarks
+          </h3>
+          <div className="space-y-4">
+            {benchmarks.map((b, i) => {
+              const isBetter = b.lowerIsBetter ? b.carrierValue <= b.industryAvg : b.carrierValue >= b.industryAvg
+              const barColor = isBetter ? 'bg-emerald-500' : 'bg-red-400'
+              const avgBarColor = 'bg-gray-300'
+              const maxVal = Math.max(b.carrierValue, b.industryAvg) * 1.2 || 100
+              return (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium text-gray-700">{b.metric}</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={`font-bold ${isBetter ? 'text-emerald-600' : 'text-red-500'}`}>{b.carrierValue}{b.unit}</span>
+                      <span className="text-gray-400">vs</span>
+                      <span className="text-gray-500">{b.industryAvg}{b.unit} avg</span>
+                    </div>
+                  </div>
+                  <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`absolute inset-y-0 left-0 rounded-full ${barColor}`} style={{ width: `${Math.min((b.carrierValue / maxVal) * 100, 100)}%` }} />
+                    <div className={`absolute top-0 bottom-0 w-0.5 ${avgBarColor}`} style={{ left: `${Math.min((b.industryAvg / maxVal) * 100, 100)}%` }} title={`Industry Avg: ${b.industryAvg}${b.unit}`} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className={`text-[10px] font-medium ${isBetter ? 'text-emerald-600' : 'text-red-500'}`}>{isBetter ? (b.lowerIsBetter ? 'Below avg' : 'Above avg') : (b.lowerIsBetter ? 'Above avg' : 'Below avg')}</span>
+                    <span className="text-[10px] text-gray-400">National average</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* 7. Description */}
+      <Card padding="md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+        <p className="text-sm text-gray-600 leading-relaxed">{c.description}</p>
+      </Card>
+
+      {/* 8. Industry Percentile Ranking */}
+      <CarrierComparison percentiles={percentiles} />
     </div>
   )
 }
@@ -1619,63 +1676,547 @@ function ChameleonTab() {
 }
 
 // ============================================================
-// TAB 9: FULL REPORT
+// SAFETY RECOMMENDATIONS ENGINE
 // ============================================================
-function FullReportTab() {
-  const { contactHistory, riskScoreTrend, vinInspections, monitoringAlerts, relatedCarriers, percentiles } = useCarrierDataContext()
+interface SafetyRecommendation {
+  id: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  category: string
+  title: string
+  description: string
+  impact: string
+  timeline: string
+  estimatedImprovement: string
+}
+
+function generateSafetyRecommendations(
+  basicScores: ReturnType<typeof useCarrierDataContext>['basicScores'],
+  basicAlerts: ReturnType<typeof useCarrierDataContext>['basicAlerts'],
+  inspections: ReturnType<typeof useCarrierDataContext>['inspections'],
+  crashes: ReturnType<typeof useCarrierDataContext>['crashes'],
+  violationBreakdown: ReturnType<typeof useCarrierDataContext>['violationBreakdown'],
+  carrier: ReturnType<typeof useCarrierDataContext>['carrier'],
+  insurancePolicies: ReturnType<typeof useCarrierDataContext>['insurancePolicies'],
+  insuranceGaps: ReturnType<typeof useCarrierDataContext>['insuranceGaps'],
+  trucks: ReturnType<typeof useCarrierDataContext>['trucks'],
+  healthCategories: ReturnType<typeof useCarrierDataContext>['healthCategories'],
+): SafetyRecommendation[] {
+  const recs: SafetyRecommendation[] = []
+  let idx = 0
+
+  // --- BASIC Score recommendations ---
+  const basicThresholds: Record<string, { alert: boolean; field: string }> = {
+    'Unsafe Driving': { alert: basicAlerts.unsafeDrivingAlert, field: 'unsafeDriving' },
+    'Hours of Service': { alert: basicAlerts.hoursOfServiceAlert, field: 'hoursOfService' },
+    'Driver Fitness': { alert: basicAlerts.driverFitnessAlert, field: 'driverFitness' },
+    'Controlled Substances': { alert: basicAlerts.controlledSubstanceAlert, field: 'controlledSubstance' },
+    'Vehicle Maintenance': { alert: basicAlerts.vehicleMaintenanceAlert, field: 'vehicleMaintenance' },
+    'Hazardous Materials': { alert: basicAlerts.hazmatAlert, field: 'hazardousMaterials' },
+    'Crash Indicator': { alert: basicAlerts.crashIndicatorAlert, field: '' },
+  }
+
+  for (const bs of basicScores) {
+    const pct = bs.percentile ?? 0
+    const info = basicThresholds[bs.name]
+    if (!info) continue
+    if (info.alert || pct >= 65) {
+      const isCritical = pct >= 80 || info.alert
+      const violationCount = info.field ? (violationBreakdown as any)[info.field] ?? 0 : 0
+
+      const actionMap: Record<string, string> = {
+        'Unsafe Driving': 'Implement driver coaching program focused on speeding, lane discipline, and distracted driving. Install dashcam/telematics to monitor driving behavior and provide real-time feedback.',
+        'Hours of Service': 'Deploy ELD compliance auditing tools. Conduct weekly HOS log reviews with drivers. Train dispatchers on realistic scheduling that avoids pushing drivers past limits.',
+        'Driver Fitness': 'Verify all CDL certifications and medical cards are current. Implement a pre-hire screening process with thorough MVR checks and drug testing protocols.',
+        'Controlled Substances': 'Strengthen random drug/alcohol testing program beyond FMCSA minimums. Implement return-to-duty monitoring and a substance abuse awareness program.',
+        'Vehicle Maintenance': 'Establish a preventive maintenance schedule for all units. Conduct weekly pre-trip/post-trip inspection audits. Address top vehicle OOS items: brakes, tires, lights, and coupling devices.',
+        'Hazardous Materials': 'Ensure all HM drivers have current HazMat endorsements. Review shipping paper accuracy and placarding compliance. Conduct quarterly HM emergency response drills.',
+        'Crash Indicator': 'Conduct post-crash root cause analysis for every incident. Implement defensive driving training. Consider DataQ challenges for any crashes where you were not at fault.',
+      }
+
+      recs.push({
+        id: `basic-${idx++}`,
+        priority: isCritical ? 'critical' : 'high',
+        category: 'BASIC Score',
+        title: `Reduce ${bs.name} Score (${pct}th percentile)`,
+        description: actionMap[bs.name] || `Focus on reducing violations in the ${bs.name} category.`,
+        impact: violationCount > 0 ? `${violationCount} violations recorded in this category` : `Percentile at ${pct}% — above intervention threshold`,
+        timeline: isCritical ? 'Immediate — within 30 days' : 'Short-term — within 60 days',
+        estimatedImprovement: `Could lower percentile by 10-25 points over 6 months with consistent effort`,
+      })
+    }
+  }
+
+  // --- Inspection OOS Rate recommendations ---
+  const natDriverOOS = inspections.nationalDriverOOSRate || 5.51
+  const natVehicleOOS = inspections.nationalVehicleOOSRate || 20.72
+  if (inspections.driverOOSRate > natDriverOOS) {
+    recs.push({
+      id: `oos-driver-${idx++}`,
+      priority: inspections.driverOOSRate > natDriverOOS * 2 ? 'critical' : 'high',
+      category: 'Inspection Readiness',
+      title: `Driver OOS Rate Above National Average (${inspections.driverOOSRate.toFixed(1)}% vs ${natDriverOOS.toFixed(1)}%)`,
+      description: 'Ensure all drivers carry current CDL, medical certificates, and required endorsements. Conduct mock roadside inspections monthly. Review HOS logs for common errors before each trip.',
+      impact: `${inspections.driverOOS} out of ${inspections.driverInspections} driver inspections resulted in OOS`,
+      timeline: 'Short-term — within 30-60 days',
+      estimatedImprovement: 'Reducing driver OOS rate to national average would improve Driver Fitness and HOS BASIC scores',
+    })
+  }
+  if (inspections.vehicleOOSRate > natVehicleOOS) {
+    recs.push({
+      id: `oos-vehicle-${idx++}`,
+      priority: inspections.vehicleOOSRate > natVehicleOOS * 1.5 ? 'critical' : 'high',
+      category: 'Inspection Readiness',
+      title: `Vehicle OOS Rate Above National Average (${inspections.vehicleOOSRate.toFixed(1)}% vs ${natVehicleOOS.toFixed(1)}%)`,
+      description: 'Implement daily DVIR (Driver Vehicle Inspection Report) compliance checks. Focus on top OOS items: brake systems (adjustment & components), tires (tread depth & inflation), lighting, and cargo securement.',
+      impact: `${inspections.vehicleOOS} out of ${inspections.vehicleInspections} vehicle inspections resulted in OOS`,
+      timeline: 'Short-term — within 30-60 days',
+      estimatedImprovement: 'Reducing vehicle OOS rate to national average would significantly improve Vehicle Maintenance BASIC',
+    })
+  }
+
+  // --- Crash recommendations ---
+  if (crashes.fatal > 0) {
+    recs.push({
+      id: `crash-fatal-${idx++}`,
+      priority: 'critical',
+      category: 'Crash Mitigation',
+      title: `${crashes.fatal} Fatal Crash${crashes.fatal > 1 ? 'es' : ''} on Record`,
+      description: 'Conduct thorough post-crash analysis. If the carrier was not at fault, file a DataQ challenge to request review. Implement advanced collision mitigation technology (automatic emergency braking, lane departure warning). Review and strengthen driver hiring standards.',
+      impact: 'Fatal crashes heavily weight the Crash Indicator BASIC and trigger FMCSA scrutiny',
+      timeline: 'Immediate — ongoing',
+      estimatedImprovement: 'Successful DataQ challenges can remove non-preventable crashes from your record within 60-90 days',
+    })
+  }
+  if (crashes.total > 3) {
+    recs.push({
+      id: `crash-freq-${idx++}`,
+      priority: 'high',
+      category: 'Crash Mitigation',
+      title: `${crashes.total} Total Crashes in Recording Period`,
+      description: 'Establish a crash review board that meets after every incident. Analyze patterns (time of day, routes, driver tenure). Invest in collision avoidance technology and require defensive driving courses for all drivers.',
+      impact: `${crashes.injury} injury and ${crashes.towaway} towaway crashes recorded`,
+      timeline: 'Short-term — implement within 30 days',
+      estimatedImprovement: 'A 30% reduction in crash frequency can lower Crash Indicator BASIC by 15-20 percentile points',
+    })
+  }
+
+  // --- Insurance recommendations ---
+  if (insuranceGaps.length > 0) {
+    const activeGaps = insuranceGaps.filter(g => !g.gapEnd || g.status === 'active')
+    recs.push({
+      id: `ins-gap-${idx++}`,
+      priority: activeGaps.length > 0 ? 'critical' : 'medium',
+      category: 'Insurance & Compliance',
+      title: `${insuranceGaps.length} Insurance Coverage Gap${insuranceGaps.length > 1 ? 's' : ''} Detected`,
+      description: activeGaps.length > 0
+        ? 'You have active insurance coverage gaps. Contact your insurance provider immediately to restore coverage. Operating without valid insurance can result in authority revocation by FMCSA.'
+        : 'Historical insurance gaps are on record. Ensure current policies are maintained without lapses. Set up automatic renewal reminders 60 days before expiration.',
+      impact: activeGaps.length > 0 ? 'Active gap — authority at risk of revocation' : 'Historical gaps may concern potential buyers or partners',
+      timeline: activeGaps.length > 0 ? 'Immediate' : 'Ongoing monitoring',
+      estimatedImprovement: 'Maintaining continuous coverage improves carrier credibility and Insurance health score',
+    })
+  }
+
+  // --- Safety Rating ---
+  if (carrier.safetyRating === 'conditional' || carrier.safetyRating === 'unsatisfactory') {
+    const ratingLabel = carrier.safetyRating === 'unsatisfactory' ? 'Unsatisfactory' : 'Conditional'
+    recs.push({
+      id: `rating-${idx++}`,
+      priority: 'critical',
+      category: 'Safety Rating',
+      title: `${ratingLabel} Safety Rating — Upgrade Required`,
+      description: carrier.safetyRating === 'unsatisfactory'
+        ? 'An Unsatisfactory rating means FMCSA has found serious safety deficiencies. You must request a safety rating upgrade by demonstrating corrective actions. Contact your FMCSA Division Administrator to schedule a compliance review.'
+        : 'A Conditional rating indicates FMCSA found safety management deficiencies. Address all identified issues and request a change of rating review. Focus on correcting the specific regulatory deficiencies cited in your compliance review report.',
+      impact: carrier.safetyRating === 'unsatisfactory'
+        ? 'Unsatisfactory-rated carriers face operating restrictions and cannot transport passengers or certain hazmat'
+        : 'Conditional rating may limit contract opportunities and raises red flags for shippers',
+      timeline: 'Immediate — begin corrective actions now',
+      estimatedImprovement: 'Achieving Satisfactory rating adds +5 to your Safety health score and opens new business opportunities',
+    })
+  } else if (carrier.safetyRating === 'not-rated') {
+    recs.push({
+      id: `rating-none-${idx++}`,
+      priority: 'medium',
+      category: 'Safety Rating',
+      title: 'No FMCSA Safety Rating on File',
+      description: 'Request a voluntary compliance review from your FMCSA Division office. Having a Satisfactory safety rating on file demonstrates commitment to safety and can be a competitive advantage when bidding on contracts.',
+      impact: 'Many shippers and brokers prefer carriers with a Satisfactory safety rating',
+      timeline: 'Medium-term — within 90 days',
+      estimatedImprovement: 'Obtaining a Satisfactory rating adds +5 to Safety health score',
+    })
+  }
+
+  // --- Fleet age / maintenance ---
+  const oldTrucks = trucks.filter(t => {
+    return t.year > 0 && t.year < new Date().getFullYear() - 10
+  })
+  if (oldTrucks.length > 0 && trucks.length > 0) {
+    const pct = Math.round((oldTrucks.length / trucks.length) * 100)
+    if (pct >= 30) {
+      recs.push({
+        id: `fleet-age-${idx++}`,
+        priority: 'medium',
+        category: 'Fleet Health',
+        title: `${pct}% of Fleet Over 10 Years Old (${oldTrucks.length} of ${trucks.length} units)`,
+        description: 'Older equipment requires more frequent maintenance and is more likely to result in vehicle OOS violations. Consider a fleet renewal plan targeting the oldest units first. Increase inspection frequency for vehicles over 10 years old.',
+        impact: 'Aging fleet directly correlates with higher Vehicle Maintenance BASIC scores',
+        timeline: 'Long-term — phased replacement over 12-24 months',
+        estimatedImprovement: 'Newer equipment typically reduces vehicle OOS rates by 15-30%',
+      })
+    }
+  }
+
+  // --- Low inspection volume ---
+  if (inspections.totalInspections < 5 && inspections.totalInspections > 0) {
+    recs.push({
+      id: `insp-volume-${idx++}`,
+      priority: 'low',
+      category: 'Inspection Readiness',
+      title: 'Low Inspection Volume — Limited Safety Data',
+      description: 'With fewer than 5 inspections on record, BASIC scores are less statistically reliable but individual violations carry outsized weight. Ensure every inspection counts by maintaining pristine equipment and driver compliance.',
+      impact: 'Each violation has a proportionally larger impact on your BASIC percentiles',
+      timeline: 'Ongoing',
+      estimatedImprovement: 'Clean inspections will steadily improve your BASIC positioning as data accumulates',
+    })
+  }
+
+  // --- General health score recommendation ---
+  const safetyCategory = healthCategories.find(c => c.name === 'Safety')
+  if (safetyCategory && safetyCategory.score < 50) {
+    recs.push({
+      id: `health-safety-${idx++}`,
+      priority: 'high',
+      category: 'Overall Safety',
+      title: `Safety Health Score Below 50 (${safetyCategory.score}/100)`,
+      description: 'Your overall safety health score indicates significant room for improvement. Focus on the critical and high-priority recommendations above. Consider engaging a safety consultant or enrolling in FMCSA\'s Compliance, Safety, Accountability (CSA) program resources.',
+      impact: 'Low safety scores reduce carrier attractiveness to shippers, brokers, and potential buyers',
+      timeline: 'Ongoing — target measurable improvement within 6 months',
+      estimatedImprovement: 'Addressing top 3 critical items typically improves overall safety score by 20-30 points',
+    })
+  }
+
+  // Sort by priority
+  const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+  recs.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+
+  return recs
+}
+
+// ============================================================
+// TAB 8: SAFETY IMPROVEMENT REPORT
+// ============================================================
+function SafetyImprovementReportTab() {
+  const {
+    basicScores, basicAlerts, inspections, crashes, violationBreakdown,
+    carrier, insurancePolicies, insuranceGaps, trucks, healthCategories,
+    violationTrend,
+  } = useCarrierDataContext()
+
+  const recommendations = useMemo(() => generateSafetyRecommendations(
+    basicScores, basicAlerts, inspections, crashes, violationBreakdown,
+    carrier, insurancePolicies, insuranceGaps, trucks, healthCategories,
+  ), [basicScores, basicAlerts, inspections, crashes, violationBreakdown, carrier, insurancePolicies, insuranceGaps, trucks, healthCategories])
+
+  const criticalCount = recommendations.filter(r => r.priority === 'critical').length
+  const highCount = recommendations.filter(r => r.priority === 'high').length
+  const mediumCount = recommendations.filter(r => r.priority === 'medium').length
+  const lowCount = recommendations.filter(r => r.priority === 'low').length
+
+  const overallGrade = criticalCount > 0 ? 'D' : highCount > 2 ? 'C' : highCount > 0 ? 'B' : recommendations.length === 0 ? 'A+' : 'A'
+  const gradeColors: Record<string, string> = {
+    'A+': 'from-emerald-400 to-emerald-600',
+    'A': 'from-emerald-400 to-emerald-500',
+    'B': 'from-blue-400 to-blue-600',
+    'C': 'from-yellow-400 to-yellow-600',
+    'D': 'from-red-400 to-red-600',
+  }
+  const gradeBg: Record<string, string> = {
+    'A+': 'bg-emerald-50 border-emerald-200',
+    'A': 'bg-emerald-50 border-emerald-200',
+    'B': 'bg-blue-50 border-blue-200',
+    'C': 'bg-yellow-50 border-yellow-200',
+    'D': 'bg-red-50 border-red-200',
+  }
+
+  const priorityColors: Record<string, { bg: string; text: string; dot: string; border: string }> = {
+    critical: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500', border: 'border-red-200' },
+    high: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', border: 'border-orange-200' },
+    medium: { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500', border: 'border-yellow-200' },
+    low: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', border: 'border-blue-200' },
+  }
+
+  const [expandedRec, setExpandedRec] = useState<string | null>(null)
+
+  // Violation trend direction
+  const trendDirection = useMemo(() => {
+    if (violationTrend.length < 3) return 'insufficient'
+    const recent = violationTrend.slice(-3).reduce((s, v) => s + v.violations, 0)
+    const earlier = violationTrend.slice(0, 3).reduce((s, v) => s + v.violations, 0)
+    if (recent < earlier * 0.8) return 'improving'
+    if (recent > earlier * 1.2) return 'worsening'
+    return 'stable'
+  }, [violationTrend])
+
   return (
     <div className="space-y-6">
+      {/* Report Header */}
+      <div className={`rounded-2xl border p-6 ${gradeBg[overallGrade]}`}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Zap className="w-6 h-6 text-indigo-500" />
+              Safety Improvement Report
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Actionable recommendations to improve {carrier.legalName || 'this carrier'}'s safety profile
+            </p>
+          </div>
+          <div className="text-center">
+            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradeColors[overallGrade]} flex items-center justify-center`}>
+              <span className="text-2xl font-black text-white">{overallGrade}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 font-medium">Safety Grade</p>
+          </div>
+        </div>
+
+        {/* Summary stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+          <div className="rounded-xl bg-white/70 p-3 text-center">
+            <p className="text-2xl font-bold text-red-600">{criticalCount}</p>
+            <p className="text-xs text-gray-500 font-medium">Critical</p>
+          </div>
+          <div className="rounded-xl bg-white/70 p-3 text-center">
+            <p className="text-2xl font-bold text-orange-600">{highCount}</p>
+            <p className="text-xs text-gray-500 font-medium">High Priority</p>
+          </div>
+          <div className="rounded-xl bg-white/70 p-3 text-center">
+            <p className="text-2xl font-bold text-yellow-600">{mediumCount}</p>
+            <p className="text-xs text-gray-500 font-medium">Medium</p>
+          </div>
+          <div className="rounded-xl bg-white/70 p-3 text-center">
+            <p className="text-2xl font-bold text-blue-600">{lowCount}</p>
+            <p className="text-xs text-gray-500 font-medium">Low</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Safety Snapshot */}
       <Card padding="md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-indigo-500" />Contact & Entity History</h3>
-        <AuthorityTimeline events={contactHistory.changes.map(c => ({ date: c.date, event: `${c.field}: "${c.oldValue}" → "${c.newValue}"`, type: 'changed' as const, policyType: c.changeType }))} />
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-indigo-500" />
+          Safety Snapshot
+        </h3>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-xs text-gray-500 font-medium mb-1">Safety Rating</p>
+            <p className={`text-lg font-bold capitalize ${
+              carrier.safetyRating === 'satisfactory' ? 'text-emerald-600' :
+              carrier.safetyRating === 'conditional' ? 'text-yellow-600' :
+              carrier.safetyRating === 'unsatisfactory' ? 'text-red-600' : 'text-gray-400'
+            }`}>{carrier.safetyRating === 'not-rated' ? 'Not Rated' : carrier.safetyRating || 'Not Rated'}</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-xs text-gray-500 font-medium mb-1">Total Inspections (24 mo)</p>
+            <p className="text-lg font-bold text-gray-900">{fmtNumber(inspections.totalInspections)}</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-xs text-gray-500 font-medium mb-1">Total Crashes</p>
+            <p className={`text-lg font-bold ${crashes.total > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {crashes.total}{crashes.fatal > 0 && <span className="text-sm font-normal text-red-500 ml-1">({crashes.fatal} fatal)</span>}
+            </p>
+          </div>
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-xs text-gray-500 font-medium mb-1">Driver OOS Rate</p>
+            <p className={`text-lg font-bold ${inspections.driverOOSRate > (inspections.nationalDriverOOSRate || 5.51) ? 'text-red-600' : 'text-emerald-600'}`}>
+              {inspections.driverOOSRate.toFixed(1)}%
+              <span className="text-xs font-normal text-gray-400 ml-1">(nat'l avg {(inspections.nationalDriverOOSRate || 5.51).toFixed(1)}%)</span>
+            </p>
+          </div>
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-xs text-gray-500 font-medium mb-1">Vehicle OOS Rate</p>
+            <p className={`text-lg font-bold ${inspections.vehicleOOSRate > (inspections.nationalVehicleOOSRate || 20.72) ? 'text-red-600' : 'text-emerald-600'}`}>
+              {inspections.vehicleOOSRate.toFixed(1)}%
+              <span className="text-xs font-normal text-gray-400 ml-1">(nat'l avg {(inspections.nationalVehicleOOSRate || 20.72).toFixed(1)}%)</span>
+            </p>
+          </div>
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-xs text-gray-500 font-medium mb-1">Violation Trend</p>
+            <p className={`text-lg font-bold flex items-center gap-1 ${
+              trendDirection === 'improving' ? 'text-emerald-600' :
+              trendDirection === 'worsening' ? 'text-red-600' : 'text-gray-500'
+            }`}>
+              {trendDirection === 'improving' && <><TrendingDown className="w-5 h-5" /> Improving</>}
+              {trendDirection === 'worsening' && <><TrendingUp className="w-5 h-5" /> Worsening</>}
+              {trendDirection === 'stable' && 'Stable'}
+              {trendDirection === 'insufficient' && 'Insufficient Data'}
+            </p>
+          </div>
+        </div>
       </Card>
 
-      {riskScoreTrend.length > 0 && (
+      {/* BASIC Scores Overview */}
+      {basicScores.length > 0 && (
         <Card padding="md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-indigo-500" />Risk Score Trend <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">12 months</span></h3>
-          <SparklineChart data={riskScoreTrend.map(d => ({ label: d.month, value: d.riskScore }))} height={100} color="#6366f1" label="Risk Score" currentValue={riskScoreTrend[riskScoreTrend.length - 1].riskScore} />
-        </Card>
-      )}
-
-      {vinInspections.length > 0 && (
-        <Card padding="md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"><Eye className="w-5 h-5 text-indigo-500" />VIN Inspection History</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">VIN</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Location</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Result</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Violations</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vinInspections.map((insp, i) => {
-                  const resultColors: Record<string, string> = { pass: 'bg-emerald-50 text-emerald-700', fail: 'bg-red-50 text-red-700', oos: 'bg-red-50 text-red-700', warning: 'bg-yellow-50 text-yellow-700' }
-                  return (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 px-3 font-mono text-xs">{insp.vin}</td>
-                      <td className="py-2 px-3 text-gray-600">{safeFmtDate(insp.date)}</td>
-                      <td className="py-2 px-3 text-gray-600">{insp.location}</td>
-                      <td className="py-2 px-3"><span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full capitalize">{insp.type}</span></td>
-                      <td className="py-2 px-3"><span className={`px-2 py-0.5 text-xs font-semibold rounded-full uppercase ${resultColors[insp.result]}`}>{insp.result}</span></td>
-                      <td className="py-2 px-3 text-center">{insp.violations}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-indigo-500" />
+            BASIC Score Risk Map
+          </h3>
+          <div className="space-y-3">
+            {basicScores.map((bs, i) => {
+              const isScored = bs.score != null
+              const pct = bs.percentile ?? 0
+              const isAboveThreshold = isScored && pct >= bs.threshold
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-40 text-sm font-medium text-gray-700 truncate">{bs.name}</div>
+                  {isScored ? (
+                    <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          pct >= bs.threshold ? 'bg-red-500' : pct >= bs.threshold * 0.85 ? 'bg-orange-400' : 'bg-emerald-400'
+                        }`}
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                      />
+                      {/* Threshold marker */}
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-gray-800"
+                        style={{ left: `${bs.threshold}%` }}
+                        title={`Intervention threshold: ${bs.threshold}%`}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex-1 h-6 bg-gray-50 rounded-full flex items-center justify-center">
+                      <span className="text-xs text-gray-400">Not Scored — Insufficient Data</span>
+                    </div>
+                  )}
+                  <div className="w-16 text-right">
+                    {isScored ? (
+                      <span className={`text-sm font-bold ${
+                        pct >= bs.threshold ? 'text-red-600' : pct >= bs.threshold * 0.85 ? 'text-orange-600' : 'text-emerald-600'
+                      }`}>{pct}%</span>
+                    ) : (
+                      <span className="text-sm text-gray-300">—</span>
+                    )}
+                  </div>
+                  {isAboveThreshold && (
+                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  )}
+                </div>
+              )
+            })}
+            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+              <span className="inline-block w-3 h-0.5 bg-gray-800" /> = FMCSA intervention threshold
+            </p>
           </div>
         </Card>
       )}
 
-      <MonitoringAlerts alerts={monitoringAlerts} />
-      <RelatedCarriers carriers={relatedCarriers} />
+      {/* Recommendations */}
+      {recommendations.length > 0 ? (
+        <Card padding="md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-indigo-500" />
+            Priority Action Plan
+            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{recommendations.length} items</span>
+          </h3>
+          <div className="space-y-3">
+            {recommendations.map((rec) => {
+              const colors = priorityColors[rec.priority]
+              const isExpanded = expandedRec === rec.id
+              return (
+                <motion.div
+                  key={rec.id}
+                  className={`rounded-xl border ${colors.border} overflow-hidden`}
+                  layout
+                >
+                  <button
+                    onClick={() => setExpandedRec(isExpanded ? null : rec.id)}
+                    className={`w-full text-left px-4 py-3 flex items-start gap-3 ${colors.bg} hover:opacity-90 transition-opacity`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${colors.dot} mt-1.5 flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs font-bold uppercase ${colors.text}`}>{rec.priority}</span>
+                        <span className="text-xs text-gray-400">|</span>
+                        <span className="text-xs font-medium text-gray-500">{rec.category}</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 mt-0.5">{rec.title}</p>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-4 pt-2 space-y-3 bg-white">
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">What to do</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{rec.description}</p>
+                          </div>
+                          <div className="grid sm:grid-cols-3 gap-3">
+                            <div className="rounded-lg bg-gray-50 p-3">
+                              <p className="text-xs font-semibold text-gray-500 mb-1">Current Impact</p>
+                              <p className="text-xs text-gray-700">{rec.impact}</p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-3">
+                              <p className="text-xs font-semibold text-gray-500 mb-1">Timeline</p>
+                              <p className="text-xs text-gray-700">{rec.timeline}</p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-3">
+                              <p className="text-xs font-semibold text-gray-500 mb-1">Expected Improvement</p>
+                              <p className="text-xs text-gray-700">{rec.estimatedImprovement}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )
+            })}
+          </div>
+        </Card>
+      ) : (
+        <Card padding="md">
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-emerald-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Excellent Safety Profile</h3>
+            <p className="text-sm text-gray-500 max-w-md mx-auto">
+              This carrier meets or exceeds all safety benchmarks. No critical improvements needed at this time.
+              Continue maintaining current safety practices and monitoring BASIC scores.
+            </p>
+          </div>
+        </Card>
+      )}
 
-      {percentiles.length > 0 && <CarrierComparison percentiles={percentiles} />}
+      {/* Disclaimer */}
+      <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
+        <div className="flex items-start gap-2">
+          <Info className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-gray-500 leading-relaxed">
+            <p className="font-semibold text-gray-600 mb-1">Disclaimer</p>
+            <p>
+              This Safety Improvement Report is generated based on publicly available FMCSA data and industry benchmarks.
+              It is intended as guidance only and does not constitute legal or regulatory advice. Actual BASIC score
+              improvements depend on many factors including inspection frequency, violation severity weighting, and
+              the FMCSA Safety Measurement System methodology. Consult a qualified safety consultant or your FMCSA
+              Division Administrator for specific compliance guidance.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -2095,7 +2636,7 @@ export default function CarrierPulsePage() {
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
     credit: showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
     chameleon: showSkeleton ? <CarrierLoadingSkeleton /> : <ChameleonTab />,
-    'full-report': showSkeleton ? <CarrierLoadingSkeleton /> : <FullReportTab />,
+    'safety-improvement': showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyImprovementReportTab />,
   }
 
   return (
