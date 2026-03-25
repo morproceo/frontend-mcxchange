@@ -685,14 +685,13 @@ export function mapToV2AuthorityPending(report: any): V2AuthorityPending {
 export function mapToV2BasicScores(report: any): V2BasicScore[] {
   const scores = report?.safety?.basicScores || []
 
-  // FMCSA BASICs are derived from inspections — if the carrier has zero inspections
-  // in the 24-month window, any scores from the data provider are not real FMCSA
-  // percentiles and should be nulled out to avoid misleading the user.
+  // Trust MorPro data — it reflects FMCSA SMS percentiles.
+  // FMCSA can score a BASIC even with zero violations (peer-group ranking).
+  // Only guard: if the carrier has zero inspections overall, no BASICs can be scored.
   const inspTotals = report?.safety?.inspectionTotals || {}
   const inspRecords = report?.inspections?.records || []
   const totalInspections = parseFloat(inspTotals.total || inspTotals.last24Months || '0') || inspRecords.length || 0
-  if (totalInspections === 0) {
-    // No inspections at all — return all 7 BASICs as unscored
+  if (totalInspections === 0 && scores.length === 0) {
     return ALL_BASICS.map(def => ({
       name: def.name,
       score: null,
@@ -702,54 +701,15 @@ export function mapToV2BasicScores(report: any): V2BasicScore[] {
     }))
   }
 
-  // Cross-reference MorPro scores with violation counts — a BASIC with
-  // zero violations in its category should not display a percentile since
-  // FMCSA can't score a BASIC without violation/inspection data in that category.
-  // Use the same mapped breakdown to ensure field-name consistency.
-  const vb = mapToV2ViolationBreakdown(report)
-  const totalViolations = vb.unsafeDriving + vb.hoursOfService + vb.driverFitness +
-    vb.controlledSubstance + vb.vehicleMaintenance + vb.hazardousMaterials
-  const violationsByBasic: Record<string, number> = {
-    'unsafe driving': vb.unsafeDriving,
-    'hours-of-service compliance': vb.hoursOfService,
-    'driver fitness': vb.driverFitness,
-    'controlled substances/alcohol': vb.controlledSubstance,
-    'vehicle maintenance': vb.vehicleMaintenance,
-    'hazardous materials compliance': vb.hazardousMaterials,
-    'crash indicator': 0, // Crash Indicator is scored from crashes, not violations
-  }
-
-  // Build lookup from MorPro scores — keyed by both raw lowercase and normalized name
-  const morProLookup = new Map<string, any>()
-  for (const b of scores) {
-    const name = (b.basicName || b.name || '')
-    if (name) {
-      morProLookup.set(name.toLowerCase().trim(), b)
-      morProLookup.set(normalizeBasicName(name), b)
-    }
-  }
-
-  // Use ALL_BASICS as canonical structure, only show MorPro score if backed by data
-  return ALL_BASICS.map(def => {
-    const normalized = def.name.toLowerCase()
-    // Try to find MorPro's score — check raw lowercase, then normalized form
-    const morPro = morProLookup.get(normalized) || morProLookup.get(normalizeBasicName(def.name))
-    const rawScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
-
-    // For Crash Indicator, check crash data instead of violations
-    const isCrashIndicator = normalized === 'crash indicator'
-    const crashTotal = (report?.safety?.crashes?.total || report?.crashes?.total || 0)
-    const hasBackingData = isCrashIndicator ? crashTotal > 0 : (violationsByBasic[normalized] || 0) > 0
-
-    // Only show a score if there's actual violation/crash data backing it
-    const validScore = hasBackingData && rawScore != null && Number(rawScore) > 0 ? Number(rawScore) : null
-
+  return scores.map((b: any) => {
+    const rawScore = b.score ?? b.percentile ?? b.measure;
     return {
-      name: def.name,
-      score: validScore,
-      threshold: morPro?.threshold ?? morPro?.thresholdPercent ?? def.threshold,
-      percentile: validScore,
-      description: BASIC_DESCRIPTIONS[def.name] || morPro?.description || morPro?.basicCode || '',
+      name: b.basicName || b.name || 'Unknown',
+      // Preserve null — means FMCSA doesn't have enough data to score this BASIC
+      score: rawScore != null ? Number(rawScore) : null,
+      threshold: b.threshold ?? b.thresholdPercent ?? 65,
+      percentile: rawScore != null ? Number(rawScore) : null,
+      description: b.description || b.basicCode || '',
     }
   })
 }
@@ -868,31 +828,15 @@ export function mapSMSToV2BasicAlerts(smsData: FMCSASMSData): V2BasicAlerts {
 }
 
 export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
-  // No inspections → no BASIC alerts possible
-  const inspTotals = report?.safety?.inspectionTotals || {}
-  const inspRecords = report?.inspections?.records || []
-  const totalInspections = parseFloat(inspTotals.total || inspTotals.last24Months || '0') || inspRecords.length || 0
-  if (totalInspections === 0) {
-    return {
-      unsafeDrivingAlert: false, hoursOfServiceAlert: false, driverFitnessAlert: false,
-      controlledSubstanceAlert: false, vehicleMaintenanceAlert: false, hazmatAlert: false,
-      crashIndicatorAlert: false, unsafeDrivingOOSAlert: false, hoursOfServiceOOSAlert: false,
-      vehicleMaintenanceOOSAlert: false,
-    }
-  }
-
-  // Cross-reference alerts with mapped violation data for consistent field names
-  const vb = mapToV2ViolationBreakdown(report)
   const alerts = report?.safety?.basicAlerts || {}
-
   return {
-    unsafeDrivingAlert: vb.unsafeDriving > 0 && (alerts.unsafeDriving || alerts.unsafeDrivingAlert || false),
-    hoursOfServiceAlert: vb.hoursOfService > 0 && (alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false),
-    driverFitnessAlert: vb.driverFitness > 0 && (alerts.driverFitness || alerts.driverFitnessAlert || false),
-    controlledSubstanceAlert: vb.controlledSubstance > 0 && (alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false),
-    vehicleMaintenanceAlert: vb.vehicleMaintenance > 0 && (alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false),
-    hazmatAlert: vb.hazardousMaterials > 0 && (alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false),
-    crashIndicatorAlert: alerts.crashIndicator || alerts.crashIndicatorAlert || false, // Crashes, not violations
+    unsafeDrivingAlert: alerts.unsafeDriving || alerts.unsafeDrivingAlert || false,
+    hoursOfServiceAlert: alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false,
+    driverFitnessAlert: alerts.driverFitness || alerts.driverFitnessAlert || false,
+    controlledSubstanceAlert: alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false,
+    vehicleMaintenanceAlert: alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false,
+    hazmatAlert: alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false,
+    crashIndicatorAlert: alerts.crashIndicator || alerts.crashIndicatorAlert || false,
     unsafeDrivingOOSAlert: alerts.unsafeDrivingOOS || alerts.unsafeDrivingOOSAlert || false,
     hoursOfServiceOOSAlert: alerts.hoursOfServiceOOS || alerts.hoursOfServiceOOSAlert || false,
     vehicleMaintenanceOOSAlert: alerts.vehicleMaintenanceOOS || alerts.vehicleMaintenanceOOSAlert || false,

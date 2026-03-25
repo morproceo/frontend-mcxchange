@@ -3564,12 +3564,7 @@ export default function MCDetailPageV2() {
       authorityPending: mapToV2AuthorityPending(carrierReport),
       // FMCSA SMS = gate (which BASICs are scored), MorPro = fresher values
       // Only use SMS if it actually returned scored basics — otherwise fall back to MorPro
-      basicScores: (() => {
-        const useSMS = smsData && smsData.basics.length > 0
-        const scores = useSMS ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport)
-        console.log('[MCDetailV2] BASIC scores path:', useSMS ? 'FMCSA SMS' : 'MorPro fallback', 'smsData:', smsData ? `${smsData.basics.length} basics` : 'null', 'scores:', scores.map(s => `${s.name}: ${s.score}`))
-        return scores
-      })(),
+      basicScores: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
       basicAlerts: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
