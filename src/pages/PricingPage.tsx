@@ -17,6 +17,12 @@ const planStyles = {
     bgColor: 'from-blue-50 to-cyan-50',
     popular: false,
   },
+  professional: {
+    icon: Shield,
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'from-emerald-50 to-teal-50',
+    popular: false,
+  },
   premium: {
     icon: Zap,
     color: 'from-purple-500 to-indigo-500',
@@ -125,7 +131,7 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {plans.map((plan, index) => {
             const Icon = plan.icon
             const displayPrice = billingCycle === 'monthly' ? plan.priceMonthly : Number(getMonthlyEquivalent(plan))
@@ -255,7 +261,7 @@ export default function PricingPage() {
               <span className="text-2xl font-bold text-gray-900">$12.99</span>
               <span className="text-gray-500">/month</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Enterprise & VIP plans</p>
+            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Professional, Premium, Enterprise & VIP plans</p>
             <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors">
               Add CarrierPulse
             </button>
@@ -278,7 +284,7 @@ export default function PricingPage() {
               <span className="text-2xl font-bold text-gray-900">2 credits</span>
               <span className="text-gray-500">/report</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Enterprise & VIP plans</p>
+            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Professional, Premium, Enterprise & VIP plans</p>
             <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
               Get Started
             </button>

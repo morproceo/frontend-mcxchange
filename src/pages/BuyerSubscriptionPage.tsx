@@ -40,6 +40,13 @@ const planStyles = {
     borderColor: 'border-blue-200',
     popular: false,
   },
+  professional: {
+    icon: Shield,
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'from-emerald-50 to-teal-50',
+    borderColor: 'border-emerald-200',
+    popular: false,
+  },
   premium: {
     icon: Zap,
     color: 'from-purple-500 to-indigo-500',
