@@ -705,31 +705,34 @@ export function mapToV2BasicScores(report: any): V2BasicScore[] {
   // Cross-reference MorPro scores with violation counts — a BASIC with
   // zero violations in its category should not display a percentile since
   // FMCSA can't score a BASIC without violation/inspection data in that category.
-  const breakdown = report?.safety?.violationBreakdown || {}
+  // Use the same mapped breakdown to ensure field-name consistency.
+  const vb = mapToV2ViolationBreakdown(report)
+  const totalViolations = vb.unsafeDriving + vb.hoursOfService + vb.driverFitness +
+    vb.controlledSubstance + vb.vehicleMaintenance + vb.hazardousMaterials
   const violationsByBasic: Record<string, number> = {
-    'unsafe driving': breakdown.unsafeDriving || 0,
-    'hours of service': (breakdown.hoursOfService || breakdown.hosCompliance || 0),
-    'hours-of-service compliance': (breakdown.hoursOfService || breakdown.hosCompliance || 0),
-    'driver fitness': breakdown.driverFitness || 0,
-    'controlled substances': (breakdown.controlledSubstance || breakdown.controlledSubstances || 0),
-    'controlled substances/alcohol': (breakdown.controlledSubstance || breakdown.controlledSubstances || 0),
-    'vehicle maintenance': breakdown.vehicleMaintenance || 0,
-    'hazardous materials': (breakdown.hazardousMaterials || breakdown.hazmat || breakdown.hazmatCompliance || 0),
-    'hazardous materials compliance': (breakdown.hazardousMaterials || breakdown.hazmat || breakdown.hazmatCompliance || 0),
+    'unsafe driving': vb.unsafeDriving,
+    'hours-of-service compliance': vb.hoursOfService,
+    'driver fitness': vb.driverFitness,
+    'controlled substances/alcohol': vb.controlledSubstance,
+    'vehicle maintenance': vb.vehicleMaintenance,
+    'hazardous materials compliance': vb.hazardousMaterials,
     'crash indicator': 0, // Crash Indicator is scored from crashes, not violations
   }
 
-  // Build lookup from MorPro scores
+  // Build lookup from MorPro scores — keyed by both raw lowercase and normalized name
   const morProLookup = new Map<string, any>()
   for (const b of scores) {
-    const name = (b.basicName || b.name || '').toLowerCase().trim()
-    if (name) morProLookup.set(name, b)
+    const name = (b.basicName || b.name || '')
+    if (name) {
+      morProLookup.set(name.toLowerCase().trim(), b)
+      morProLookup.set(normalizeBasicName(name), b)
+    }
   }
 
   // Use ALL_BASICS as canonical structure, only show MorPro score if backed by data
   return ALL_BASICS.map(def => {
     const normalized = def.name.toLowerCase()
-    // Try to find MorPro's score for this BASIC
+    // Try to find MorPro's score — check raw lowercase, then normalized form
     const morPro = morProLookup.get(normalized) || morProLookup.get(normalizeBasicName(def.name))
     const rawScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
 
@@ -881,19 +884,17 @@ export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
     }
   }
 
-  // Cross-reference alerts with violation data — only flag alerts for categories
-  // that have actual violations, preventing phantom alerts from MorPro
-  const breakdown = report?.safety?.violationBreakdown || {}
+  // Cross-reference alerts with mapped violation data for consistent field names
+  const vb = mapToV2ViolationBreakdown(report)
   const alerts = report?.safety?.basicAlerts || {}
-  const hasViol = (fields: string[]) => fields.some(f => (breakdown[f] || 0) > 0)
 
   return {
-    unsafeDrivingAlert: hasViol(['unsafeDriving']) && (alerts.unsafeDriving || alerts.unsafeDrivingAlert || false),
-    hoursOfServiceAlert: hasViol(['hoursOfService', 'hosCompliance']) && (alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false),
-    driverFitnessAlert: hasViol(['driverFitness']) && (alerts.driverFitness || alerts.driverFitnessAlert || false),
-    controlledSubstanceAlert: hasViol(['controlledSubstance', 'controlledSubstances']) && (alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false),
-    vehicleMaintenanceAlert: hasViol(['vehicleMaintenance']) && (alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false),
-    hazmatAlert: hasViol(['hazardousMaterials', 'hazmat', 'hazmatCompliance']) && (alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false),
+    unsafeDrivingAlert: vb.unsafeDriving > 0 && (alerts.unsafeDriving || alerts.unsafeDrivingAlert || false),
+    hoursOfServiceAlert: vb.hoursOfService > 0 && (alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false),
+    driverFitnessAlert: vb.driverFitness > 0 && (alerts.driverFitness || alerts.driverFitnessAlert || false),
+    controlledSubstanceAlert: vb.controlledSubstance > 0 && (alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false),
+    vehicleMaintenanceAlert: vb.vehicleMaintenance > 0 && (alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false),
+    hazmatAlert: vb.hazardousMaterials > 0 && (alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false),
     crashIndicatorAlert: alerts.crashIndicator || alerts.crashIndicatorAlert || false, // Crashes, not violations
     unsafeDrivingOOSAlert: alerts.unsafeDrivingOOS || alerts.unsafeDrivingOOSAlert || false,
     hoursOfServiceOOSAlert: alerts.hoursOfServiceOOS || alerts.hoursOfServiceOOSAlert || false,
