@@ -504,10 +504,15 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
   const timeline = auth.timeline || []
 
   // DEBUG — remove after fixing
-  console.log('[Authority Debug] fmcsaAuth:', fmcsaAuth)
-  console.log('[Authority Debug] report.authority:', JSON.stringify(auth, null, 2)?.substring(0, 1000))
-  console.log('[Authority Debug] report.carrier keys:', Object.keys(report?.carrier || {}).filter(k => k.toLowerCase().includes('auth')))
-  console.log('[Authority Debug] statuses:', JSON.stringify(statuses, null, 2)?.substring(0, 500))
+  try {
+    console.log('[Authority Debug] fmcsaAuth:', fmcsaAuth ? Object.keys(fmcsaAuth) : 'null')
+    console.log('[Authority Debug] fmcsaAuth values:', fmcsaAuth ? { common: fmcsaAuth.commonAuthorityStatus, contract: fmcsaAuth.contractAuthorityStatus, broker: fmcsaAuth.brokerAuthorityStatus } : 'null')
+    console.log('[Authority Debug] auth keys:', Object.keys(auth))
+    console.log('[Authority Debug] statuses keys:', typeof statuses === 'object' ? Object.keys(statuses) : statuses)
+    const carrierKeys = Object.keys(report?.carrier || {}).filter(k => k.toLowerCase().includes('auth'))
+    console.log('[Authority Debug] carrier auth keys:', carrierKeys)
+    if (carrierKeys.length > 0) console.log('[Authority Debug] carrier auth values:', carrierKeys.map(k => `${k}=${report.carrier[k]}`))
+  } catch (e) { console.log('[Authority Debug] error:', e) }
 
   function mapStatus(s: string | undefined | null): 'active' | 'inactive' | 'revoked' {
     if (!s) return 'inactive'
