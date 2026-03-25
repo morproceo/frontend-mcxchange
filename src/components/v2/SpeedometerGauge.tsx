@@ -42,8 +42,8 @@ export default function SpeedometerGauge({ name, score, threshold, max = 100, al
   // Use the actual threshold to determine status — not hardcoded breakpoints
   const level = getBasicLevel(score, threshold)
   const colors = statusColors[level]
-  // Flash red when score exceeds threshold OR when the API explicitly flags an alert
-  const shouldFlash = aboveThreshold || !!alert
+  // Only flash red when score is actually at or above the threshold
+  const shouldFlash = aboveThreshold
   const size = 160
   const strokeWidth = 14
   const cx = size / 2
