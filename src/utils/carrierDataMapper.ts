@@ -691,18 +691,62 @@ export function mapToV2BasicScores(report: any): V2BasicScore[] {
   const inspTotals = report?.safety?.inspectionTotals || {}
   const inspRecords = report?.inspections?.records || []
   const totalInspections = parseFloat(inspTotals.total || inspTotals.last24Months || '0') || inspRecords.length || 0
-  const hasInspections = totalInspections > 0
+  if (totalInspections === 0) {
+    // No inspections at all — return all 7 BASICs as unscored
+    return ALL_BASICS.map(def => ({
+      name: def.name,
+      score: null,
+      threshold: def.threshold,
+      percentile: null,
+      description: BASIC_DESCRIPTIONS[def.name] || '',
+    }))
+  }
 
-  return scores.map((b: any) => {
-    const rawScore = b.score ?? b.percentile ?? b.measure;
-    // Only show a score if the carrier actually has inspections
-    const validScore = hasInspections && rawScore != null ? Number(rawScore) : null;
+  // Cross-reference MorPro scores with violation counts — a BASIC with
+  // zero violations in its category should not display a percentile since
+  // FMCSA can't score a BASIC without violation/inspection data in that category.
+  const breakdown = report?.safety?.violationBreakdown || {}
+  const violationsByBasic: Record<string, number> = {
+    'unsafe driving': breakdown.unsafeDriving || 0,
+    'hours of service': (breakdown.hoursOfService || breakdown.hosCompliance || 0),
+    'hours-of-service compliance': (breakdown.hoursOfService || breakdown.hosCompliance || 0),
+    'driver fitness': breakdown.driverFitness || 0,
+    'controlled substances': (breakdown.controlledSubstance || breakdown.controlledSubstances || 0),
+    'controlled substances/alcohol': (breakdown.controlledSubstance || breakdown.controlledSubstances || 0),
+    'vehicle maintenance': breakdown.vehicleMaintenance || 0,
+    'hazardous materials': (breakdown.hazardousMaterials || breakdown.hazmat || breakdown.hazmatCompliance || 0),
+    'hazardous materials compliance': (breakdown.hazardousMaterials || breakdown.hazmat || breakdown.hazmatCompliance || 0),
+    'crash indicator': 0, // Crash Indicator is scored from crashes, not violations
+  }
+
+  // Build lookup from MorPro scores
+  const morProLookup = new Map<string, any>()
+  for (const b of scores) {
+    const name = (b.basicName || b.name || '').toLowerCase().trim()
+    if (name) morProLookup.set(name, b)
+  }
+
+  // Use ALL_BASICS as canonical structure, only show MorPro score if backed by data
+  return ALL_BASICS.map(def => {
+    const normalized = def.name.toLowerCase()
+    // Try to find MorPro's score for this BASIC
+    const morPro = morProLookup.get(normalized) || morProLookup.get(normalizeBasicName(def.name))
+    const rawScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
+
+    // For Crash Indicator, check crash data instead of violations
+    const isCrashIndicator = normalized === 'crash indicator'
+    const crashTotal = (report?.safety?.crashes?.total || report?.crashes?.total || 0)
+    const hasBackingData = isCrashIndicator ? crashTotal > 0 : (violationsByBasic[normalized] || 0) > 0
+
+    // Only show a score if there's actual violation/crash data backing it
+    const validScore = hasBackingData && rawScore != null && Number(rawScore) > 0 ? Number(rawScore) : null
+
     return {
-      name: b.basicName || b.name || 'Unknown',
+      name: def.name,
       score: validScore,
-      threshold: b.threshold ?? b.thresholdPercent ?? 65,
+      threshold: morPro?.threshold ?? morPro?.thresholdPercent ?? def.threshold,
       percentile: validScore,
-      description: b.description || b.basicCode || '',
+      description: BASIC_DESCRIPTIONS[def.name] || morPro?.description || morPro?.basicCode || '',
     }
   })
 }
@@ -837,15 +881,20 @@ export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
     }
   }
 
+  // Cross-reference alerts with violation data — only flag alerts for categories
+  // that have actual violations, preventing phantom alerts from MorPro
+  const breakdown = report?.safety?.violationBreakdown || {}
   const alerts = report?.safety?.basicAlerts || {}
+  const hasViol = (fields: string[]) => fields.some(f => (breakdown[f] || 0) > 0)
+
   return {
-    unsafeDrivingAlert: alerts.unsafeDriving || alerts.unsafeDrivingAlert || false,
-    hoursOfServiceAlert: alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false,
-    driverFitnessAlert: alerts.driverFitness || alerts.driverFitnessAlert || false,
-    controlledSubstanceAlert: alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false,
-    vehicleMaintenanceAlert: alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false,
-    hazmatAlert: alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false,
-    crashIndicatorAlert: alerts.crashIndicator || alerts.crashIndicatorAlert || false,
+    unsafeDrivingAlert: hasViol(['unsafeDriving']) && (alerts.unsafeDriving || alerts.unsafeDrivingAlert || false),
+    hoursOfServiceAlert: hasViol(['hoursOfService', 'hosCompliance']) && (alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false),
+    driverFitnessAlert: hasViol(['driverFitness']) && (alerts.driverFitness || alerts.driverFitnessAlert || false),
+    controlledSubstanceAlert: hasViol(['controlledSubstance', 'controlledSubstances']) && (alerts.controlledSubstance || alerts.controlledSubstances || alerts.controlledSubstanceAlert || false),
+    vehicleMaintenanceAlert: hasViol(['vehicleMaintenance']) && (alerts.vehicleMaintenance || alerts.vehicleMaintenanceAlert || false),
+    hazmatAlert: hasViol(['hazardousMaterials', 'hazmat', 'hazmatCompliance']) && (alerts.hazmat || alerts.hazmatCompliance || alerts.hazmatAlert || false),
+    crashIndicatorAlert: alerts.crashIndicator || alerts.crashIndicatorAlert || false, // Crashes, not violations
     unsafeDrivingOOSAlert: alerts.unsafeDrivingOOS || alerts.unsafeDrivingOOSAlert || false,
     hoursOfServiceOOSAlert: alerts.hoursOfServiceOOS || alerts.hoursOfServiceOOSAlert || false,
     vehicleMaintenanceOOSAlert: alerts.vehicleMaintenanceOOS || alerts.vehicleMaintenanceOOSAlert || false,
