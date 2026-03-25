@@ -3710,7 +3710,7 @@ export default function MCDetailPageV2() {
                   </Button>
                 </Link>
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate('/marketplace')}
                   className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -3737,7 +3737,7 @@ export default function MCDetailPageV2() {
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Listing</h1>
               <p className="text-gray-500 mb-6">{error}</p>
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => navigate('/marketplace')}
                 className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -3865,11 +3865,11 @@ export default function MCDetailPageV2() {
       {/* Back button */}
       <div className="max-w-7xl mx-auto px-4 pt-4">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/marketplace')}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Back to Marketplace
         </button>
       </div>
 
