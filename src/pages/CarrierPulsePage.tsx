@@ -2401,7 +2401,12 @@ export default function CarrierPulsePage() {
       authority: mapToV2AuthorityData(carrierReport, fmcsaAuthority),
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
-      basicScores: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
+      basicScores: (() => {
+        const useSMS = smsData && smsData.basics.length > 0
+        const scores = useSMS ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport)
+        console.log('[CarrierPulse] BASIC scores path:', useSMS ? 'FMCSA SMS' : 'MorPro fallback', 'smsData:', smsData ? `${smsData.basics.length} basics` : 'null', 'scores:', scores.map(s => `${s.name}: ${s.score}`))
+        return scores
+      })(),
       basicAlerts: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
