@@ -503,6 +503,12 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
   const statuses = auth.statuses || auth || {}
   const timeline = auth.timeline || []
 
+  // DEBUG — remove after fixing
+  console.log('[Authority Debug] fmcsaAuth:', fmcsaAuth)
+  console.log('[Authority Debug] report.authority:', JSON.stringify(auth, null, 2)?.substring(0, 1000))
+  console.log('[Authority Debug] report.carrier keys:', Object.keys(report?.carrier || {}).filter(k => k.toLowerCase().includes('auth')))
+  console.log('[Authority Debug] statuses:', JSON.stringify(statuses, null, 2)?.substring(0, 500))
+
   function mapStatus(s: string | undefined | null): 'active' | 'inactive' | 'revoked' {
     if (!s) return 'inactive'
     const lower = String(s).toLowerCase().trim()
