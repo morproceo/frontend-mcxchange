@@ -503,16 +503,7 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
   const statuses = auth.statuses || auth || {}
   const timeline = auth.timeline || []
 
-  // DEBUG — remove after fixing
-  try {
-    console.log('[Authority Debug] fmcsaAuth:', fmcsaAuth ? Object.keys(fmcsaAuth) : 'null')
-    console.log('[Authority Debug] fmcsaAuth values:', fmcsaAuth ? { common: fmcsaAuth.commonAuthorityStatus, contract: fmcsaAuth.contractAuthorityStatus, broker: fmcsaAuth.brokerAuthorityStatus } : 'null')
-    console.log('[Authority Debug] auth keys:', Object.keys(auth))
-    console.log('[Authority Debug] statuses keys:', typeof statuses === 'object' ? Object.keys(statuses) : statuses)
-    const carrierKeys = Object.keys(report?.carrier || {}).filter(k => k.toLowerCase().includes('auth'))
-    console.log('[Authority Debug] carrier auth keys:', carrierKeys)
-    if (carrierKeys.length > 0) console.log('[Authority Debug] carrier auth values:', carrierKeys.map(k => `${k}=${report.carrier[k]}`))
-  } catch (e) { console.log('[Authority Debug] error:', e) }
+
 
   function mapStatus(s: string | undefined | null): 'active' | 'inactive' | 'revoked' {
     if (!s) return 'inactive'
@@ -526,6 +517,31 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
 
   // If we have FMCSA authority data (source of truth), use it directly
   if (fmcsaAuth) {
+    // FMCSA may return an array of authority entries (one per type: C=Common, E=Contract, B=Broker)
+    if (Array.isArray(fmcsaAuth)) {
+      const result: V2AuthorityData = {
+        common: { status: 'inactive', grantedDate: '', effectiveDate: '' },
+        contract: { status: 'inactive', grantedDate: '', effectiveDate: '' },
+        broker: { status: 'inactive', grantedDate: '', effectiveDate: '' },
+      }
+      for (const item of fmcsaAuth) {
+        const type = String(item.authTypeCd || item.authorityType || '').toUpperCase()
+        const status = mapStatus(item.authActCd || item.authStatus || item.status)
+        const grantDate = normalizeDate(item.authGrantDt || item.grantDate || item.grantDt || '')
+        const effDate = normalizeDate(item.effectiveDt || item.effDt || item.authGrantDt || '')
+
+        if (type === 'C' || type === 'COMMON') {
+          result.common = { status, grantedDate: grantDate, effectiveDate: effDate }
+        } else if (type === 'E' || type === 'CONTRACT') {
+          result.contract = { status, grantedDate: grantDate, effectiveDate: effDate }
+        } else if (type === 'B' || type === 'BROKER') {
+          result.broker = { status, grantedDate: grantDate, effectiveDate: effDate }
+        }
+      }
+      return result
+    }
+
+    // Single object format
     return {
       common: {
         status: mapStatus(fmcsaAuth.commonAuthorityStatus),
