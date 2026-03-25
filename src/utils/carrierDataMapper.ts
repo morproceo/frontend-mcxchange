@@ -767,8 +767,9 @@ export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any)
   return ALL_BASICS.map(def => {
     const normalized = normalizeBasicName(def.name)
     const sms = smsLookup.get(normalized)
-    if (!sms || sms.percentile <= 0) {
-      // FMCSA says this BASIC is not scored — no data, period
+    // FMCSA says this BASIC is not scored if: missing, zero percentile, or
+    // zero inspections in that category (stale measure without backing data)
+    if (!sms || sms.percentile <= 0 || sms.totalInspections <= 0) {
       return {
         name: def.name,
         score: null,
@@ -803,7 +804,11 @@ export function mapSMSToV2BasicAlerts(smsData: FMCSASMSData): V2BasicAlerts {
   for (const b of smsData.basics) {
     lookup.set(normalizeBasicName(b.basicName), b)
   }
-  const find = (name: string) => lookup.get(normalizeBasicName(name))
+  const find = (name: string) => {
+    const b = lookup.get(normalizeBasicName(name))
+    // Only flag alert if BASIC has actual inspections backing the score
+    return b && b.totalInspections > 0 ? b : undefined
+  }
   return {
     unsafeDrivingAlert: find('Unsafe Driving')?.exceedsThreshold || false,
     hoursOfServiceAlert: find('Hours-of-Service Compliance')?.exceedsThreshold || false,
