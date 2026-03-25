@@ -500,14 +500,16 @@ export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2
 // ============================================================
 export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityData {
   const auth = report?.authority || {}
-  const statuses = auth.statuses || {}
+  const statuses = auth.statuses || auth || {}
   const timeline = auth.timeline || []
 
   function mapStatus(s: string | undefined | null): 'active' | 'inactive' | 'revoked' {
     if (!s) return 'inactive'
-    const lower = String(s).toLowerCase()
-    if (lower === 'active' || lower === 'a') return 'active'
-    if (lower === 'revoked' || lower === 'r') return 'revoked'
+    const lower = String(s).toLowerCase().trim()
+    // FMCSA returns: 'ACTIVE', 'A', 'ACTIVE - PENDING' etc.
+    if (lower === 'active' || lower === 'a' || lower.startsWith('active') || lower === 'y' || lower === 'yes') return 'active'
+    if (lower === 'revoked' || lower === 'r' || lower.startsWith('revok')) return 'revoked'
+    // 'NONE', 'N/A', 'INACTIVE', 'I', 'PENDING', 'NOT AUTHORIZED', etc.
     return 'inactive'
   }
 
@@ -532,21 +534,32 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
     }
   }
 
+  // Also check carrier-level fields (some APIs put authority status on the carrier object)
+  const carrier = report?.carrier || {}
+
   // The API returns statuses as nested objects: statuses.common.status
   // OR as flat fields: statuses.commonAuthorityStatus
+  // OR at the carrier level: carrier.commonAuthorityStatus
   function getStatus(key: string): string | undefined {
     // Nested: statuses.common.status
     if (statuses[key]?.status) return statuses[key].status
-    // Flat: statuses.commonAuthorityStatus
-    return statuses[`${key}AuthorityStatus`] || undefined
+    // Flat on statuses: statuses.commonAuthorityStatus
+    if (statuses[`${key}AuthorityStatus`]) return statuses[`${key}AuthorityStatus`]
+    // Flat on auth root: auth.commonAuthorityStatus
+    if (auth[`${key}AuthorityStatus`]) return auth[`${key}AuthorityStatus`]
+    // On carrier object: carrier.commonAuthorityStatus
+    if (carrier[`${key}AuthorityStatus`]) return carrier[`${key}AuthorityStatus`]
+    // Simple key on statuses: statuses.common (as a string value)
+    if (typeof statuses[key] === 'string') return statuses[key]
+    return undefined
   }
 
   function getDate(key: string, dateField: string): string {
     // Nested: statuses.common.grantedDate
     if (statuses[key]?.[dateField]) return normalizeDate(statuses[key][dateField])
-    // Flat: statuses.commonAuthorityGrantDate
+    // Flat key pattern: commonAuthorityGrantDate / commonAuthorityGrantedDate
     const flatKey = `${key}Authority${dateField.charAt(0).toUpperCase() + dateField.slice(1)}`
-    return normalizeDate(statuses[flatKey] || '')
+    return normalizeDate(statuses[flatKey] || auth[flatKey] || carrier[flatKey] || '')
   }
 
   // Derive authority statuses from timeline if direct statuses are null
