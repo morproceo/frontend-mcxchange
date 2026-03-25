@@ -684,14 +684,24 @@ export function mapToV2AuthorityPending(report: any): V2AuthorityPending {
 // ============================================================
 export function mapToV2BasicScores(report: any): V2BasicScore[] {
   const scores = report?.safety?.basicScores || []
+
+  // FMCSA BASICs are derived from inspections — if the carrier has zero inspections
+  // in the 24-month window, any scores from the data provider are not real FMCSA
+  // percentiles and should be nulled out to avoid misleading the user.
+  const inspTotals = report?.safety?.inspectionTotals || {}
+  const inspRecords = report?.inspections?.records || []
+  const totalInspections = parseFloat(inspTotals.total || inspTotals.last24Months || '0') || inspRecords.length || 0
+  const hasInspections = totalInspections > 0
+
   return scores.map((b: any) => {
     const rawScore = b.score ?? b.percentile ?? b.measure;
+    // Only show a score if the carrier actually has inspections
+    const validScore = hasInspections && rawScore != null ? Number(rawScore) : null;
     return {
       name: b.basicName || b.name || 'Unknown',
-      // Preserve null — means FMCSA doesn't have enough data to score this BASIC
-      score: rawScore != null ? Number(rawScore) : null,
+      score: validScore,
       threshold: b.threshold ?? b.thresholdPercent ?? 65,
-      percentile: rawScore != null ? Number(rawScore) : null,
+      percentile: validScore,
       description: b.description || b.basicCode || '',
     }
   })
@@ -809,6 +819,19 @@ export function mapSMSToV2BasicAlerts(smsData: FMCSASMSData): V2BasicAlerts {
 }
 
 export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
+  // No inspections → no BASIC alerts possible
+  const inspTotals = report?.safety?.inspectionTotals || {}
+  const inspRecords = report?.inspections?.records || []
+  const totalInspections = parseFloat(inspTotals.total || inspTotals.last24Months || '0') || inspRecords.length || 0
+  if (totalInspections === 0) {
+    return {
+      unsafeDrivingAlert: false, hoursOfServiceAlert: false, driverFitnessAlert: false,
+      controlledSubstanceAlert: false, vehicleMaintenanceAlert: false, hazmatAlert: false,
+      crashIndicatorAlert: false, unsafeDrivingOOSAlert: false, hoursOfServiceOOSAlert: false,
+      vehicleMaintenanceOOSAlert: false,
+    }
+  }
+
   const alerts = report?.safety?.basicAlerts || {}
   return {
     unsafeDrivingAlert: alerts.unsafeDriving || alerts.unsafeDrivingAlert || false,
