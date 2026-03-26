@@ -259,6 +259,47 @@ export default function PricingPage() {
           <p className="text-gray-500 mt-2">Enhance your experience with powerful tools.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Package Tool Bundle */}
+          <div className="bg-white rounded-2xl border-2 border-rose-300 p-6 hover:shadow-lg transition-shadow relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-center py-1.5 text-xs font-bold uppercase tracking-wider">
+              Best Value Bundle
+            </div>
+            <div className="flex items-center gap-3 mb-4 mt-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Package Tool</h3>
+                <p className="text-sm text-gray-500">All-in-one tools bundle</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Get all three carrier intelligence tools in one package — CarrierPulse, Chameleon Carrier Search, and Safety Improvement Report.
+            </p>
+            <ul className="space-y-2 mb-4">
+              <li className="flex items-center gap-2 text-sm">
+                <Check className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                <span className="text-gray-700">CarrierPulse — BASIC scores & inspections</span>
+              </li>
+              <li className="flex items-center gap-2 text-sm">
+                <Check className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                <span className="text-gray-700">Chameleon Check — carrier identity search</span>
+              </li>
+              <li className="flex items-center gap-2 text-sm">
+                <Check className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                <span className="text-gray-700">Safety Improvement Report</span>
+              </li>
+            </ul>
+            <div className="flex items-baseline gap-1 mb-1">
+              <span className="text-2xl font-bold text-gray-900">$16.99</span>
+              <span className="text-gray-500">/month</span>
+            </div>
+            <p className="text-xs text-rose-500 font-medium mb-4">Save vs. buying tools individually</p>
+            <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold hover:from-rose-600 hover:to-pink-600 transition-colors shadow-lg shadow-rose-500/25">
+              Get Package Tool
+            </button>
+          </div>
+
           <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
