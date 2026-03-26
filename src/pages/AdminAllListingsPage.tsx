@@ -968,12 +968,13 @@ const AdminAllListingsPage = () => {
   }
 
   const handleAddListing = async () => {
-    if (!selectedSeller) {
-      setAddListingError('Please search and select a seller to assign this listing to')
-      return
-    }
-    if (!newListing.mcNumber) {
-      setAddListingError('MC Number is required')
+    const missingFields: string[] = []
+    if (!newListing.mcNumber) missingFields.push('MC Number')
+    if (!selectedSeller) missingFields.push('Seller (search and select a seller)')
+    if (!newListing.price) missingFields.push('Asking Price')
+
+    if (missingFields.length > 0) {
+      setAddListingError(`Missing required fields: ${missingFields.join(', ')}`)
       return
     }
 
@@ -2919,7 +2920,7 @@ const AdminAllListingsPage = () => {
                 <div className="flex gap-3 pt-4 border-t border-gray-200">
                   <Button
                     onClick={handleAddListing}
-                    disabled={addListingLoading || !newListing.mcNumber || !selectedSeller || !newListing.price}
+                    disabled={addListingLoading}
                     className="flex-1 bg-indigo-600 hover:bg-indigo-700"
                   >
                     {addListingLoading ? (
