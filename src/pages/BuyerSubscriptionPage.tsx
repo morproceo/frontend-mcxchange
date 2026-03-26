@@ -606,8 +606,8 @@ const BuyerSubscriptionPage = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-12">
-          {plans.map((plan, index) => {
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
+          {plans.filter(p => p.id !== 'package_tool').map((plan, index) => {
             const Icon = plan.icon
             const isSelected = selectedPlan === plan.id
             const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === plan.id
@@ -755,6 +755,98 @@ const BuyerSubscriptionPage = () => {
             )
           })}
         </div>
+
+        {/* Package Tool Add-On */}
+        {(() => {
+          const pkgPlan = plans.find(p => p.id === 'package_tool')
+          if (!pkgPlan) return null
+          const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === 'package_tool'
+          const isSelected = selectedPlan === 'package_tool'
+          const displayPrice = billingCycle === 'monthly' ? pkgPlan.priceMonthly : Number(getMonthlyEquivalent(pkgPlan))
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-12"
+            >
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-rose-100 to-pink-100 border border-rose-200 mb-3">
+                  <Package className="w-4 h-4 text-rose-600" />
+                  <span className="text-sm font-medium text-rose-700">Add-On Tools Package</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Package Tool</h2>
+                <p className="text-gray-600">All carrier intelligence tools in one bundle — no listing credits needed</p>
+              </div>
+
+              <div className="max-w-2xl mx-auto">
+                <Card
+                  className={`relative overflow-hidden cursor-pointer transition-all ${
+                    isSelected ? 'ring-2 ring-gray-900 border-rose-200' : ''
+                  } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`}
+                  onClick={() => !isCurrentPlan && setSelectedPlan('package_tool')}
+                >
+                  {isCurrentPlan && (
+                    <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-1 text-xs font-bold">
+                      CURRENT PLAN
+                    </div>
+                  )}
+                  <div className={`bg-gradient-to-r from-rose-50 to-pink-50 -m-6 ${isCurrentPlan ? 'mt-2' : ''} mb-6 p-6 border-b border-gray-100`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-lg">
+                          <Package className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900">Package Tool</h3>
+                          <p className="text-sm text-gray-500">Tools-only add-on — no listing credits</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-4xl font-bold text-gray-900">${displayPrice.toFixed(2)}</span>
+                          <span className="text-gray-500">/month</span>
+                        </div>
+                        {billingCycle === 'yearly' && (
+                          <p className="text-sm text-gray-500">Billed ${pkgPlan.priceYearly.toFixed(2)} annually</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    {pkgPlan.features.map((feature, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <Check className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                        <span className="text-gray-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {isCurrentPlan ? (
+                    <Button fullWidth variant="outline" disabled className="bg-green-50 border-green-200 text-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Current Plan
+                    </Button>
+                  ) : (
+                    <Button
+                      fullWidth
+                      variant={isSelected ? 'primary' : 'outline'}
+                      onClick={(e) => { e.stopPropagation(); setSelectedPlan('package_tool') }}
+                      className={isSelected ? 'bg-gradient-to-r from-rose-500 to-pink-500 border-0' : ''}
+                    >
+                      {isSelected ? (
+                        <><Check className="w-4 h-4 mr-2" /> Selected</>
+                      ) : (
+                        'Select Package Tool'
+                      )}
+                    </Button>
+                  )}
+                </Card>
+              </div>
+            </motion.div>
+          )
+        })()}
 
         {/* Checkout Section */}
         {selectedPlan && (!hasActiveSubscription || subscription.plan.toLowerCase() !== selectedPlan) && (() => {
