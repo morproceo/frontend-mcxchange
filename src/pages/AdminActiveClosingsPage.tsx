@@ -184,6 +184,30 @@ const AdminActiveClosingsPage = () => {
     }
   }
 
+  // Message Parties Modal State
+  const [messageModalTxn, setMessageModalTxn] = useState<TransactionData | null>(null)
+  const [messageContent, setMessageContent] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
+
+  const handleSendMessageToParties = async () => {
+    if (!messageModalTxn || !messageContent.trim()) return
+    setSendingMessage(true)
+    try {
+      const response = await api.sendTransactionMessage(messageModalTxn.id, messageContent.trim())
+      if (response.success) {
+        toast.success('Message sent to transaction room!')
+        setMessageContent('')
+        setMessageModalTxn(null)
+      } else {
+        toast.error('Failed to send message')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send message')
+    } finally {
+      setSendingMessage(false)
+    }
+  }
+
   // Create Transaction Modal State
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
@@ -934,7 +958,7 @@ const AdminActiveClosingsPage = () => {
                             Open Transaction Room
                           </Button>
                         </Link>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => setMessageModalTxn(txn)}>
                           <MessageSquare className="w-4 h-4 mr-1" />
                           Message Parties
                         </Button>
@@ -1295,7 +1319,7 @@ const AdminActiveClosingsPage = () => {
                         Open Full Transaction Room
                       </Button>
                     </Link>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => setMessageModalTxn(selectedTransaction)}>
                       <MessageSquare className="w-4 h-4 mr-2" />
                       Message All Parties
                     </Button>
@@ -1315,6 +1339,72 @@ const AdminActiveClosingsPage = () => {
                       Refresh Data
                     </Button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Message Parties Modal */}
+      <AnimatePresence>
+        {messageModalTxn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => { setMessageModalTxn(null); setMessageContent('') }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-indigo-600" />
+                      Message Parties
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      MC #{messageModalTxn.listing?.mcNumber} — {messageModalTxn.buyer?.name} & {messageModalTxn.seller?.name}
+                    </p>
+                  </div>
+                  <button onClick={() => { setMessageModalTxn(null); setMessageContent('') }} className="p-2 hover:bg-gray-100 rounded-lg">
+                    <X className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <textarea
+                  placeholder="Type your message to both parties..."
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={handleSendMessageToParties}
+                    disabled={sendingMessage || !messageContent.trim()}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    {sendingMessage ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                    ) : (
+                      <><Send className="w-4 h-4 mr-2" /> Send Message</>
+                    )}
+                  </Button>
+                  <Link to={`/transaction/${messageModalTxn.id}`}>
+                    <Button variant="outline">
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Open Room
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </motion.div>

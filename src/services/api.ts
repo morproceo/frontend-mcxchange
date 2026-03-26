@@ -1552,6 +1552,17 @@ class ApiService {
   }
 
   // Admin delete transaction
+  async sendTransactionMessage(transactionId: string, content: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/transactions/${transactionId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
   async adminSendTransactionEmails(transactionId: string) {
     return this.request<{
       success: boolean;
