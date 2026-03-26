@@ -24,11 +24,13 @@ import {
   ShieldQuestion,
   UserCheck,
   Ban,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import api from '../services/api'
+import { toast } from 'react-hot-toast'
 import type { StripeTransaction } from '../types'
 
 interface Transaction {
@@ -121,6 +123,26 @@ const AdminTransactionsPage = () => {
   const [stripeStatusFilter, setStripeStatusFilter] = useState<'all' | 'succeeded' | 'pending' | 'failed'>('all')
   const [stripeSearchQuery, setStripeSearchQuery] = useState('')
   const [selectedStripeTransaction, setSelectedStripeTransaction] = useState<string | null>(null)
+
+  // Send emails state
+  const [sendingEmailsFor, setSendingEmailsFor] = useState<string | null>(null)
+
+  // Handle sending notification emails for a transaction
+  const handleSendEmails = async (txnId: string) => {
+    setSendingEmailsFor(txnId)
+    try {
+      const response = await api.adminSendTransactionEmails(txnId)
+      if (response.success) {
+        toast.success(response.message || 'Notification emails sent!')
+      } else {
+        toast.error('Failed to send emails')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send notification emails')
+    } finally {
+      setSendingEmailsFor(null)
+    }
+  }
 
   // Block user for mismatch state
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null)
@@ -1018,15 +1040,29 @@ const AdminTransactionsPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 text-xs text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Created: {new Date(txn.createdAt).toLocaleString()}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-6 text-xs text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Created: {new Date(txn.createdAt).toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3" />
+                          Updated: {new Date(txn.updatedAt).toLocaleString()}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <RefreshCw className="w-3 h-3" />
-                        Updated: {new Date(txn.updatedAt).toLocaleString()}
-                      </div>
+                      <Button
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleSendEmails(txn.id) }}
+                        disabled={sendingEmailsFor === txn.id}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        {sendingEmailsFor === txn.id ? (
+                          <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Sending...</>
+                        ) : (
+                          <><Send className="w-3 h-3 mr-1.5" /> Send Notification Emails</>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 )}
