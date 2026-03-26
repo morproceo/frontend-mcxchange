@@ -178,19 +178,24 @@ interface RecentSearch {
   timestamp: number
 }
 
-const RECENT_SEARCHES_KEY = 'carrierPulse_recentSearches'
+const RECENT_SEARCHES_KEY_PREFIX = 'carrierPulse_recentSearches'
 
-function getRecentSearches(): RecentSearch[] {
+function getRecentSearchesKey(userId?: string): string {
+  return userId ? `${RECENT_SEARCHES_KEY_PREFIX}_${userId}` : RECENT_SEARCHES_KEY_PREFIX
+}
+
+function getRecentSearches(userId?: string): RecentSearch[] {
   try {
-    const raw = localStorage.getItem(RECENT_SEARCHES_KEY)
+    const raw = localStorage.getItem(getRecentSearchesKey(userId))
     return raw ? JSON.parse(raw) : []
   } catch { return [] }
 }
 
-function addRecentSearch(dotNumber: string, carrierName: string) {
-  const existing = getRecentSearches().filter(s => s.dotNumber !== dotNumber)
+function addRecentSearch(dotNumber: string, carrierName: string, userId?: string) {
+  const key = getRecentSearchesKey(userId)
+  const existing = getRecentSearches(userId).filter(s => s.dotNumber !== dotNumber)
   const updated = [{ dotNumber, carrierName, timestamp: Date.now() }, ...existing].slice(0, 10)
-  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated))
+  localStorage.setItem(key, JSON.stringify(updated))
 }
 
 // ============================================================
@@ -2232,7 +2237,7 @@ export default function CarrierPulsePage() {
   const [dotInput, setDotInput] = useState('')
   const [activeDot, setActiveDot] = useState<string | undefined>(urlDotNumber)
   const [activeTab, setActiveTab] = useState('overview')
-  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(getRecentSearches())
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(getRecentSearches(user?.id))
 
   // Access gating
   const [accessChecked, setAccessChecked] = useState(false)
@@ -2324,8 +2329,8 @@ export default function CarrierPulsePage() {
   useEffect(() => {
     if (carrierReport && activeDot) {
       const name = carrierReport?.carrier?.legalName || 'Unknown Carrier'
-      addRecentSearch(activeDot, name)
-      setRecentSearches(getRecentSearches())
+      addRecentSearch(activeDot, name, user?.id)
+      setRecentSearches(getRecentSearches(user?.id))
     }
   }, [carrierReport, activeDot])
 
