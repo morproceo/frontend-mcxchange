@@ -34,7 +34,8 @@ import {
   Plus,
   X,
   Truck,
-  Trash2
+  Trash2,
+  Send
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -165,6 +166,23 @@ const AdminActiveClosingsPage = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null)
+  const [sendingEmailsFor, setSendingEmailsFor] = useState<string | null>(null)
+
+  const handleSendEmails = async (txnId: string) => {
+    setSendingEmailsFor(txnId)
+    try {
+      const response = await api.adminSendTransactionEmails(txnId)
+      if (response.success) {
+        toast.success(response.message || 'Notification emails sent!')
+      } else {
+        toast.error('Failed to send emails')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send notification emails')
+    } finally {
+      setSendingEmailsFor(null)
+    }
+  }
 
   // Create Transaction Modal State
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -920,6 +938,18 @@ const AdminActiveClosingsPage = () => {
                           <MessageSquare className="w-4 h-4 mr-1" />
                           Message Parties
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSendEmails(txn.id)}
+                          disabled={sendingEmailsFor === txn.id}
+                        >
+                          {sendingEmailsFor === txn.id ? (
+                            <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Sending...</>
+                          ) : (
+                            <><Send className="w-4 h-4 mr-1" /> Send Notification Emails</>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -1268,6 +1298,17 @@ const AdminActiveClosingsPage = () => {
                     <Button variant="outline">
                       <MessageSquare className="w-4 h-4 mr-2" />
                       Message All Parties
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSendEmails(selectedTransaction.id)}
+                      disabled={sendingEmailsFor === selectedTransaction.id}
+                    >
+                      {sendingEmailsFor === selectedTransaction.id ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                      ) : (
+                        <><Send className="w-4 h-4 mr-2" /> Send Notification Emails</>
+                      )}
                     </Button>
                     <Button variant="outline" onClick={() => fetchTransactions(true)}>
                       <RefreshCw className="w-4 h-4 mr-2" />
