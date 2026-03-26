@@ -682,7 +682,7 @@ const TransactionRoomPage = () => {
               dbaName: txn.listing.dbaName || (prev.listing as any).dbaName,
               title: txn.listing.title || prev.listing.title,
               description: txn.listing.description || prev.listing.description,
-              price: txn.listing.price || prev.listing.price,
+              price: txn.listing.askingPrice || txn.listing.listingPrice || prev.listing.price,
               yearsActive: txn.listing.yearsActive || prev.listing.yearsActive,
               // Backend has cargoTypes as JSON string, parse and use as operationType
               operationType: txn.listing.cargoTypes
@@ -962,13 +962,15 @@ const TransactionRoomPage = () => {
             yearsActive: listing.yearsActive || 0,
             fleetSize: listing.fleetSize || 0,
             totalDrivers: listing.totalDrivers || 0,
-            safetyRating: listing.safetyRating || 'None',
+            safetyRating: listing.safetyRating
+              ? listing.safetyRating.charAt(0).toUpperCase() + listing.safetyRating.slice(1).toLowerCase()
+              : 'None',
             saferScore: listing.saferScore,
             insuranceOnFile: listing.insuranceOnFile ?? false,
             bipdCoverage: listing.bipdCoverage,
             cargoCoverage: listing.cargoCoverage,
             bondAmount: listing.bondAmount,
-            amazonStatus: listing.amazonStatus || 'not-setup',
+            amazonStatus: listing.amazonStatus?.toLowerCase() || 'not-setup',
             amazonRelayScore: listing.amazonRelayScore,
             highwaySetup: listing.highwaySetup ?? false,
             sellingWithEmail: listing.sellingWithEmail ?? false,
