@@ -18,6 +18,8 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const AdminRegisterPage = lazy(() => import('./pages/AdminRegisterPage'))
 const SellerVerificationPage = lazy(() => import('./pages/SellerVerificationPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const MCDetailPage = lazy(() => import('./pages/MCDetailPage'))
 const MCDetailPageV2 = lazy(() => import('./pages/MCDetailPageV2'))
@@ -121,6 +123,8 @@ function App() {
               <Route path="admin-register" element={<AdminRegisterPage />} />
               <Route path="seller-verification" element={<SellerVerificationPage />} />
               <Route path="verify-email" element={<VerifyEmailPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="reset-password" element={<ResetPasswordPage />} />
               <Route path="marketplace" element={<MarketplacePage />} />
               <Route path="mc/:id" element={<MCDetailPageV2 />} />
               <Route path="mc-v2/:id" element={<MCDetailPageV2 />} />

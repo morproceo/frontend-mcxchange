@@ -221,6 +221,21 @@ class ApiService {
     });
   }
 
+  // Password reset
+  async forgotPassword(email: string) {
+    return this.request<{ success: boolean; message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    return this.request<{ success: boolean; message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+  }
+
   // Email verification
   async verifyEmail(token: string) {
     return this.request<{ success: boolean; message: string }>('/auth/verify-email', {
