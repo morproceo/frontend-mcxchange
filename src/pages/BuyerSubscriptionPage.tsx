@@ -33,6 +33,13 @@ import type { SubscriptionPlanConfig, CreditPack } from '../types'
 
 // Plan display configuration (styling only - prices come from API)
 const planStyles = {
+  package_tool: {
+    icon: Package,
+    color: 'from-rose-500 to-pink-500',
+    bgColor: 'from-rose-50 to-pink-50',
+    borderColor: 'border-rose-200',
+    popular: false,
+  },
   starter: {
     icon: Coins,
     color: 'from-blue-500 to-cyan-500',
@@ -599,7 +606,7 @@ const BuyerSubscriptionPage = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-12">
           {plans.map((plan, index) => {
             const Icon = plan.icon
             const isSelected = selectedPlan === plan.id
@@ -607,6 +614,7 @@ const BuyerSubscriptionPage = () => {
             const displayPrice = billingCycle === 'monthly' ? plan.priceMonthly : Number(getMonthlyEquivalent(plan))
             const yearlyTotal = plan.priceYearly
             const isVip = plan.id === 'vip_access'
+            const isToolsOnly = plan.credits === 0
 
             return (
               <motion.div
@@ -641,7 +649,7 @@ const BuyerSubscriptionPage = () => {
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                         <p className="text-sm text-gray-500">
-                          {isVip ? 'All Access Plan' : `${plan.credits} credits/month`}
+                          {isVip ? 'All Access Plan' : isToolsOnly ? 'Add-On Tools Package' : `${plan.credits} credits/month`}
                         </p>
                       </div>
                     </div>
@@ -658,7 +666,7 @@ const BuyerSubscriptionPage = () => {
                     )}
                   </div>
 
-                  {/* Credits Highlight / VIP Highlight */}
+                  {/* Credits Highlight / VIP Highlight / Tools-Only */}
                   {isVip ? (
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
@@ -681,6 +689,14 @@ const BuyerSubscriptionPage = () => {
                           <span className="font-semibold text-purple-700">Free consultation call with Maria</span>
                           <span className="text-gray-600"> — personalized guidance on your MC purchase</span>
                         </div>
+                      </div>
+                    </div>
+                  ) : isToolsOnly ? (
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 mb-6">
+                      <Package className="w-8 h-8 text-rose-500" />
+                      <div>
+                        <div className="text-lg font-bold text-rose-600">Add-On Tools</div>
+                        <div className="text-sm text-gray-600">No listing credits — tools only</div>
                       </div>
                     </div>
                   ) : (
@@ -759,7 +775,7 @@ const BuyerSubscriptionPage = () => {
                   {hasActiveSubscription ? 'Upgrade Your Subscription' : 'Complete Your Subscription'}
                 </h2>
                 <p className="text-gray-600">
-                  {selectedPlanData.name} Plan {selectedPlan !== 'vip_access' ? `- ${selectedPlanData.credits} credits/month` : '- All Access'}
+                  {selectedPlanData.name} Plan {selectedPlan === 'vip_access' ? '- All Access' : selectedPlanData.credits === 0 ? '- Tools Only' : `- ${selectedPlanData.credits} credits/month`}
                 </p>
               </div>
 
@@ -833,7 +849,7 @@ const BuyerSubscriptionPage = () => {
         {/* CarrierPulse Add-On */}
         {(() => {
           const planLower = subscription?.plan?.toLowerCase()
-          const hasHigherPlan = planLower === 'premium' || planLower === 'enterprise' || planLower === 'vip_access'
+          const hasHigherPlan = planLower === 'package_tool' || planLower === 'professional' || planLower === 'premium' || planLower === 'enterprise' || planLower === 'vip_access'
           // Show add-on card if: user doesn't have CarrierPulse AND doesn't have a plan that includes it
           if (!carrierPulseAccess && !hasHigherPlan) {
             return (

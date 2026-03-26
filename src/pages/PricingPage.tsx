@@ -11,6 +11,12 @@ import { useAuth } from '../context/AuthContext'
 import type { SubscriptionPlanConfig, CreditPack } from '../types'
 
 const planStyles = {
+  package_tool: {
+    icon: Package,
+    color: 'from-rose-500 to-pink-500',
+    bgColor: 'from-rose-50 to-pink-50',
+    popular: false,
+  },
   starter: {
     icon: Coins,
     color: 'from-blue-500 to-cyan-500',
@@ -131,12 +137,13 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           {plans.map((plan, index) => {
             const Icon = plan.icon
             const displayPrice = billingCycle === 'monthly' ? plan.priceMonthly : Number(getMonthlyEquivalent(plan))
             const yearlyTotal = plan.priceYearly
             const isVip = plan.id === 'vip_access'
+            const isToolsOnly = plan.credits === 0
 
             return (
               <motion.div
@@ -160,7 +167,7 @@ export default function PricingPage() {
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {isVip ? 'All Access Plan' : `${plan.credits} credits/month`}
+                        {isVip ? 'All Access Plan' : isToolsOnly ? 'Add-On Tools Package' : `${plan.credits} credits/month`}
                       </p>
                     </div>
                   </div>
@@ -176,7 +183,7 @@ export default function PricingPage() {
                 </div>
 
                 <div className="p-6">
-                  {/* Credits / VIP Highlight */}
+                  {/* Credits / VIP Highlight / Tools-Only */}
                   {isVip ? (
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
@@ -197,6 +204,14 @@ export default function PricingPage() {
                         <div className="text-xs">
                           <span className="font-semibold text-purple-700">Free consultation call with Maria</span>
                         </div>
+                      </div>
+                    </div>
+                  ) : isToolsOnly ? (
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 mb-6">
+                      <Package className="w-8 h-8 text-rose-500" />
+                      <div>
+                        <div className="text-lg font-bold text-rose-600">Add-On Tools</div>
+                        <div className="text-sm text-gray-600">No listing credits — tools only</div>
                       </div>
                     </div>
                   ) : (
@@ -261,7 +276,7 @@ export default function PricingPage() {
               <span className="text-2xl font-bold text-gray-900">$12.99</span>
               <span className="text-gray-500">/month</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Professional, Premium, Enterprise & VIP plans</p>
+            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Package Tool, Professional, Premium, Enterprise & VIP plans</p>
             <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors">
               Add CarrierPulse
             </button>
