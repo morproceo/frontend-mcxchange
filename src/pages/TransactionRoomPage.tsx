@@ -1522,8 +1522,8 @@ For questions, contact us at escrow@domilea.com`
             <p className="text-2xl font-bold">{transaction.safetyRecord.saferScore}</p>
           </div>
           <div>
-            <p className="text-gray-400 text-sm">Amazon Score</p>
-            <p className="text-2xl font-bold">{transaction.platformIntegrations.amazonRelay.score}-Rated</p>
+            <p className="text-gray-400 text-sm">Authority Status</p>
+            <p className="text-2xl font-bold">{(transaction.listing as any).authorityStatus || 'Active'}</p>
           </div>
         </div>
       </div>
@@ -3408,60 +3408,6 @@ For questions, contact us at escrow@domilea.com`
 
             {/* Right Column - Actions & Quick Info */}
             <div className="space-y-6">
-              {/* Platform Integrations */}
-              <Card>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Integrations</h3>
-                <div className="space-y-4">
-                  {/* Amazon Relay */}
-                  <div className="bg-orange-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">Amazon Relay</span>
-                      <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-bold">
-                        {transaction.platformIntegrations.amazonRelay.score}-Rating
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-gray-500">Completed Loads</p>
-                        <p className="font-medium">{transaction.platformIntegrations.amazonRelay.loads}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Member Since</p>
-                        <p className="font-medium">{transaction.platformIntegrations.amazonRelay.memberSince.toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Highway */}
-                  <div className="bg-blue-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">Highway.com</span>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                        {transaction.platformIntegrations.highway.status}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      {transaction.platformIntegrations.highway.factoring && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Factoring</span>
-                      )}
-                      {transaction.platformIntegrations.highway.quickPay && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">QuickPay</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* DAT */}
-                  <div className="bg-green-50 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">DAT Load Board</span>
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                        {transaction.platformIntegrations.dat.rating}% Rating
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
               {/* Safety Summary */}
               <Card>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Safety Summary</h3>

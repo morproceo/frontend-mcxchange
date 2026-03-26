@@ -61,7 +61,7 @@ export interface UserResponse {
 }
 
 // Subscription Types
-export type SubscriptionPlan = 'starter' | 'professional' | 'premium' | 'enterprise' | 'vip_access'
+export type SubscriptionPlan = 'package_tool' | 'starter' | 'professional' | 'premium' | 'enterprise' | 'vip_access'
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'INCOMPLETE'
 
 export interface SubscriptionInfo {
