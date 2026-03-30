@@ -206,8 +206,8 @@ const RegisterPage = () => {
                 setTermsAccepted(false)
               }}
               options={[
-                { value: 'buyer', label: 'Buy MC Authorities' },
-                { value: 'seller', label: 'Sell MC Authorities' }
+                { value: 'buyer', label: 'Buy' },
+                { value: 'seller', label: 'Sell' },
               ]}
             />
 
