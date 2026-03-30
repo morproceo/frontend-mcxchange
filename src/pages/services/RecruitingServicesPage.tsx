@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import api from '../../services/api'
 import {
   Users,
   CheckCircle,
@@ -32,10 +33,21 @@ const RecruitingServicesPage = () => {
     message: ''
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    setError('')
+    try {
+      await api.submitRecruitingForm(formData)
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const services = [
@@ -439,10 +451,10 @@ const RecruitingServicesPage = () => {
                 </Button>
               </a>
 
-              <a href="mailto:recruiting@mcexchange.com">
+              <a href="mailto:info@domilea.com">
                 <Button size="lg" variant="outline" className="min-w-[200px] border-white text-white hover:bg-white/10">
                   <Mail className="w-5 h-5 mr-2" />
-                  recruiting@mcexchange.com
+                  info@domilea.com
                 </Button>
               </a>
             </div>

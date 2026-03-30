@@ -2824,6 +2824,71 @@ class ApiService {
   }
 
   // ===========================
+  // Safety Services
+  // ===========================
+
+  async submitSafetyForm(data: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    mcNumber?: string;
+    serviceType?: string;
+    message?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/safety-services/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ===========================
+  // Recruiting Services
+  // ===========================
+
+  async submitRecruitingForm(data: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    driversNeeded?: string;
+    driverType?: string;
+    message?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/recruiting-services/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ===========================
+  // Fuel Program
+  // ===========================
+
+  async submitFuelProgramForm(data: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    fleetSize?: string;
+    message?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/fuel-program/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ===========================
   // AI Chat Assistant
   // ===========================
 

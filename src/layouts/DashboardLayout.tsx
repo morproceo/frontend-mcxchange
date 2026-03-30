@@ -32,7 +32,13 @@ import {
   Activity,
   LucideIcon,
   Calendar,
-  FileSearch
+  FileSearch,
+  Briefcase,
+  Fuel,
+  ShieldCheck,
+  UserSearch,
+  Truck,
+  ClipboardList
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import TrustBadge from '../components/ui/TrustBadge'
@@ -145,6 +151,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
           { icon: Activity, label: 'CarrierPulse', path: '/seller/carrier-pulse', badge: 'New' },
           { icon: ShieldAlert, label: 'Chameleon Check', path: '/seller/chameleon-check' },
+          {
+            label: 'Services',
+            icon: Briefcase,
+            items: [
+              { icon: Fuel, label: 'Fuel Program', path: '/services/fuel-program' },
+              { icon: ShieldCheck, label: 'Safety Services', path: '/services/safety' },
+              { icon: UserSearch, label: 'Recruiting', path: '/services/recruiting' },
+              { icon: Truck, label: 'Dispatch', path: '/services/dispatch' },
+              { icon: ClipboardList, label: 'Back Office', path: '/services/admin' },
+            ]
+          },
         ]
       case 'buyer':
         return [
@@ -163,6 +180,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             : []),
           { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' },
           { icon: ShieldAlert, label: 'Chameleon Check', path: '/buyer/chameleon-check' },
+          {
+            label: 'Services',
+            icon: Briefcase,
+            items: [
+              { icon: Fuel, label: 'Fuel Program', path: '/services/fuel-program' },
+              { icon: ShieldCheck, label: 'Safety Services', path: '/services/safety' },
+              { icon: UserSearch, label: 'Recruiting', path: '/services/recruiting' },
+              { icon: Truck, label: 'Dispatch', path: '/services/dispatch' },
+              { icon: ClipboardList, label: 'Back Office', path: '/services/admin' },
+            ]
+          },
         ]
       case 'admin':
         return [
