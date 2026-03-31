@@ -275,6 +275,38 @@ export const SellerTermsContent = () => {
       <p className="text-gray-700 mb-4">
         You acknowledge that the Marketplace is not a data storage service or a &quot;record keeper&quot; for your regulatory compliance. While we may retain certain data for our own compliance purposes, we generally have no obligation to store, maintain, or provide you with copies of any Content, Listings, or Data Room logs you provide or access. You are solely responsible for creating and maintaining your own backups of your data and transaction records as required by the FMCSA, IRS, or other applicable laws. and then
       </p>
+
+      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 11: SMS/TEXT MESSAGING TERMS</h2>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.1. Description of SMS Services.</h3>
+      <p className="text-gray-700 mb-4">
+        By opting in to SMS communications from Domilea.CO, you may receive text messages including but not limited to: promotional materials and special offers, account notifications and alerts, transaction updates and order confirmations, appointment reminders, listing activity updates, and other service-related communications.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.2. Opt-Out Instructions.</h3>
+      <p className="text-gray-700 mb-4">
+        You may opt out of receiving SMS messages at any time by texting <strong>STOP</strong> to any message you receive from Domilea.CO. Upon receipt of your STOP request, you will receive a one-time confirmation message and will no longer receive SMS messages from us. To resume messages, text <strong>START</strong>. For assistance, text <strong>HELP</strong> or contact us at info@domilea.com.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.3. Message Frequency and Data Rates.</h3>
+      <p className="text-gray-700 mb-4">
+        Message frequency may vary based on your account activity and preferences. Up to 4 messages per month. Standard message and data rates may apply depending on your mobile carrier and plan. Domilea.CO is not responsible for any messaging or data charges imposed by your carrier.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.4. Carrier Liability Disclaimer.</h3>
+      <p className="text-gray-700 mb-4">
+        Mobile carriers are not liable for delayed or undelivered messages. Domilea.CO makes no guarantees regarding the delivery, timeliness, or accuracy of SMS messages. Service availability may be affected by your carrier, network conditions, or device compatibility.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.5. No Sharing of SMS Data.</h3>
+      <p className="text-gray-700 mb-4">
+        Domilea.CO will not share, sell, or disclose your phone number or SMS opt-in consent to any third parties or affiliates for marketing or promotional purposes. Your phone number will only be used by Domilea.CO to deliver the messages you have consented to receive.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.6. Age Restriction.</h3>
+      <p className="text-gray-700 mb-4">
+        You must be at least 18 years of age to opt in to and use Domilea.CO&apos;s SMS messaging services. By opting in, you confirm that you are 18 years of age or older. If we become aware that a person under the age of 18 has opted in to our SMS services, we will promptly remove their phone number and opt-in consent from our records.
+      </p>
     </div>
   )
 }
@@ -462,6 +494,38 @@ export const BuyerTermsContent = () => {
       <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">6.9. Representations of Authority and Personal Liability for Fraud.</h3>
       <p className="text-gray-700 mb-4">
         If Buyer is an entity (e.g., corporation, LLC, or partnership), the individual executing this Agreement by clicking &quot;I Agree&quot; (the &quot;Signatory&quot;) represents and warrants that they are a duly authorized officer, agent, or representative of such entity with full legal authority to bind the entity to these Terms. Notwithstanding the foregoing, the Signatory expressly agrees that they shall be personally liable, jointly and severally with the purported Buyer, for all obligations, damages, indemnities, and fees arising under this Agreement in the event that: (i) the Buyer entity does not exist, is dissolved, or is not in good standing with its jurisdiction of formation at the time of execution; (ii) the Signatory lacks the actual authority to bind the entity; (iii) the Signatory utilizes a false identity, alias, or stolen credentials to access the Platform; or (iv) the corporate form is utilized to perpetuate a fraud or circumvent the Marketplace’s fee structure. The Signatory hereby knowingly and voluntarily waives any common law or statutory &quot;corporate shield&quot; or &quot;piercing the corporate veil&quot; defenses and agrees to indemnify the Marketplace for all legal costs incurred in establishing the Signatory’s personal liability under this Section.
+      </p>
+
+      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 7: SMS/TEXT MESSAGING TERMS</h2>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.1. Description of SMS Services.</h3>
+      <p className="text-gray-700 mb-4">
+        By opting in to SMS communications from Domilea.CO, you may receive text messages including but not limited to: promotional materials and special offers, account notifications and alerts, transaction updates and order confirmations, appointment reminders, listing activity updates, and other service-related communications.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.2. Opt-Out Instructions.</h3>
+      <p className="text-gray-700 mb-4">
+        You may opt out of receiving SMS messages at any time by texting <strong>STOP</strong> to any message you receive from Domilea.CO. Upon receipt of your STOP request, you will receive a one-time confirmation message and will no longer receive SMS messages from us. To resume messages, text <strong>START</strong>. For assistance, text <strong>HELP</strong> or contact us at info@domilea.com.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.3. Message Frequency and Data Rates.</h3>
+      <p className="text-gray-700 mb-4">
+        Message frequency may vary based on your account activity and preferences. Up to 4 messages per month. Standard message and data rates may apply depending on your mobile carrier and plan. Domilea.CO is not responsible for any messaging or data charges imposed by your carrier.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.4. Carrier Liability Disclaimer.</h3>
+      <p className="text-gray-700 mb-4">
+        Mobile carriers are not liable for delayed or undelivered messages. Domilea.CO makes no guarantees regarding the delivery, timeliness, or accuracy of SMS messages. Service availability may be affected by your carrier, network conditions, or device compatibility.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.5. No Sharing of SMS Data.</h3>
+      <p className="text-gray-700 mb-4">
+        Domilea.CO will not share, sell, or disclose your phone number or SMS opt-in consent to any third parties or affiliates for marketing or promotional purposes. Your phone number will only be used by Domilea.CO to deliver the messages you have consented to receive.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.6. Age Restriction.</h3>
+      <p className="text-gray-700 mb-4">
+        You must be at least 18 years of age to opt in to and use Domilea.CO&apos;s SMS messaging services. By opting in, you confirm that you are 18 years of age or older. If we become aware that a person under the age of 18 has opted in to our SMS services, we will promptly remove their phone number and opt-in consent from our records.
       </p>
     </div>
   )
