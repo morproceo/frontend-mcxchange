@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <h3 className="text-white text-lg font-semibold mb-2">Domilea</h3>
+            <h3 className="text-white text-lg font-semibold mb-2">Domilea.CO</h3>
           </div>
 
           {/* Quick Links */}
@@ -31,7 +31,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-gray-800 mt-10 pt-6 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Domilea. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Domilea.CO. All rights reserved.</p>
         </div>
       </div>
     </footer>
