@@ -260,7 +260,7 @@ const RegisterPage = () => {
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
                 />
                 <span className="text-xs text-gray-600 leading-relaxed">
-                  I consent to receive marketing text messages from <span className="font-semibold">Domilea.CO</span> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text <span className="font-semibold">HELP</span> for assistance. Reply <span className="font-semibold">STOP</span> to opt out.
+                  I consent to receive marketing text messages from <span className="font-semibold">Domilea.CO</span> at the phone number provided. Up to 4 messages per month. Message &amp; data rates may apply. Reply <span className="font-semibold">STOP</span> to unsubscribe. Text <span className="font-semibold">HELP</span> for assistance.
                 </span>
               </label>
 
@@ -272,7 +272,7 @@ const RegisterPage = () => {
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
                 />
                 <span className="text-xs text-gray-600 leading-relaxed">
-                  I consent to receive non-marketing text messages from <span className="font-semibold">Domilea.CO</span> about my order updates, appointment reminders, and other transactional notifications. Message &amp; data rates may apply.
+                  I consent to receive non-marketing text messages from <span className="font-semibold">Domilea.CO</span> about my order updates, appointment reminders, and other transactional notifications. Up to 4 messages per month. Message &amp; data rates may apply. Reply <span className="font-semibold">STOP</span> to unsubscribe. Text <span className="font-semibold">HELP</span> for assistance.
                 </span>
               </label>
             </div>

@@ -585,14 +585,30 @@ export const PrivacyContent = () => {
       </p>
       <ul className="list-disc pl-6 text-gray-700 mb-4 space-y-3">
         <li>
-          I consent to receive marketing text messages from <strong>Domilea.CO</strong> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text <strong>HELP</strong> for assistance. Reply <strong>STOP</strong> to opt out.
+          I consent to receive marketing text messages from <strong>Domilea.CO</strong> at the phone number provided. Up to 4 messages per month. Message &amp; data rates may apply. Reply <strong>STOP</strong> to unsubscribe. Text <strong>HELP</strong> for assistance.
         </li>
         <li>
-          I consent to receive non-marketing text messages from <strong>Domilea.CO</strong> about my order updates, appointment reminders, and other transactional notifications. Message &amp; data rates may apply.
+          I consent to receive non-marketing text messages from <strong>Domilea.CO</strong> about my order updates, appointment reminders, and other transactional notifications. Up to 4 messages per month. Message &amp; data rates may apply. Reply <strong>STOP</strong> to unsubscribe. Text <strong>HELP</strong> for assistance.
         </li>
       </ul>
+      <p className="text-gray-700 mb-4">
+        <strong>No Sharing of SMS Opt-In Data:</strong> Domilea.CO will not share, sell, or disclose your phone number or SMS opt-in consent to any third parties or affiliates for marketing or promotional purposes. Your phone number will only be used by Domilea.CO to deliver the messages you have consented to receive.
+      </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">5.6. Material Changes and Policy Updates.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">5.6. Cookies, Tracking Technologies, and Analytics.</h3>
+      <p className="text-gray-700 mb-4">
+        Domilea.CO uses cookies and similar tracking technologies (such as pixels, web beacons, and local storage) to enhance your experience, analyze usage patterns, and improve our services. The types of cookies we use include:
+      </p>
+      <ul className="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+        <li><strong>Essential Cookies:</strong> Required for the Platform to function properly, including session management, authentication, and security. These cannot be disabled.</li>
+        <li><strong>Analytics Cookies:</strong> Help us understand how users interact with the Platform by collecting anonymized usage data such as pages visited, time spent, and click behavior. We may use third-party analytics providers (such as Google Analytics) to process this data on our behalf.</li>
+        <li><strong>Functional Cookies:</strong> Remember your preferences and settings (such as language or display options) to provide a personalized experience.</li>
+      </ul>
+      <p className="text-gray-700 mb-4">
+        You may manage or disable non-essential cookies through your browser settings. Please note that disabling certain cookies may affect the functionality of the Platform. By continuing to use the Platform, you consent to our use of cookies as described in this section.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">5.7. Material Changes and Policy Updates.</h3>
       <p className="text-gray-700 mb-4">
         The Marketplace reserves the right to modify, amend, or update this Privacy Policy at any time to reflect changes in our data practices, technological infrastructure, or applicable law. If we make &quot;Material Changes&quot;—defined as changes that significantly expand our rights to use or share your previously collected Personal Information—we will provide notice via a prominent banner on the Platform or via direct email to your registered address prior to the change becoming effective. Your continued use of the Marketplace or the retention of your account after the effective date of any such changes constitutes your valid electronic signature and acceptance of the revised Policy.
       </p>
