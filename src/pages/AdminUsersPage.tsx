@@ -24,7 +24,7 @@ import {
   Star,
   TrendingUp,
   UserPlus,
-  Edit,
+  Edit as PencilIcon,
   Trash2,
   CreditCard,
   History,
@@ -815,8 +815,15 @@ const AdminUsersPage = () => {
                             <MessageSquare className="w-4 h-4" />
                             Send Message
                           </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                            <Edit className="w-4 h-4" />
+                          <button
+                            onClick={() => {
+                              setShowActionMenu(null)
+                              openUserDetail(user)
+                              setTimeout(() => handleEditProfile(), 100)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <PencilIcon className="w-4 h-4" />
                             Edit User
                           </button>
                           {!user.verified && user.status !== 'BLOCKED' && user.role === 'SELLER' && (
@@ -980,11 +987,16 @@ const AdminUsersPage = () => {
                       </span>
                       {!isEditingProfile ? (
                         <button
-                          onClick={handleEditProfile}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Edit profile"
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleEditProfile()
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1"
                         >
-                          <Edit className="w-4 h-4" />
+                          <PencilIcon className="w-3 h-3" />
+                          Edit
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
