@@ -11,12 +11,6 @@ import { useAuth } from '../context/AuthContext'
 import type { SubscriptionPlanConfig, CreditPack } from '../types'
 
 const planStyles = {
-  package_tool: {
-    icon: Package,
-    color: 'from-rose-500 to-pink-500',
-    bgColor: 'from-rose-50 to-pink-50',
-    popular: false,
-  },
   starter: {
     icon: Coins,
     color: 'from-blue-500 to-cyan-500',
@@ -71,10 +65,12 @@ export default function PricingPage() {
       api.getCreditPacks(),
     ]).then(([plansRes, packsRes]) => {
       if (plansRes.data?.length) {
-        setPlans(plansRes.data.map(plan => {
-          const key = plan.id.toLowerCase() as keyof typeof planStyles
-          return { ...plan, ...(planStyles[key] || planStyles.starter), id: key }
-        }))
+        setPlans(plansRes.data
+          .filter(plan => plan.id.toLowerCase() !== 'package_tool')
+          .map(plan => {
+            const key = plan.id.toLowerCase() as keyof typeof planStyles
+            return { ...plan, ...(planStyles[key] || planStyles.starter), id: key }
+          }))
       }
       if (packsRes.data) setCreditPacks(packsRes.data)
     }).finally(() => setLoading(false))
@@ -137,13 +133,12 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {plans.map((plan, index) => {
             const Icon = plan.icon
             const displayPrice = billingCycle === 'monthly' ? plan.priceMonthly : Number(getMonthlyEquivalent(plan))
             const yearlyTotal = plan.priceYearly
             const isVip = plan.id === 'vip_access'
-            const isToolsOnly = plan.credits === 0
 
             return (
               <motion.div
@@ -167,7 +162,7 @@ export default function PricingPage() {
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                       <p className="text-sm text-gray-500">
-                        {isVip ? 'All Access Plan' : isToolsOnly ? 'Add-On Tools Package' : `${plan.credits} credits/month`}
+                        {isVip ? 'All Access Plan' : `${plan.credits} credits/month`}
                       </p>
                     </div>
                   </div>
@@ -204,14 +199,6 @@ export default function PricingPage() {
                         <div className="text-xs">
                           <span className="font-semibold text-purple-700">Free consultation call with Maria</span>
                         </div>
-                      </div>
-                    </div>
-                  ) : isToolsOnly ? (
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 mb-6">
-                      <Package className="w-8 h-8 text-rose-500" />
-                      <div>
-                        <div className="text-lg font-bold text-rose-600">Add-On Tools</div>
-                        <div className="text-sm text-gray-600">No listing credits — tools only</div>
                       </div>
                     </div>
                   ) : (
@@ -291,7 +278,7 @@ export default function PricingPage() {
               </li>
             </ul>
             <div className="flex items-baseline gap-1 mb-1">
-              <span className="text-2xl font-bold text-gray-900">$16.99</span>
+              <span className="text-2xl font-bold text-gray-900">$14.99</span>
               <span className="text-gray-500">/month</span>
             </div>
             <p className="text-xs text-rose-500 font-medium mb-4">Save vs. buying tools individually</p>

@@ -72,8 +72,6 @@ const RegisterPage = () => {
   const [privacyRead, setPrivacyRead] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
-  const [smsTransactionalConsent, setSmsTransactionalConsent] = useState(false)
-  const [smsMarketingConsent, setSmsMarketingConsent] = useState(false)
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string) => {
@@ -372,43 +370,6 @@ const RegisterPage = () => {
             >
               <PrivacyContent />
             </ScrollToAgreeModal>
-
-            {/* SMS Consent Section */}
-            <div className="space-y-3 border-t border-gray-200 pt-5">
-              <p className="text-sm font-semibold text-gray-900">SMS Communications</p>
-
-              {/* Transactional SMS Consent */}
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={smsTransactionalConsent}
-                  onChange={(e) => setSmsTransactionalConsent(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                />
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  I consent to receive transactional messages from{' '}
-                  <span className="font-semibold">Domilea</span> at the phone number provided.
-                  Message frequency may vary. Message & Data rates may apply.
-                  Reply HELP for help or STOP to opt-out.
-                </span>
-              </label>
-
-              {/* Marketing SMS Consent */}
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={smsMarketingConsent}
-                  onChange={(e) => setSmsMarketingConsent(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                />
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  I consent to receive marketing and promotional messages from{' '}
-                  <span className="font-semibold">Domilea</span> at the phone number provided.
-                  Message frequency may vary. Message & Data rates may apply.
-                  Reply HELP for help or STOP to opt-out.
-                </span>
-              </label>
-            </div>
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
               Create Account
