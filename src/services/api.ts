@@ -538,6 +538,13 @@ class ApiService {
   }
 
   // Admin Update User Role
+  async updateUser(userId: string, updates: { name?: string; email?: string; phone?: string; companyName?: string }) {
+    return this.request<any>(`/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
   async updateUserRole(userId: string, role: string) {
     return this.request<any>(`/admin/users/${userId}/role`, {
       method: 'PUT',

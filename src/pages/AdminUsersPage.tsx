@@ -117,6 +117,11 @@ const AdminUsersPage = () => {
   const [editingRole, setEditingRole] = useState<string>('')
   const [roleUpdating, setRoleUpdating] = useState(false)
 
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', companyName: '' })
+  const [profileSaving, setProfileSaving] = useState(false)
+
   // Activity log modal state
   const [showActivityModal, setShowActivityModal] = useState(false)
   const [activityLogLoading, setActivityLogLoading] = useState(false)
@@ -329,8 +334,38 @@ const AdminUsersPage = () => {
     }
   }
 
+  const handleEditProfile = () => {
+    if (!selectedUser) return
+    setEditForm({
+      name: selectedUser.name || '',
+      email: selectedUser.email || '',
+      phone: selectedUser.phone || '',
+      companyName: selectedUser.companyName || '',
+    })
+    setIsEditingProfile(true)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!selectedUser) return
+    try {
+      setProfileSaving(true)
+      await api.updateUser(selectedUser.id, editForm)
+      setSelectedUser({ ...selectedUser, ...editForm })
+      const details = await api.getAdminUserDetails(selectedUser.id)
+      setUserDetails(details)
+      fetchUsers()
+      setIsEditingProfile(false)
+    } catch (err: any) {
+      console.error('Failed to update profile:', err)
+      alert(err.message || 'Failed to update profile')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
   const openUserDetail = async (user: UserData) => {
     setSelectedUser(user)
+    setIsEditingProfile(false)
     setShowDetailModal(true)
     setCreditAmount('')
     setCreditReason('')
@@ -938,48 +973,116 @@ const AdminUsersPage = () => {
                 {/* Contact Info */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <User className="w-5 h-5 text-indigo-600" />
-                      Contact Information
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-indigo-600" />
+                        Contact Information
+                      </span>
+                      {!isEditingProfile ? (
+                        <button
+                          onClick={handleEditProfile}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit profile"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleSaveProfile}
+                            disabled={profileSaving}
+                            className="px-3 py-1 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                          >
+                            {profileSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => setIsEditingProfile(false)}
+                            className="px-3 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-700">{selectedUser.email}</span>
+                    {isEditingProfile ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Name</label>
+                          <input
+                            type="text"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Email</label>
+                          <input
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Phone</label>
+                          <input
+                            type="text"
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Company Name</label>
+                          <input
+                            type="text"
+                            value={editForm.companyName}
+                            onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                          />
+                        </div>
                       </div>
-                      {selectedUser.phone && (
+                    ) : (
+                      <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700">{selectedUser.phone}</span>
+                          <Mail className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-700">{selectedUser.email}</span>
                         </div>
-                      )}
-                      {selectedUser.companyName && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Package className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700">{selectedUser.companyName}</span>
-                        </div>
-                      )}
-                      {userDetails?.data?.city && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700">
-                            {[userDetails.data.city, userDetails.data.state, userDetails.data.zipCode].filter(Boolean).join(', ')}
-                          </span>
-                        </div>
-                      )}
-                      {userDetails?.data?.companyAddress && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <FileText className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700">Company: {userDetails.data.companyAddress}</span>
-                        </div>
-                      )}
-                      {userDetails?.data?.ein && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <FileText className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700">EIN: {userDetails.data.ein}</span>
-                        </div>
-                      )}
-                    </div>
+                        {selectedUser.phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">{selectedUser.phone}</span>
+                          </div>
+                        )}
+                        {selectedUser.companyName && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Package className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">{selectedUser.companyName}</span>
+                          </div>
+                        )}
+                        {userDetails?.data?.city && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">
+                              {[userDetails.data.city, userDetails.data.state, userDetails.data.zipCode].filter(Boolean).join(', ')}
+                            </span>
+                          </div>
+                        )}
+                        {userDetails?.data?.companyAddress && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">Company: {userDetails.data.companyAddress}</span>
+                          </div>
+                        )}
+                        {userDetails?.data?.ein && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-700">EIN: {userDetails.data.ein}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 bg-gray-50 rounded-xl">
