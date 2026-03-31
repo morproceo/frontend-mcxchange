@@ -185,7 +185,7 @@ const RegisterPage = () => {
               <DomileaIcon size={40} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign Up</h1>
           <p className="text-gray-500">Join the Domilea marketplace</p>
         </div>
 
@@ -401,7 +401,7 @@ const RegisterPage = () => {
             </ScrollToAgreeModal>
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
-              Create Account
+              Sign Up
             </Button>
 
             <div className="text-center text-xs text-gray-400 -mt-2">
@@ -411,9 +411,9 @@ const RegisterPage = () => {
             </div>
 
             <div className="text-center text-sm text-gray-500">
-              Already have an account?{' '}
+              Have an account?{' '}
               <Link to="/login" className="text-secondary-600 hover:text-secondary-700 font-medium">
-                Sign in
+                Log in
               </Link>
             </div>
           </form>
