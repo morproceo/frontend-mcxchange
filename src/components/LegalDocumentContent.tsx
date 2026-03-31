@@ -579,7 +579,20 @@ export const PrivacyContent = () => {
         The Marketplace is owned, operated, and controlled within the United States and is intended solely for the use of US-domiciled entities and persons. If you access the Platform from the European Union, the United Kingdom, Canada, or any other jurisdiction with laws governing data collection and use that differ from US law, you expressly acknowledge that you are voluntarily transferring your Personal Information to the United States. By utilizing the Platform, you unconditionally consent to the transfer, processing, and storage of your data in the United States under US federal and state laws, which may provide a lower standard of privacy protection than your home jurisdiction. The Marketplace explicitly disclaims compliance with the General Data Protection Regulation (GDPR) for users who voluntarily access the Platform from outside the intended market, and you hereby waive any claims arising under foreign privacy laws.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">5.5. Material Changes and Policy Updates.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">5.5. SMS/Text Messaging Consent.</h3>
+      <p className="text-gray-700 mb-4">
+        By providing your phone number, you agree to the following:
+      </p>
+      <ul className="list-disc pl-6 text-gray-700 mb-4 space-y-3">
+        <li>
+          I consent to receive marketing text messages from <strong>Domilea</strong> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text <strong>HELP</strong> for assistance. Reply <strong>STOP</strong> to opt out.
+        </li>
+        <li>
+          I consent to receive non-marketing text messages from <strong>Domilea</strong> about my order updates, appointment reminders, and other transactional notifications. Message &amp; data rates may apply.
+        </li>
+      </ul>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">5.6. Material Changes and Policy Updates.</h3>
       <p className="text-gray-700 mb-4">
         The Marketplace reserves the right to modify, amend, or update this Privacy Policy at any time to reflect changes in our data practices, technological infrastructure, or applicable law. If we make &quot;Material Changes&quot;—defined as changes that significantly expand our rights to use or share your previously collected Personal Information—we will provide notice via a prominent banner on the Platform or via direct email to your registered address prior to the change becoming effective. Your continued use of the Marketplace or the retention of your account after the effective date of any such changes constitutes your valid electronic signature and acceptance of the revised Policy.
       </p>

@@ -273,7 +273,7 @@ const AdminFacebookPage = () => {
                 Page Name (for display)
               </label>
               <Input
-                placeholder="Domilea MC Exchange"
+                placeholder="Domilea"
                 value={pageName}
                 onChange={(e) => setPageName(e.target.value)}
               />
