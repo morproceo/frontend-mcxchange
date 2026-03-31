@@ -666,6 +666,7 @@ class ApiService {
     state?: string;
     amazonStatus?: string;
     sort?: string;
+    status?: string;
   }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
@@ -676,6 +677,7 @@ class ApiService {
     if (params?.state) searchParams.set('state', params.state);
     if (params?.amazonStatus) searchParams.set('amazonStatus', params.amazonStatus);
     if (params?.sort) searchParams.set('sort', params.sort);
+    if (params?.status) searchParams.set('status', params.status);
 
     const query = searchParams.toString();
     return this.request<any>(`/listings${query ? `?${query}` : ''}`);

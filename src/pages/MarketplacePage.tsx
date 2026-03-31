@@ -10,9 +10,11 @@ import {
   Mail,
   Phone,
   CheckCircle,
-  Loader2
+  Loader2,
+  BadgeCheck
 } from 'lucide-react'
 import MCCard from '../components/MCCard'
+import SoldMCCard from '../components/SoldMCCard'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
@@ -80,6 +82,7 @@ const MarketplacePage = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [savedListings, setSavedListings] = useState<Set<string>>(new Set())
   const [listings, setListings] = useState<MCListing[]>([])
+  const [soldListings, setSoldListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -173,6 +176,30 @@ const MarketplacePage = () => {
         })
 
         setListings(transformedListings)
+
+        // Fetch sold listings for "Recently Sold" section
+        try {
+          const soldResponse = await api.getListings({ status: 'SOLD', limit: 12 })
+          const soldData = (soldResponse.data || soldResponse.listings || []).map((listing: any) => ({
+            id: listing.id,
+            mcNumber: listing.mcNumber,
+            state: listing.state,
+            city: listing.city || undefined,
+            price: parseFloat(listing.listingPrice || listing.askingPrice || listing.price) || 0,
+            yearsActive: listing.yearsActive || 0,
+            fleetSize: listing.fleetSize || 0,
+            safetyRating: listing.safetyRating?.toLowerCase() || 'not-rated',
+            amazonStatus: listing.amazonStatus?.toLowerCase() || 'none',
+            amazonRelayScore: listing.amazonRelayScore,
+            highwaySetup: listing.highwaySetup || false,
+            sellingWithEmail: listing.sellingWithEmail || false,
+            sellingWithPhone: listing.sellingWithPhone || false,
+            soldAt: listing.soldAt,
+          }))
+          setSoldListings(soldData)
+        } catch (err) {
+          console.error('Failed to fetch sold listings:', err)
+        }
       } catch (err) {
         console.error('Failed to fetch listings:', err)
         setError('Failed to load listings. Please try again.')
@@ -720,6 +747,24 @@ const MarketplacePage = () => {
             </div>
           )
         })()}
+
+        {/* Recently Sold Section */}
+        {!loading && soldListings.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600 shadow-md shadow-emerald-200/50">
+                <BadgeCheck className="w-4 h-4 text-white" />
+                <span className="text-sm font-bold text-white tracking-wide">RECENTLY SOLD</span>
+              </div>
+              <div className="flex-1 h-px bg-gradient-to-r from-emerald-200 to-transparent" />
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {soldListings.map((listing) => (
+                <SoldMCCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Empty State */}
         {!loading && !error && filteredListings.length === 0 && (
