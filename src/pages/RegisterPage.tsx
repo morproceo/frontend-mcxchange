@@ -72,6 +72,8 @@ const RegisterPage = () => {
   const [privacyRead, setPrivacyRead] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [smsMarketingConsent, setSmsMarketingConsent] = useState(false)
+  const [smsTransactionalConsent, setSmsTransactionalConsent] = useState(false)
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string) => {
@@ -247,6 +249,33 @@ const RegisterPage = () => {
               icon={<Phone className="w-4 h-4" />}
               required
             />
+
+            {/* SMS Consent */}
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smsMarketingConsent}
+                  onChange={(e) => setSmsMarketingConsent(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  I consent to receive marketing text messages from <span className="font-semibold">Domilea</span> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text <span className="font-semibold">HELP</span> for assistance. Reply <span className="font-semibold">STOP</span> to opt out.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smsTransactionalConsent}
+                  onChange={(e) => setSmsTransactionalConsent(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  I consent to receive non-marketing text messages from <span className="font-semibold">Domilea</span> about my order updates, appointment reminders, and other transactional notifications. Message &amp; data rates may apply.
+                </span>
+              </label>
+            </div>
 
             <Input
               label="Password"
