@@ -323,7 +323,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           <div className="flex items-center space-x-3">
             <Icon className={clsx('h-4 w-4 flex-shrink-0', hasActiveItem ? 'text-gray-900' : 'text-gray-500')} />
             {!isCollapsed && (
-              <span className="font-medium text-sm">{category.label}</span>
+              <span className="font-medium">{category.label}</span>
             )}
           </div>
           {!isCollapsed && (
