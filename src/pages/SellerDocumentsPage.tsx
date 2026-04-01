@@ -106,13 +106,29 @@ const SellerDocumentsPage = () => {
     }])
     setUploadingId(tempId)
 
-    // Simulate upload — replace with real API call when ready
-    setTimeout(() => {
+    // Map frontend doc types to backend enum
+    const typeMap: Record<string, string> = {
+      'articles-of-incorporation': 'ARTICLES_OF_INCORPORATION',
+      'mc-certificate': 'AUTHORITY',
+      'ein-letter': 'EIN_LETTER',
+      'insurance-certificate': 'INSURANCE',
+      'loss-runs': 'LOSS_RUNS',
+      'factoring-lor': 'LETTER_OF_RELEASE',
+    }
+
+    try {
+      await api.uploadSellerDocument(file, typeMap[docType] || 'OTHER')
       setUploads(prev => prev.map(u =>
         u.id === tempId ? { ...u, status: 'uploaded' } : u
       ))
+    } catch (err: any) {
+      console.error('Document upload failed:', err)
+      setUploads(prev => prev.map(u =>
+        u.id === tempId ? { ...u, status: 'error' } : u
+      ))
+    } finally {
       setUploadingId(null)
-    }, 1500)
+    }
   }
 
   const removeUpload = (id: string) => {
