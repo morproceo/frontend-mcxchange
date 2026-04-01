@@ -214,7 +214,7 @@ const SellerDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Welcome back, {user?.name}!</h2>
             <p className="text-gray-500">Here's what's happening with your listings today.</p>
           </div>
-          <Link to="/seller/create-listing">
+          <Link to="/seller/carrier-pulse">
             <Button size="lg">
               <Plus className="w-5 h-5 mr-2" />
               New Listing
@@ -290,7 +290,7 @@ const SellerDashboard = () => {
                   <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-bold text-gray-900 mb-2">No listings yet</h3>
                   <p className="text-gray-500 mb-6">Create your first listing to start selling</p>
-                  <Link to="/seller/create-listing">
+                  <Link to="/seller/carrier-pulse">
                     <Button><Plus className="w-4 h-4 mr-2" />Create Listing</Button>
                   </Link>
                 </div>

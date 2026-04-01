@@ -172,7 +172,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
         return [
           { icon: LayoutDashboard, label: 'Dashboard', path: '/seller/dashboard' },
           { icon: Package, label: 'My Listings', path: '/seller/listings' },
-          { icon: Plus, label: 'Create Listing', path: '/seller/create-listing' },
+          { icon: Plus, label: 'Create Listing', path: '/seller/carrier-pulse' },
           { icon: MessageSquare, label: 'Offers', path: '/seller/offers' },
           { icon: Handshake, label: 'Transactions', path: '/seller/transactions' },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },

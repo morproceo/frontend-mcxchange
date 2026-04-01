@@ -420,7 +420,7 @@ const MCPricingEstimator = () => {
                 fullWidth
                 onClick={() => {
                   const mid = Math.round((suggestedRange.low + suggestedRange.high) / 2)
-                  window.location.href = `/seller/create-listing?mc=${mcNumber}&price=${mid}`
+                  window.location.href = `/seller/carrier-pulse`
                 }}
               >
                 List at This Price

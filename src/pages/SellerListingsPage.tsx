@@ -170,7 +170,7 @@ const SellerListingsPage = () => {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">My Listings</h2>
             <p className="text-sm sm:text-base text-gray-500">Manage your MC authority listings</p>
           </div>
-          <Button onClick={() => navigate('/seller/create-listing')} className="w-full sm:w-auto">
+          <Button onClick={() => navigate('/seller/carrier-pulse')} className="w-full sm:w-auto">
             <Package className="w-4 h-4 mr-2" />
             Create New Listing
           </Button>
@@ -235,7 +235,7 @@ const SellerListingsPage = () => {
               <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Listings Yet</h3>
               <p className="text-gray-500 mb-6">Create your first MC authority listing to get started.</p>
-              <Button onClick={() => navigate('/seller/create-listing')}>
+              <Button onClick={() => navigate('/seller/carrier-pulse')}>
                 <Package className="w-4 h-4 mr-2" />
                 Create New Listing
               </Button>
