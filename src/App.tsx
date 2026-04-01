@@ -85,6 +85,7 @@ const AdminActiveClosingsPage = lazy(() => import('./pages/AdminActiveClosingsPa
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'))
 const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
+const AdminCreateListingPage = lazy(() => import('./pages/AdminCreateListingPage'))
 
 // CarrierPulse
 const CarrierPulsePage = lazy(() => import('./pages/CarrierPulsePage'))
@@ -239,6 +240,7 @@ function App() {
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="transactions" element={<AdminTransactionsPage />} />
               <Route path="active-closings" element={<AdminActiveClosingsPage />} />
+              <Route path="create-listing" element={<AdminCreateListingPage />} />
               <Route path="listings" element={<AdminAllListingsPage />} />
               <Route path="listing/:id" element={<AdminListingDetailPage />} />
               <Route path="offers" element={<AdminOffersPage />} />

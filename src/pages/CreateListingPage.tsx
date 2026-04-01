@@ -288,6 +288,12 @@ const CreateListingPage = () => {
     monthlyInsurancePremium: ''
   })
 
+  // Track if we came from CarrierPulse
+  const fromPulse = searchParams.get('fromPulse') === 'true'
+  const pulseMC = searchParams.get('mc') || ''
+  const pulseDOT = searchParams.get('dot') || ''
+  const [pulseAutoFetched, setPulseAutoFetched] = useState(false)
+
   // FMCSA lookup state
   const [isFetchingFMCSA, setIsFetchingFMCSA] = useState(false)
   const [fmcsaFetched, setFmcsaFetched] = useState(false)
@@ -298,6 +304,93 @@ const CreateListingPage = () => {
   const [insuranceHistory, setInsuranceHistory] = useState<any[]>([])
   const [fmcsaCarrierData, setFmcsaCarrierData] = useState<any>(null)
 
+  // Auto-fetch FMCSA data when coming from CarrierPulse
+  useEffect(() => {
+    if (fromPulse && (pulseMC || pulseDOT) && !pulseAutoFetched && !fmcsaFetched && settingsLoaded) {
+      setPulseAutoFetched(true)
+      // Set MC/DOT in form, then trigger lookup
+      setFormData(prev => ({
+        ...prev,
+        mcNumber: pulseMC || prev.mcNumber,
+        dotNumber: pulseDOT || prev.dotNumber,
+      }))
+      // Trigger lookup after form data is set
+      const doLookup = async () => {
+        setIsFetchingFMCSA(true)
+        setFmcsaError('')
+        try {
+          let response
+          if (pulseMC) {
+            response = await api.fmcsaLookupByMC(pulseMC)
+          } else if (pulseDOT) {
+            response = await api.fmcsaLookupByDOT(pulseDOT)
+          }
+          if (response?.data?.dotNumber) {
+            const carrier = response.data
+            const fullAddress = [carrier.physicalAddress, carrier.hqCity, carrier.hqState].filter(Boolean).join(', ')
+            let safetyRatingValue = 'not-rated'
+            if (carrier.safetyRating) {
+              const rating = carrier.safetyRating.toLowerCase()
+              if (rating.includes('satisfactory')) safetyRatingValue = 'satisfactory'
+              else if (rating.includes('conditional')) safetyRatingValue = 'conditional'
+              else if (rating.includes('unsatisfactory')) safetyRatingValue = 'unsatisfactory'
+            }
+            const operatingStatus = carrier.allowedToOperate === 'Y' ? 'AUTHORIZED' : 'NOT AUTHORIZED'
+            const insuranceStatus = carrier.insuranceOnFile ? 'active' : 'expired'
+            let yearsActive = ''
+            if (carrier.mcs150Date) {
+              try {
+                const mcsDate = new Date(carrier.mcs150Date)
+                const years = Math.floor((Date.now() - mcsDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                if (years > 0) yearsActive = String(years)
+              } catch {}
+            }
+            const mcNum = pulseMC || carrier.dotNumber
+            setFormData(prev => ({
+              ...prev,
+              mcNumber: pulseMC || prev.mcNumber,
+              dotNumber: carrier.dotNumber || prev.dotNumber,
+              legalName: carrier.legalName || '',
+              dbaName: carrier.dbaName || '',
+              physicalAddress: fullAddress,
+              mailingAddress: fullAddress,
+              phone: carrier.phone || '',
+              powerUnits: String(carrier.totalPowerUnits || 0),
+              drivers: String(carrier.totalDrivers || 0),
+              mcs150Date: carrier.mcs150Date || '',
+              operatingStatus,
+              entityType: carrier.carrierOperation || 'CARRIER',
+              state: carrier.hqState || '',
+              cargoCarried: carrier.cargoTypes || [],
+              fleetSize: String(carrier.totalPowerUnits || 0),
+              safetyRating: safetyRatingValue,
+              insuranceStatus,
+              yearsActive: yearsActive || '',
+              title: `${carrier.legalName} - MC #${mcNum}`,
+            }))
+            setFmcsaCarrierData(carrier)
+            // Fetch authority + insurance history
+            const dotNum = carrier.dotNumber
+            if (dotNum) {
+              const [authRes, insRes] = await Promise.all([
+                api.fmcsaGetAuthorityHistory(dotNum).catch(() => null),
+                api.fmcsaGetInsuranceHistory(dotNum).catch(() => null),
+              ])
+              if (authRes?.data) setAuthorityHistory(authRes.data)
+              if (insRes?.data) setInsuranceHistory(Array.isArray(insRes.data) ? insRes.data : [])
+            }
+            setFmcsaFetched(true)
+            setStep(2) // Skip to step 2
+          }
+        } catch (err: any) {
+          setFmcsaError(err.message || 'Failed to auto-fill from FMCSA.')
+        } finally {
+          setIsFetchingFMCSA(false)
+        }
+      }
+      doLookup()
+    }
+  }, [fromPulse, pulseMC, pulseDOT, pulseAutoFetched, fmcsaFetched, settingsLoaded])
 
   // FMCSA lookup function - uses real API
   const handleFMCSALookup = async () => {

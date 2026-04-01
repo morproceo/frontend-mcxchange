@@ -274,6 +274,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             items: [
               { icon: Users, label: 'Users', path: '/admin/users' },
               { icon: Activity, label: 'Activity Log', path: '/admin/activity-log' },
+              { icon: Plus, label: 'Create Listing', path: '/admin/create-listing' },
               { icon: Package, label: 'Listings', path: '/admin/listings' },
               { icon: FileText, label: 'Reports', path: '/admin/reports' },
               { icon: Settings, label: 'Settings', path: '/admin/settings' },
