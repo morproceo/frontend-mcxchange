@@ -860,14 +860,12 @@ const TransactionRoomPage = () => {
           // Log the computed buyer step for debugging
           console.log('[TransactionRoomPage] Setting buyer step based on mappedStatus:', mappedStatus)
 
-          // Parse FMCSA data from listing if available
+          // Parse FMCSA data from listing if available, otherwise fetch live
           if (txn.listing?.fmcsaData) {
             try {
               const parsedFmcsa = typeof txn.listing.fmcsaData === 'string'
                 ? JSON.parse(txn.listing.fmcsaData)
                 : txn.listing.fmcsaData
-
-              console.log('[TransactionRoomPage] Parsed FMCSA data:', parsedFmcsa)
 
               setFmcsaData({
                 dotNumber: parsedFmcsa.dotNumber || '',
@@ -897,9 +895,41 @@ const TransactionRoomPage = () => {
             } catch (parseError) {
               console.error('[TransactionRoomPage] Error parsing FMCSA data:', parseError)
             }
+          } else if (txn.listing?.dotNumber) {
+            // No stored FMCSA data — fetch live from FMCSA API
+            api.fmcsaLookupByDOT(txn.listing.dotNumber).then(res => {
+              if (res.success && res.data) {
+                const d = res.data
+                setFmcsaData({
+                  dotNumber: d.dotNumber || '',
+                  legalName: d.legalName || '',
+                  dbaName: d.dbaName,
+                  carrierOperation: d.carrierOperation || 'Unknown',
+                  hqCity: d.hqCity || '',
+                  hqState: d.hqState || '',
+                  physicalAddress: d.physicalAddress || '',
+                  phone: d.phone || '',
+                  safetyRating: d.safetyRating || 'None',
+                  safetyRatingDate: d.safetyRatingDate,
+                  totalDrivers: d.totalDrivers || 0,
+                  totalPowerUnits: d.totalPowerUnits || 0,
+                  mcs150Date: d.mcs150Date,
+                  allowedToOperate: d.allowedToOperate || 'N',
+                  bipdRequired: d.bipdRequired || 0,
+                  cargoRequired: d.cargoRequired || 0,
+                  bondRequired: d.bondRequired || 0,
+                  insuranceOnFile: d.insuranceOnFile ?? false,
+                  bipdOnFile: d.bipdOnFile || 0,
+                  cargoOnFile: d.cargoOnFile || 0,
+                  bondOnFile: d.bondOnFile || 0,
+                  verified: true,
+                  verifiedAt: new Date(),
+                })
+              }
+            }).catch(() => {})
           }
 
-          // Parse authority history from listing
+          // Parse authority history from listing, or fetch live
           if (txn.listing.authorityHistory) {
             try {
               const rawAuthority = typeof txn.listing.authorityHistory === 'string'
@@ -918,6 +948,23 @@ const TransactionRoomPage = () => {
             } catch (parseError) {
               console.error('[TransactionRoomPage] Error parsing authority history:', parseError)
             }
+          } else if (txn.listing?.dotNumber) {
+            // Fetch authority history live from FMCSA
+            api.fmcsaGetAuthorityHistory(txn.listing.dotNumber).then(res => {
+              if (res.success && res.data) {
+                const d = res.data
+                setAuthorityHistory({
+                  commonAuthorityStatus: d.commonAuthorityStatus || 'N/A',
+                  commonAuthorityGrantDate: d.commonAuthorityGrantDate,
+                  commonAuthorityReinstatedDate: d.commonAuthorityReinstatedDate,
+                  commonAuthorityRevokedDate: d.commonAuthorityRevokedDate,
+                  contractAuthorityStatus: d.contractAuthorityStatus || 'N/A',
+                  contractAuthorityGrantDate: d.contractAuthorityGrantDate,
+                  brokerAuthorityStatus: d.brokerAuthorityStatus || 'N/A',
+                  brokerAuthorityGrantDate: d.brokerAuthorityGrantDate,
+                })
+              }
+            }).catch(() => {})
           }
 
           // Parse insurance history from listing
