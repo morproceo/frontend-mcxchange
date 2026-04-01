@@ -453,12 +453,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
                   <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
                 </div>
               </div>
-              <TrustBadge
-                score={user?.trustScore || 0}
-                level={getTrustLevel(user?.trustScore || 0)}
-                verified={user?.verified}
-                size="sm"
-              />
             </div>
           </div>
         )}

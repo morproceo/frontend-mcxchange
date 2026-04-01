@@ -353,9 +353,6 @@ const BuyerDashboard = () => {
       case 'price-desc':
         results.sort((a, b) => (b.listingPrice ?? b.askingPrice ?? b.price ?? 0) - (a.listingPrice ?? a.askingPrice ?? a.price ?? 0))
         break
-      case 'trust-score':
-        results.sort((a, b) => b.trustScore - a.trustScore)
-        break
       case 'newest':
         results.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         break
@@ -615,13 +612,7 @@ const BuyerDashboard = () => {
                               </p>
                             </div>
 
-                            <div className="flex items-center justify-between mb-3">
-                              <TrustBadge
-                                score={listing.trustScore}
-                                level={getTrustLevel(listing.trustScore)}
-                                size="sm"
-                                showScore={false}
-                              />
+                            <div className="flex items-center justify-end mb-3">
                               <div className="text-secondary-600 font-bold">
                                 ${(listing.listingPrice ?? listing.askingPrice ?? listing.price ?? 0).toLocaleString()}
                               </div>
@@ -732,7 +723,6 @@ const BuyerDashboard = () => {
                           { value: 'oldest', label: 'Oldest First' },
                           { value: 'price-asc', label: 'Price: Low to High' },
                           { value: 'price-desc', label: 'Price: High to Low' },
-                          { value: 'trust-score', label: 'Trust Score' },
                           { value: 'years-active', label: 'Years Active' }
                         ]}
                       />
