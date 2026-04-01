@@ -38,6 +38,8 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
     try {
       const response = await api.fmcsaLookupByMC(cleaned)
       if (response.success && response.data?.dotNumber) {
+        // Save MC and DOT to the seller's account
+        api.updateProfile({ mcNumber: cleaned, dotNumber: response.data.dotNumber }).catch(() => {})
         // Navigate to full CarrierPulse page with the DOT number
         localStorage.setItem('mcx_carrier_pulse_dismiss_count', '99')
         onClose()
