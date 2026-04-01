@@ -246,7 +246,7 @@ export default function PricingPage() {
           <p className="text-gray-500 mt-2">Enhance your experience with powerful tools.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Package Tool Bundle */}
+          {/* Pulse Bundle */}
           <div className="bg-white rounded-2xl border-2 border-rose-300 p-6 hover:shadow-lg transition-shadow relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-center py-1.5 text-xs font-bold uppercase tracking-wider">
               Best Value Bundle
@@ -256,7 +256,7 @@ export default function PricingPage() {
                 <Package className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Package Tool</h3>
+                <h3 className="text-lg font-bold text-gray-900">Pulse Bundle</h3>
                 <p className="text-sm text-gray-500">All-in-one tools bundle</p>
               </div>
             </div>
@@ -283,7 +283,7 @@ export default function PricingPage() {
             </div>
             <p className="text-xs text-rose-500 font-medium mb-4">Save vs. buying tools individually</p>
             <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold hover:from-rose-600 hover:to-pink-600 transition-colors shadow-lg shadow-rose-500/25">
-              Get Package Tool
+              Get Pulse Bundle
             </button>
           </div>
 
@@ -304,7 +304,7 @@ export default function PricingPage() {
               <span className="text-2xl font-bold text-gray-900">$12.99</span>
               <span className="text-gray-500">/month</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Package Tool, Professional, Premium, Enterprise & VIP plans</p>
+            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Pulse Bundle, Professional, Premium, Enterprise & VIP plans</p>
             <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors">
               Add CarrierPulse
             </button>

@@ -756,7 +756,7 @@ const BuyerSubscriptionPage = () => {
           })}
         </div>
 
-        {/* Package Tool Add-On */}
+        {/* Pulse Bundle Add-On */}
         {(() => {
           const pkgPlan = plans.find(p => p.id === 'package_tool')
           if (!pkgPlan) return null
@@ -773,9 +773,9 @@ const BuyerSubscriptionPage = () => {
               <div className="text-center mb-6">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-rose-100 to-pink-100 border border-rose-200 mb-3">
                   <Package className="w-4 h-4 text-rose-600" />
-                  <span className="text-sm font-medium text-rose-700">Add-On Tools Package</span>
+                  <span className="text-sm font-medium text-rose-700">Pulse Bundle</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Package Tool</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Pulse Bundle</h2>
                 <p className="text-gray-600">All carrier intelligence tools in one bundle — no listing credits needed</p>
               </div>
 
@@ -798,7 +798,7 @@ const BuyerSubscriptionPage = () => {
                           <Package className="w-7 h-7 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-bold text-gray-900">Package Tool</h3>
+                          <h3 className="text-xl font-bold text-gray-900">Pulse Bundle</h3>
                           <p className="text-sm text-gray-500">Tools-only add-on — no listing credits</p>
                         </div>
                       </div>
@@ -838,7 +838,7 @@ const BuyerSubscriptionPage = () => {
                       {isSelected ? (
                         <><Check className="w-4 h-4 mr-2" /> Selected</>
                       ) : (
-                        'Select Package Tool'
+                        'Select Pulse Bundle'
                       )}
                     </Button>
                   )}

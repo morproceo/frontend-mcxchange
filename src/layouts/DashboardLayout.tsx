@@ -177,7 +177,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe', badge: 'New' }]
             : []),
           { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' },
-          { icon: ShieldAlert, label: 'Chameleon Check', path: '/buyer/chameleon-check' },
+          { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'New' },
           {
             label: 'Services',
             icon: Briefcase,
