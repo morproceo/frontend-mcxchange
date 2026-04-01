@@ -179,7 +179,7 @@ const MarketplacePage = () => {
 
         // Fetch sold listings for "Recently Sold" section
         try {
-          const soldResponse = await api.getListings({ status: 'SOLD', limit: 12 })
+          const soldResponse = await api.getListings({ status: 'SOLD', limit: 100 })
           const soldData = (soldResponse.data || soldResponse.listings || []).map((listing: any) => ({
             id: listing.id,
             mcNumber: listing.mcNumber,
