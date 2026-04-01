@@ -359,7 +359,6 @@ const AdminMessagesPage = () => {
     const term = userSearch.trim()
     if (term.length < 2) {
       setUserResults([])
-      setSelectedUser(null)
       setUserError(null)
       return
     }
