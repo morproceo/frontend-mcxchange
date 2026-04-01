@@ -725,13 +725,9 @@ export function mapToV2AuthorityPending(report: any): V2AuthorityPending {
 export function mapToV2BasicScores(report: any): V2BasicScore[] {
   const scores = report?.safety?.basicScores || []
 
-  // Trust MorPro data — it reflects FMCSA SMS percentiles.
-  // FMCSA can score a BASIC even with zero violations (peer-group ranking).
-  // Only guard: if the carrier has zero inspections overall, no BASICs can be scored.
-  const inspTotals = report?.safety?.inspectionTotals || {}
-  const inspRecords = report?.inspections?.records || []
-  const totalInspections = parseFloat(inspTotals.total || inspTotals.last24Months || '0') || inspRecords.length || 0
-  if (totalInspections === 0 && scores.length === 0) {
+  // When MorPro has no BASIC scores, return all 7 categories as "Not Scored"
+  // so the UI always renders the BASIC section (matches SMS-path behavior).
+  if (scores.length === 0) {
     return ALL_BASICS.map(def => ({
       name: def.name,
       score: null,

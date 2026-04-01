@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
+import CarrierPulseOnboardingModal from '../components/CarrierPulseOnboardingModal'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import MCCard from '../components/MCCard'
@@ -55,6 +56,11 @@ interface DashboardStats {
 
 const SellerDashboard = () => {
   const { user, isIdentityVerified } = useAuth()
+
+  // Carrier Pulse onboarding modal - show on first visit
+  const [showCarrierPulse, setShowCarrierPulse] = useState(() => {
+    return !localStorage.getItem('mcx_carrier_pulse_completed')
+  })
 
   // API data state
   const [myListings, setMyListings] = useState<MCListing[]>([])
@@ -395,6 +401,12 @@ const SellerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Carrier Pulse Onboarding Modal */}
+      <CarrierPulseOnboardingModal
+        isOpen={showCarrierPulse}
+        onClose={() => setShowCarrierPulse(false)}
+      />
     </div>
   )
 }
