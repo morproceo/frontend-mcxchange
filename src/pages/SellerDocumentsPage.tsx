@@ -158,7 +158,7 @@ const SellerDocumentsPage = () => {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Documents</h2>
-        <p className="text-gray-500 text-sm">Upload the required documents to list your authority for sale</p>
+        <p className="text-gray-500 text-sm">These documents will be needed to complete the sale of your company. You don't need to upload them now — only once you accept an offer from a buyer.</p>
       </div>
 
       {/* Progress */}
