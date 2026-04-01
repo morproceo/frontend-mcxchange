@@ -200,6 +200,8 @@ class ApiService {
     state?: string;
     zipCode?: string;
     ein?: string;
+    mcNumber?: string;
+    dotNumber?: string;
   }) {
     return this.request<{
       success: boolean;

@@ -59,6 +59,8 @@ interface UserData {
   memberSince: string
   lastLoginAt?: string
   companyName?: string
+  mcNumber?: string
+  dotNumber?: string
   identityVerified?: boolean
   identityVerificationStatus?: string
   identityVerifiedAt?: string
@@ -1087,6 +1089,15 @@ const AdminUsersPage = () => {
                           <div className="flex items-center gap-2 text-sm">
                             <Package className="w-4 h-4 text-gray-400" />
                             <span className="text-gray-700">{selectedUser.companyName}</span>
+                          </div>
+                        )}
+                        {userDetails?.data?.mcNumber && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="w-4 h-4 text-indigo-400" />
+                            <span className="text-gray-700">MC# {userDetails.data.mcNumber}</span>
+                            {userDetails?.data?.dotNumber && (
+                              <span className="text-gray-400">/ DOT# {userDetails.data.dotNumber}</span>
+                            )}
                           </div>
                         )}
                         {userDetails?.data?.city && (
