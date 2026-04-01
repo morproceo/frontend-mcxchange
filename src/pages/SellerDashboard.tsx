@@ -11,7 +11,8 @@ import {
   Loader2,
   Send,
   User,
-  Inbox
+  Inbox,
+  Pencil
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
@@ -23,6 +24,7 @@ import { MCListing } from '../types'
 import { getTrustLevel } from '../utils/helpers'
 import CarrierPulseOnboardingModal from '../components/CarrierPulseOnboardingModal'
 import MCPricingEstimator from '../components/MCPricingEstimator'
+import EditListingModal from '../components/EditListingModal'
 
 interface SellerOffer {
   id: string
@@ -70,6 +72,10 @@ const SellerDashboard = () => {
   const [myListings, setMyListings] = useState<MCListing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Edit listing modal state
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editingListingId, setEditingListingId] = useState('')
 
   // Stats and offers state
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
@@ -263,7 +269,19 @@ const SellerDashboard = () => {
             ) : myListings.length > 0 ? (
               <div className="space-y-4">
                 {myListings.map((listing) => (
-                  <MCCard key={listing.id} listing={listing} />
+                  <div key={listing.id} className="relative">
+                    <MCCard listing={listing} />
+                    <button
+                      onClick={() => {
+                        setEditingListingId(listing.id)
+                        setEditModalOpen(true)
+                      }}
+                      className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -350,6 +368,37 @@ const SellerDashboard = () => {
           setShowCarrierPulse(false)
           const prev = parseInt(localStorage.getItem('mcx_carrier_pulse_dismiss_count') || '0', 10)
           localStorage.setItem('mcx_carrier_pulse_dismiss_count', String(prev + 1))
+        }}
+      />
+
+      <EditListingModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        listingId={editingListingId}
+        onSuccess={() => {
+          // Re-fetch listings after edit
+          api.getSellerListings({ limit: 2 }).then(response => {
+            const transformed = (response.data || []).map((l: any) => ({
+              id: l.id, mcNumber: l.mcNumber, sellerId: l.sellerId || user?.id || '',
+              title: l.title || `MC Authority #${l.mcNumber}`, description: l.description || '',
+              price: l.askingPrice || l.price || 0, yearsActive: l.yearsActive || 0,
+              fleetSize: l.fleetSize || 0, operationType: l.operationType || [],
+              safetyRating: l.safetyRating || 'satisfactory', insuranceStatus: l.insuranceStatus || 'active',
+              verified: l.verified || false, isPremium: l.isPremium || false, isVip: l.isVip || false,
+              trustScore: l.trustScore || 50, trustLevel: getTrustLevel(l.trustScore || 50),
+              views: l.views || 0, saves: l.saves || 0, state: l.state || '',
+              createdAt: new Date(l.createdAt), verificationBadges: [],
+              amazonStatus: l.amazonStatus || 'none', amazonRelayScore: l.amazonRelayScore || null,
+              highwaySetup: l.highwaySetup || false, sellingWithEmail: l.sellingWithEmail || false,
+              sellingWithPhone: l.sellingWithPhone || false, documents: l.documents || [],
+              status: l.status || 'active', visibility: l.visibility || 'public',
+              updatedAt: new Date(l.updatedAt || l.createdAt),
+              seller: { id: user?.id || l.sellerId, name: user?.name || '', email: user?.email || '',
+                role: 'seller' as const, verified: user?.verified || false, trustScore: user?.trustScore || 50,
+                memberSince: user?.memberSince || new Date(), completedDeals: 0, reviews: [], identityVerified: false },
+            })) as MCListing[]
+            setMyListings(transformed)
+          }).catch(() => {})
         }}
       />
     </div>
