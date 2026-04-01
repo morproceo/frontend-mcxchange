@@ -4539,11 +4539,36 @@ For questions, contact us at escrow@domilea.com`
                   <h3 className="text-lg font-semibold text-gray-900">Transaction Documents</h3>
                   <p className="text-sm text-gray-500">{transaction.sellerDocuments.length} documents uploaded</p>
                 </div>
-                {userRole === 'seller' && (
-                  <Button variant="outline">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Document
-                  </Button>
+                {(userRole === 'seller' || userRole === 'admin') && (
+                  <>
+                    <input
+                      type="file"
+                      id="transaction-doc-upload"
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        e.target.value = ''
+                        try {
+                          const formData = new FormData()
+                          formData.append('file', file)
+                          formData.append('type', 'OTHER')
+                          await api.uploadTransactionDocument(transactionId, formData)
+                          toast.success('Document uploaded successfully')
+                          // Refresh transaction data
+                          const res = await api.getTransaction(transactionId)
+                          if (res.success && res.data) setTransaction(res.data)
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to upload document')
+                        }
+                      }}
+                    />
+                    <Button variant="outline" onClick={() => document.getElementById('transaction-doc-upload')?.click()}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Document
+                    </Button>
+                  </>
                 )}
               </div>
 
