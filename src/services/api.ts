@@ -856,6 +856,10 @@ class ApiService {
     });
   }
 
+  async getUnreadMessageCount() {
+    return this.request<{ success: boolean; data: { count: number } }>('/messages/unread-count');
+  }
+
   async sendInquiryToAdmin(listingId: string | undefined, content: string, contactPhone?: string) {
     return this.request<{
       success: boolean;

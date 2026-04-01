@@ -78,6 +78,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [isConsultationOpen, setIsConsultationOpen] = useState(false)
   const [buyerSubscription, setBuyerSubscription] = useState<{ plan?: string; status?: string } | null>(null)
   const [buyerSubscriptionLoading, setBuyerSubscriptionLoading] = useState(false)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -126,6 +127,32 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
 
     return () => {
       isActive = false
+    }
+  }, [user?.role])
+
+  // Fetch unread message count for admin (and refresh every 30s)
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+      setUnreadMessageCount(0)
+      return
+    }
+
+    let isActive = true
+    const fetchUnread = async () => {
+      try {
+        const res = await api.getUnreadMessageCount()
+        if (isActive) setUnreadMessageCount(res.data?.count || 0)
+      } catch {
+        // ignore
+      }
+    }
+
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 30000)
+
+    return () => {
+      isActive = false
+      clearInterval(interval)
     }
   }, [user?.role])
 
@@ -200,7 +227,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             label: 'Sales Pipeline',
             icon: Handshake,
             items: [
-              { icon: MessageSquare, label: 'Inquiries', path: '/admin/messages' },
+              { icon: MessageSquare, label: 'Inquiries', path: '/admin/messages', ...(unreadMessageCount > 0 ? { badge: String(unreadMessageCount), badgeColor: 'bg-red-500' } : {}) },
               { icon: Send, label: 'Offers', path: '/admin/offers' },
               { icon: Scale, label: 'Active Closings', path: '/admin/active-closings' },
               { icon: Handshake, label: 'Transactions', path: '/admin/transactions' },
@@ -553,9 +580,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               <Search className="h-5 w-5 text-gray-600" />
             </button>
 
-            <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
+            <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors" onClick={() => user?.role === 'admin' ? navigate('/admin/messages') : undefined}>
               <Bell className="h-5 w-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              {unreadMessageCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full leading-none">
+                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                </span>
+              )}
             </button>
             <div className="h-8 w-px bg-gray-200 hidden sm:block" />
             <Link to="/profile" className="flex items-center space-x-3">
