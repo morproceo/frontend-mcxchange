@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import 'framer-motion'
 import {
   MessageSquare,
@@ -95,6 +96,7 @@ const statusConfig = {
 
 const AdminMessagesPage = () => {
   const { user } = useAuth()
+  const location = useLocation()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -177,6 +179,23 @@ const AdminMessagesPage = () => {
 
     loadConversations()
   }, [])
+
+  // Handle navigation from AdminUsersPage "Send Message" button
+  useEffect(() => {
+    const state = location.state as { composeToUser?: { id: string; name: string; email: string } } | null
+    if (state?.composeToUser) {
+      setSelectedUser({
+        id: state.composeToUser.id,
+        name: state.composeToUser.name,
+        email: state.composeToUser.email,
+        role: '',
+        status: '',
+      })
+      setShowComposeModal(true)
+      // Clear the state so refreshing doesn't re-open the modal
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
 
   useEffect(() => {
     const loadMessages = async () => {

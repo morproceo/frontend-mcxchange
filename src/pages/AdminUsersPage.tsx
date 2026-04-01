@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -81,6 +82,7 @@ interface Pagination {
 }
 
 const AdminUsersPage = () => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'all' | 'buyers' | 'sellers' | 'admins' | 'blocked' | 'pending'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
@@ -811,7 +813,21 @@ const AdminUsersPage = () => {
                             <Eye className="w-4 h-4" />
                             View Profile
                           </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setShowActionMenu(null)
+                              navigate('/admin/messages', {
+                                state: {
+                                  composeToUser: {
+                                    id: user.id,
+                                    name: user.name,
+                                    email: user.email,
+                                  }
+                                }
+                              })
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
                             <MessageSquare className="w-4 h-4" />
                             Send Message
                           </button>
@@ -1330,7 +1346,21 @@ const AdminUsersPage = () => {
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDetailModal(false)
+                      navigate('/admin/messages', {
+                        state: {
+                          composeToUser: {
+                            id: selectedUser.id,
+                            name: selectedUser.name,
+                            email: selectedUser.email,
+                          }
+                        }
+                      })
+                    }}
+                  >
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Send Message
                   </Button>
