@@ -2452,7 +2452,7 @@ For questions, contact us at escrow@domilea.com`
                                       </div>
                                       <div>
                                         <span className="text-gray-500">Account Name:</span>
-                                        <p className="font-medium text-gray-900">MC Exchange LLC</p>
+                                        <p className="font-medium text-gray-900">Domilea LLC</p>
                                       </div>
                                       <div>
                                         <span className="text-gray-500">Routing Number:</span>

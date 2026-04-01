@@ -285,7 +285,7 @@ const AgreementApprovalPanel = ({
                 </div>
                 <span className="font-semibold text-sm">Admin</span>
               </div>
-              <p className="text-xs text-gray-600 mb-2">MC Exchange</p>
+              <p className="text-xs text-gray-600 mb-2">Domilea</p>
               <div className="flex items-center gap-1">
                 {approvalStatus.adminApproved ? (
                   <span className="text-xs text-green-600 font-medium flex items-center gap-1">

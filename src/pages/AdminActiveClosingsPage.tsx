@@ -1153,7 +1153,7 @@ const AdminActiveClosingsPage = () => {
                     <div className="p-4 bg-amber-50 rounded-xl text-center border border-amber-200">
                       <p className="text-sm text-amber-600">Broker Margin</p>
                       <p className="text-2xl font-bold text-amber-700">${(selectedTransaction.agreedPrice - (selectedTransaction.listing?.price || selectedTransaction.agreedPrice)).toLocaleString()}</p>
-                      <p className="text-xs text-amber-500">MC Exchange earnings</p>
+                      <p className="text-xs text-amber-500">Domilea earnings</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">

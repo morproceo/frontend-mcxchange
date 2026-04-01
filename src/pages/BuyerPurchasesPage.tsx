@@ -273,7 +273,7 @@ const BuyerPurchasesPage = () => {
         </head>
         <body>
           <div class="header">
-            <div class="logo">MC Exchange</div>
+            <div class="logo">Domilea</div>
             <div class="invoice-title">INVOICE / RECEIPT</div>
           </div>
           <div class="section">
@@ -308,7 +308,7 @@ const BuyerPurchasesPage = () => {
           </div>
           <div class="footer">
             <p>Thank you for your purchase!</p>
-            <p>MC Exchange - Your Trusted MC Authority Marketplace</p>
+            <p>Domilea - Your Trusted MC Authority Marketplace</p>
             <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
           </div>
         </body>
@@ -745,7 +745,7 @@ const BuyerPurchasesPage = () => {
               <div ref={invoiceRef} className="p-6">
                 {/* Company Header */}
                 <div className="text-center mb-8 pb-6 border-b-2 border-gray-900">
-                  <h1 className="text-2xl font-bold text-gray-900">MC Exchange</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">Domilea</h1>
                   <p className="text-gray-500 mt-1">Your Trusted MC Authority Marketplace</p>
                   <p className="text-lg font-semibold text-gray-700 mt-3">INVOICE / RECEIPT</p>
                 </div>
@@ -901,7 +901,7 @@ const BuyerPurchasesPage = () => {
                 {/* Footer */}
                 <div className="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
                   <p>Thank you for your purchase!</p>
-                  <p className="mt-1">MC Exchange - Your Trusted MC Authority Marketplace</p>
+                  <p className="mt-1">Domilea - Your Trusted MC Authority Marketplace</p>
                   <p className="mt-2 text-xs">Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
                 </div>
               </div>

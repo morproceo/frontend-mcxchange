@@ -174,7 +174,7 @@ export default function AIChatWidget() {
                     <Bot className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold leading-tight">MC Exchange AI</p>
+                    <p className="text-sm font-semibold leading-tight">Domilea AI</p>
                     <p className="text-[10px] opacity-80 flex items-center gap-1">
                       <Sparkles className="h-2.5 w-2.5" /> Powered by AI
                     </p>
@@ -194,7 +194,7 @@ export default function AIChatWidget() {
                   <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
                     <Bot className="h-10 w-10 mb-2 text-indigo-300" />
                     <p className="text-sm font-medium text-gray-500">Hi! How can I help you today?</p>
-                    <p className="text-xs mt-1">Ask me anything about MC Exchange.</p>
+                    <p className="text-xs mt-1">Ask me anything about Domilea.</p>
                   </div>
                 )}
 

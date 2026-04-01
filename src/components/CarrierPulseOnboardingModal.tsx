@@ -211,7 +211,7 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
                 {step === 'search' && (
                   <>
                     <div className="bg-gradient-to-r from-secondary-50 to-primary-50 rounded-xl p-5 mb-6 border border-secondary-100">
-                      <h3 className="font-bold text-gray-900 mb-2">Welcome to MC Exchange!</h3>
+                      <h3 className="font-bold text-gray-900 mb-2">Welcome to Domilea!</h3>
                       <p className="text-sm text-gray-600">
                         Before you start listing, let's pull up your carrier information from FMCSA.
                         Enter your MC number below and we'll show you exactly what buyers will see
