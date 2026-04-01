@@ -85,6 +85,7 @@ const AdminActiveClosingsPage = lazy(() => import('./pages/AdminActiveClosingsPa
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'))
 const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
+const SafetyImprovementReportPage = lazy(() => import('./pages/SafetyImprovementReportPage'))
 const AdminCreateListingPage = lazy(() => import('./pages/AdminCreateListingPage'))
 
 // CarrierPulse
@@ -249,6 +250,7 @@ function App() {
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
               <Route path="chameleon-check" element={<ChameleonCheckPage />} />
               <Route path="chameleon-check/:dotNumber" element={<ChameleonCheckPage />} />
+              <Route path="safety-report" element={<SafetyImprovementReportPage />} />
             </Route>
 
             {/* Public Dispute Page - No auth required */}

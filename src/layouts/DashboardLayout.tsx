@@ -265,6 +265,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               { icon: Users, label: 'Facebook Groups', path: '/admin/facebook' },
               { icon: Activity, label: 'CarrierPulse', path: '/admin/carrier-pulse' },
               { icon: ShieldAlert, label: 'Chameleon Check', path: '/admin/chameleon-check' },
+              { icon: Shield, label: 'Safety Improvement Report', path: '/admin/safety-report' },
             ]
           },
           // Management category
