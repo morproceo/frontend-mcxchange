@@ -1016,8 +1016,8 @@ class ApiService {
     highwaySetup?: boolean;
     sellingWithEmail?: boolean;
     sellingWithPhone?: boolean;
-    contactEmail?: string;
-    contactPhone?: string;
+    rmisSetup?: boolean;
+    setupWithBrokers?: boolean;
     cargoTypes?: string[];
     visibility?: string;
   }) {
@@ -1745,6 +1745,33 @@ class ApiService {
         stripeCustomerId: string;
       };
     }>('/seller/stripe-history');
+  }
+
+  // Upload seller document (Articles of Incorporation, EIN Letter, etc.)
+  async uploadSellerDocument(file: File, type: string) {
+    const url = `${API_BASE_URL}/documents`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    const currentToken = this.token || localStorage.getItem('mcx_token');
+    const headers: HeadersInit = {};
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Failed to upload document');
+    }
+
+    return data as { success: boolean; data: any; message: string };
   }
 
   // Upload proof of payment for final payment

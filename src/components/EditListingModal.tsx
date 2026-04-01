@@ -107,8 +107,8 @@ interface ListingData {
   highwaySetup?: boolean
   sellingWithEmail?: boolean
   sellingWithPhone?: boolean
-  contactEmail?: string
-  contactPhone?: string
+  rmisSetup?: boolean
+  setupWithBrokers?: boolean
 }
 
 const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListingModalProps) => {
@@ -138,8 +138,8 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
     highwaySetup: false,
     sellingWithEmail: false,
     sellingWithPhone: false,
-    contactEmail: '',
-    contactPhone: '',
+    rmisSetup: false,
+    setupWithBrokers: false,
   })
 
   useEffect(() => {
@@ -177,8 +177,8 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
           highwaySetup: data.highwaySetup || false,
           sellingWithEmail: data.sellingWithEmail || false,
           sellingWithPhone: data.sellingWithPhone || false,
-          contactEmail: data.contactEmail || '',
-          contactPhone: data.contactPhone || '',
+          rmisSetup: data.rmisSetup || false,
+          setupWithBrokers: data.setupWithBrokers || false,
         })
       }
     } catch (err: any) {
@@ -215,8 +215,8 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
         highwaySetup: formData.highwaySetup,
         sellingWithEmail: formData.sellingWithEmail,
         sellingWithPhone: formData.sellingWithPhone,
-        contactEmail: formData.contactEmail || undefined,
-        contactPhone: formData.contactPhone || undefined,
+        rmisSetup: formData.rmisSetup,
+        setupWithBrokers: formData.setupWithBrokers,
       }
 
       // Remove undefined values
@@ -475,47 +475,49 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                     </label>
                   </div>
 
-                  {/* Contact Info */}
+                  {/* What's Included & Setup */}
                   <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contact Information</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">What's Included & Setup</h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input
-                        label="Contact Email"
-                        type="email"
-                        value={formData.contactEmail}
-                        onChange={(e) => handleChange('contactEmail', e.target.value)}
-                        placeholder="email@company.com"
-                      />
-
-                      <Input
-                        label="Contact Phone"
-                        type="tel"
-                        value={formData.contactPhone}
-                        onChange={(e) => handleChange('contactPhone', e.target.value)}
-                        placeholder="(555) 123-4567"
-                      />
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.sellingWithEmail}
-                          onChange={(e) => handleChange('sellingWithEmail', e.target.checked)}
-                          className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
-                        />
-                        <span className="text-gray-700">Email Included in Sale</span>
-                      </label>
-
-                      <label className="flex items-center gap-3 cursor-pointer">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
                         <input
                           type="checkbox"
                           checked={formData.sellingWithPhone}
                           onChange={(e) => handleChange('sellingWithPhone', e.target.checked)}
                           className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
                         />
-                        <span className="text-gray-700">Phone Included in Sale</span>
+                        <span className="text-gray-700">Selling with Phone?</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.sellingWithEmail}
+                          onChange={(e) => handleChange('sellingWithEmail', e.target.checked)}
+                          className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-gray-700">Selling with Email?</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.rmisSetup}
+                          onChange={(e) => handleChange('rmisSetup', e.target.checked)}
+                          className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-gray-700">RMIS Setup?</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.setupWithBrokers}
+                          onChange={(e) => handleChange('setupWithBrokers', e.target.checked)}
+                          className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-gray-700">Set Up with Brokers?</span>
                       </label>
                     </div>
                   </div>
