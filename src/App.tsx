@@ -165,7 +165,6 @@ function App() {
               <Route path="earnings" element={<SellerEarningsPage />} />
               <Route path="documents" element={<SellerDocumentsPage />} />
               <Route path="transactions" element={<SellerTransactionsPage />} />
-              <Route path="messages" element={<BuyerMessagesPage />} />
               <Route path="carrier-pulse" element={<CarrierPulsePage />} />
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
               <Route path="chameleon-check" element={<ChameleonCheckPage />} />
