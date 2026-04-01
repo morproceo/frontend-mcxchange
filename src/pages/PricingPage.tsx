@@ -105,6 +105,16 @@ export default function PricingPage() {
           <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             Choose the plan that fits your needs. Unlock listings, run credit reports, and find the perfect business opportunity.
           </p>
+
+          {/* Seller free banner */}
+          <div className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-50 border border-emerald-200">
+            <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-semibold text-emerald-800">
+              Selling your authority? Sellers list for free — no subscription required.
+            </span>
+          </div>
         </motion.div>
 
         {/* Billing Toggle */}
