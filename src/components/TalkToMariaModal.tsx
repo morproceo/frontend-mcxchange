@@ -119,7 +119,7 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">Talk to a Representative</h2>
-                      <p className="text-sm text-gray-500">Expert MC Authority Consultation</p>
+                      <p className="text-sm text-gray-500">Talk to Domilea Admin</p>
                     </div>
                   </div>
                   <button
@@ -139,9 +139,9 @@ const TalkToMariaModal = ({ isOpen, onClose }: TalkToMariaModalProps) => {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold text-gray-900 mb-1">Domilea Representative</h3>
-                        <p className="text-sm text-secondary-600 mb-2">Senior MC Authority Consultant</p>
+                        <p className="text-sm text-secondary-600 mb-2">Domilea Admin</p>
                         <p className="text-xs text-gray-600">
-                          Our team has 15+ years of experience helping carriers navigate MC authority purchases,
+                          Our team has 15+ years of experience helping carriers navigate authority purchases,
                           compliance, and business growth strategies.
                         </p>
                       </div>
