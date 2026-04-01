@@ -3426,11 +3426,14 @@ export default function MCDetailPageV2() {
   const { isAuthenticated, user, isIdentityVerified, isLoading: authLoading } = useAuth()
   const { listing, loading, error, isUnlocked, unlocking, unlock } = useListing(id)
 
-  // Preview mode: logged in but not identity verified (admins bypass)
-  const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin'
+  // Check if current user is the listing owner (seller viewing their own listing)
+  const isListingOwner = listing?.sellerId === user?.id || listing?.isOwner
 
-  // Mark non-overview tabs as locked until listing is unlocked (admins bypass)
-  const canAccessAllTabs = isUnlocked || user?.role === 'admin'
+  // Preview mode: logged in but not identity verified (admins and listing owners bypass)
+  const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin' && !isListingOwner
+
+  // Mark non-overview tabs as locked until listing is unlocked (admins and listing owners bypass)
+  const canAccessAllTabs = isUnlocked || user?.role === 'admin' || isListingOwner
   const visibleTabs = tabs.map(t => ({
     ...t,
     locked: !canAccessAllTabs && t.id !== 'overview',
