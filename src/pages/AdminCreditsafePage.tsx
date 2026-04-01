@@ -1348,6 +1348,194 @@ const AdminCreditsafePage = () => {
                             )}
                           </div>
 
+                          {/* Detailed UCC Filings */}
+                          {reportData.negativeInfo.uccFilings && reportData.negativeInfo.uccFilings.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-blue-500" />
+                                UCC Filing Details ({reportData.negativeInfo.uccFilings.length})
+                              </h5>
+                              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                {reportData.negativeInfo.uccFilings.map((ucc: any, index: number) => (
+                                  <div key={index} className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                      <div>
+                                        <span className="text-gray-500">Filing #:</span>{' '}
+                                        <span className="font-medium text-gray-900">{ucc.filingNumber || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Type:</span>{' '}
+                                        <span className="font-medium text-gray-900">{ucc.filingType || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Filed:</span>{' '}
+                                        <span className="font-medium text-gray-900">{formatDate(ucc.filedDate)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Expires:</span>{' '}
+                                        <span className="font-medium text-gray-900">{formatDate(ucc.expirationDate)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Jurisdiction:</span>{' '}
+                                        <span className="font-medium text-gray-900">{ucc.jurisdiction || ucc.filingOffice || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Status:</span>{' '}
+                                        <span className={`font-medium ${ucc.status === 'Active' ? 'text-amber-700' : 'text-gray-600'}`}>
+                                          {ucc.status || 'N/A'}
+                                        </span>
+                                      </div>
+                                      {ucc.securedParty?.name && (
+                                        <div className="sm:col-span-2">
+                                          <span className="text-gray-500">Secured Party:</span>{' '}
+                                          <span className="font-medium text-gray-900">{ucc.securedParty.name}</span>
+                                          {ucc.securedParty.address && (
+                                            <span className="text-gray-400 text-xs ml-2">{ucc.securedParty.address}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {ucc.collateralDescription && (
+                                        <div className="sm:col-span-2">
+                                          <span className="text-gray-500">Collateral:</span>{' '}
+                                          <span className="font-medium text-gray-900 text-xs">{ucc.collateralDescription}</span>
+                                        </div>
+                                      )}
+                                      {ucc.debtorName && (
+                                        <div className="sm:col-span-2">
+                                          <span className="text-gray-500">Debtor:</span>{' '}
+                                          <span className="font-medium text-gray-900">{ucc.debtorName}</span>
+                                          {ucc.debtorAddress?.simpleValue && (
+                                            <span className="text-gray-400 text-xs ml-2">{ucc.debtorAddress.simpleValue}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Detailed Judgments */}
+                          {reportData.negativeInfo.judgments && reportData.negativeInfo.judgments.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <Scale className="w-4 h-4 text-red-500" />
+                                Judgment Details ({reportData.negativeInfo.judgments.length})
+                              </h5>
+                              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                {reportData.negativeInfo.judgments.map((judgment: any, index: number) => (
+                                  <div key={index} className="bg-red-50 rounded-xl p-4 border border-red-200">
+                                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                      <div>
+                                        <span className="text-gray-500">Case #:</span>{' '}
+                                        <span className="font-medium text-gray-900">{judgment.caseNumber || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Filed:</span>{' '}
+                                        <span className="font-medium text-gray-900">{formatDate(judgment.filedDate)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Amount:</span>{' '}
+                                        <span className="font-bold text-red-700">
+                                          {formatCurrency(judgment.amount, judgment.currency)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Status:</span>{' '}
+                                        <span className="font-medium text-gray-900">{judgment.status || 'N/A'}</span>
+                                      </div>
+                                      {judgment.plaintiff && (
+                                        <div className="sm:col-span-2">
+                                          <span className="text-gray-500">Plaintiff:</span>{' '}
+                                          <span className="font-medium text-gray-900">{judgment.plaintiff}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Detailed Tax Liens */}
+                          {reportData.negativeInfo.taxLiens && reportData.negativeInfo.taxLiens.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <Landmark className="w-4 h-4 text-amber-500" />
+                                Tax Lien Details ({reportData.negativeInfo.taxLiens.length})
+                              </h5>
+                              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                {reportData.negativeInfo.taxLiens.map((lien: any, index: number) => (
+                                  <div key={index} className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                      <div>
+                                        <span className="text-gray-500">Filed:</span>{' '}
+                                        <span className="font-medium text-gray-900">{formatDate(lien.filedDate)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Amount:</span>{' '}
+                                        <span className="font-bold text-amber-700">
+                                          {formatCurrency(lien.amount, lien.currency)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Jurisdiction:</span>{' '}
+                                        <span className="font-medium text-gray-900">{lien.jurisdiction || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Status:</span>{' '}
+                                        <span className="font-medium text-gray-900">{lien.status || 'N/A'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Detailed Suits */}
+                          {reportData.negativeInfo.suits && reportData.negativeInfo.suits.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <FileWarning className="w-4 h-4 text-orange-500" />
+                                Suit Details ({reportData.negativeInfo.suits.length})
+                              </h5>
+                              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                {reportData.negativeInfo.suits.map((suit: any, index: number) => (
+                                  <div key={index} className="bg-orange-50 rounded-xl p-4 border border-orange-200">
+                                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                      <div>
+                                        <span className="text-gray-500">Case #:</span>{' '}
+                                        <span className="font-medium text-gray-900">{suit.caseNumber || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Filed:</span>{' '}
+                                        <span className="font-medium text-gray-900">{formatDate(suit.filedDate)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Amount:</span>{' '}
+                                        <span className="font-bold text-orange-700">
+                                          {formatCurrency(suit.amount, suit.currency)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Status:</span>{' '}
+                                        <span className="font-medium text-gray-900">{suit.status || 'N/A'}</span>
+                                      </div>
+                                      {suit.plaintiff && (
+                                        <div className="sm:col-span-2">
+                                          <span className="text-gray-500">Plaintiff:</span>{' '}
+                                          <span className="font-medium text-gray-900">{suit.plaintiff}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {/* Legal Filings Amount Summary */}
                           {reportData.ratingCommentary.legalFilingsCount > 0 && (
                             <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
@@ -1380,35 +1568,192 @@ const AdminCreditsafePage = () => {
                         title="Payment History & Trends"
                         icon={Banknote}
                       >
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div className="bg-gray-50 rounded-xl p-5 text-center">
-                            <Clock className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                            <p className="text-2xl font-bold text-gray-900">
-                              {reportData.paymentData.dbt !== undefined ? `${reportData.paymentData.dbt}` : 'N/A'}
-                            </p>
-                            <p className="text-sm text-gray-600">Days Beyond Terms</p>
+                        <div className="space-y-6">
+                          {/* DBT Overview */}
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="bg-gray-50 rounded-xl p-5 text-center">
+                              <Clock className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-gray-900">
+                                {reportData.paymentData.dbt !== undefined ? `${reportData.paymentData.dbt}` : 'N/A'}
+                              </p>
+                              <p className="text-sm text-gray-600">Days Beyond Terms</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-5 text-center">
+                              <Activity className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-gray-900">
+                                {reportData.paymentData.industryDBT !== undefined ? `${reportData.paymentData.industryDBT}` : 'N/A'}
+                              </p>
+                              <p className="text-sm text-gray-600">Industry Average DBT</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-5 text-center">
+                              <TrendingUp className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-gray-900">
+                                {reportData.paymentData.paymentTrendIndicator || 'N/A'}
+                              </p>
+                              <p className="text-sm text-gray-600">Payment Trend</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-5 text-center">
+                              <BarChart3 className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                              <p className="text-2xl font-bold text-gray-900">
+                                {reportData.paymentData.paymentComparison || 'N/A'}
+                              </p>
+                              <p className="text-sm text-gray-600">vs Industry</p>
+                            </div>
                           </div>
-                          <div className="bg-gray-50 rounded-xl p-5 text-center">
-                            <Activity className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                            <p className="text-2xl font-bold text-gray-900">
-                              {reportData.paymentData.industryDBT !== undefined ? `${reportData.paymentData.industryDBT}` : 'N/A'}
-                            </p>
-                            <p className="text-sm text-gray-600">Industry Average DBT</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-xl p-5 text-center">
-                            <TrendingUp className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                            <p className="text-2xl font-bold text-gray-900">
-                              {reportData.paymentData.paymentTrendIndicator || 'N/A'}
-                            </p>
-                            <p className="text-sm text-gray-600">Payment Trend</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-xl p-5 text-center">
-                            <BarChart3 className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                            <p className="text-2xl font-bold text-gray-900">
-                              {reportData.paymentData.paymentComparison || 'N/A'}
-                            </p>
-                            <p className="text-sm text-gray-600">vs Industry</p>
-                          </div>
+
+                          {/* Trade Payment Summary */}
+                          {reportData.paymentData.tradePaymentSummary && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <CreditCard className="w-4 h-4 text-blue-500" />
+                                Trade Payment Summary
+                              </h5>
+                              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {reportData.paymentData.tradePaymentSummary.currentPercentage !== undefined && (
+                                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-200">
+                                    <p className="text-2xl font-bold text-emerald-700">
+                                      {reportData.paymentData.tradePaymentSummary.currentPercentage}%
+                                    </p>
+                                    <p className="text-sm text-gray-600">Paid Current</p>
+                                  </div>
+                                )}
+                                {reportData.paymentData.tradePaymentSummary.slow30Percentage !== undefined && (
+                                  <div className="bg-yellow-50 rounded-xl p-4 text-center border border-yellow-200">
+                                    <p className="text-2xl font-bold text-yellow-700">
+                                      {reportData.paymentData.tradePaymentSummary.slow30Percentage}%
+                                    </p>
+                                    <p className="text-sm text-gray-600">1-30 Days Slow</p>
+                                  </div>
+                                )}
+                                {reportData.paymentData.tradePaymentSummary.slow60Percentage !== undefined && (
+                                  <div className="bg-orange-50 rounded-xl p-4 text-center border border-orange-200">
+                                    <p className="text-2xl font-bold text-orange-700">
+                                      {reportData.paymentData.tradePaymentSummary.slow60Percentage}%
+                                    </p>
+                                    <p className="text-sm text-gray-600">31-60 Days Slow</p>
+                                  </div>
+                                )}
+                                {reportData.paymentData.tradePaymentSummary.slow90Percentage !== undefined && (
+                                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-200">
+                                    <p className="text-2xl font-bold text-red-700">
+                                      {reportData.paymentData.tradePaymentSummary.slow90Percentage}%
+                                    </p>
+                                    <p className="text-sm text-gray-600">61-90 Days Slow</p>
+                                  </div>
+                                )}
+                              </div>
+                              {(reportData.paymentData.tradePaymentSummary.totalTradeLines !== undefined ||
+                                reportData.paymentData.tradePaymentSummary.totalHighCreditAmount !== undefined) && (
+                                <div className="grid sm:grid-cols-3 gap-4 mt-4">
+                                  {reportData.paymentData.tradePaymentSummary.totalTradeLines !== undefined && (
+                                    <div className="bg-gray-50 rounded-xl p-4 text-center">
+                                      <p className="text-2xl font-bold text-gray-900">
+                                        {formatNumber(reportData.paymentData.tradePaymentSummary.totalTradeLines)}
+                                      </p>
+                                      <p className="text-sm text-gray-600">Total Trade Lines</p>
+                                    </div>
+                                  )}
+                                  {reportData.paymentData.tradePaymentSummary.totalHighCreditAmount !== undefined && (
+                                    <div className="bg-gray-50 rounded-xl p-4 text-center">
+                                      <p className="text-2xl font-bold text-gray-900">
+                                        {formatCurrency(reportData.paymentData.tradePaymentSummary.totalHighCreditAmount)}
+                                      </p>
+                                      <p className="text-sm text-gray-600">Total High Credit</p>
+                                    </div>
+                                  )}
+                                  {reportData.paymentData.tradePaymentSummary.totalBalanceAmount !== undefined && (
+                                    <div className="bg-gray-50 rounded-xl p-4 text-center">
+                                      <p className="text-2xl font-bold text-gray-900">
+                                        {formatCurrency(reportData.paymentData.tradePaymentSummary.totalBalanceAmount)}
+                                      </p>
+                                      <p className="text-sm text-gray-600">Total Balance</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Trade Lines Information */}
+                          {reportData.paymentData.tradeLinesInformation && reportData.paymentData.tradeLinesInformation.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-indigo-500" />
+                                Trade Lines ({reportData.paymentData.tradeLinesInformation.length})
+                              </h5>
+                              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                                <table className="w-full text-sm">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="text-left px-4 py-3 font-semibold text-gray-700">Industry</th>
+                                      <th className="text-right px-4 py-3 font-semibold text-gray-700">High Credit</th>
+                                      <th className="text-right px-4 py-3 font-semibold text-gray-700">Balance</th>
+                                      <th className="text-right px-4 py-3 font-semibold text-gray-700">DBT</th>
+                                      <th className="text-center px-4 py-3 font-semibold text-gray-700">Terms</th>
+                                      <th className="text-center px-4 py-3 font-semibold text-gray-700">Last Activity</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {reportData.paymentData.tradeLinesInformation.slice(0, 20).map((line: any, index: number) => (
+                                      <tr key={index} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-gray-900">{line.industry || line.creditorName || 'N/A'}</td>
+                                        <td className="px-4 py-3 text-right font-medium">{formatCurrency(line.highCreditAmount)}</td>
+                                        <td className="px-4 py-3 text-right font-medium">{formatCurrency(line.balanceAmount || line.recentHighCredit)}</td>
+                                        <td className="px-4 py-3 text-right">
+                                          <span className={`font-bold ${
+                                            (line.dbt || 0) > 30 ? 'text-red-600' :
+                                            (line.dbt || 0) > 15 ? 'text-amber-600' : 'text-emerald-600'
+                                          }`}>
+                                            {line.dbt !== undefined ? line.dbt : 'N/A'}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-gray-600">{line.terms || 'N/A'}</td>
+                                        <td className="px-4 py-3 text-center text-gray-500">{formatDate(line.lastActivityDate || line.dateReported)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              {reportData.paymentData.tradeLinesInformation.length > 20 && (
+                                <p className="text-sm text-gray-500 mt-2 text-center">
+                                  Showing 20 of {reportData.paymentData.tradeLinesInformation.length} trade lines
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* DBT History */}
+                          {reportData.paymentData.dbtHistory && reportData.paymentData.dbtHistory.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4 text-purple-500" />
+                                DBT History (Days Beyond Terms Trend)
+                              </h5>
+                              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                <div className="flex items-end gap-1 h-32">
+                                  {reportData.paymentData.dbtHistory.map((entry: any, index: number) => {
+                                    const dbtVal = entry.dbt ?? entry.value ?? 0
+                                    const maxDbt = Math.max(...reportData.paymentData.dbtHistory.map((e: any) => e.dbt ?? e.value ?? 0), 1)
+                                    const height = Math.max((dbtVal / maxDbt) * 100, 4)
+                                    return (
+                                      <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                                        <span className="text-[10px] font-bold text-gray-700">{dbtVal}</span>
+                                        <div
+                                          className={`w-full rounded-t ${
+                                            dbtVal > 30 ? 'bg-red-400' : dbtVal > 15 ? 'bg-amber-400' : 'bg-emerald-400'
+                                          }`}
+                                          style={{ height: `${height}%` }}
+                                        />
+                                        <span className="text-[9px] text-gray-400 truncate w-full text-center">
+                                          {entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : `${index + 1}`}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </ExpandableSection>
 
@@ -1580,6 +1925,119 @@ const AdminCreditsafePage = () => {
                                 </div>
                               </div>
                             ))}
+                          </div>
+                        </ExpandableSection>
+                      )}
+
+                      {/* Credit Rating History */}
+                      {reportData.creditRatingHistory && reportData.creditRatingHistory.length > 0 && (
+                        <ExpandableSection
+                          title="Credit Rating History"
+                          icon={Activity}
+                          badge={reportData.creditRatingHistory.length}
+                          badgeColor="bg-blue-100 text-blue-700"
+                        >
+                          <div className="space-y-3">
+                            <p className="text-sm text-gray-500 mb-4">
+                              Historical credit rating changes over time.
+                            </p>
+                            <div className="overflow-x-auto rounded-xl border border-gray-200">
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Date</th>
+                                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Rating</th>
+                                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Description</th>
+                                    <th className="text-right px-4 py-3 font-semibold text-gray-700">Credit Limit</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {reportData.creditRatingHistory.map((entry: any, index: number) => (
+                                    <tr key={index} className="hover:bg-gray-50">
+                                      <td className="px-4 py-3 text-gray-900">{formatDate(entry.date || entry.ratingDate)}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
+                                          parseInt(entry.commonValue || entry.rating || '0') >= 60
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : parseInt(entry.commonValue || entry.rating || '0') >= 40
+                                            ? 'bg-amber-100 text-amber-700'
+                                            : 'bg-red-100 text-red-700'
+                                        }`}>
+                                          {entry.commonValue || entry.rating || 'N/A'}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-gray-600">
+                                        {entry.commonDescription || entry.description || 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-medium">
+                                        {formatCurrency(entry.creditLimit?.value, entry.creditLimit?.currency)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </ExpandableSection>
+                      )}
+
+                      {/* Enquiries / Inquiries Trend */}
+                      {reportData.enquiriesTrend && (
+                        Object.keys(reportData.enquiriesTrend).length > 0 &&
+                        (reportData.enquiriesTrend.last3Months !== undefined ||
+                         reportData.enquiriesTrend.last6Months !== undefined ||
+                         reportData.enquiriesTrend.last12Months !== undefined ||
+                         (Array.isArray(reportData.enquiriesTrend) && reportData.enquiriesTrend.length > 0))
+                      ) && (
+                        <ExpandableSection
+                          title="Credit Inquiries Trend"
+                          icon={Search}
+                        >
+                          <div className="space-y-4">
+                            <p className="text-sm text-gray-500">
+                              Number of times this company's credit has been checked by other businesses.
+                            </p>
+                            {Array.isArray(reportData.enquiriesTrend) ? (
+                              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                                <table className="w-full text-sm">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="text-left px-4 py-3 font-semibold text-gray-700">Period</th>
+                                      <th className="text-right px-4 py-3 font-semibold text-gray-700">Inquiries</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {reportData.enquiriesTrend.map((entry: any, index: number) => (
+                                      <tr key={index} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-gray-900">{entry.date || entry.period || formatDate(entry.month)}</td>
+                                        <td className="px-4 py-3 text-right font-bold text-gray-900">{entry.count || entry.numberOfEnquiries || 0}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="grid sm:grid-cols-3 gap-4">
+                                {reportData.enquiriesTrend.last3Months !== undefined && (
+                                  <div className="bg-blue-50 rounded-xl p-5 text-center border border-blue-200">
+                                    <p className="text-3xl font-bold text-blue-700">{reportData.enquiriesTrend.last3Months}</p>
+                                    <p className="text-sm text-gray-600">Last 3 Months</p>
+                                  </div>
+                                )}
+                                {reportData.enquiriesTrend.last6Months !== undefined && (
+                                  <div className="bg-indigo-50 rounded-xl p-5 text-center border border-indigo-200">
+                                    <p className="text-3xl font-bold text-indigo-700">{reportData.enquiriesTrend.last6Months}</p>
+                                    <p className="text-sm text-gray-600">Last 6 Months</p>
+                                  </div>
+                                )}
+                                {reportData.enquiriesTrend.last12Months !== undefined && (
+                                  <div className="bg-purple-50 rounded-xl p-5 text-center border border-purple-200">
+                                    <p className="text-3xl font-bold text-purple-700">{reportData.enquiriesTrend.last12Months}</p>
+                                    <p className="text-sm text-gray-600">Last 12 Months</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </ExpandableSection>
                       )}
