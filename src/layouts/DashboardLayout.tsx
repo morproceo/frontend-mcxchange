@@ -149,8 +149,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Handshake, label: 'Transactions', path: '/seller/transactions' },
           { icon: DollarSign, label: 'Earnings', path: '/seller/earnings' },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
-          { icon: Activity, label: 'CarrierPulse', path: '/seller/carrier-pulse', badge: 'New' },
-          { icon: ShieldAlert, label: 'Chameleon Check', path: '/seller/chameleon-check' },
           {
             label: 'Services',
             icon: Briefcase,
