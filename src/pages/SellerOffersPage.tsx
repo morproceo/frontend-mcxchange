@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   DollarSign,
@@ -7,309 +7,243 @@ import {
   XCircle,
   Clock,
   User,
-  Calendar
+  Calendar,
+  Loader2,
+  Inbox
 } from 'lucide-react'
-import GlassCard from '../components/ui/GlassCard'
+import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel } from '../utils/helpers'
-import { formatDistanceToNow } from 'date-fns'
+import api from '../services/api'
+
+interface SellerOffer {
+  id: string
+  listingId: string
+  amount: number
+  status: string
+  message?: string
+  createdAt: string
+  listing?: {
+    mcNumber: string
+    title: string
+    askingPrice?: number
+  }
+  buyer?: {
+    id: string
+    name: string
+  }
+}
 
 const SellerOffersPage = () => {
-  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'PENDING' | 'ACCEPTED' | 'REJECTED'>('all')
+  const [offers, setOffers] = useState<SellerOffer[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const offers = [
-    {
-      id: '1',
-      listingId: '1',
-      mcNumber: '123456',
-      listingTitle: 'Established Interstate Authority - Clean Record',
-      askingPrice: 45000,
-      offerAmount: 42000,
-      buyer: {
-        name: 'John Transport LLC',
-        trustScore: 78,
-        verified: true,
-        completedDeals: 2
-      },
-      message: 'Very interested in this authority. Have cash ready for quick closing.',
-      status: 'pending',
-      createdAt: new Date('2024-01-10T10:30:00')
-    },
-    {
-      id: '2',
-      listingId: '1',
-      mcNumber: '123456',
-      listingTitle: 'Established Interstate Authority - Clean Record',
-      askingPrice: 45000,
-      offerAmount: 44000,
-      buyer: {
-        name: 'Express Freight Corp',
-        trustScore: 92,
-        verified: true,
-        completedDeals: 5
-      },
-      message: 'Looking to expand our operations. Can close within 48 hours if accepted.',
-      status: 'pending',
-      createdAt: new Date('2024-01-11T14:20:00')
-    },
-    {
-      id: '3',
-      listingId: '4',
-      mcNumber: '901234',
-      listingTitle: 'Expedited Freight Authority',
-      askingPrice: 38000,
-      offerAmount: 37000,
-      buyer: {
-        name: 'Quick Logistics Inc',
-        trustScore: 85,
-        verified: true,
-        completedDeals: 3
-      },
-      message: 'Great fit for our business model. Ready to proceed immediately.',
-      status: 'pending',
-      createdAt: new Date('2024-01-09T16:45:00')
-    },
-    {
-      id: '4',
-      listingId: '3',
-      mcNumber: '345678',
-      listingTitle: 'Long Haul Authority - Amazon Approved',
-      askingPrice: 52000,
-      offerAmount: 52000,
-      buyer: {
-        name: 'National Carriers LLC',
-        trustScore: 88,
-        verified: true,
-        completedDeals: 4
-      },
-      message: 'Willing to pay full asking price. Please consider.',
-      status: 'accepted',
-      createdAt: new Date('2024-01-08T09:15:00')
-    },
-    {
-      id: '5',
-      listingId: '1',
-      mcNumber: '123456',
-      listingTitle: 'Established Interstate Authority - Clean Record',
-      askingPrice: 45000,
-      offerAmount: 35000,
-      buyer: {
-        name: 'Budget Transport',
-        trustScore: 62,
-        verified: false,
-        completedDeals: 0
-      },
-      message: 'Starting out, this is our budget.',
-      status: 'rejected',
-      createdAt: new Date('2024-01-07T11:30:00')
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        setLoading(true)
+        const statusParam = activeFilter === 'all' ? undefined : activeFilter
+        const response = await api.getSellerOffers({ status: statusParam })
+        setOffers(response.data || [])
+      } catch {
+        setOffers([])
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+    fetchOffers()
+  }, [activeFilter])
 
-  const filteredOffers = offers.filter(offer =>
-    activeFilter === 'all' || offer.status === activeFilter
-  )
+  const pendingCount = offers.filter(o => o.status === 'PENDING').length
+  const acceptedCount = offers.filter(o => o.status === 'ACCEPTED').length
+  const rejectedCount = offers.filter(o => o.status === 'REJECTED').length
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'text-yellow-400'
-      case 'accepted':
-        return 'text-trust-high'
-      case 'rejected':
-        return 'text-red-400'
-      default:
-        return 'text-white/60'
+      case 'PENDING': return 'text-amber-600'
+      case 'ACCEPTED': return 'text-emerald-600'
+      case 'REJECTED': return 'text-red-500'
+      default: return 'text-gray-500'
     }
   }
 
-  const getStatusIcon = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4" />
-      case 'accepted':
-        return <CheckCircle className="w-4 h-4" />
-      case 'rejected':
-        return <XCircle className="w-4 h-4" />
+      case 'PENDING':
+        return (
+          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Pending
+          </span>
+        )
+      case 'ACCEPTED':
+        return (
+          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" /> Accepted
+          </span>
+        )
+      case 'REJECTED':
+        return (
+          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-red-50 border border-red-200 text-red-600 flex items-center gap-1">
+            <XCircle className="w-3 h-3" /> Rejected
+          </span>
+        )
       default:
-        return null
+        return (
+          <span className="px-2 py-1 rounded-lg text-xs font-medium bg-gray-50 border border-gray-200 text-gray-600">
+            {status}
+          </span>
+        )
     }
   }
 
-  const stats = [
-    {
-      label: 'Pending Offers',
-      value: offers.filter(o => o.status === 'pending').length,
-      color: 'text-yellow-400'
-    },
-    {
-      label: 'Accepted',
-      value: offers.filter(o => o.status === 'accepted').length,
-      color: 'text-trust-high'
-    },
-    {
-      label: 'Rejected',
-      value: offers.filter(o => o.status === 'rejected').length,
-      color: 'text-red-400'
-    },
-    {
-      label: 'Avg Offer',
-      value: `$${Math.round(offers.reduce((sum, o) => sum + o.offerAmount, 0) / offers.length / 1000)}K`,
-      color: 'text-primary-400'
-    }
-  ]
-
-  const handleAcceptOffer = (offerId: string) => {
-    alert(`Offer ${offerId} accepted! Buyer will be notified.`)
-  }
-
-  const handleRejectOffer = (offerId: string) => {
-    alert(`Offer ${offerId} rejected.`)
-  }
-
-  const handleCounterOffer = (_offerId: string) => {
-    const amount = prompt('Enter counter offer amount:')
-    if (amount) {
-      alert(`Counter offer of $${amount} sent to buyer.`)
-    }
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    if (diffMin < 60) return `${diffMin}m ago`
+    const diffHrs = Math.floor(diffMin / 60)
+    if (diffHrs < 24) return `${diffHrs}h ago`
+    const diffDays = Math.floor(diffHrs / 24)
+    if (diffDays < 30) return `${diffDays}d ago`
+    return date.toLocaleDateString()
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-1">Offers Received</h2>
-          <p className="text-white/60">Review and manage offers on your listings</p>
-        </div>
+    <div className="p-6 md:p-8 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Offers Received</h2>
+        <p className="text-gray-500 text-sm">Review and manage offers on your listings</p>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card padding="sm">
+          <p className="text-xs text-gray-500 mb-1">Pending</p>
+          <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs text-gray-500 mb-1">Accepted</p>
+          <p className="text-2xl font-bold text-emerald-600">{acceptedCount}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs text-gray-500 mb-1">Rejected</p>
+          <p className="text-2xl font-bold text-red-500">{rejectedCount}</p>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 mb-6">
+        {(['all', 'PENDING', 'ACCEPTED', 'REJECTED'] as const).map((filter) => (
+          <button
+            key={filter}
+            onClick={() => setActiveFilter(filter)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+              activeFilter === filter
+                ? 'bg-secondary-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {filter === 'all' ? 'All' : filter.toLowerCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="text-center py-16">
+          <Loader2 className="w-8 h-8 text-gray-400 mx-auto animate-spin" />
+          <p className="text-gray-500 mt-3">Loading offers...</p>
+        </div>
+      ) : offers.length === 0 ? (
+        <Card>
+          <div className="text-center py-16">
+            <Inbox className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">No offers yet</h3>
+            <p className="text-gray-500 text-sm max-w-sm mx-auto">
+              When buyers submit offers on your listings, they'll appear here for you to review, accept, or decline.
+            </p>
+          </div>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {offers.map((offer, index) => (
             <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
+              key={offer.id}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
-              <GlassCard>
-                <div className="text-sm text-white/60 mb-1">{stat.label}</div>
-                <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-              </GlassCard>
+              <Card>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="text-base font-bold text-gray-900">
+                        MC #{offer.listing?.mcNumber || 'N/A'}
+                      </h3>
+                      {getStatusBadge(offer.status)}
+                    </div>
+                    {offer.listing?.title && (
+                      <p className="text-sm text-gray-500">{offer.listing.title}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{formatRelativeTime(offer.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    {offer.listing?.askingPrice && (
+                      <>
+                        <p className="text-xs text-gray-400">Asking</p>
+                        <p className="text-sm text-gray-500">${offer.listing.askingPrice.toLocaleString()}</p>
+                      </>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">Offer</p>
+                    <p className="text-xl font-bold text-secondary-600">
+                      ${(offer.amount ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Buyer */}
+                {offer.buyer?.name && (
+                  <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-gray-50 rounded-lg">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700">{offer.buyer.name}</span>
+                  </div>
+                )}
+
+                {/* Message */}
+                {offer.message && (
+                  <div className="mb-3 px-3 py-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-gray-600">{offer.message}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions for pending offers */}
+                {offer.status === 'PENDING' && (
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" fullWidth>
+                      <CheckCircle className="w-4 h-4 mr-1" /> Accept
+                    </Button>
+                    <Button size="sm" fullWidth variant="outline">
+                      <DollarSign className="w-4 h-4 mr-1" /> Counter
+                    </Button>
+                    <Button size="sm" fullWidth variant="outline">
+                      <XCircle className="w-4 h-4 mr-1" /> Decline
+                    </Button>
+                  </div>
+                )}
+              </Card>
             </motion.div>
           ))}
         </div>
-
-        {/* Filters */}
-        <div className="flex gap-2 mb-6">
-          {(['all', 'pending', 'accepted', 'rejected'] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
-                activeFilter === filter
-                  ? 'bg-primary-500 text-white'
-                  : 'glass-subtle text-white/80 hover:bg-white/15'
-              }`}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-
-        {/* Offers List */}
-        <div className="space-y-4">
-          {filteredOffers.map((offer) => (
-            <GlassCard key={offer.id}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold">MC #{offer.mcNumber}</h3>
-                    <span className={`glass-subtle px-3 py-1 rounded-full text-sm flex items-center gap-1.5 ${getStatusColor(offer.status)}`}>
-                      {getStatusIcon(offer.status)}
-                      <span className="capitalize">{offer.status}</span>
-                    </span>
-                  </div>
-                  <p className="text-sm text-white/80 mb-1">{offer.listingTitle}</p>
-                  <div className="flex items-center gap-2 text-xs text-white/60">
-                    <Calendar className="w-3 h-3" />
-                    <span>{formatDistanceToNow(offer.createdAt, { addSuffix: true })}</span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-sm text-white/60 mb-1">Your Asking Price</div>
-                  <div className="text-lg font-semibold text-white/80 mb-2">
-                    ${offer.askingPrice.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-white/60 mb-1">Offer Amount</div>
-                  <div className="text-2xl font-bold text-primary-400">
-                    ${offer.offerAmount.toLocaleString()}
-                  </div>
-                  <div className={`text-xs mt-1 ${offer.offerAmount >= offer.askingPrice ? 'text-trust-high' : 'text-yellow-400'}`}>
-                    {offer.offerAmount >= offer.askingPrice ? 'Full price' : `${Math.round((offer.offerAmount / offer.askingPrice) * 100)}% of asking`}
-                  </div>
-                </div>
-              </div>
-
-              {/* Buyer Info */}
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-2">Buyer Information</div>
-                <div className="flex items-center justify-between glass-subtle rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center">
-                      <User className="w-5 h-5 text-primary-400" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">{offer.buyer.name}</div>
-                      <div className="text-xs text-white/60">
-                        {offer.buyer.completedDeals} completed deals
-                      </div>
-                    </div>
-                  </div>
-                  <TrustBadge
-                    score={offer.buyer.trustScore}
-                    level={getTrustLevel(offer.buyer.trustScore)}
-                    verified={offer.buyer.verified}
-                    size="sm"
-                  />
-                </div>
-              </div>
-
-              {/* Message */}
-              {offer.message && (
-                <div className="mb-4">
-                  <div className="text-sm font-medium mb-2">Buyer's Message</div>
-                  <div className="glass-subtle rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="w-4 h-4 text-primary-400 mt-1 flex-shrink-0" />
-                      <p className="text-sm text-white/80">{offer.message}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              {offer.status === 'pending' && (
-                <div className="flex gap-3">
-                  <Button fullWidth onClick={() => handleAcceptOffer(offer.id)}>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Accept Offer
-                  </Button>
-                  <Button fullWidth variant="secondary" onClick={() => handleCounterOffer(offer.id)}>
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Counter Offer
-                  </Button>
-                  <Button fullWidth variant="ghost" onClick={() => handleRejectOffer(offer.id)}>
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Reject
-                  </Button>
-                </div>
-              )}
-            </GlassCard>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
