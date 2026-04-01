@@ -57,6 +57,7 @@ interface MenuItem {
   label: string
   path: string
   badge?: string
+  badgeColor?: string
 }
 
 interface MenuCategory {
@@ -177,7 +178,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe', badge: 'New' }]
             : []),
           { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' },
-          { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'New' },
+          { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'New', badgeColor: 'bg-pink-500' },
           {
             label: 'Services',
             icon: Briefcase,
@@ -296,7 +297,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           <>
             <span className={clsx('font-medium text-inherit', indented ? 'text-sm' : '')}>{item.label}</span>
             {item.badge && (
-              <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-500 text-white leading-none">{item.badge}</span>
+              <span className={clsx('ml-auto px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-full text-white leading-none', item.badgeColor || 'bg-indigo-500')}>{item.badge}</span>
             )}
           </>
         )}
