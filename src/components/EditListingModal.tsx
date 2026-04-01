@@ -99,11 +99,16 @@ interface ListingData {
   insuranceOnFile?: boolean
   bipdCoverage?: number
   cargoCoverage?: number
+  bondAmount?: number
+  insuranceCompany?: string
+  monthlyInsurancePremium?: number
   amazonStatus?: string
   amazonRelayScore?: string
   highwaySetup?: boolean
   sellingWithEmail?: boolean
   sellingWithPhone?: boolean
+  contactEmail?: string
+  contactPhone?: string
 }
 
 const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListingModalProps) => {
@@ -125,11 +130,16 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
     insuranceOnFile: false,
     bipdCoverage: '',
     cargoCoverage: '',
+    bondAmount: '',
+    insuranceCompany: '',
+    monthlyInsurancePremium: '',
     amazonStatus: 'NONE',
     amazonRelayScore: '',
     highwaySetup: false,
     sellingWithEmail: false,
-    sellingWithPhone: false
+    sellingWithPhone: false,
+    contactEmail: '',
+    contactPhone: '',
   })
 
   useEffect(() => {
@@ -159,11 +169,16 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
           insuranceOnFile: data.insuranceOnFile || false,
           bipdCoverage: String(data.bipdCoverage || ''),
           cargoCoverage: String(data.cargoCoverage || ''),
+          bondAmount: String(data.bondAmount || ''),
+          insuranceCompany: data.insuranceCompany || '',
+          monthlyInsurancePremium: String(data.monthlyInsurancePremium || ''),
           amazonStatus: data.amazonStatus || 'NONE',
           amazonRelayScore: data.amazonRelayScore || '',
           highwaySetup: data.highwaySetup || false,
           sellingWithEmail: data.sellingWithEmail || false,
-          sellingWithPhone: data.sellingWithPhone || false
+          sellingWithPhone: data.sellingWithPhone || false,
+          contactEmail: data.contactEmail || '',
+          contactPhone: data.contactPhone || '',
         })
       }
     } catch (err: any) {
@@ -192,11 +207,16 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
         insuranceOnFile: formData.insuranceOnFile,
         bipdCoverage: formData.bipdCoverage ? parseFloat(formData.bipdCoverage) : undefined,
         cargoCoverage: formData.cargoCoverage ? parseFloat(formData.cargoCoverage) : undefined,
+        bondAmount: formData.bondAmount ? parseFloat(formData.bondAmount) : undefined,
+        insuranceCompany: formData.insuranceCompany || undefined,
+        monthlyInsurancePremium: formData.monthlyInsurancePremium ? parseFloat(formData.monthlyInsurancePremium) : undefined,
         amazonStatus: formData.amazonStatus,
         amazonRelayScore: formData.amazonRelayScore || undefined,
         highwaySetup: formData.highwaySetup,
         sellingWithEmail: formData.sellingWithEmail,
-        sellingWithPhone: formData.sellingWithPhone
+        sellingWithPhone: formData.sellingWithPhone,
+        contactEmail: formData.contactEmail || undefined,
+        contactPhone: formData.contactPhone || undefined,
       }
 
       // Remove undefined values
@@ -380,7 +400,14 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                       <span className="text-gray-700">Insurance On File</span>
                     </label>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Insurance Company"
+                      value={formData.insuranceCompany}
+                      onChange={(e) => handleChange('insuranceCompany', e.target.value)}
+                      placeholder="e.g., Progressive, National Interstate"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <Input
                         label="BIPD Coverage ($)"
                         type="number"
@@ -396,7 +423,23 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                         onChange={(e) => handleChange('cargoCoverage', e.target.value)}
                         placeholder="Cargo amount"
                       />
+
+                      <Input
+                        label="Bond / Surety ($)"
+                        type="number"
+                        value={formData.bondAmount}
+                        onChange={(e) => handleChange('bondAmount', e.target.value)}
+                        placeholder="Bond amount"
+                      />
                     </div>
+
+                    <Input
+                      label="Monthly Insurance Premium ($)"
+                      type="number"
+                      value={formData.monthlyInsurancePremium}
+                      onChange={(e) => handleChange('monthlyInsurancePremium', e.target.value)}
+                      placeholder="Monthly premium"
+                    />
                   </div>
 
                   {/* Platform Status */}
@@ -432,9 +475,27 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                     </label>
                   </div>
 
-                  {/* Contact Inclusions */}
+                  {/* Contact Info */}
                   <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Selling With</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Contact Information</h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input
+                        label="Contact Email"
+                        type="email"
+                        value={formData.contactEmail}
+                        onChange={(e) => handleChange('contactEmail', e.target.value)}
+                        placeholder="email@company.com"
+                      />
+
+                      <Input
+                        label="Contact Phone"
+                        type="tel"
+                        value={formData.contactPhone}
+                        onChange={(e) => handleChange('contactPhone', e.target.value)}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-4">
                       <label className="flex items-center gap-3 cursor-pointer">
@@ -444,7 +505,7 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                           onChange={(e) => handleChange('sellingWithEmail', e.target.checked)}
                           className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
                         />
-                        <span className="text-gray-700">Email Included</span>
+                        <span className="text-gray-700">Email Included in Sale</span>
                       </label>
 
                       <label className="flex items-center gap-3 cursor-pointer">
@@ -454,7 +515,7 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                           onChange={(e) => handleChange('sellingWithPhone', e.target.checked)}
                           className="w-5 h-5 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
                         />
-                        <span className="text-gray-700">Phone Number Included</span>
+                        <span className="text-gray-700">Phone Included in Sale</span>
                       </label>
                     </div>
                   </div>

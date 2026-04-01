@@ -1008,11 +1008,16 @@ class ApiService {
     insuranceOnFile?: boolean;
     bipdCoverage?: number;
     cargoCoverage?: number;
+    bondAmount?: number;
+    insuranceCompany?: string;
+    monthlyInsurancePremium?: number;
     amazonStatus?: string;
     amazonRelayScore?: string;
     highwaySetup?: boolean;
     sellingWithEmail?: boolean;
     sellingWithPhone?: boolean;
+    contactEmail?: string;
+    contactPhone?: string;
     cargoTypes?: string[];
     visibility?: string;
   }) {
