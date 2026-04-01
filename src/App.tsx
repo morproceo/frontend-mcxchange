@@ -86,6 +86,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'))
 const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage'))
 const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
 const SafetyImprovementReportPage = lazy(() => import('./pages/SafetyImprovementReportPage'))
+const CarrierPulsePreviewPage = lazy(() => import('./pages/CarrierPulsePreviewPage'))
 const AdminCreateListingPage = lazy(() => import('./pages/AdminCreateListingPage'))
 
 // CarrierPulse
@@ -142,6 +143,7 @@ function App() {
               <Route path="services/dispatch" element={<DispatchServicesPage />} />
               <Route path="services/admin" element={<AdminServicesPage />} />
               <Route path="drivers" element={<DriversLandingPage />} />
+              <Route path="carrier-pulse-preview" element={<CarrierPulsePreviewPage />} />
             </Route>
 
             {/* Seller Welcome (standalone, no DashboardLayout) */}
