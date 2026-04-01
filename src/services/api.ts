@@ -1221,6 +1221,15 @@ class ApiService {
     });
   }
 
+  async deleteOffer(offerId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/admin/offers/${offerId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Buyer offer actions
   async withdrawOffer(offerId: string) {
     return this.request<{

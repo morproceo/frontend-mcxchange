@@ -18,7 +18,8 @@ import {
   FileText,
   ShoppingCart,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -172,6 +173,21 @@ const AdminOffersPage = () => {
       alert(err.message || 'Failed to reject offer')
     } finally {
       setProcessing(false)
+    }
+  }
+
+  const handleDelete = async (offerId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    if (!confirm('Are you sure you want to delete this offer? This cannot be undone.')) return
+    try {
+      await api.deleteOffer(offerId)
+      setOffers(prev => prev.filter(o => o.id !== offerId))
+      if (selectedOffer?.id === offerId) {
+        setShowDetailModal(false)
+        setSelectedOffer(null)
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete offer')
     }
   }
 
@@ -381,6 +397,14 @@ const AdminOffersPage = () => {
                           Review
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handleDelete(offer.id, e)}
+                        className="text-red-600 hover:bg-red-50 border-red-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
 
