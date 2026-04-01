@@ -105,45 +105,7 @@ const AdminInvoiceGenerator = () => {
     issueDate: format(new Date(), 'yyyy-MM-dd'),
   })
 
-  const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>([
-    {
-      id: '1',
-      invoiceNumber: 'INV-202401-0001',
-      invoiceType: 'mc_sale',
-      userName: 'John Transport LLC',
-      userEmail: 'john@transport.com',
-      mcNumber: '123456',
-      total: 45000,
-      status: 'paid',
-      issueDate: '2024-01-10',
-      dueDate: '2024-01-17',
-      paidDate: '2024-01-12'
-    },
-    {
-      id: '2',
-      invoiceNumber: 'INV-202401-0002',
-      invoiceType: 'deposit',
-      userName: 'Express Freight Corp',
-      userEmail: 'billing@express.com',
-      mcNumber: '789012',
-      total: 5000,
-      status: 'sent',
-      issueDate: '2024-01-11',
-      dueDate: '2024-01-18',
-    },
-    {
-      id: '3',
-      invoiceNumber: 'INV-202401-0003',
-      invoiceType: 'listing_fee',
-      userName: 'Regional Routes LLC',
-      userEmail: 'finance@regional.com',
-      mcNumber: '901234',
-      total: 199,
-      status: 'overdue',
-      issueDate: '2024-01-05',
-      dueDate: '2024-01-12',
-    }
-  ])
+  const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>([])
 
   // Fetch users from API
   useEffect(() => {
