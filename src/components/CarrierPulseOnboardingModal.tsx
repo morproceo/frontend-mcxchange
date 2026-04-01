@@ -18,6 +18,11 @@ import {
   TrendingUp,
   FileText,
   ArrowRight,
+  MessageSquare,
+  Mail,
+  Calendar,
+  Hash,
+  Send,
 } from 'lucide-react'
 import GlassCard from './ui/GlassCard'
 import Button from './ui/Button'
@@ -37,6 +42,11 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [carrierData, setCarrierData] = useState<FMCSACarrierData | null>(null)
+  const [morProData, setMorProData] = useState<any>(null)
+  const [authorityData, setAuthorityData] = useState<any>(null)
+  const [contactMessage, setContactMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [messageSent, setMessageSent] = useState(false)
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +65,15 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
       if (response.success && response.data) {
         setCarrierData(response.data)
         setStep('results')
+        // Also fetch MorPro + authority data for richer details
+        if (response.data.dotNumber) {
+          api.getCarrierReport(response.data.dotNumber).then(res => {
+            if (res.success && res.data) setMorProData(res.data)
+          }).catch(() => {})
+          api.fmcsaGetAuthorityHistory(response.data.dotNumber).then(res => {
+            if (res.success && res.data) setAuthorityData(res.data)
+          }).catch(() => {})
+        }
       } else {
         setError('No carrier found with that MC number. Please check and try again.')
       }
@@ -77,13 +96,35 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
     setMcNumber('')
     setError(null)
     setCarrierData(null)
+    setMorProData(null)
+    setAuthorityData(null)
+    setContactMessage('')
+    setMessageSent(false)
     onClose()
   }
 
   const handleBack = () => {
     setStep('search')
     setCarrierData(null)
+    setMorProData(null)
+    setAuthorityData(null)
     setError(null)
+    setContactMessage('')
+    setMessageSent(false)
+  }
+
+  const handleSendMessage = async () => {
+    if (!contactMessage.trim()) return
+    setSendingMessage(true)
+    try {
+      await api.sendInquiryToAdmin(undefined, contactMessage.trim())
+      setMessageSent(true)
+      setContactMessage('')
+    } catch {
+      // Silently handle
+    } finally {
+      setSendingMessage(false)
+    }
   }
 
   const getSafetyColor = (rating: string) => {
@@ -258,12 +299,20 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
                             <div className="font-semibold text-gray-900">{carrierData.dbaName}</div>
                           </div>
                         )}
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Entity Type</div>
+                          <div className="text-sm text-gray-900">{carrierData.carrierOperation || morProData?.carrier?.entityType || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">EIN</div>
+                          <div className="text-sm text-gray-900">{morProData?.carrier?.ein || (carrierData as any).ein || 'N/A'}</div>
+                        </div>
                         <div className="flex items-start gap-2">
                           <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                           <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Location</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Address</div>
                             <div className="text-sm text-gray-900">
-                              {carrierData.physicalAddress || `${carrierData.hqCity}, ${carrierData.hqState}`}
+                              {carrierData.physicalAddress ? `${carrierData.physicalAddress}, ${carrierData.hqCity}, ${carrierData.hqState}` : `${carrierData.hqCity}, ${carrierData.hqState}`}
                             </div>
                           </div>
                         </div>
@@ -272,6 +321,54 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
                           <div>
                             <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phone</div>
                             <div className="text-sm text-gray-900">{carrierData.phone || 'N/A'}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Mail className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Email Domain</div>
+                            <div className="text-sm text-gray-900">{morProData?.carrier?.emailDomain || 'N/A'}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">MCS-150 Date</div>
+                            <div className="text-sm text-gray-900">{carrierData.mcs150Date || morProData?.carrier?.mcs150Date || 'N/A'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Authority Details */}
+                    <div className="bg-gray-50 rounded-xl p-5 mb-5 border border-gray-100">
+                      <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <Hash className="w-5 h-5 text-secondary-600" />
+                        Authority Details
+                      </h3>
+                      <div className="grid md:grid-cols-3 gap-3">
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          <div className="text-xs text-gray-500 mb-1">Common Authority</div>
+                          <div className={`text-sm font-bold ${
+                            authorityData?.commonAuthorityStatus === 'ACTIVE' ? 'text-emerald-600' : 'text-gray-500'
+                          }`}>
+                            {authorityData?.commonAuthorityStatus || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          <div className="text-xs text-gray-500 mb-1">Contract Authority</div>
+                          <div className={`text-sm font-bold ${
+                            authorityData?.contractAuthorityStatus === 'ACTIVE' ? 'text-emerald-600' : 'text-gray-500'
+                          }`}>
+                            {authorityData?.contractAuthorityStatus || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          <div className="text-xs text-gray-500 mb-1">Broker Authority</div>
+                          <div className={`text-sm font-bold ${
+                            authorityData?.brokerAuthorityStatus === 'ACTIVE' ? 'text-emerald-600' : 'text-gray-500'
+                          }`}>
+                            {authorityData?.brokerAuthorityStatus || 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -425,14 +522,57 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
                       </div>
                     )}
 
-                    {/* Action Buttons */}
+                    {/* Ready to Sell */}
+                    <div className="bg-gradient-to-r from-secondary-50 to-primary-50 rounded-xl p-5 mb-5 border border-secondary-100">
+                      <h3 className="font-bold text-gray-900 mb-2 text-lg">Ready to Sell Your Authority?</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Your MC details look good! Click below to create your listing and start receiving offers from verified buyers.
+                      </p>
+                      <Button fullWidth onClick={handleReadyToSell}>
+                        Yes, List My Authority for Sale
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </Button>
+                    </div>
+
+                    {/* Contact Domilea Team */}
+                    <div className="bg-gray-50 rounded-xl p-5 mb-5 border border-gray-100">
+                      <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-secondary-600" />
+                        Have Questions About the Process?
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-3">
+                        Not sure how selling works? Our team is here to help walk you through every step — from listing to closing.
+                      </p>
+                      {messageSent ? (
+                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
+                          <CheckCircle className="w-4 h-4" />
+                          Message sent! We'll get back to you shortly on your dashboard.
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={contactMessage}
+                            onChange={(e) => setContactMessage(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage() }}
+                            placeholder="Type your question here..."
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent"
+                            disabled={sendingMessage}
+                          />
+                          <Button onClick={handleSendMessage} disabled={sendingMessage || !contactMessage.trim()}>
+                            {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Back button */}
                     <div className="flex gap-3">
                       <Button type="button" variant="ghost" onClick={handleBack}>
                         Back
                       </Button>
-                      <Button fullWidth onClick={handleReadyToSell}>
-                        Ready to Sell? Click Here to List
-                        <ArrowRight className="w-5 h-5 ml-2" />
+                      <Button fullWidth variant="outline" onClick={handleClose}>
+                        I'll Come Back Later
                       </Button>
                     </div>
                   </>
