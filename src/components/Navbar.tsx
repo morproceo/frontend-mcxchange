@@ -20,6 +20,7 @@ import {
   FileSearch,
   Bot,
   DollarSign,
+  ShieldAlert,
 } from 'lucide-react'
 import { useState } from 'react'
 import Button from './ui/Button'
@@ -35,6 +36,8 @@ const Navbar = () => {
   const toolLinks = [
     { name: 'CarrierPulse', href: '/services', icon: Activity, desc: 'Carrier intelligence platform', comingSoon: false },
     { name: 'Credit Reports', href: '/services', icon: FileSearch, desc: 'Business credit intelligence', comingSoon: false },
+    { name: 'Chameleon Check', href: '/chameleon-check', icon: ShieldAlert, desc: 'Detect reincarnated carriers', comingSoon: false },
+    { name: 'Safety Improvement Report', href: '/safety-report', icon: Shield, desc: 'BASIC scores & safety analysis', comingSoon: false },
     { name: 'Eva AI', href: '#', icon: Bot, desc: 'AI compliance management', comingSoon: true },
   ]
 
