@@ -18,7 +18,7 @@ import {
   Calendar, Users, Hash, Phone, Building2, Package, DollarSign,
   TrendingUp, TrendingDown, Clock, ExternalLink, Mail,
   BarChart3, Eye, Zap, ChevronRight, ChevronDown, ChevronUp, MapPinned,
-  Coins, Search, Loader2, AlertCircle, ShieldAlert, Info,
+  Coins, Search, Loader2, AlertCircle, ShieldAlert, Info, Lock, Crown,
 } from 'lucide-react'
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import Card from '../components/ui/Card'
@@ -2263,7 +2263,7 @@ function SafetyImprovementReportTab() {
 // ============================================================
 // MAIN PAGE COMPONENT
 // ============================================================
-export default function CarrierPulsePage() {
+export default function CarrierPulsePage({ previewMode = false }: { previewMode?: boolean } = {}) {
   const navigate = useNavigate()
   const { dotNumber: urlDotNumber } = useParams()
   const [searchParams] = useSearchParams()
@@ -2283,6 +2283,14 @@ export default function CarrierPulsePage() {
 
   // Check access on mount
   useEffect(() => {
+    // Preview mode — skip access gating, allow free search
+    if (previewMode) {
+      setHasAccess(true)
+      setAccessReason('preview')
+      setAccessChecked(true)
+      return
+    }
+
     // Admin and seller always have access (no buyer subscription check needed)
     if (user?.role === 'admin' || user?.role === 'seller') {
       setHasAccess(true)
@@ -2307,7 +2315,7 @@ export default function CarrierPulsePage() {
       }
     }
     checkAccess()
-  }, [user?.role])
+  }, [user?.role, previewMode])
 
   // Handle purchase success return
   useEffect(() => {
@@ -2729,7 +2737,32 @@ export default function CarrierPulsePage() {
                 <TabNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
                 <AnimatePresence mode="wait">
                   <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                    {tabContent[activeTab]}
+                    {previewMode && activeTab !== 'overview' ? (
+                      <div className="relative min-h-[500px]">
+                        <div className="pointer-events-none select-none">
+                          {tabContent[activeTab]}
+                        </div>
+                        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-md bg-white/60 rounded-2xl">
+                          <div className="text-center max-w-sm px-6">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
+                              <Lock className="w-8 h-8 text-white" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Unlock Full Report</h3>
+                            <p className="text-gray-500 text-sm mb-6">
+                              Subscribe to CarrierPulse to access detailed {activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'credit' ? 'business credit reports' : activeTab === 'chameleon' ? 'chameleon carrier detection' : activeTab === 'authority' ? 'authority & compliance data' : 'this section'}.
+                            </p>
+                            <Link to="/pricing">
+                              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                                <Crown className="w-4 h-4 mr-2" />
+                                View Plans
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      tabContent[activeTab]
+                    )}
                   </motion.div>
                 </AnimatePresence>
               </>
