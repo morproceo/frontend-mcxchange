@@ -1747,6 +1747,23 @@ class ApiService {
     }>('/seller/stripe-history');
   }
 
+  // Get seller's uploaded documents
+  async getSellerDocuments() {
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        type: string;
+        name: string;
+        url: string;
+        size: number;
+        mimeType: string;
+        status: string;
+        createdAt: string;
+      }>;
+    }>('/seller/documents');
+  }
+
   // Upload seller document (Articles of Incorporation, EIN Letter, etc.)
   async uploadSellerDocument(file: File, type: string) {
     const url = `${API_BASE_URL}/documents`;

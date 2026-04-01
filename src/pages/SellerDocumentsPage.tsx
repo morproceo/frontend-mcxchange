@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   FileText,
@@ -77,6 +77,40 @@ const SellerDocumentsPage = () => {
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeUploadDocType, setActiveUploadDocType] = useState<string | null>(null)
+
+  // Load existing documents on mount
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const res = await api.getSellerDocuments()
+        if (res.success && res.data) {
+          // Map backend type to frontend docType
+          const reverseTypeMap: Record<string, string> = {
+            'ARTICLES_OF_INCORPORATION': 'articles-of-incorporation',
+            'AUTHORITY': 'mc-certificate',
+            'EIN_LETTER': 'ein-letter',
+            'INSURANCE': 'insurance-certificate',
+            'LOSS_RUNS': 'loss-runs',
+            'LETTER_OF_RELEASE': 'factoring-lor',
+          }
+          const loaded: UploadedFile[] = res.data.map((doc: any) => ({
+            id: doc.id,
+            docType: reverseTypeMap[doc.type] || 'other',
+            fileName: doc.name,
+            fileSize: doc.size < 1024 * 1024
+              ? `${(doc.size / 1024).toFixed(0)} KB`
+              : `${(doc.size / (1024 * 1024)).toFixed(1)} MB`,
+            uploadedAt: doc.createdAt,
+            status: 'uploaded' as const,
+          }))
+          setUploads(loaded)
+        }
+      } catch {
+        // ignore load errors
+      }
+    }
+    loadDocuments()
+  }, [])
 
   const handleUploadClick = (docType: string) => {
     setActiveUploadDocType(docType)
