@@ -147,9 +147,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Plus, label: 'Create Listing', path: '/seller/create-listing' },
           { icon: MessageSquare, label: 'Offers', path: '/seller/offers' },
           { icon: Handshake, label: 'Transactions', path: '/seller/transactions' },
-          { icon: DollarSign, label: 'Earnings', path: '/seller/earnings' },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
-          { icon: MessageSquare, label: 'Messages', path: '/seller/messages' },
           {
             label: 'Services',
             icon: Briefcase,

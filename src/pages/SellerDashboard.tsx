@@ -5,7 +5,6 @@ import {
   Plus,
   Eye,
   MessageSquare,
-  DollarSign,
   Package,
   CheckCircle,
   Clock,
@@ -177,12 +176,6 @@ const SellerDashboard = () => {
     fetchOffers()
   }, [])
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`
-    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`
-    return `$${amount.toLocaleString()}`
-  }
-
   const formatRelativeTime = (dateStr: string) => {
     const date = new Date(dateStr)
     const now = new Date()
@@ -201,7 +194,6 @@ const SellerDashboard = () => {
     { icon: Package, label: 'Active Listings', value: String(dashboardStats?.listings?.active ?? 0), change: `${dashboardStats?.listings?.pending ?? 0} pending review`, color: 'text-secondary-600', bgColor: 'bg-secondary-50' },
     { icon: Eye, label: 'Total Views', value: (dashboardStats?.totalViews ?? 0).toLocaleString(), change: 'All time', color: 'text-purple-600', bgColor: 'bg-purple-50' },
     { icon: MessageSquare, label: 'Pending Offers', value: String(dashboardStats?.offers?.pending ?? 0), change: `${dashboardStats?.offers?.total ?? 0} total offers`, color: 'text-amber-600', bgColor: 'bg-amber-50' },
-    { icon: DollarSign, label: 'Total Earnings', value: formatCurrency(dashboardStats?.totalEarnings ?? 0), change: `${dashboardStats?.listings?.sold ?? 0} completed sales`, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
   ]
 
   return (
