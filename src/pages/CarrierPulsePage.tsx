@@ -26,6 +26,7 @@ import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
+import SellerListingGuideModal from '../components/SellerListingGuideModal'
 import CreditReportView from '../components/v2/CreditReportView'
 import TabNav, { TabItem } from '../components/v2/TabNav'
 import SpeedometerGauge from '../components/v2/SpeedometerGauge'
@@ -239,12 +240,29 @@ function PulseHeroHeader({ onSearchAnother }: { onSearchAnother: () => void }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { carrier: c } = useCarrierDataContext()
+  const [showListingGuide, setShowListingGuide] = useState(false)
   const healthColor = c.carrierHealthScore >= 80 ? '#34d399' : c.carrierHealthScore >= 60 ? '#fbbf24' : '#f87171'
   const healthRadius = 30
   const healthCirc = 2 * Math.PI * healthRadius
 
+  const navigateToListing = () => {
+    const params = new URLSearchParams({ fromPulse: 'true' })
+    if (c.mcNumber) params.set('mc', c.mcNumber)
+    if (c.dotNumber) params.set('dot', c.dotNumber)
+    const basePath = user?.role === 'admin' ? '/admin/create-listing' : '/seller/create-listing'
+    navigate(`${basePath}?${params.toString()}`)
+  }
+
   return (
     <div className="w-full">
+      <SellerListingGuideModal
+        isOpen={showListingGuide}
+        onClose={() => setShowListingGuide(false)}
+        onConfirm={() => {
+          setShowListingGuide(false)
+          navigateToListing()
+        }}
+      />
       <div className="relative rounded-2xl overflow-hidden" style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)',
       }}>
@@ -366,13 +384,7 @@ function PulseHeroHeader({ onSearchAnother }: { onSearchAnother: () => void }) {
             {/* List This Authority button for sellers and admins */}
             {(user?.role === 'seller' || user?.role === 'admin') && (
               <button
-                onClick={() => {
-                  const params = new URLSearchParams({ fromPulse: 'true' })
-                  if (c.mcNumber) params.set('mc', c.mcNumber)
-                  if (c.dotNumber) params.set('dot', c.dotNumber)
-                  const basePath = user?.role === 'admin' ? '/admin/create-listing' : '/seller/create-listing'
-                  navigate(`${basePath}?${params.toString()}`)
-                }}
+                onClick={() => setShowListingGuide(true)}
                 className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 transition-colors text-sm font-bold text-white flex items-center gap-2 shadow-lg shadow-emerald-500/25"
               >
                 <Package className="w-4 h-4" />
