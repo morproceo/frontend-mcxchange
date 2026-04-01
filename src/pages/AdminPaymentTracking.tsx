@@ -19,79 +19,21 @@ const AdminPaymentTracking = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'received' | 'pending' | 'failed'>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
-  const payments = [
-    {
-      id: 'PAY-001',
-      invoiceId: 'INV-001',
-      userName: 'John Transport LLC',
-      userEmail: 'john@transport.com',
-      mcNumber: '123456',
-      amount: 45000,
-      status: 'received',
-      paymentMethod: 'Wire Transfer',
-      submittedDate: '2024-01-12T10:30:00',
-      confirmedDate: '2024-01-12T14:45:00',
-      transactionRef: 'WIRE-20240112-001',
-      trustScore: 78
-    },
-    {
-      id: 'PAY-002',
-      invoiceId: 'INV-002',
-      userName: 'Express Freight Corp',
-      userEmail: 'billing@express.com',
-      mcNumber: '789012',
-      amount: 32000,
-      status: 'pending',
-      paymentMethod: 'Wire Transfer',
-      submittedDate: '2024-01-11T16:20:00',
-      confirmedDate: null,
-      transactionRef: 'WIRE-20240111-002',
-      trustScore: 92
-    },
-    {
-      id: 'PAY-003',
-      invoiceId: 'INV-003',
-      userName: 'Regional Routes LLC',
-      userEmail: 'finance@regional.com',
-      mcNumber: '901234',
-      amount: 38000,
-      status: 'pending',
-      paymentMethod: 'Wire Transfer',
-      submittedDate: '2024-01-13T09:15:00',
-      confirmedDate: null,
-      transactionRef: 'WIRE-20240113-001',
-      trustScore: 85
-    },
-    {
-      id: 'PAY-004',
-      invoiceId: 'INV-004',
-      userName: 'Budget Transport',
-      userEmail: 'payments@budget.com',
-      mcNumber: '456789',
-      amount: 28000,
-      status: 'failed',
-      paymentMethod: 'Wire Transfer',
-      submittedDate: '2024-01-10T11:00:00',
-      confirmedDate: null,
-      transactionRef: 'WIRE-20240110-003',
-      trustScore: 62,
-      failReason: 'Insufficient funds'
-    },
-    {
-      id: 'PAY-005',
-      invoiceId: 'INV-005',
-      userName: 'National Carriers LLC',
-      userEmail: 'accounting@national.com',
-      mcNumber: '234567',
-      amount: 52000,
-      status: 'received',
-      paymentMethod: 'Wire Transfer',
-      submittedDate: '2024-01-08T13:30:00',
-      confirmedDate: '2024-01-08T16:20:00',
-      transactionRef: 'WIRE-20240108-002',
-      trustScore: 88
-    }
-  ]
+  const payments: {
+    id: string
+    invoiceId: string
+    userName: string
+    userEmail: string
+    mcNumber: string
+    amount: number
+    status: string
+    paymentMethod: string
+    submittedDate: string
+    confirmedDate: string | null
+    transactionRef: string
+    trustScore: number
+    failReason?: string
+  }[] = []
 
   const filteredPayments = payments.filter(payment => {
     const matchesFilter = activeFilter === 'all' || payment.status === activeFilter
