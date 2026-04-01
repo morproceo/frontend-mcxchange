@@ -3429,8 +3429,8 @@ export default function MCDetailPageV2() {
   // Check if current user is the listing owner (seller viewing their own listing)
   const isListingOwner = listing?.sellerId === user?.id || listing?.isOwner
 
-  // Preview mode: logged in but not identity verified (admins and listing owners bypass)
-  const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin' && !isListingOwner
+  // Preview mode: logged in but not identity verified (admins, sellers, and listing owners bypass)
+  const isPreviewMode = isAuthenticated && !isIdentityVerified && user?.role !== 'admin' && user?.role !== 'seller' && !isListingOwner
 
   // Mark non-overview tabs as locked until listing is unlocked (admins and listing owners bypass)
   const canAccessAllTabs = isUnlocked || user?.role === 'admin' || isListingOwner
