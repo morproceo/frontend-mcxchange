@@ -938,41 +938,56 @@ void statusConfig[conversation.status].icon
               </div>
 
               <div className="space-y-4 pb-safe">
-                <div>
-                  <Input
-                    placeholder="Search users by name or email..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    icon={<Search className="w-4 h-4" />}
-                    className="text-base"
-                    style={{ fontSize: '16px' }}
-                  />
-                </div>
+                {selectedUser ? (
+                  <div className="flex items-center justify-between bg-indigo-50 rounded-lg px-4 py-3 border border-indigo-200">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{selectedUser.name}</div>
+                      <div className="text-xs text-gray-500">{selectedUser.email}</div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedUser(null)}
+                      className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors"
+                    >
+                      <X className="w-3 h-3 text-gray-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <Input
+                        placeholder="Search users by name or email..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        icon={<Search className="w-4 h-4" />}
+                        className="text-base"
+                        style={{ fontSize: '16px' }}
+                      />
+                    </div>
 
-                <div className="max-h-40 sm:max-h-52 overflow-y-auto rounded-lg border border-gray-200">
-                  {userSearch.trim().length < 2 ? (
-                    <div className="p-4 text-sm text-gray-500">Type at least 2 characters to search</div>
-                  ) : userLoading ? (
-                    <div className="p-4 text-sm text-gray-500">Searching users...</div>
-                  ) : userError ? (
-                    <div className="p-4 text-sm text-red-500">{userError}</div>
-                  ) : userResults.length === 0 ? (
-                    <div className="p-4 text-sm text-gray-500">No users found</div>
-                  ) : (
-                    userResults.map((userItem) => (
-                      <button
-                        key={userItem.id}
-                        onClick={() => setSelectedUser(userItem)}
-                        className={`w-full px-4 py-4 sm:py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-gray-50 active:bg-gray-100 ${
-                          selectedUser?.id === userItem.id ? 'bg-indigo-50' : ''
-                        }`}
-                      >
-                        <div className="text-sm font-semibold text-gray-900">{userItem.name}</div>
-                        <div className="text-xs text-gray-500">{userItem.email}</div>
-                      </button>
-                    ))
-                  )}
-                </div>
+                    <div className="max-h-40 sm:max-h-52 overflow-y-auto rounded-lg border border-gray-200">
+                      {userSearch.trim().length < 2 ? (
+                        <div className="p-4 text-sm text-gray-500">Type at least 2 characters to search</div>
+                      ) : userLoading ? (
+                        <div className="p-4 text-sm text-gray-500">Searching users...</div>
+                      ) : userError ? (
+                        <div className="p-4 text-sm text-red-500">{userError}</div>
+                      ) : userResults.length === 0 ? (
+                        <div className="p-4 text-sm text-gray-500">No users found</div>
+                      ) : (
+                        userResults.map((userItem) => (
+                          <button
+                            key={userItem.id}
+                            onClick={() => setSelectedUser(userItem)}
+                            className="w-full px-4 py-4 sm:py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-gray-50 active:bg-gray-100"
+                          >
+                            <div className="text-sm font-semibold text-gray-900">{userItem.name}</div>
+                            <div className="text-xs text-gray-500">{userItem.email}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <Textarea
                   placeholder={selectedUser ? `Message ${selectedUser.name}...` : 'Select a user to start messaging'}
