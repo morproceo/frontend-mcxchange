@@ -22,6 +22,7 @@ import MCCard from '../components/MCCard'
 import api from '../services/api'
 import { MCListing } from '../types'
 import { getTrustLevel } from '../utils/helpers'
+import CarrierPulseOnboardingModal from '../components/CarrierPulseOnboardingModal'
 
 interface SellerOffer {
   id: string
@@ -58,6 +59,11 @@ interface DashboardStats {
 
 const SellerDashboard = () => {
   const { user, isIdentityVerified } = useAuth()
+
+  // Carrier Pulse onboarding modal - show on first visit
+  const [showCarrierPulse, setShowCarrierPulse] = useState(() => {
+    return !localStorage.getItem('mcx_carrier_pulse_completed')
+  })
 
   // API data state
   const [myListings, setMyListings] = useState<MCListing[]>([])
@@ -339,6 +345,12 @@ const SellerDashboard = () => {
         {/* Messages — Seller ↔ Admin */}
         <SellerAdminMessages />
       </div>
+
+      {/* Carrier Pulse Onboarding Modal */}
+      <CarrierPulseOnboardingModal
+        isOpen={showCarrierPulse}
+        onClose={() => setShowCarrierPulse(false)}
+      />
     </div>
   )
 }

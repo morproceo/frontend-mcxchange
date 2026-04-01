@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Upload,
   CheckCircle,
   AlertCircle,
   X,
@@ -90,19 +89,12 @@ const US_STATES = [
   { value: 'WY', label: 'Wyoming' }
 ]
 
-interface UploadedFile {
-  id: string
-  name: string
-  size: string
-  type: string
-}
-
 // Step info will be filtered based on payment requirement
 const allSteps = [
   { num: 1, title: 'Authority Info', icon: Search, description: 'MC/DOT lookup & verification' },
   { num: 2, title: 'Listing Details', icon: Package, description: 'Pricing, platforms & features' },
   { num: 3, title: 'Authority Details', icon: TruckIcon, description: 'Fleet info & operations' },
-  { num: 4, title: 'Documents', icon: FileText, description: 'Upload required files' },
+  { num: 4, title: 'Documents', icon: FileText, description: 'What you\'ll need' },
   { num: 5, title: 'Payment', icon: DollarSign, description: 'Listing activation fee', isPaymentStep: true },
   { num: 6, title: 'Confirmation', icon: CheckCircle, description: 'Review & submit' }
 ]
@@ -306,23 +298,6 @@ const CreateListingPage = () => {
   const [insuranceHistory, setInsuranceHistory] = useState<any[]>([])
   const [fmcsaCarrierData, setFmcsaCarrierData] = useState<any>(null)
 
-  const [uploadedFiles, setUploadedFiles] = useState<{
-    articleOfIncorporation: UploadedFile | null
-    einLetter: UploadedFile | null
-    driverLicense: UploadedFile | null
-    coi: UploadedFile | null
-    lossRun: UploadedFile | null
-    additional: UploadedFile[]
-    factoringLOR: UploadedFile | null
-  }>({
-    articleOfIncorporation: null,
-    einLetter: null,
-    driverLicense: null,
-    coi: null,
-    lossRun: null,
-    additional: [],
-    factoringLOR: null
-  })
 
   // FMCSA lookup function - uses real API
   const handleFMCSALookup = async () => {
@@ -569,49 +544,6 @@ const CreateListingPage = () => {
     }))
   }
 
-  const simulateFileUpload = (fileType: 'articleOfIncorporation' | 'einLetter' | 'driverLicense' | 'coi' | 'lossRun' | 'additional' | 'factoringLOR') => {
-    const fileNames: Record<string, string> = {
-      articleOfIncorporation: 'Article_of_Incorporation.pdf',
-      einLetter: 'EIN_Letter.pdf',
-      driverLicense: 'Driver_License.pdf',
-      coi: 'Certificate_of_Insurance.pdf',
-      lossRun: 'Loss_Run_Report.pdf',
-      factoringLOR: 'Factoring_LOR.pdf'
-    }
-
-    const mockFile: UploadedFile = {
-      id: Date.now().toString(),
-      name: fileNames[fileType] || `Document_${Date.now()}.pdf`,
-      size: '2.4 MB',
-      type: 'application/pdf'
-    }
-
-    if (fileType === 'additional') {
-      setUploadedFiles(prev => ({
-        ...prev,
-        additional: [...prev.additional, mockFile]
-      }))
-    } else {
-      setUploadedFiles(prev => ({
-        ...prev,
-        [fileType]: mockFile
-      }))
-    }
-  }
-
-  const removeFile = (fileType: 'articleOfIncorporation' | 'einLetter' | 'driverLicense' | 'coi' | 'lossRun' | 'factoringLOR' | 'additional', fileId?: string) => {
-    if (fileType === 'additional' && fileId) {
-      setUploadedFiles(prev => ({
-        ...prev,
-        additional: prev.additional.filter(f => f.id !== fileId)
-      }))
-    } else {
-      setUploadedFiles(prev => ({
-        ...prev,
-        [fileType]: null
-      }))
-    }
-  }
 
   const operationTypeOptions = [
     { name: 'Dry Van', icon: '📦' },
@@ -631,7 +563,7 @@ const CreateListingPage = () => {
 
   const calculateProgress = () => {
     let filled = 0
-    let total = 10
+    let total = 9
 
     if (formData.mcNumber || formData.dotNumber) filled++
     if (fmcsaFetched) filled++
@@ -642,7 +574,6 @@ const CreateListingPage = () => {
     if (formData.sellingWithEmail && formData.sellingWithPhone) filled++
     if (formData.hasFactoring) filled++
     if (formData.operationTypes.length > 0) filled++
-    if (uploadedFiles.articleOfIncorporation || uploadedFiles.einLetter || uploadedFiles.driverLicense || uploadedFiles.coi || uploadedFiles.lossRun) filled++
 
     return Math.round((filled / total) * 100)
   }
@@ -1321,34 +1252,6 @@ const CreateListingPage = () => {
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Letter of Release (LOR) <span className="text-gray-400">- Optional</span>
-                          </label>
-                          {uploadedFiles.factoringLOR ? (
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-200">
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-cyan-400" />
-                                <div>
-                                  <div className="font-medium text-sm">{uploadedFiles.factoringLOR.name}</div>
-                                  <div className="text-xs text-gray-500">{uploadedFiles.factoringLOR.size}</div>
-                                </div>
-                              </div>
-                              <button type="button" onClick={() => removeFile('factoringLOR')} className="p-2 hover:bg-gray-100 rounded-lg">
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => simulateFileUpload('factoringLOR')}
-                              className="w-full p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-cyan-400/50 transition-colors text-center"
-                            >
-                              <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                              <div className="text-sm text-gray-500">Click to upload LOR document</div>
-                            </button>
-                          )}
-                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1522,7 +1425,7 @@ const CreateListingPage = () => {
               </motion.div>
             )}
 
-            {/* Step 4: Documents */}
+            {/* Step 4: Documents Info (no uploads - just informational) */}
             {step === 4 && (
               <motion.div
                 key="step4"
@@ -1538,248 +1441,159 @@ const CreateListingPage = () => {
                         <FileText className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Upload Documents</h2>
-                        <p className="text-gray-500">Required documents for verification</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Documents You'll Need</h2>
+                        <p className="text-gray-500">No uploads required right now &mdash; just know what to have ready</p>
                       </div>
                     </div>
                   </div>
 
+                  {/* Info Banner */}
+                  <div className="p-4 rounded-xl bg-secondary-50 border border-secondary-100 mb-6 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-secondary-700 mb-1">You don't need to upload anything yet!</p>
+                      <p className="text-gray-600">Once you receive and accept an offer from a buyer, we'll walk you through uploading your documents to complete the sale. Here's what's typically needed so you can start gathering them.</p>
+                    </div>
+                  </div>
+
                   <div className="grid md:grid-cols-2 gap-4">
-                    {/* Article of Incorporation */}
+                    {/* Articles of Incorporation */}
                     <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          uploadedFiles.articleOfIncorporation ? 'bg-trust-high/20' : 'bg-pink-500/20'
-                        }`}>
-                          {uploadedFiles.articleOfIncorporation ? (
-                            <CheckCircle className="w-5 h-5 text-trust-high" />
-                          ) : (
-                            <Building2 className="w-5 h-5 text-pink-400" />
-                          )}
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-pink-500/20">
+                          <Building2 className="w-5 h-5 text-pink-400" />
                         </div>
                         <div>
-                          <span className="font-semibold text-gray-900">Article of Incorporation</span>
-                          <span className="text-red-400 ml-1">*</span>
+                          <span className="font-semibold text-gray-900">Articles of Incorporation</span>
                         </div>
                       </div>
-                      {uploadedFiles.articleOfIncorporation ? (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-trust-high/10 border border-trust-high/30">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-trust-high" />
-                            <span className="text-sm">{uploadedFiles.articleOfIncorporation.name}</span>
+                      <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-4">
+                        <div className="flex items-center justify-center mb-3">
+                          <div className="w-full max-w-[200px] h-[130px] rounded-lg bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-100 flex flex-col items-center justify-center">
+                            <Building2 className="w-10 h-10 text-pink-300 mb-2" />
+                            <div className="text-[10px] text-pink-400 font-medium text-center px-2">ARTICLES OF<br/>INCORPORATION</div>
                           </div>
-                          <button type="button" onClick={() => removeFile('articleOfIncorporation')} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-4 h-4" />
-                          </button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => simulateFileUpload('articleOfIncorporation')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-pink-400/50 transition-colors"
-                        >
-                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <div className="text-sm text-gray-500">Click to upload</div>
-                        </button>
-                      )}
+                        <p className="text-xs text-gray-500 text-center">Official state filing document that establishes your LLC or Corporation. Shows the registered agent, formation date, and business structure.</p>
+                      </div>
                     </div>
 
                     {/* EIN Letter */}
                     <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          uploadedFiles.einLetter ? 'bg-trust-high/20' : 'bg-rose-500/20'
-                        }`}>
-                          {uploadedFiles.einLetter ? (
-                            <CheckCircle className="w-5 h-5 text-trust-high" />
-                          ) : (
-                            <FileText className="w-5 h-5 text-rose-400" />
-                          )}
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-rose-500/20">
+                          <FileText className="w-5 h-5 text-rose-400" />
                         </div>
                         <div>
-                          <span className="font-semibold text-gray-900">EIN Letter</span>
-                          <span className="text-red-400 ml-1">*</span>
+                          <span className="font-semibold text-gray-900">EIN Letter (IRS CP 575)</span>
                         </div>
                       </div>
-                      {uploadedFiles.einLetter ? (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-trust-high/10 border border-trust-high/30">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-trust-high" />
-                            <span className="text-sm">{uploadedFiles.einLetter.name}</span>
+                      <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-4">
+                        <div className="flex items-center justify-center mb-3">
+                          <div className="w-full max-w-[200px] h-[130px] rounded-lg bg-gradient-to-br from-rose-50 to-red-50 border border-rose-100 flex flex-col items-center justify-center">
+                            <div className="text-[9px] text-rose-300 font-bold mb-1">DEPARTMENT OF THE TREASURY</div>
+                            <div className="text-[9px] text-rose-300">INTERNAL REVENUE SERVICE</div>
+                            <div className="w-16 h-px bg-rose-200 my-2" />
+                            <FileText className="w-8 h-8 text-rose-300 mb-1" />
+                            <div className="text-[10px] text-rose-400 font-medium">EIN: XX-XXXXXXX</div>
                           </div>
-                          <button type="button" onClick={() => removeFile('einLetter')} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-4 h-4" />
-                          </button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => simulateFileUpload('einLetter')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-rose-400/50 transition-colors"
-                        >
-                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <div className="text-sm text-gray-500">Click to upload</div>
-                        </button>
-                      )}
+                        <p className="text-xs text-gray-500 text-center">IRS-issued letter confirming your Employer Identification Number. This ties the business entity to its federal tax ID.</p>
+                      </div>
                     </div>
 
-                    {/* Driver License */}
+                    {/* MC Certificate */}
                     <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          uploadedFiles.driverLicense ? 'bg-trust-high/20' : 'bg-purple-500/20'
-                        }`}>
-                          {uploadedFiles.driverLicense ? (
-                            <CheckCircle className="w-5 h-5 text-trust-high" />
-                          ) : (
-                            <BadgeCheck className="w-5 h-5 text-purple-400" />
-                          )}
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500/20">
+                          <BadgeCheck className="w-5 h-5 text-blue-400" />
                         </div>
                         <div>
-                          <span className="font-semibold text-gray-900">Driver License</span>
-                          <span className="text-red-400 ml-1">*</span>
+                          <span className="font-semibold text-gray-900">MC Certificate of Authority</span>
                         </div>
                       </div>
-                      {uploadedFiles.driverLicense ? (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-trust-high/10 border border-trust-high/30">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-trust-high" />
-                            <span className="text-sm">{uploadedFiles.driverLicense.name}</span>
+                      <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-4">
+                        <div className="flex items-center justify-center mb-3">
+                          <div className="w-full max-w-[200px] h-[130px] rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex flex-col items-center justify-center">
+                            <div className="text-[9px] text-blue-300 font-bold mb-1">FEDERAL MOTOR CARRIER</div>
+                            <div className="text-[9px] text-blue-300">SAFETY ADMINISTRATION</div>
+                            <div className="w-16 h-px bg-blue-200 my-2" />
+                            <BadgeCheck className="w-8 h-8 text-blue-300 mb-1" />
+                            <div className="text-[10px] text-blue-400 font-medium">MC-XXXXXX</div>
                           </div>
-                          <button type="button" onClick={() => removeFile('driverLicense')} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-4 h-4" />
-                          </button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => simulateFileUpload('driverLicense')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-purple-400/50 transition-colors"
-                        >
-                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <div className="text-sm text-gray-500">Click to upload</div>
-                        </button>
-                      )}
+                        <p className="text-xs text-gray-500 text-center">Your FMCSA-issued Motor Carrier certificate that grants operating authority. This is the core document being transferred in the sale.</p>
+                      </div>
                     </div>
 
-                    {/* COI - Certificate of Insurance */}
+                    {/* Insurance Certificate */}
                     <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          uploadedFiles.coi ? 'bg-trust-high/20' : 'bg-cyan-500/20'
-                        }`}>
-                          {uploadedFiles.coi ? (
-                            <CheckCircle className="w-5 h-5 text-trust-high" />
-                          ) : (
-                            <Shield className="w-5 h-5 text-cyan-400" />
-                          )}
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-cyan-500/20">
+                          <Shield className="w-5 h-5 text-cyan-400" />
                         </div>
                         <div>
-                          <span className="font-semibold text-gray-900">COI (Certificate of Insurance)</span>
-                          <span className="text-red-400 ml-1">*</span>
+                          <span className="font-semibold text-gray-900">Insurance Certificate (COI)</span>
                         </div>
                       </div>
-                      {uploadedFiles.coi ? (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-trust-high/10 border border-trust-high/30">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-trust-high" />
-                            <span className="text-sm">{uploadedFiles.coi.name}</span>
+                      <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-4">
+                        <div className="flex items-center justify-center mb-3">
+                          <div className="w-full max-w-[200px] h-[130px] rounded-lg bg-gradient-to-br from-cyan-50 to-teal-50 border border-cyan-100 flex flex-col items-center justify-center">
+                            <div className="text-[9px] text-cyan-300 font-bold mb-1">CERTIFICATE OF</div>
+                            <div className="text-[9px] text-cyan-300">LIABILITY INSURANCE</div>
+                            <div className="w-16 h-px bg-cyan-200 my-2" />
+                            <Shield className="w-8 h-8 text-cyan-300 mb-1" />
+                            <div className="text-[10px] text-cyan-400 font-medium">BIPD / CARGO</div>
                           </div>
-                          <button type="button" onClick={() => removeFile('coi')} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-4 h-4" />
-                          </button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => simulateFileUpload('coi')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-cyan-400/50 transition-colors"
-                        >
-                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <div className="text-sm text-gray-500">Click to upload</div>
-                        </button>
-                      )}
+                        <p className="text-xs text-gray-500 text-center">Current Certificate of Insurance showing active BIPD and Cargo coverage. Buyers want to verify coverage is in good standing.</p>
+                      </div>
                     </div>
 
-                    {/* Loss Run Report */}
-                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                    {/* Loss Runs */}
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 md:col-span-2">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          uploadedFiles.lossRun ? 'bg-trust-high/20' : 'bg-orange-500/20'
-                        }`}>
-                          {uploadedFiles.lossRun ? (
-                            <CheckCircle className="w-5 h-5 text-trust-high" />
-                          ) : (
-                            <ClipboardCheck className="w-5 h-5 text-orange-400" />
-                          )}
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500/20">
+                          <ClipboardCheck className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
-                          <span className="font-semibold text-gray-900">Copy of Loss Run</span>
-                          <span className="text-red-400 ml-1">*</span>
+                          <span className="font-semibold text-gray-900">Loss Runs</span>
                         </div>
                       </div>
-                      {uploadedFiles.lossRun ? (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-trust-high/10 border border-trust-high/30">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-trust-high" />
-                            <span className="text-sm">{uploadedFiles.lossRun.name}</span>
-                          </div>
-                          <button type="button" onClick={() => removeFile('lossRun')} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => simulateFileUpload('lossRun')}
-                          className="w-full p-6 rounded-lg border-2 border-dashed border-gray-300 hover:border-orange-400/50 transition-colors"
-                        >
-                          <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <div className="text-sm text-gray-500">Click to upload</div>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Additional Documents */}
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Additional Documents <span className="text-gray-400">- Optional</span>
-                    </label>
-
-                    {uploadedFiles.additional.length > 0 && (
-                      <div className="space-y-2 mb-4">
-                        {uploadedFiles.additional.map((file) => (
-                          <div key={file.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-primary-400" />
-                              <span className="text-sm">{file.name}</span>
+                      <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-4">
+                        <div className="flex items-center justify-center mb-3">
+                          <div className="w-full max-w-[280px] h-[130px] rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 flex flex-col items-center justify-center">
+                            <div className="text-[9px] text-orange-300 font-bold mb-1">LOSS RUN REPORT</div>
+                            <div className="w-20 h-px bg-orange-200 my-1" />
+                            <div className="flex gap-4 my-2">
+                              <div className="text-center">
+                                <div className="text-[9px] text-orange-300">Claims</div>
+                                <div className="text-sm font-bold text-orange-400">0</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[9px] text-orange-300">Losses</div>
+                                <div className="text-sm font-bold text-orange-400">$0</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[9px] text-orange-300">Period</div>
+                                <div className="text-sm font-bold text-orange-400">3 yr</div>
+                              </div>
                             </div>
-                            <button type="button" onClick={() => removeFile('additional', file.id)} className="p-1 hover:bg-gray-100 rounded">
-                              <X className="w-4 h-4" />
-                            </button>
+                            <div className="text-[10px] text-orange-400 font-medium">Issued by Insurance Carrier</div>
                           </div>
-                        ))}
+                        </div>
+                        <p className="text-xs text-gray-500 text-center">A report from your insurance company showing your claims history, typically covering 3-5 years. Request this from your insurer &mdash; it can take a few days.</p>
                       </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => simulateFileUpload('additional')}
-                      className="w-full p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-400/50 transition-colors text-center"
-                    >
-                      <Upload className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                      <div className="text-sm text-gray-500">Safety records, UCC filings, etc.</div>
-                    </button>
+                    </div>
                   </div>
                 </GlassCard>
 
-                {/* Verification Notice */}
-                <div className="p-4 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                {/* Additional Documents Notice */}
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-semibold text-yellow-400 mb-1">Document Verification</p>
-                    <p className="text-gray-600">Your documents will be reviewed by our team within 24-48 hours. You'll receive a notification once approved.</p>
+                    <p className="font-semibold text-amber-700 mb-1">Every sale is different</p>
+                    <p className="text-gray-600">Depending on your specific situation, additional documents may be needed such as UCC filings, operating agreements, factoring release letters, or state-specific permits. We'll let you know exactly what's required once you have an accepted offer.</p>
                   </div>
                 </div>
 
@@ -2076,22 +1890,22 @@ const CreateListingPage = () => {
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">1</div>
                         <div>
-                          <p className="font-medium text-gray-900">Document Review</p>
-                          <p className="text-gray-500">Our team will verify your documents within 24-48 hours</p>
+                          <p className="font-medium text-gray-900">Listing Review</p>
+                          <p className="text-gray-500">Our team will review and approve your listing within 24-48 hours</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">2</div>
                         <div>
-                          <p className="font-medium text-gray-900">Listing Approval</p>
-                          <p className="text-gray-500">Once approved, your listing goes live on the marketplace</p>
+                          <p className="font-medium text-gray-900">Receive Offers</p>
+                          <p className="text-gray-500">Once live, verified buyers can view and make offers on your MC</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">3</div>
                         <div>
-                          <p className="font-medium text-gray-900">Receive Offers</p>
-                          <p className="text-gray-500">Verified buyers can view and make offers on your MC</p>
+                          <p className="font-medium text-gray-900">Upload Documents &amp; Close</p>
+                          <p className="text-gray-500">After you accept an offer, we'll guide you through uploading your documents to complete the sale</p>
                         </div>
                       </div>
                     </div>
