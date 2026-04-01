@@ -26,7 +26,8 @@ import {
   Star,
   ClipboardCheck,
   Globe,
-  BadgeCheck
+  BadgeCheck,
+  AlertTriangle
 } from 'lucide-react'
 import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
@@ -285,7 +286,10 @@ const CreateListingPage = () => {
 
     // Insurance (user-entered)
     insuranceCompany: '',
-    monthlyInsurancePremium: ''
+    monthlyInsurancePremium: '',
+
+    // RMIS
+    rmisSetup: ''
   })
 
   // Track if we came from CarrierPulse
@@ -1126,6 +1130,18 @@ const CreateListingPage = () => {
 
                 </GlassCard>
 
+                {/* Whole Business Disclaimer */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 mb-1">Whole Business Sale Required</p>
+                    <p className="text-sm text-amber-700">
+                      You must sell the entire business entity (LLC, Inc., etc.) — not just the trucking authority.
+                      The MC authority is tied to your legal entity and cannot be transferred separately.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Platform Integrations */}
                 <GlassCard>
                   <div className="flex items-start gap-4 mb-6">
@@ -1195,6 +1211,24 @@ const CreateListingPage = () => {
                           { value: '', label: 'Select Status' },
                           { value: 'yes', label: '✅ Yes - Setup Complete' },
                           { value: 'pending', label: '⏳ Pending Setup' },
+                          { value: 'no', label: '❌ No' }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <span className="text-lg">📋</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">RMIS Setup</span>
+                      </div>
+                      <Select
+                        value={formData.rmisSetup}
+                        onChange={(e) => setFormData({ ...formData, rmisSetup: e.target.value })}
+                        options={[
+                          { value: '', label: 'Select Status' },
+                          { value: 'yes', label: '✅ Yes - Setup Complete' },
                           { value: 'no', label: '❌ No' }
                         ]}
                       />
