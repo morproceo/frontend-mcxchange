@@ -22,6 +22,7 @@ import api from '../services/api'
 import { MCListing } from '../types'
 import { getTrustLevel } from '../utils/helpers'
 import CarrierPulseOnboardingModal from '../components/CarrierPulseOnboardingModal'
+import MCPricingEstimator from '../components/MCPricingEstimator'
 
 interface SellerOffer {
   id: string
@@ -232,9 +233,12 @@ const SellerDashboard = () => {
           ))}
         </div>
 
+        {/* Pricing Estimator + Listings/Offers Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* My Listings */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Pricing Estimator */}
+            <MCPricingEstimator />
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">My Listings</h2>
               <Link to="/seller/listings" className="text-secondary-600 hover:text-secondary-700 text-sm font-medium">View All</Link>
