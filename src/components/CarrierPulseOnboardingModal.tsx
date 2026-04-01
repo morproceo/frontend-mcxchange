@@ -85,13 +85,13 @@ const CarrierPulseOnboardingModal = ({ isOpen, onClose }: CarrierPulseOnboarding
   }
 
   const handleReadyToSell = () => {
-    localStorage.setItem('mcx_carrier_pulse_completed', 'true')
+    // They're listing — don't show again
+    localStorage.setItem('mcx_carrier_pulse_dismiss_count', '99')
     onClose()
     navigate('/seller/create-listing')
   }
 
   const handleClose = () => {
-    localStorage.setItem('mcx_carrier_pulse_completed', 'true')
     setStep('search')
     setMcNumber('')
     setError(null)

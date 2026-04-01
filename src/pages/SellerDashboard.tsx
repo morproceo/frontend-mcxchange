@@ -60,9 +60,10 @@ interface DashboardStats {
 const SellerDashboard = () => {
   const { user, isIdentityVerified } = useAuth()
 
-  // Carrier Pulse onboarding modal - show on first visit
+  // Carrier Pulse onboarding modal - show on first two visits if no listings yet
   const [showCarrierPulse, setShowCarrierPulse] = useState(() => {
-    return !localStorage.getItem('mcx_carrier_pulse_completed')
+    const dismissCount = parseInt(localStorage.getItem('mcx_carrier_pulse_dismiss_count') || '0', 10)
+    return dismissCount < 2
   })
 
   // API data state
@@ -342,10 +343,14 @@ const SellerDashboard = () => {
         <SellerAdminMessages />
       </div>
 
-      {/* Carrier Pulse Onboarding Modal */}
+      {/* Carrier Pulse Onboarding Modal — shows first 2 visits until seller has listings */}
       <CarrierPulseOnboardingModal
-        isOpen={showCarrierPulse}
-        onClose={() => setShowCarrierPulse(false)}
+        isOpen={showCarrierPulse && myListings.length === 0 && !loading}
+        onClose={() => {
+          setShowCarrierPulse(false)
+          const prev = parseInt(localStorage.getItem('mcx_carrier_pulse_dismiss_count') || '0', 10)
+          localStorage.setItem('mcx_carrier_pulse_dismiss_count', String(prev + 1))
+        }}
       />
     </div>
   )
