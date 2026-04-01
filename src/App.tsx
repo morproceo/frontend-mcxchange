@@ -142,9 +142,6 @@ function App() {
               <Route path="services/dispatch" element={<DispatchServicesPage />} />
               <Route path="services/admin" element={<AdminServicesPage />} />
               <Route path="drivers" element={<DriversLandingPage />} />
-              <Route path="chameleon-check" element={<ChameleonCheckPage />} />
-              <Route path="chameleon-check/:dotNumber" element={<ChameleonCheckPage />} />
-              <Route path="safety-report" element={<SafetyImprovementReportPage />} />
             </Route>
 
             {/* Seller Welcome (standalone, no DashboardLayout) */}
