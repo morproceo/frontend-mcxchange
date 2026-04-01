@@ -39,7 +39,7 @@ const MCPricingEstimator = () => {
   const [suggestedRange, setSuggestedRange] = useState<{ low: number; high: number }>({ low: 0, high: 0 })
   const [breakdown, setBreakdown] = useState<PriceBreakdownItem[]>([])
   const [displayNumber, setDisplayNumber] = useState(0)
-  const animationRef = useRef<NodeJS.Timeout | null>(null)
+  const animationRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Animated number cycling during "calculating"
   useEffect(() => {
