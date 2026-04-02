@@ -4554,10 +4554,10 @@ For questions, contact us at escrow@domilea.com`
                           const formData = new FormData()
                           formData.append('file', file)
                           formData.append('type', 'OTHER')
-                          await api.uploadTransactionDocument(transactionId, formData)
+                          await api.uploadTransactionDocument(transactionId!, formData)
                           toast.success('Document uploaded successfully')
                           // Refresh transaction data
-                          const res = await api.getTransaction(transactionId)
+                          const res = await api.getTransaction(transactionId!)
                           if (res.success && res.data) setTransaction(res.data)
                         } catch (err: any) {
                           toast.error(err.message || 'Failed to upload document')
