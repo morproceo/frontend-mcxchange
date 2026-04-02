@@ -12,7 +12,8 @@ import {
   Send,
   User,
   Inbox,
-  Pencil
+  Pencil,
+  Trash2
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
@@ -75,6 +76,23 @@ const SellerDashboard = () => {
   // Edit listing modal state
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingListingId, setEditingListingId] = useState('')
+
+  // Delete state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDeleteListing = async (listingId: string) => {
+    setDeleting(true)
+    try {
+      await api.deleteListing(listingId)
+      setDeleteConfirmId(null)
+      setMyListings(prev => prev.filter(l => l.id !== listingId))
+    } catch (err: any) {
+      console.error('Failed to delete listing:', err)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // Stats and offers state
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
@@ -268,16 +286,44 @@ const SellerDashboard = () => {
                 {myListings.map((listing) => (
                   <div key={listing.id} className="relative">
                     <MCCard listing={listing} />
-                    <button
-                      onClick={() => {
-                        setEditingListingId(listing.id)
-                        setEditModalOpen(true)
-                      }}
-                      className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Edit
-                    </button>
+                    <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingListingId(listing.id)
+                          setEditModalOpen(true)
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+                      {deleteConfirmId === listing.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleDeleteListing(listing.id)}
+                            disabled={deleting}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 border border-red-500 rounded-lg text-sm font-medium text-white hover:bg-red-600 shadow-sm transition-colors disabled:opacity-50"
+                          >
+                            {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex items-center px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirmId(listing.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:border-red-200 shadow-sm transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
