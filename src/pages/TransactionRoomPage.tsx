@@ -1447,8 +1447,10 @@ For questions, contact us at escrow@domilea.com`
   }
 
   const canApprove = () => {
-    if (userRole === 'buyer' && !transaction.buyerApproved) return true
-    if (userRole === 'seller' && !transaction.sellerApproved) return true
+    // Buyer/seller can only approve once deposit is received (not while still awaiting deposit)
+    const approvalStatuses: TransactionStatus[] = ['deposit-received', 'in-review', 'buyer-approved', 'seller-approved']
+    if (userRole === 'buyer' && !transaction.buyerApproved && approvalStatuses.includes(transaction.status)) return true
+    if (userRole === 'seller' && !transaction.sellerApproved && approvalStatuses.includes(transaction.status)) return true
     if (userRole === 'admin' && transaction.buyerApproved && transaction.sellerApproved && !transaction.adminApproved) return true
     return false
   }
