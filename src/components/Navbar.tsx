@@ -266,6 +266,13 @@ const Navbar = () => {
             )}
           </div>
 
+          {/* Mobile Sign In button */}
+          {!isAuthenticated && (
+            <Link to="/login" className="md:hidden">
+              <Button variant="ghost" size="sm">Sign In</Button>
+            </Link>
+          )}
+
           {/* Mobile menu button */}
           <button
             className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
