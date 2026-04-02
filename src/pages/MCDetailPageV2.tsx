@@ -101,7 +101,7 @@ import {
   mapToV2ComplianceFinancials, mapToV2VinInspections, mapToV2NetworkSignals,
   mapToV2Benchmarks, detectChameleonCarrier,
   calculateCarrierHealthScore,
-  mapSMSToV2BasicScores, mapSMSToV2BasicAlerts,
+  mapSMSToV2BasicScores,
   HealthCategory,
 } from '../utils/carrierDataMapper'
 import type { FMCSASMSData, FMCSAAuthorityHistory } from '../types'
@@ -3520,8 +3520,8 @@ export default function MCDetailPageV2() {
         authority: fallbackAuthority,
         authorityHistory: [],
         authorityPending: fallbackAuthorityPending,
-        basicScores: [],
-        basicAlerts: fallbackBasicAlerts,
+        basicScores: smsData ? mapSMSToV2BasicScores(smsData) : [],
+        basicAlerts: smsData ? mapToV2BasicAlerts(null, smsData) : fallbackBasicAlerts,
         violationBreakdown: fallbackViolationBreakdown,
         issData: fallbackISSData,
         inspections: fallbackInspections,
@@ -3565,10 +3565,9 @@ export default function MCDetailPageV2() {
       authority: mapToV2AuthorityData(carrierReport, fmcsaAuthority),
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
-      // FMCSA SMS = gate (which BASICs are scored), MorPro = fresher values
-      // Only use SMS if it actually returned scored basics — otherwise fall back to MorPro
-      basicScores: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
-      basicAlerts: (smsData && smsData.basics.length > 0) ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
+      // MorPro first, FMCSA SMS fills gaps
+      basicScores: smsData ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
+      basicAlerts: mapToV2BasicAlerts(carrierReport, smsData),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
       inspections: mapToV2InspectionSummary(carrierReport, smsData),
