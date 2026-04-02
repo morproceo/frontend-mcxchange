@@ -413,7 +413,7 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, userCredits, u
 // ============================================================
 // HERO HEADER
 // ============================================================
-function HeroHeader() {
+function HeroHeader({ unlocked }: { unlocked: boolean }) {
   const { carrier: mockCarrier } = useCarrierDataContext()
   const healthColor = mockCarrier.carrierHealthScore >= 80 ? '#34d399' : mockCarrier.carrierHealthScore >= 60 ? '#fbbf24' : '#f87171'
   const healthRadius = 30
@@ -475,9 +475,9 @@ function HeroHeader() {
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400">Active Authority</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">{mockCarrier.legalName}</h1>
+              <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-md select-none' : ''}`}>{mockCarrier.legalName}</h1>
               {mockCarrier.dbaName && (
-                <p className="text-white/40 text-sm mt-1 font-medium">DBA: {mockCarrier.dbaName}</p>
+                <p className={`text-white/40 text-sm mt-1 font-medium ${!unlocked ? 'blur-md select-none' : ''}`}>DBA: {mockCarrier.dbaName}</p>
               )}
             </div>
 
@@ -517,11 +517,11 @@ function HeroHeader() {
             className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mt-6"
           >
             {[
-              { label: 'MC Number', value: mockCarrier.mcNumber || 'N/A', accent: false },
-              { label: 'DOT Number', value: mockCarrier.dotNumber, accent: false },
-              { label: 'Location', value: mockCarrier.location, accent: false },
-              { label: 'Authority Age', value: `${mockCarrier.yearsActive} yrs`, accent: false },
-              { label: 'Annual Miles', value: mockCarrier.mcs150Mileage >= 1000000 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M mi` : mockCarrier.mcs150Mileage > 0 ? `${mockCarrier.mcs150Mileage.toLocaleString()} mi` : 'N/A', accent: true },
+              { label: 'MC Number', value: mockCarrier.mcNumber || 'N/A', accent: false, sensitive: true },
+              { label: 'DOT Number', value: mockCarrier.dotNumber, accent: false, sensitive: true },
+              { label: 'Location', value: mockCarrier.location, accent: false, sensitive: false },
+              { label: 'Authority Age', value: `${mockCarrier.yearsActive} yrs`, accent: false, sensitive: false },
+              { label: 'Annual Miles', value: mockCarrier.mcs150Mileage >= 1000000 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M mi` : mockCarrier.mcs150Mileage > 0 ? `${mockCarrier.mcs150Mileage.toLocaleString()} mi` : 'N/A', accent: true, sensitive: false },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -540,7 +540,7 @@ function HeroHeader() {
                 }}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">{stat.label}</p>
-                <p className={`text-lg sm:text-xl font-extrabold mt-0.5 ${stat.accent ? 'text-indigo-300' : 'text-white'}`}>
+                <p className={`text-lg sm:text-xl font-extrabold mt-0.5 ${stat.accent ? 'text-indigo-300' : 'text-white'} ${stat.sensitive && !unlocked ? 'blur-md select-none' : ''}`}>
                   {stat.value}
                 </p>
               </motion.div>
@@ -3897,7 +3897,7 @@ export default function MCDetailPageV2() {
       )}
 
       {/* Hero Header */}
-      <HeroHeader />
+      <HeroHeader unlocked={!!canAccessAllTabs} />
 
       {/* Tab Navigation */}
       <TabNav tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
