@@ -793,6 +793,13 @@ function normalizeBasicName(name: string): string {
  * If a BASIC isn't in the FMCSA SMS response, it's not scored — period.
  */
 export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any): V2BasicScore[] {
+  // If FMCSA returned no basics at all, fall back entirely to MorPro data.
+  // An empty array means FMCSA has no SMS data for this carrier (e.g. too few inspections),
+  // NOT that individual BASICs are unscored — so MorPro scores are the best we have.
+  if (smsData.basics.length === 0) {
+    return mapToV2BasicScores(morProReport)
+  }
+
   // Build lookup from FMCSA basics array using normalized names for matching
   const smsLookup = new Map<string, FMCSASMSBasic>()
   for (const b of smsData.basics) {
@@ -810,9 +817,21 @@ export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any)
   return ALL_BASICS.map(def => {
     const normalized = normalizeBasicName(def.name)
     const sms = smsLookup.get(normalized)
-    // Trust FMCSA — if a BASIC is missing or has zero percentile, it's not scored.
+    // Trust FMCSA — if a specific BASIC is missing or has zero percentile, it's not scored.
     // A non-zero percentile is legitimate even with zero violations (peer-group ranking).
     if (!sms || sms.percentile <= 0) {
+      // FMCSA says this BASIC isn't scored, but check if MorPro has a score for it
+      const morPro = morProLookup.get(normalized)
+      const morProScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
+      if (morProScore != null && morProScore > 0) {
+        return {
+          name: def.name,
+          score: Number(morProScore),
+          threshold: morPro.threshold ?? def.threshold,
+          percentile: Number(morProScore),
+          description: BASIC_DESCRIPTIONS[def.name] || '',
+        }
+      }
       return {
         name: def.name,
         score: null,
