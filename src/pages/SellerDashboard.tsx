@@ -15,7 +15,6 @@ import {
   Pencil
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import MCCard from '../components/MCCard'
@@ -60,7 +59,7 @@ interface DashboardStats {
 }
 
 const SellerDashboard = () => {
-  const { user, isIdentityVerified } = useAuth()
+  const { user } = useAuth()
 
   // Carrier Pulse onboarding modal - show on first two visits if no listings yet
   const [showCarrierPulse, setShowCarrierPulse] = useState(() => {
@@ -207,8 +206,6 @@ const SellerDashboard = () => {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
-        {!isIdentityVerified && <IdentityVerificationBanner />}
-
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Welcome back, {user?.name}!</h2>
