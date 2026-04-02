@@ -94,7 +94,7 @@ import {
   mapToV2ComplianceFinancials, mapToV2VinInspections, mapToV2NetworkSignals,
   mapToV2Benchmarks, detectChameleonCarrier,
   calculateCarrierHealthScore,
-  mapSMSToV2BasicScores, mapSMSToV2BasicAlerts,
+  mapSMSToV2BasicScores,
   HealthCategory,
 } from '../utils/carrierDataMapper'
 import type { FMCSASMSData, FMCSAAuthorityHistory } from '../types'
@@ -2429,7 +2429,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
         carrier: fallbackCarrier, authority: fallbackAuthority, authorityHistory: [],
         authorityPending: fallbackAuthorityPending,
         basicScores: smsData ? mapSMSToV2BasicScores(smsData) : [],
-        basicAlerts: smsData ? mapSMSToV2BasicAlerts(smsData) : fallbackBasicAlerts,
+        basicAlerts: smsData ? mapToV2BasicAlerts(null, smsData) : fallbackBasicAlerts,
         violationBreakdown: fallbackViolationBreakdown, issData: fallbackISSData,
         inspections: fallbackInspections, inspectionRecords: [], operations: fallbackOperations,
         violationTrend: [], crashes: fallbackCrashes, crashRecords: [],
@@ -2451,7 +2451,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
       basicScores: smsData ? mapSMSToV2BasicScores(smsData, carrierReport) : mapToV2BasicScores(carrierReport),
-      basicAlerts: smsData ? mapSMSToV2BasicAlerts(smsData) : mapToV2BasicAlerts(carrierReport),
+      basicAlerts: mapToV2BasicAlerts(carrierReport, smsData),
       violationBreakdown: mapToV2ViolationBreakdown(carrierReport),
       issData: mapToV2ISSData(carrierReport),
       inspections: mapToV2InspectionSummary(carrierReport, smsData),

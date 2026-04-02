@@ -793,66 +793,55 @@ function normalizeBasicName(name: string): string {
  * If a BASIC isn't in the FMCSA SMS response, it's not scored — period.
  */
 export function mapSMSToV2BasicScores(smsData: FMCSASMSData, morProReport?: any): V2BasicScore[] {
-  // If FMCSA returned no basics at all, fall back entirely to MorPro data.
-  // An empty array means FMCSA has no SMS data for this carrier (e.g. too few inspections),
-  // NOT that individual BASICs are unscored — so MorPro scores are the best we have.
-  if (smsData.basics.length === 0) {
-    return mapToV2BasicScores(morProReport)
-  }
-
-  // Build lookup from FMCSA basics array using normalized names for matching
-  const smsLookup = new Map<string, FMCSASMSBasic>()
-  for (const b of smsData.basics) {
-    smsLookup.set(normalizeBasicName(b.basicName), b)
-  }
-
-  // Build lookup from MorPro basic scores (if available) for fresher values
-  const morProLookup = new Map<string, any>()
+  // Priority: MorPro first, FMCSA SMS fills gaps where MorPro has no score.
   const morProScores = morProReport?.safety?.basicScores || []
+  const morProLookup = new Map<string, any>()
   for (const b of morProScores) {
     const name = b.basicName || b.name || ''
     if (name) morProLookup.set(normalizeBasicName(name), b)
   }
 
+  // Build FMCSA SMS lookup as fallback
+  const smsLookup = new Map<string, FMCSASMSBasic>()
+  for (const b of smsData.basics) {
+    smsLookup.set(normalizeBasicName(b.basicName), b)
+  }
+
   return ALL_BASICS.map(def => {
     const normalized = normalizeBasicName(def.name)
-    const sms = smsLookup.get(normalized)
-    // Trust FMCSA — if a specific BASIC is missing or has zero percentile, it's not scored.
-    // A non-zero percentile is legitimate even with zero violations (peer-group ranking).
-    if (!sms || sms.percentile <= 0) {
-      // FMCSA says this BASIC isn't scored, but check if MorPro has a score for it
-      const morPro = morProLookup.get(normalized)
-      const morProScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
-      if (morProScore != null && morProScore > 0) {
-        return {
-          name: def.name,
-          score: Number(morProScore),
-          threshold: morPro.threshold ?? def.threshold,
-          percentile: Number(morProScore),
-          description: BASIC_DESCRIPTIONS[def.name] || '',
-        }
-      }
+    const morPro = morProLookup.get(normalized)
+    const morProScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
+
+    // Use MorPro score if available
+    if (morProScore != null && morProScore > 0) {
       return {
         name: def.name,
-        score: null,
-        threshold: def.threshold,
-        percentile: null,
-        description: BASIC_DESCRIPTIONS[def.name] || '',
+        score: Number(morProScore),
+        threshold: morPro.threshold ?? morPro.thresholdPercent ?? def.threshold,
+        percentile: Number(morProScore),
+        description: BASIC_DESCRIPTIONS[def.name] || morPro.description || '',
       }
     }
 
-    // This BASIC IS scored by FMCSA — check MorPro for a fresher value
-    const morPro = morProLookup.get(normalized)
-    const morProScore = morPro ? (morPro.score ?? morPro.percentile ?? morPro.measure) : null
-    // Use MorPro value if it's a real score, otherwise use FMCSA's
-    const bestScore = (morProScore != null && morProScore > 0) ? Number(morProScore) : sms.percentile
+    // Fall back to FMCSA SMS data
+    const sms = smsLookup.get(normalized)
+    if (sms && sms.percentile > 0) {
+      return {
+        name: def.name,
+        score: sms.percentile,
+        threshold: sms.thresholdPercent || def.threshold,
+        percentile: sms.percentile,
+        description: BASIC_DESCRIPTIONS[def.name] || sms.basicCode || '',
+      }
+    }
 
+    // Neither source has a score
     return {
       name: def.name,
-      score: bestScore,
-      threshold: sms.thresholdPercent || def.threshold,
-      percentile: bestScore,
-      description: BASIC_DESCRIPTIONS[def.name] || sms.basicCode || '',
+      score: null,
+      threshold: def.threshold,
+      percentile: null,
+      description: BASIC_DESCRIPTIONS[def.name] || '',
     }
   })
 }
@@ -882,9 +871,9 @@ export function mapSMSToV2BasicAlerts(smsData: FMCSASMSData): V2BasicAlerts {
   }
 }
 
-export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
+export function mapToV2BasicAlerts(report: any, smsData?: FMCSASMSData | null): V2BasicAlerts {
   const alerts = report?.safety?.basicAlerts || {}
-  return {
+  const morPro: V2BasicAlerts = {
     unsafeDrivingAlert: alerts.unsafeDriving || alerts.unsafeDrivingAlert || false,
     hoursOfServiceAlert: alerts.hoursOfService || alerts.hosCompliance || alerts.hoursOfServiceAlert || false,
     driverFitnessAlert: alerts.driverFitness || alerts.driverFitnessAlert || false,
@@ -896,6 +885,16 @@ export function mapToV2BasicAlerts(report: any): V2BasicAlerts {
     hoursOfServiceOOSAlert: alerts.hoursOfServiceOOS || alerts.hoursOfServiceOOSAlert || false,
     vehicleMaintenanceOOSAlert: alerts.vehicleMaintenanceOOS || alerts.vehicleMaintenanceOOSAlert || false,
   }
+  // MorPro first — only merge FMCSA SMS alerts for fields MorPro doesn't flag
+  if (smsData && smsData.basics.length > 0) {
+    const smsAlerts = mapSMSToV2BasicAlerts(smsData)
+    for (const key of Object.keys(morPro) as (keyof V2BasicAlerts)[]) {
+      if (!morPro[key] && smsAlerts[key]) {
+        morPro[key] = true
+      }
+    }
+  }
+  return morPro
 }
 
 export function mapToV2ViolationBreakdown(report: any): V2ViolationBreakdown {

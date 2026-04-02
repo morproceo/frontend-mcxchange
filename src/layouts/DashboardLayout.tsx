@@ -78,6 +78,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [isConsultationOpen, setIsConsultationOpen] = useState(false)
   const [buyerSubscription, setBuyerSubscription] = useState<{ plan?: string; status?: string } | null>(null)
   const [buyerSubscriptionLoading, setBuyerSubscriptionLoading] = useState(false)
+  const [hasStandaloneCarrierPulse, setHasStandaloneCarrierPulse] = useState(false)
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
 
   const handleLogout = () => {
@@ -123,7 +124,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
       }
     }
 
+    const fetchCarrierPulseAccess = async () => {
+      try {
+        const res = await api.getCarrierPulseAccess()
+        if (isActive && res.success && res.data) {
+          setHasStandaloneCarrierPulse(res.data.hasAccess && res.data.reason === 'standalone')
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     fetchSubscription()
+    fetchCarrierPulseAccess()
 
     return () => {
       isActive = false
@@ -167,6 +180,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
     const hasEnterpriseAccess =
       (planLower === 'enterprise' || planLower === 'vip_access') && isActive
 
+    const hasPulseBundleAccess =
+      (planLower === 'package_tool' || planLower === 'professional' || hasPremiumAccess) && isActive
+
     switch (user?.role) {
       case 'seller':
         return [
@@ -204,8 +220,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           ...(hasPremiumAccess && !buyerSubscriptionLoading
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe', badge: 'New' }]
             : []),
-          { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' },
-          { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'New', badgeColor: 'bg-pink-500' },
+          ...(hasPulseBundleAccess
+            ? [
+                { icon: Package, label: 'Pulse Bundle', path: '/buyer/carrier-pulse' },
+              ]
+            : hasStandaloneCarrierPulse
+            ? [
+                { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse' },
+                { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'Upgrade' as const, badgeColor: 'bg-pink-500' },
+              ]
+            : [
+                { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' as const },
+                { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'New' as const, badgeColor: 'bg-pink-500' },
+              ]),
           {
             label: 'Services',
             icon: Briefcase,
