@@ -2427,7 +2427,9 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     if (!carrierReport) {
       return {
         carrier: fallbackCarrier, authority: fallbackAuthority, authorityHistory: [],
-        authorityPending: fallbackAuthorityPending, basicScores: [], basicAlerts: fallbackBasicAlerts,
+        authorityPending: fallbackAuthorityPending,
+        basicScores: smsData ? mapSMSToV2BasicScores(smsData) : [],
+        basicAlerts: smsData ? mapSMSToV2BasicAlerts(smsData) : fallbackBasicAlerts,
         violationBreakdown: fallbackViolationBreakdown, issData: fallbackISSData,
         inspections: fallbackInspections, inspectionRecords: [], operations: fallbackOperations,
         violationTrend: [], crashes: fallbackCrashes, crashRecords: [],
