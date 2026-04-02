@@ -41,6 +41,7 @@ const AdminServicesPage = lazy(() => import('./pages/services/AdminServicesPage'
 const SellerWelcomePage = lazy(() => import('./pages/SellerWelcomePage'))
 const SellerDashboard = lazy(() => import('./pages/SellerDashboard'))
 const CreateListingPage = lazy(() => import('./pages/CreateListingPage'))
+const SellerCreateListingPage = lazy(() => import('./pages/SellerCreateListingPage'))
 const SellerListingsPage = lazy(() => import('./pages/SellerListingsPage'))
 const SellerOffersPage = lazy(() => import('./pages/SellerOffersPage'))
 const SellerEarningsPage = lazy(() => import('./pages/SellerEarningsPage'))
@@ -166,7 +167,7 @@ function App() {
               }
             >
               <Route path="dashboard" element={<SellerDashboard />} />
-              <Route path="create-listing" element={<CreateListingPage />} />
+              <Route path="create-listing" element={<SellerCreateListingPage />} />
               <Route path="listings" element={<SellerListingsPage />} />
               <Route path="offers" element={<SellerOffersPage />} />
               <Route path="earnings" element={<SellerEarningsPage />} />
