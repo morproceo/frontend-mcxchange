@@ -553,24 +553,30 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
       return result
     }
 
-    // Single object format
-    return {
-      common: {
-        status: mapStatus(fmcsaAuth.commonAuthorityStatus),
-        grantedDate: normalizeDate(fmcsaAuth.commonAuthorityGrantDate || fmcsaAuth.grantDate || ''),
-        effectiveDate: normalizeDate(fmcsaAuth.effectiveDate || fmcsaAuth.commonAuthorityGrantDate || ''),
-      },
-      contract: {
-        status: mapStatus(fmcsaAuth.contractAuthorityStatus),
-        grantedDate: normalizeDate(fmcsaAuth.contractAuthorityGrantDate || ''),
-        effectiveDate: normalizeDate(fmcsaAuth.contractAuthorityGrantDate || ''),
-      },
-      broker: {
-        status: mapStatus(fmcsaAuth.brokerAuthorityStatus),
-        grantedDate: normalizeDate(fmcsaAuth.brokerAuthorityGrantDate || ''),
-        effectiveDate: normalizeDate(fmcsaAuth.brokerAuthorityGrantDate || ''),
-      },
+    // Single object format — check if it has real data (not all N/A)
+    const hasRealData = (fmcsaAuth.commonAuthorityStatus && fmcsaAuth.commonAuthorityStatus !== 'N/A')
+      || (fmcsaAuth.contractAuthorityStatus && fmcsaAuth.contractAuthorityStatus !== 'N/A')
+      || (fmcsaAuth.brokerAuthorityStatus && fmcsaAuth.brokerAuthorityStatus !== 'N/A')
+    if (hasRealData) {
+      return {
+        common: {
+          status: mapStatus(fmcsaAuth.commonAuthorityStatus),
+          grantedDate: normalizeDate(fmcsaAuth.commonAuthorityGrantDate || fmcsaAuth.grantDate || ''),
+          effectiveDate: normalizeDate(fmcsaAuth.effectiveDate || fmcsaAuth.commonAuthorityGrantDate || ''),
+        },
+        contract: {
+          status: mapStatus(fmcsaAuth.contractAuthorityStatus),
+          grantedDate: normalizeDate(fmcsaAuth.contractAuthorityGrantDate || ''),
+          effectiveDate: normalizeDate(fmcsaAuth.contractAuthorityGrantDate || ''),
+        },
+        broker: {
+          status: mapStatus(fmcsaAuth.brokerAuthorityStatus),
+          grantedDate: normalizeDate(fmcsaAuth.brokerAuthorityGrantDate || ''),
+          effectiveDate: normalizeDate(fmcsaAuth.brokerAuthorityGrantDate || ''),
+        },
+      }
     }
+    // All N/A — fall through to MorPro data below
   }
 
   // Also check carrier-level fields (some APIs put authority status on the carrier object)
