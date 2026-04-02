@@ -407,13 +407,25 @@ export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2
     ? `${carrier.location.street || ''}, ${carrier.location.city || ''}, ${carrier.location.state || ''} ${carrier.location.zip || ''}`.trim()
     : listing?.address || ''
 
-  // Derive operatingStatus from API
-  const opStatus = carrier.operatingStatus || carrier.allowedToOperate
+  // Derive operatingStatus — check allowedToOperate first (clear Y/N from FMCSA),
+  // then operatingStatus which may be an authority type code (A/C/B/E) not a status.
+  const allowed = carrier.allowedToOperate
+  const opStatus = carrier.operatingStatus
   let operatingStatus: 'authorized' | 'not-authorized' | 'pending' = 'not-authorized'
-  if (opStatus === 'A' || opStatus === 'Y' || opStatus === 'authorized' || opStatus === 'AUTHORIZED') {
+  if (allowed === 'Y' || allowed === 'A' || allowed === 'authorized' || allowed === 'AUTHORIZED') {
+    operatingStatus = 'authorized'
+  } else if (allowed === 'N') {
+    operatingStatus = 'not-authorized'
+  } else if (opStatus === 'A' || opStatus === 'Y' || opStatus === 'authorized' || opStatus === 'AUTHORIZED') {
     operatingStatus = 'authorized'
   } else if (opStatus === 'pending') {
     operatingStatus = 'pending'
+  } else if (opStatus === 'N' || opStatus === 'not-authorized' || opStatus === 'NOT AUTHORIZED' || opStatus === 'revoked' || opStatus === 'REVOKED') {
+    operatingStatus = 'not-authorized'
+  } else if (listing?.status?.toUpperCase() === 'ACTIVE') {
+    // If MorPro returns an authority type code (C/B/E) rather than a status,
+    // and the listing is active, default to authorized
+    operatingStatus = 'authorized'
   }
 
   // Safety rating normalization
@@ -1647,9 +1659,11 @@ export function mapToV2NetworkSignals(report: any, listing?: MCListingExtended):
       : `${totalRevocations} revocation(s) found on record`,
   })
 
-  // Operating status
-  const opStatus = carrier.operatingStatus || carrier.allowedToOperate
-  const isAuthorized = opStatus === 'A' || opStatus === 'Y' || opStatus === 'authorized' || opStatus === 'AUTHORIZED'
+  // Operating status — check clear deny signals, otherwise assume authorized
+  const allowed2 = carrier.allowedToOperate
+  const opStatus2 = carrier.operatingStatus
+  const isDenied = allowed2 === 'N' || opStatus2 === 'N' || opStatus2 === 'not-authorized' || opStatus2 === 'NOT AUTHORIZED' || opStatus2 === 'revoked' || opStatus2 === 'REVOKED'
+  const isAuthorized = !isDenied
   signals.push({
     name: 'Operating Status',
     value: isAuthorized ? 'Authorized' : 'Not Authorized',
