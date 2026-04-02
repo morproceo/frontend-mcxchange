@@ -408,23 +408,28 @@ export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2
     : listing?.address || ''
 
   // Derive operatingStatus — check allowedToOperate first (clear Y/N from FMCSA),
-  // then operatingStatus which may be an authority type code (A/C/B/E) not a status.
+  // then authorizedForHire, then operatingStatus which may be an authority type code (A/C/B/E).
   const allowed = carrier.allowedToOperate
   const opStatus = carrier.operatingStatus
+  const authForHire = carrier.authorizedForHire
   let operatingStatus: 'authorized' | 'not-authorized' | 'pending' = 'not-authorized'
   if (allowed === 'Y' || allowed === 'A' || allowed === 'authorized' || allowed === 'AUTHORIZED') {
     operatingStatus = 'authorized'
   } else if (allowed === 'N') {
     operatingStatus = 'not-authorized'
+  } else if (authForHire === true || authForHire === 'Y' || authForHire === 'True' || authForHire === 'TRUE') {
+    operatingStatus = 'authorized'
   } else if (opStatus === 'A' || opStatus === 'Y' || opStatus === 'authorized' || opStatus === 'AUTHORIZED') {
+    operatingStatus = 'authorized'
+  } else if (opStatus === 'C' || opStatus === 'B' || opStatus === 'E') {
+    // Authority type codes (C=Common, B=Broker, E=Contract) indicate active authority
     operatingStatus = 'authorized'
   } else if (opStatus === 'pending') {
     operatingStatus = 'pending'
   } else if (opStatus === 'N' || opStatus === 'not-authorized' || opStatus === 'NOT AUTHORIZED' || opStatus === 'revoked' || opStatus === 'REVOKED') {
     operatingStatus = 'not-authorized'
   } else if (listing?.status?.toUpperCase() === 'ACTIVE') {
-    // If MorPro returns an authority type code (C/B/E) rather than a status,
-    // and the listing is active, default to authorized
+    // Fallback: if the listing is active, default to authorized
     operatingStatus = 'authorized'
   }
 
@@ -727,13 +732,19 @@ function mapEventType(type: string): V2AuthorityEvent['type'] {
 
 export function mapToV2AuthorityPending(report: any): V2AuthorityPending {
   const pending = report?.authority?.pendingFlags || {}
+  // API may return string "Y"/"N" instead of boolean — treat only "Y"/true as pending
+  function isTruthy(v: any): boolean {
+    if (typeof v === 'boolean') return v
+    if (typeof v === 'string') return v.toUpperCase() === 'Y' || v.toUpperCase() === 'YES' || v.toUpperCase() === 'TRUE'
+    return false
+  }
   return {
-    commonPending: pending.commonPending || false,
-    commonReview: pending.commonReview || false,
-    contractPending: pending.contractPending || false,
-    contractReview: pending.contractReview || false,
-    brokerPending: pending.brokerPending || false,
-    brokerReview: pending.brokerReview || false,
+    commonPending: isTruthy(pending.commonPending),
+    commonReview: isTruthy(pending.commonReview),
+    contractPending: isTruthy(pending.contractPending),
+    contractReview: isTruthy(pending.contractReview),
+    brokerPending: isTruthy(pending.brokerPending),
+    brokerReview: isTruthy(pending.brokerReview),
   }
 }
 
