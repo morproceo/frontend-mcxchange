@@ -66,28 +66,44 @@ export default function SellerCreateListingPage() {
   const [submitError, setSubmitError] = useState('')
   const [createdListing, setCreatedListing] = useState<any>(null)
 
-  // Auto-fetch FMCSA data when coming from CarrierPulse
+  // Auto-fetch carrier data from MorPro when coming from CarrierPulse
   useEffect(() => {
-    if (fromPulse && (pulseMC || pulseDOT) && !carrierData) {
-      fetchCarrierData(pulseMC, pulseDOT)
+    if (fromPulse && pulseDOT && !carrierData) {
+      fetchCarrierData(pulseDOT)
     }
-  }, [fromPulse, pulseMC, pulseDOT])
+  }, [fromPulse, pulseDOT])
 
-  const fetchCarrierData = async (mc: string, dot: string) => {
+  const fetchCarrierData = async (dot: string) => {
+    const cleanDot = dot.replace(/\D/g, '')
+    if (!cleanDot) return
     setFmcsaLoading(true)
     try {
-      let response
-      const cleanMC = mc.replace(/^MC-?/i, '').replace(/\D/g, '')
-      if (cleanMC) {
-        response = await api.fmcsaLookupByMC(cleanMC)
-      } else if (dot) {
-        response = await api.fmcsaLookupByDOT(dot)
-      }
-      if (response?.data?.dotNumber) {
-        const carrier = response.data
-        setCarrierData(carrier)
-        const mcNum = mc || carrier.mcNumber || carrier.dotNumber
-        setTitle(`${carrier.legalName} - MC #${mcNum}`)
+      const response = await api.getCarrierReport(cleanDot)
+      if (response.success && response.data) {
+        const report = response.data
+        const carrier = report.carrier || {}
+        setCarrierData({
+          ...carrier,
+          dotNumber: carrier.dotNumber || cleanDot,
+          legalName: carrier.legalName || '',
+          dbaName: carrier.dbaName || '',
+          hqCity: carrier.location?.city || '',
+          hqState: carrier.location?.state || '',
+          physicalAddress: carrier.location?.street || '',
+          totalPowerUnits: carrier.totalPowerUnits || carrier.powerUnits || 0,
+          totalDrivers: carrier.totalDrivers || 0,
+          safetyRating: report.safety?.safetyRating || carrier.safetyRating || '',
+          insuranceOnFile: (report.insurance?.activePolicies?.length || 0) > 0,
+          bipdOnFile: report.insurance?.activePolicies?.find((p: any) => String(p.insuranceType || '').toLowerCase().includes('bipd') || String(p.insuranceType || '').toLowerCase().includes('liability'))?.coverageAmount || 0,
+          cargoOnFile: report.insurance?.activePolicies?.find((p: any) => String(p.insuranceType || '').toLowerCase().includes('cargo'))?.coverageAmount || 0,
+          bondOnFile: report.insurance?.activePolicies?.find((p: any) => String(p.insuranceType || '').toLowerCase().includes('bond'))?.coverageAmount || 0,
+          allowedToOperate: carrier.allowedToOperate || carrier.operatingStatus || '',
+          mcNumber: carrier.mcNumber || pulseMC || '',
+          cargoTypes: report.cargo ? Object.entries(report.cargo).filter(([, v]) => v === true).map(([k]) => k) : [],
+        })
+        setTitle(`${carrier.legalName || 'Carrier'} - DOT #${cleanDot}`)
+      } else {
+        setSearchError('Carrier data not found for this DOT number.')
       }
     } catch (err: any) {
       setSearchError(err.message || 'Failed to fetch carrier data')
@@ -96,29 +112,14 @@ export default function SellerCreateListingPage() {
     }
   }
 
-  // MC search → navigate to CarrierPulse
-  const handleMCSearch = async () => {
-    const cleaned = mcInput.replace(/[^0-9]/g, '')
+  // DOT search → navigate to CarrierPulse
+  const handleDOTSearch = async () => {
+    const cleaned = mcInput.replace(/\D/g, '')
     if (!cleaned) {
-      setSearchError('Please enter a valid MC number')
+      setSearchError('Please enter a valid DOT number')
       return
     }
-
-    setSearchLoading(true)
-    setSearchError('')
-
-    try {
-      const response = await api.fmcsaLookupByMC(cleaned)
-      if (response.success && response.data?.dotNumber) {
-        navigate(`/seller/carrier-pulse/${response.data.dotNumber}?fromAdmin=true&mc=${cleaned}`)
-      } else {
-        setSearchError('No carrier found with that MC number.')
-      }
-    } catch (err: any) {
-      setSearchError(err.message || 'Failed to look up carrier.')
-    } finally {
-      setSearchLoading(false)
-    }
+    navigate(`/seller/carrier-pulse/${cleaned}?fromAdmin=true`)
   }
 
   // Submit listing — auto-assigned to logged-in seller
@@ -203,7 +204,7 @@ export default function SellerCreateListingPage() {
             <Package className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">List Your Authority</h1>
-          <p className="text-gray-500 mt-2 mb-8">Look up your carrier by MC number to view the full profile, then create a listing</p>
+          <p className="text-gray-500 mt-2 mb-8">Look up your carrier by DOT number to view the full profile, then create a listing</p>
 
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -212,14 +213,14 @@ export default function SellerCreateListingPage() {
                 type="text"
                 value={mcInput}
                 onChange={e => { setMcInput(e.target.value); setSearchError('') }}
-                onKeyDown={e => e.key === 'Enter' && handleMCSearch()}
-                placeholder="Enter MC number..."
+                onKeyDown={e => e.key === 'Enter' && handleDOTSearch()}
+                placeholder="Enter DOT number..."
                 className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-lg font-medium transition-all outline-none"
                 autoFocus
               />
             </div>
             <button
-              onClick={handleMCSearch}
+              onClick={handleDOTSearch}
               disabled={!mcInput.trim() || searchLoading}
               className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold transition-colors flex items-center gap-2"
             >
@@ -237,6 +238,7 @@ export default function SellerCreateListingPage() {
 
           <p className="mt-6 text-xs text-gray-400">
             This will open the full CarrierPulse view. After reviewing, click "List This Authority" to create the listing.
+            Your DOT number can be found on your FMCSA registration or at <a href="https://safer.fmcsa.dot.gov" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline">SAFER</a>.
           </p>
         </motion.div>
       </div>
