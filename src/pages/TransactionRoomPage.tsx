@@ -3281,11 +3281,54 @@ For questions, contact us at escrow@domilea.com`
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 mt-3">
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" onClick={() => {
+                              const summary = [
+                                `Transaction Summary`,
+                                `====================`,
+                                `Transaction ID: ${transactionId}`,
+                                `Status: ${transaction.status}`,
+                                ``,
+                                `Listing: MC#${transaction.listing?.mcNumber || 'N/A'}`,
+                                `Legal Name: ${(transaction.listing as any)?.legalName || 'N/A'}`,
+                                ``,
+                                `Buyer: ${transaction.buyer?.name || 'N/A'} (${transaction.buyer?.email || 'N/A'})`,
+                                `Seller: ${transaction.seller?.name || 'N/A'} (${transaction.seller?.email || 'N/A'})`,
+                                ``,
+                                `Agreed Price: $${transaction.agreedPrice?.toLocaleString() || '0'}`,
+                                `Deposit: $${transaction.depositAmount?.toLocaleString() || '0'} (${transaction.depositPaid ? 'Paid' : 'Pending'})`,
+                                `Final Payment: $${transaction.finalPaymentAmount?.toLocaleString() || '0'}`,
+                                ``,
+                                `Buyer Approved: ${transaction.buyerApproved ? 'Yes' : 'No'}`,
+                                `Seller Approved: ${transaction.sellerApproved ? 'Yes' : 'No'}`,
+                                `Admin Approved: ${transaction.adminApproved ? 'Yes' : 'No'}`,
+                                ``,
+                                `Created: ${transaction.createdAt ? new Date(transaction.createdAt).toLocaleString() : 'N/A'}`,
+                                `Completed: ${transaction.completedAt ? new Date(transaction.completedAt).toLocaleString() : 'N/A'}`,
+                              ].join('\n')
+                              const blob = new Blob([summary], { type: 'text/plain' })
+                              const url = URL.createObjectURL(blob)
+                              const link = document.createElement('a')
+                              link.href = url
+                              link.download = `transaction-${transactionId?.slice(0, 8)}-summary.txt`
+                              document.body.appendChild(link)
+                              link.click()
+                              document.body.removeChild(link)
+                              URL.revokeObjectURL(url)
+                              toast.success('Summary exported')
+                            }}>
                               <Download className="w-4 h-4 mr-1" />
                               Export Summary
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              try {
+                                const res = await api.adminSendTransactionEmails(transactionId!)
+                                if (res.success) {
+                                  toast.success(`Confirmation emails sent to ${res.data.buyerEmail} and ${res.data.sellerEmail}`)
+                                }
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to send confirmation emails')
+                              }
+                            }}>
                               <Mail className="w-4 h-4 mr-1" />
                               Send Confirmation
                             </Button>
@@ -3336,11 +3379,11 @@ For questions, contact us at escrow@domilea.com`
 
                   {/* Quick Links */}
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => setActiveTab('messages')}>
                       <MessageSquare className="w-4 h-4 mr-1" />
                       Message Parties
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => setActiveTab('timeline')}>
                       <ScrollText className="w-4 h-4 mr-1" />
                       Activity Log
                     </Button>
