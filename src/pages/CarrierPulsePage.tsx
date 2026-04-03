@@ -2768,7 +2768,37 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                 <TabNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
                 <AnimatePresence mode="wait">
                   <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                    {previewMode && activeTab !== 'overview' ? (
+                    {!hasBundleAccess && BUNDLE_ONLY_TABS.has(activeTab) ? (
+                      <div className="relative min-h-[500px]">
+                        <div className="pointer-events-none select-none opacity-30">
+                          {tabContent[activeTab]}
+                        </div>
+                        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm bg-white/70 rounded-2xl">
+                        <div className="text-center max-w-md px-6">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/25">
+                            <Package className="w-8 h-8 text-white" />
+                          </div>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">
+                            {activeTab === 'chameleon' ? 'Chameleon Check' : 'Safety Improvement Report'}
+                          </h3>
+                          <p className="text-gray-500 text-sm mb-2">
+                            {activeTab === 'chameleon'
+                              ? 'Detect chameleon carriers — companies that shut down and reopen under new names to dodge safety records.'
+                              : 'Get detailed safety analysis with trends, risk areas, and actionable recommendations.'}
+                          </p>
+                          <p className="text-amber-600 text-sm font-semibold mb-6">
+                            Subscribe to Pulse Bundle to unlock Chameleon Check and Safety Improvement Report.
+                          </p>
+                          <Link to="/buyer/package-tool">
+                            <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                              <Package className="w-4 h-4 mr-2" />
+                              Subscribe to Pulse Bundle
+                            </Button>
+                          </Link>
+                        </div>
+                        </div>
+                      </div>
+                    ) : previewMode && activeTab !== 'overview' ? (
                       <div className="relative min-h-[500px]">
                         <div className="pointer-events-none select-none">
                           {tabContent[activeTab]}
@@ -2780,42 +2810,12 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">Unlock Full Report</h3>
                             <p className="text-gray-500 text-sm mb-6">
-                              Subscribe to CarrierPulse to access detailed {activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'chameleon' ? 'chameleon carrier detection' : activeTab === 'authority' ? 'authority & compliance data' : 'this section'}.
+                              Subscribe to CarrierPulse to access detailed {activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'authority' ? 'authority & compliance data' : 'this section'}.
                             </p>
                             <Link to="/pricing">
                               <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
                                 <Crown className="w-4 h-4 mr-2" />
                                 View Plans
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    ) : !hasBundleAccess && BUNDLE_ONLY_TABS.has(activeTab) ? (
-                      <div className="relative min-h-[500px]">
-                        <div className="pointer-events-none select-none opacity-30">
-                          {tabContent[activeTab]}
-                        </div>
-                        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm bg-white/70 rounded-2xl">
-                          <div className="text-center max-w-md px-6">
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/25">
-                              <Package className="w-8 h-8 text-white" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">
-                              {activeTab === 'chameleon' ? 'Chameleon Check' : 'Safety Improvement Report'} requires Pulse Bundle
-                            </h3>
-                            <p className="text-gray-500 text-sm mb-2">
-                              {activeTab === 'chameleon'
-                                ? 'Detect chameleon carriers — companies that shut down and reopen under new names to dodge safety records.'
-                                : 'Get detailed safety analysis with trends, risk areas, and actionable recommendations.'}
-                            </p>
-                            <p className="text-amber-600 text-sm font-semibold mb-6">
-                              Upgrade to Pulse Bundle to unlock Chameleon Check and Safety Improvement Report.
-                            </p>
-                            <Link to="/buyer/package-tool">
-                              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-                                <Package className="w-4 h-4 mr-2" />
-                                Upgrade to Pulse Bundle
                               </Button>
                             </Link>
                           </div>
