@@ -35,7 +35,7 @@ const Navbar = () => {
 
   const toolLinks = [
     { name: 'CarrierPulse', href: '/carrier-pulse-preview', icon: Activity, desc: 'Carrier intelligence platform', comingSoon: false },
-    { name: 'Credit Reports', href: '/services', icon: FileSearch, desc: 'Business credit intelligence', comingSoon: false },
+    { name: 'Credit Reports', href: '/buyer/credit-report', icon: FileSearch, desc: 'Business credit intelligence — $55/report', comingSoon: false },
     { name: 'Chameleon Check', href: '/pricing', icon: ShieldAlert, desc: 'Detect reincarnated carriers', comingSoon: false },
     { name: 'Safety Improvement Report', href: '/pricing', icon: Shield, desc: 'BASIC scores & safety analysis', comingSoon: false },
     { name: 'Eva AI', href: '#', icon: Bot, desc: 'AI compliance management', comingSoon: true },
@@ -270,6 +270,13 @@ const Navbar = () => {
           {!isAuthenticated && (
             <Link to="/login" className="md:hidden">
               <Button variant="ghost" size="sm">Sign In</Button>
+            </Link>
+          )}
+
+          {/* Mobile Dashboard button when logged in */}
+          {isAuthenticated && (
+            <Link to={getDashboardLink()} className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors">
+              <LayoutDashboard className="h-5 w-5 text-gray-600" />
             </Link>
           )}
 
