@@ -7,6 +7,8 @@ export interface TabItem {
   label: string
   icon?: any
   locked?: boolean
+  badge?: string
+  badgeColor?: string
 }
 
 interface TabNavProps {
@@ -42,6 +44,11 @@ export default function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
               >
                 {Icon && <Icon className={`w-4 h-4 ${tab.locked ? 'opacity-50' : ''}`} />}
                 <span className={tab.locked ? 'opacity-70' : ''}>{tab.label}</span>
+                {tab.badge && (
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${tab.badgeColor || 'bg-gray-100 text-gray-500'}`}>
+                    {tab.badge}
+                  </span>
+                )}
                 {tab.locked && <Lock className="w-3 h-3 text-gray-400 ml-0.5" />}
                 {isActive && !tab.locked && (
                   <motion.div
@@ -104,6 +111,11 @@ export default function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
                       >
                         {Icon && <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-300' : tab.locked ? 'text-indigo-400/40' : 'text-indigo-400/60'}`} />}
                         <span className={`text-sm ${isActive ? 'font-bold text-white' : tab.locked ? 'font-medium text-white/50' : 'font-medium text-white/70'}`}>{tab.label}</span>
+                        {tab.badge && (
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${tab.badgeColor || 'bg-white/10 text-white/50'}`}>
+                            {tab.badge}
+                          </span>
+                        )}
                         {tab.locked ? (
                           <Lock className="ml-auto w-3.5 h-3.5 text-indigo-400/50" />
                         ) : isActive ? (

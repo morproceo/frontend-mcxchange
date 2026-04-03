@@ -60,6 +60,7 @@ const BuyerMessagesPage = lazy(() => import('./pages/BuyerMessagesPage'))
 const BuyerSubscriptionPage = lazy(() => import('./pages/BuyerSubscriptionPage'))
 const BuyerUnlockedMCsPage = lazy(() => import('./pages/BuyerUnlockedMCsPage'))
 const BuyerCreditsafePage = lazy(() => import('./pages/BuyerCreditsafePage'))
+const CreditReportPurchasePage = lazy(() => import('./pages/CreditReportPurchasePage'))
 const VipMarketplacePage = lazy(() => import('./pages/VipMarketplacePage'))
 const BuyerDepositPage = lazy(() => import('./pages/BuyerDepositPage'))
 const BuyerTransactionsPage = lazy(() => import('./pages/BuyerTransactionsPage'))
@@ -205,6 +206,7 @@ function App() {
               <Route path="purchases" element={<VerificationRequiredRoute><BuyerPurchasesPage /></VerificationRequiredRoute>} />
               <Route path="messages" element={<VerificationRequiredRoute><BuyerMessagesPage /></VerificationRequiredRoute>} />
               <Route path="creditsafe" element={<VerificationRequiredRoute><BuyerCreditsafePage /></VerificationRequiredRoute>} />
+              <Route path="credit-report" element={<CreditReportPurchasePage />} />
               <Route path="vip-marketplace" element={<VerificationRequiredRoute><VipMarketplacePage /></VerificationRequiredRoute>} />
               <Route path="unlocked" element={<VerificationRequiredRoute><BuyerUnlockedMCsPage /></VerificationRequiredRoute>} />
               <Route path="deposit/:offerId" element={<VerificationRequiredRoute><BuyerDepositPage /></VerificationRequiredRoute>} />

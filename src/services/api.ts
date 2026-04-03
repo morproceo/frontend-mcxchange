@@ -1217,6 +1217,17 @@ class ApiService {
     });
   }
 
+  async forwardOfferToSeller(offerId: string, sellerAmount: number, notes?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/admin/offers/${offerId}/forward`, {
+      method: 'POST',
+      body: JSON.stringify({ sellerAmount, notes }),
+    });
+  }
+
   async rejectOffer(offerId: string, reason: string) {
     return this.request<{
       success: boolean;
@@ -3033,6 +3044,34 @@ class ApiService {
   async carrierPulseCreditsafeReport(connectId: string) {
     return this.request<{ success: boolean; data: any }>(
       `/buyer/carrier-pulse/creditsafe/report/${connectId}`
+    );
+  }
+
+  // Credit Report one-time purchase ($55)
+  async createCreditReportCheckout(connectId: string, companyName: string) {
+    return this.request<{ success: boolean; data: { sessionId: string; url: string } }>(
+      '/buyer/creditsafe/checkout',
+      { method: 'POST', body: JSON.stringify({ connectId, companyName }) }
+    );
+  }
+
+  async checkCreditReportPurchase(connectId: string) {
+    return this.request<{ success: boolean; data: { purchased: boolean; free: boolean; price?: number } }>(
+      `/buyer/creditsafe/purchase/${connectId}`
+    );
+  }
+
+  async creditsafeOpenSearch(params: { name: string; state?: string }) {
+    const query = new URLSearchParams({ name: params.name });
+    if (params.state) query.set('state', params.state);
+    return this.request<{ success: boolean; data: { companies: any[]; totalResults: number } }>(
+      `/buyer/creditsafe/open-search?${query}`
+    );
+  }
+
+  async creditsafePurchasedReport(connectId: string) {
+    return this.request<{ success: boolean; data: any }>(
+      `/buyer/creditsafe/purchased-report/${connectId}`
     );
   }
 }
