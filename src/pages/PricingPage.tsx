@@ -355,7 +355,7 @@ export default function PricingPage() {
             </div>
             <p className="text-xs text-emerald-600 font-medium mb-1">Included with Professional, Premium, Enterprise & VIP plans</p>
             <p className="text-xs text-gray-500 mb-4">Or <span className="font-semibold text-gray-700">$55 per report</span> — no subscription needed</p>
-            <button onClick={() => navigate('/credit-report-preview')} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
+            <button onClick={() => user ? navigate('/buyer/credit-report') : navigate('/register?redirect=/buyer/credit-report')} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
               Buy a Report — $55
             </button>
           </div>

@@ -107,7 +107,7 @@ export default function ChameleonCheckPreviewPage() {
     if (user) {
       navigate('/buyer/chameleon-check')
     } else {
-      navigate('/auth?redirect=/buyer/chameleon-check')
+      navigate('/register?redirect=/buyer/chameleon-check')
     }
   }
 

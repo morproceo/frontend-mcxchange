@@ -88,7 +88,7 @@ export default function CreditReportPreviewPage() {
     if (user) {
       navigate('/buyer/credit-report')
     } else {
-      navigate('/auth?redirect=/buyer/credit-report')
+      navigate('/register?redirect=/buyer/credit-report')
     }
   }
 
