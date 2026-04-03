@@ -21,13 +21,13 @@ const planStyles = {
     icon: Shield,
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'from-emerald-50 to-teal-50',
-    popular: false,
+    popular: true,
   },
   premium: {
     icon: Zap,
     color: 'from-purple-500 to-indigo-500',
     bgColor: 'from-purple-50 to-indigo-50',
-    popular: true,
+    popular: false,
   },
   enterprise: {
     icon: Crown,
