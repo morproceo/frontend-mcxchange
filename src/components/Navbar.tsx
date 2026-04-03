@@ -38,7 +38,7 @@ const Navbar = () => {
     { name: 'Credit Reports', href: '/credit-report-preview', icon: FileSearch, desc: 'Business credit intelligence — $55/report', comingSoon: false },
     { name: 'Chameleon Check', href: '/chameleon-check-preview', icon: ShieldAlert, desc: 'Detect reincarnated carriers', comingSoon: false },
     { name: 'Safety Improvement Report', href: '/safety-report-preview', icon: Shield, desc: 'BASIC scores & safety analysis', comingSoon: false },
-    { name: 'Eva AI', href: '#', icon: Bot, desc: 'AI compliance management', comingSoon: true },
+    { name: 'Eva AI', href: '/eva-ai', icon: Bot, desc: 'AI compliance management — coming soon', comingSoon: false },
   ]
 
   const serviceLinks = [
