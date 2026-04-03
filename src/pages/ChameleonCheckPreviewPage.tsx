@@ -134,7 +134,7 @@ export default function ChameleonCheckPreviewPage() {
             </p>
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="flex items-center gap-2 px-6 py-3 bg-white rounded-2xl border border-gray-200 shadow-lg shadow-gray-200/50">
-                <span className="text-3xl font-bold text-gray-900">$12.99</span>
+                <span className="text-3xl font-bold text-gray-900">$14.99</span>
                 <span className="text-gray-500">/month</span>
               </div>
             </div>
@@ -146,7 +146,7 @@ export default function ChameleonCheckPreviewPage() {
               {user ? 'Start Checking Carriers' : 'Get Started — Create Free Account'}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <p className="text-sm text-gray-400 mt-4">Includes CarrierPulse access. Cancel anytime.</p>
+            <p className="text-sm text-gray-400 mt-4">Included in Pulse Bundle. Cancel anytime.</p>
           </motion.div>
         </div>
       </div>
@@ -352,14 +352,14 @@ export default function ChameleonCheckPreviewPage() {
       {/* Included with */}
       <div className="max-w-4xl mx-auto px-6 pb-16">
         <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Included With Your Subscription</h3>
-          <p className="text-gray-500 text-sm mb-6">$12.99/mo gets you Chameleon Check + CarrierPulse. Or upgrade to Professional for all tools.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Included in Pulse Bundle</h3>
+          <p className="text-gray-500 text-sm mb-6">$14.99/mo gets you Chameleon Check + Safety Improvement Report + CarrierPulse. Or upgrade to Professional for all tools.</p>
           <div className="flex flex-wrap justify-center gap-3">
             {[
               'Unlimited chameleon checks',
+              'Safety Improvement Report',
               'Shared EIN & officer detection',
               'Revocation & restart analysis',
-              'Equipment cross-referencing',
               'Full CarrierPulse access',
               'Cancel anytime',
             ].map((feature) => (
