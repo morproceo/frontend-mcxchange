@@ -99,9 +99,10 @@ const Navbar = () => {
               onMouseLeave={() => setToolsDropdownOpen(false)}
             >
               <button
-                className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 font-semibold transition-colors"
               >
                 <span>Tools</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-600 leading-none">New</span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${toolsDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -311,7 +312,7 @@ const Navbar = () => {
 
               {/* Mobile Tools */}
               <div className="px-2">
-                <span className="text-gray-600 font-medium py-1 block">Tools</span>
+                <span className="text-indigo-600 font-semibold py-1 flex items-center gap-2">Tools <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-600 leading-none">New</span></span>
                 <div className="mt-2 space-y-1 pl-4 border-l-2 border-gray-100">
                   {toolLinks.map((tool) => (
                     <Link
