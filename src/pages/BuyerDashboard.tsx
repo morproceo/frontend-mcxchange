@@ -76,6 +76,7 @@ interface UnlockedListing {
   sellingWithEmail?: boolean
   sellingWithPhone?: boolean
   unlockedAt: Date
+  status?: string
   listing: {
     id: string
     price: number
@@ -221,6 +222,7 @@ const BuyerDashboard = () => {
             sellingWithEmail: item.sellingWithEmail || item.listing?.sellingWithEmail,
             sellingWithPhone: item.sellingWithPhone || item.listing?.sellingWithPhone,
             unlockedAt: new Date(item.unlockedAt || item.createdAt),
+            status: item.status || item.listing?.status,
             listing: {
               id: item.listing?.id || item.listingId,
               price: item.listing?.askingPrice || item.listing?.price || 0,
@@ -865,31 +867,43 @@ const BuyerDashboard = () => {
               </Card>
             ) : unlockedListings.length > 0 ? (
               <div className="space-y-4">
-                {unlockedListings.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 -m-6 mb-4 p-4 border-b border-gray-100">
+                {unlockedListings.map((item) => {
+                  const isSold = item.status === 'SOLD'
+                  const isRejected = item.status === 'REJECTED'
+                  const isUnavailable = isSold || isRejected
+                  return (
+                  <Card key={item.id} className={`overflow-hidden ${isUnavailable ? 'opacity-60' : ''}`}>
+                    <div className={`-m-6 mb-4 p-4 border-b border-gray-100 ${isSold ? 'bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100' : isRejected ? 'bg-gradient-to-r from-red-50 via-red-50/50 to-gray-50' : 'bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                            <Unlock className="w-5 h-5 text-emerald-600" />
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSold ? 'bg-gray-200' : isRejected ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                            <Unlock className={`w-5 h-5 ${isSold ? 'text-gray-500' : isRejected ? 'text-red-500' : 'text-emerald-600'}`} />
                           </div>
                           <div>
-                            <Link
-                              to={`/mc/${item.listing.id}`}
-                              className="text-xl font-bold text-gray-900 hover:text-secondary-600 transition-colors"
-                            >
-                              MC #{item.mcNumber}
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to={`/mc/${item.listing.id}`}
+                                className="text-xl font-bold text-gray-900 hover:text-secondary-600 transition-colors"
+                              >
+                                MC #{item.mcNumber}
+                              </Link>
+                              {isSold && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-200 text-gray-600">Sold</span>
+                              )}
+                              {isRejected && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-100 text-red-600">Rejected</span>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-500">
                               Unlocked on {item.unlockedAt.toLocaleDateString()}
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-emerald-600">
+                          <div className={`text-2xl font-bold ${isUnavailable ? 'text-gray-400 line-through' : 'text-emerald-600'}`}>
                             ${item.listing.price.toLocaleString()}
                           </div>
-                          <div className="text-sm text-gray-500">Asking Price</div>
+                          <div className="text-sm text-gray-500">{isUnavailable ? 'No longer available' : 'Asking Price'}</div>
                         </div>
                       </div>
                     </div>
@@ -954,7 +968,8 @@ const BuyerDashboard = () => {
                       </Button>
                     </div>
                   </Card>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <Card>
