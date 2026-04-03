@@ -475,9 +475,9 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400">Active Authority</span>
               </div>
-              <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-md select-none' : ''}`}>{mockCarrier.legalName}</h1>
+              <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-sm select-none' : ''}`}>{mockCarrier.legalName}</h1>
               {mockCarrier.dbaName && (
-                <p className={`text-white/40 text-sm mt-1 font-medium ${!unlocked ? 'blur-md select-none' : ''}`}>DBA: {mockCarrier.dbaName}</p>
+                <p className={`text-white/40 text-sm mt-1 font-medium ${!unlocked ? 'blur-sm select-none' : ''}`}>DBA: {mockCarrier.dbaName}</p>
               )}
             </div>
 
@@ -522,7 +522,12 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
               { label: 'Location', value: mockCarrier.location, accent: false, sensitive: false },
               { label: 'Authority Age', value: `${mockCarrier.yearsActive} yrs`, accent: false, sensitive: false },
               { label: 'Annual Miles', value: mockCarrier.mcs150Mileage >= 1000000 ? `${(mockCarrier.mcs150Mileage / 1000000).toFixed(1)}M mi` : mockCarrier.mcs150Mileage > 0 ? `${mockCarrier.mcs150Mileage.toLocaleString()} mi` : 'N/A', accent: true, sensitive: false },
-            ].map((stat, i) => (
+            ].map((stat, i) => {
+              // Mask sensitive values when not unlocked: show first 3 chars + asterisks
+              const displayValue = stat.sensitive && !unlocked && stat.value !== 'N/A'
+                ? `${String(stat.value).slice(0, 3)}${'*'.repeat(Math.max(0, String(stat.value).length - 3))}`
+                : stat.value
+              return (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 10 }}
@@ -540,11 +545,11 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
                 }}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">{stat.label}</p>
-                <p className={`text-lg sm:text-xl font-extrabold mt-0.5 ${stat.accent ? 'text-indigo-300' : 'text-white'} ${stat.sensitive && !unlocked ? 'blur-md select-none' : ''}`}>
-                  {stat.value}
+                <p className={`text-lg sm:text-xl font-extrabold mt-0.5 ${stat.accent ? 'text-indigo-300' : 'text-white'}`}>
+                  {displayValue}
                 </p>
               </motion.div>
-            ))}
+            )})}
           </motion.div>
 
           {/* Status ribbon + Price */}
@@ -3451,7 +3456,7 @@ export default function MCDetailPageV2() {
   const fmcsaFetchedRef = useRef<string | null>(null)
   useEffect(() => {
     const dot = listing?.dotNumber?.replace(/\D/g, '')
-    if (!dot || USE_MOCK || isPreviewMode) return
+    if (!dot || USE_MOCK) return
     if (fmcsaFetchedRef.current === dot) return
     fmcsaFetchedRef.current = dot
     // Fetch SMS + cargo + authority in parallel
@@ -3464,12 +3469,12 @@ export default function MCDetailPageV2() {
     api.fmcsaGetAuthorityHistory(dot)
       .then(res => { if (res.success && res.data) setFmcsaAuthority(res.data) })
       .catch(() => {})
-  }, [listing?.dotNumber, isPreviewMode])
+  }, [listing?.dotNumber])
 
   // Map API data to V2 interfaces (memoized)
   const carrierDataCtx = useMemo<CarrierDataContextType>(() => {
-    // Use mock/fallback data if env var is set OR in preview mode (not verified)
-    if (USE_MOCK || isPreviewMode) {
+    // Use mock/fallback data only if env var is set
+    if (USE_MOCK) {
       return {
         carrier: fallbackCarrier,
         authority: fallbackAuthority,
@@ -3602,7 +3607,7 @@ export default function MCDetailPageV2() {
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, listing, carrierLoading, carrierError, isPreviewMode, smsData, fmcsaCargoTypes, fmcsaAuthority])
+  }, [carrierReport, listing, carrierLoading, carrierError, smsData, fmcsaCargoTypes, fmcsaAuthority])
 
   // Credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
