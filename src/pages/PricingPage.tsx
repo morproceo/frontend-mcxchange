@@ -271,7 +271,7 @@ export default function PricingPage() {
           <h2 className="text-2xl font-bold text-gray-900">Add-Ons</h2>
           <p className="text-gray-500 mt-2">Enhance your experience with powerful tools.</p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Pulse Bundle */}
           <div className="bg-white rounded-2xl border-2 border-rose-300 p-6 hover:shadow-lg transition-shadow relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-center py-1.5 text-xs font-bold uppercase tracking-wider">
