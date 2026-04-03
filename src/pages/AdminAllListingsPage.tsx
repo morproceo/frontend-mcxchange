@@ -221,7 +221,7 @@ const AdminAllListingsPage = () => {
     try {
       let response
       if (newUserWithListing.mcNumber) {
-        response = await api.fmcsaLookupByMC(newUserWithListing.mcNumber)
+        response = await api.fmcsaLookupByMC(newUserWithListing.mcNumber.replace(/^MC-?/i, '').replace(/\D/g, ''))
       } else if (newUserWithListing.dotNumber) {
         response = await api.fmcsaLookupByDOT(newUserWithListing.dotNumber)
       }
@@ -467,8 +467,8 @@ const AdminAllListingsPage = () => {
     setTelegramInspectionsLoading(true)
 
     try {
-      // Fetch SMS data using MC number
-      const response = await api.fmcsaLookupByMC(listing.mcNumber)
+      // Fetch SMS data using MC number — strip MC prefix for FMCSA API
+      const response = await api.fmcsaLookupByMC(listing.mcNumber.replace(/^MC-?/i, '').replace(/\D/g, ''))
       if (response.success && response.data) {
         // Calculate total inspections from driver + vehicle + hazmat
         const total = (response.data.driverInsp || 0) +
@@ -609,7 +609,7 @@ const AdminAllListingsPage = () => {
       let response
       // Detect if it's likely a DOT number (7+ digits) or MC number
       if (newListing.mcNumber) {
-        response = await api.fmcsaLookupByMC(newListing.mcNumber)
+        response = await api.fmcsaLookupByMC(newListing.mcNumber.replace(/^MC-?/i, '').replace(/\D/g, ''))
       } else if (newListing.dotNumber) {
         response = await api.fmcsaLookupByDOT(newListing.dotNumber)
       }

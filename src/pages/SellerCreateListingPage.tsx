@@ -77,8 +77,9 @@ export default function SellerCreateListingPage() {
     setFmcsaLoading(true)
     try {
       let response
-      if (mc) {
-        response = await api.fmcsaLookupByMC(mc)
+      const cleanMC = mc.replace(/^MC-?/i, '').replace(/\D/g, '')
+      if (cleanMC) {
+        response = await api.fmcsaLookupByMC(cleanMC)
       } else if (dot) {
         response = await api.fmcsaLookupByDOT(dot)
       }
