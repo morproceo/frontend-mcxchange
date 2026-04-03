@@ -125,7 +125,7 @@ export default function PricingPage() {
                   </div>
                   <div className="text-left">
                     <p className="text-xl font-black tracking-tight">Selling Your Authority?</p>
-                    <p className="text-emerald-100 font-medium text-sm">List for FREE — no subscription, no hidden fees. Get started in minutes.</p>
+                    <p className="text-emerald-100 font-medium text-sm">List for FREE — no subscription needed. Get started in minutes.</p>
                   </div>
                 </div>
               </div>
