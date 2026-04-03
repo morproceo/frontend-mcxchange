@@ -560,14 +560,14 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
             className="flex flex-wrap items-center gap-2 sm:gap-3 mt-5 pt-5 border-t border-white/[0.06]"
           >
             {/* Status chips */}
-            {[
-              { label: 'Safety', value: 'Satisfactory', color: 'emerald' as const },
-              { label: 'Insurance', value: 'Current', color: 'emerald' as const },
-              { label: 'Fleet', value: `${mockCarrier.powerUnits} Units`, color: 'cyan' as const },
-              { label: 'Drivers', value: `${mockCarrier.totalDriversCDL} CDL`, color: 'cyan' as const },
-            ].map((chip, i) => (
+            {([
+              { label: 'Safety', value: mockCarrier.safetyRating === 'not-rated' ? 'Not Rated' : mockCarrier.safetyRating === 'satisfactory' ? 'Satisfactory' : mockCarrier.safetyRating === 'conditional' ? 'Conditional' : mockCarrier.safetyRating === 'unsatisfactory' ? 'Unsatisfactory' : 'Not Rated', color: mockCarrier.safetyRating === 'satisfactory' ? 'emerald' : mockCarrier.safetyRating === 'conditional' ? 'amber' : mockCarrier.safetyRating === 'unsatisfactory' ? 'red' : 'gray' },
+              { label: 'Insurance', value: mockCarrier.insuranceStatus === 'current' ? 'Current' : mockCarrier.insuranceStatus === 'pending' ? 'Pending' : mockCarrier.insuranceStatus === 'expired' ? 'Expired' : 'Unknown', color: mockCarrier.insuranceStatus === 'current' ? 'emerald' : mockCarrier.insuranceStatus === 'pending' ? 'amber' : 'red' },
+              { label: 'Fleet', value: `${mockCarrier.powerUnits} Units`, color: 'cyan' },
+              { label: 'Drivers', value: `${mockCarrier.totalDriversCDL} CDL`, color: 'cyan' },
+            ] as { label: string; value: string; color: string }[]).map((chip, i) => (
               <div key={chip.label} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                <div className={`w-1.5 h-1.5 rounded-full ${chip.color === 'emerald' ? 'bg-emerald-400' : 'bg-cyan-400'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${chip.color === 'emerald' ? 'bg-emerald-400' : chip.color === 'amber' ? 'bg-amber-400' : chip.color === 'red' ? 'bg-red-400' : chip.color === 'gray' ? 'bg-gray-400' : 'bg-cyan-400'}`} />
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{chip.label}</span>
                 <span className="text-xs font-bold text-white/80">{chip.value}</span>
               </div>
