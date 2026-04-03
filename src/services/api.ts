@@ -2299,6 +2299,14 @@ class ApiService {
     };
   }
 
+  // Verify a document (admin only)
+  async verifyDocument(documentId: string, verified: boolean) {
+    return this.request<{ success: boolean; data: any; message: string }>(`/documents/${documentId}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify({ verified }),
+    });
+  }
+
   // ===========================
   // CONSULTATION METHODS
   // ===========================

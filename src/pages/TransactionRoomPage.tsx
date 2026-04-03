@@ -3313,13 +3313,22 @@ For questions, contact us at escrow@domilea.com`
                               <CheckCircle className="w-3 h-3" /> Verified
                             </span>
                           ) : (
-                            <Button size="sm" variant="outline" className="text-xs py-1 px-2">
+                            <Button size="sm" variant="outline" className="text-xs py-1 px-2" onClick={async () => {
+                              try {
+                                await api.verifyDocument(doc.id, true)
+                                toast.success('Document verified')
+                                const res = await api.getTransaction(transactionId!)
+                                if (res.success && res.data) setTransaction(res.data)
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to verify document')
+                              }
+                            }}>
                               Verify
                             </Button>
                           )}
                         </div>
                       ))}
-                      <Button fullWidth variant="outline" size="sm" className="mt-2">
+                      <Button fullWidth variant="outline" size="sm" className="mt-2" onClick={() => setActiveTab('documents')}>
                         View All {transaction.sellerDocuments.length} Documents
                       </Button>
                     </div>
@@ -4621,14 +4630,38 @@ For questions, contact us at escrow@domilea.com`
                             )}
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" onClick={() => setShowDocumentPreview(doc.url)}>
                               <Eye className="w-4 h-4 mr-1" />
                               Preview
                             </Button>
                             {(transaction.status === 'completed' || userRole !== 'buyer') && (
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" onClick={() => {
+                                const link = document.createElement('a')
+                                link.href = doc.url
+                                link.download = doc.name
+                                link.target = '_blank'
+                                link.rel = 'noopener noreferrer'
+                                document.body.appendChild(link)
+                                link.click()
+                                document.body.removeChild(link)
+                              }}>
                                 <Download className="w-4 h-4 mr-1" />
                                 Download
+                              </Button>
+                            )}
+                            {userRole === 'admin' && !doc.verified && (
+                              <Button size="sm" onClick={async () => {
+                                try {
+                                  await api.verifyDocument(doc.id, true)
+                                  toast.success('Document verified')
+                                  const res = await api.getTransaction(transactionId!)
+                                  if (res.success && res.data) setTransaction(res.data)
+                                } catch (err: any) {
+                                  toast.error(err.message || 'Failed to verify document')
+                                }
+                              }}>
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Verify
                               </Button>
                             )}
                           </div>
@@ -4641,9 +4674,21 @@ For questions, contact us at escrow@domilea.com`
 
               {transaction.status === 'completed' && userRole === 'buyer' && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
-                  <Button fullWidth size="lg">
+                  <Button fullWidth size="lg" onClick={() => {
+                    transaction.sellerDocuments.forEach((doc) => {
+                      const link = document.createElement('a')
+                      link.href = doc.url
+                      link.download = doc.name
+                      link.target = '_blank'
+                      link.rel = 'noopener noreferrer'
+                      document.body.appendChild(link)
+                      link.click()
+                      document.body.removeChild(link)
+                    })
+                    toast.success('Downloading all documents...')
+                  }}>
                     <Download className="w-5 h-5 mr-2" />
-                    Download All Documents (ZIP)
+                    Download All Documents
                   </Button>
                 </div>
               )}
@@ -4763,6 +4808,64 @@ For questions, contact us at escrow@domilea.com`
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Confirm & Complete
                 </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Document Preview Modal */}
+        {showDocumentPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowDocumentPreview(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900">Document Preview</h3>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const link = document.createElement('a')
+                    link.href = showDocumentPreview
+                    link.download = ''
+                    link.target = '_blank'
+                    link.rel = 'noopener noreferrer'
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                  }}>
+                    <Download className="w-4 h-4 mr-1" />
+                    Download
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowDocumentPreview(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-100">
+                {showDocumentPreview.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                  <img src={showDocumentPreview} alt="Document" className="max-w-full max-h-full object-contain" />
+                ) : showDocumentPreview.match(/\.pdf$/i) ? (
+                  <iframe src={showDocumentPreview} className="w-full h-full min-h-[70vh]" title="Document Preview" />
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-4">Preview not available for this file type</p>
+                    <Button onClick={() => {
+                      window.open(showDocumentPreview, '_blank', 'noopener,noreferrer')
+                    }}>
+                      Open in New Tab
+                    </Button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
