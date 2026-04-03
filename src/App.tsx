@@ -90,6 +90,7 @@ const AdminActivityLogPage = lazy(() => import('./pages/AdminActivityLogPage'))
 const SafetyImprovementReportPage = lazy(() => import('./pages/SafetyImprovementReportPage'))
 const CarrierPulsePreviewPage = lazy(() => import('./pages/CarrierPulsePreviewPage'))
 const CreditReportPreviewPage = lazy(() => import('./pages/CreditReportPreviewPage'))
+const ChameleonCheckPreviewPage = lazy(() => import('./pages/ChameleonCheckPreviewPage'))
 const AdminCreateListingPage = lazy(() => import('./pages/AdminCreateListingPage'))
 
 // CarrierPulse
@@ -148,6 +149,7 @@ function App() {
               <Route path="drivers" element={<DriversLandingPage />} />
               <Route path="carrier-pulse-preview" element={<CarrierPulsePreviewPage />} />
               <Route path="credit-report-preview" element={<CreditReportPreviewPage />} />
+              <Route path="chameleon-check-preview" element={<ChameleonCheckPreviewPage />} />
             </Route>
 
             {/* Seller Welcome (standalone, no DashboardLayout) */}
