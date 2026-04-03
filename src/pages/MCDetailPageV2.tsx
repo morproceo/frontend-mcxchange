@@ -104,7 +104,7 @@ import {
   mapSMSToV2BasicScores,
   HealthCategory,
 } from '../utils/carrierDataMapper'
-import type { FMCSASMSData, FMCSAAuthorityHistory } from '../types'
+import type { FMCSASMSData, FMCSAAuthorityHistory, FMCSAInsuranceHistory } from '../types'
 
 // ============================================================
 // CARRIER DATA CONTEXT — provides mapped data to all sub-components
@@ -3452,17 +3452,18 @@ export default function MCDetailPageV2() {
     USE_MOCK ? undefined : carrierDotNumber
   )
 
-  // FMCSA data (source of truth for BASIC scores, cargo, authority)
+  // FMCSA data (source of truth for BASIC scores, cargo, authority, insurance)
   const [smsData, setSmsData] = useState<FMCSASMSData | null>(null)
   const [fmcsaCargoTypes, setFmcsaCargoTypes] = useState<string[]>([])
   const [fmcsaAuthority, setFmcsaAuthority] = useState<FMCSAAuthorityHistory | null>(null)
+  const [fmcsaInsurance, setFmcsaInsurance] = useState<FMCSAInsuranceHistory[] | null>(null)
   const fmcsaFetchedRef = useRef<string | null>(null)
   useEffect(() => {
     const dot = carrierDotNumber?.replace(/\D/g, '')
     if (!dot || USE_MOCK) return
     if (fmcsaFetchedRef.current === dot) return
     fmcsaFetchedRef.current = dot
-    // Fetch SMS + cargo + authority in parallel
+    // Fetch SMS + cargo + authority + insurance in parallel
     api.fmcsaGetSMSData(dot)
       .then(res => { if (res.success && res.data) setSmsData(res.data) })
       .catch(() => {})
@@ -3471,6 +3472,9 @@ export default function MCDetailPageV2() {
       .catch(() => {})
     api.fmcsaGetAuthorityHistory(dot)
       .then(res => { if (res.success && res.data) setFmcsaAuthority(res.data) })
+      .catch(() => {})
+    api.fmcsaGetInsuranceHistory(dot)
+      .then(res => { if (res.success && res.data) setFmcsaInsurance(res.data) })
       .catch(() => {})
   }, [carrierDotNumber])
 
@@ -3568,8 +3572,24 @@ export default function MCDetailPageV2() {
 
     // Map real API data
     const healthResult = calculateCarrierHealthScore(carrierReport, listing, smsData)
+
+    // FMCSA insurance override — detect pending cancellation that MorPro may miss
+    const carrierData = mapToV2CarrierData(carrierReport, listing)
+    if (fmcsaInsurance && fmcsaInsurance.length > 0) {
+      const hasPendingCancel = fmcsaInsurance.some(p =>
+        p.cancellationDate && new Date(p.cancellationDate) > new Date() &&
+        String(p.status || '').toLowerCase() !== 'cancelled'
+      )
+      const allCancelled = fmcsaInsurance.every(p =>
+        String(p.status || '').toLowerCase() === 'cancelled' ||
+        (p.cancellationDate && new Date(p.cancellationDate) <= new Date())
+      )
+      if (hasPendingCancel) carrierData.insuranceStatus = 'pending'
+      else if (allCancelled) carrierData.insuranceStatus = 'expired'
+    }
+
     return {
-      carrier: mapToV2CarrierData(carrierReport, listing),
+      carrier: carrierData,
       authority: mapToV2AuthorityData(carrierReport, fmcsaAuthority),
       authorityHistory: mapToV2AuthorityHistory(carrierReport),
       authorityPending: mapToV2AuthorityPending(carrierReport),
@@ -3610,7 +3630,7 @@ export default function MCDetailPageV2() {
       carrierLoading: false,
       carrierError: null,
     }
-  }, [carrierReport, listing, carrierLoading, carrierError, smsData, fmcsaCargoTypes, fmcsaAuthority])
+  }, [carrierReport, listing, carrierLoading, carrierError, smsData, fmcsaCargoTypes, fmcsaAuthority, fmcsaInsurance])
 
   // Credits
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
