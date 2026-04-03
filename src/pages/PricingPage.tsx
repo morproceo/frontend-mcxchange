@@ -407,7 +407,7 @@ export default function PricingPage() {
             { q: 'Do unused credits roll over?', a: 'No, credits reset each billing period. You start fresh with your plan\'s credit allocation each month.' },
             { q: 'Can I upgrade or downgrade my plan?', a: 'Yes, you can change your plan at any time. Contact support and we\'ll help you switch plans.' },
             { q: 'What is CarrierPulse?', a: 'CarrierPulse is our carrier intelligence tool. Look up any carrier by DOT or MC number and get instant safety scores, inspection history, insurance details, and more.' },
-            { q: 'What\'s included in the VIP plan?', a: 'VIP gives you unlimited listing unlocks, free credit reports, CarrierPulse access, a personal consultation with Maria, and your $399 fee is credited toward your purchase.' },
+            { q: 'What\'s included in the VIP plan?', a: 'VIP gives you unlimited listing unlocks, free credit reports, CarrierPulse, Chameleon Check, Safety Improvement Report, a personal consultation with Maria, and your $399 fee is credited toward your purchase.' },
           ].map((faq, i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5">
               <h3 className="font-semibold text-gray-900 mb-2">{faq.q}</h3>
