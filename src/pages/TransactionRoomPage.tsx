@@ -4630,20 +4630,34 @@ For questions, contact us at escrow@domilea.com`
                             )}
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setShowDocumentPreview(doc.url)}>
+                            <Button variant="outline" size="sm" onClick={async () => {
+                              try {
+                                const res = await api.getDocumentUrl(doc.id)
+                                if (res.success) setShowDocumentPreview(res.data.url)
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to load document preview')
+                              }
+                            }}>
                               <Eye className="w-4 h-4 mr-1" />
                               Preview
                             </Button>
                             {(transaction.status === 'completed' || userRole !== 'buyer') && (
-                              <Button variant="outline" size="sm" onClick={() => {
-                                const link = document.createElement('a')
-                                link.href = doc.url
-                                link.download = doc.name
-                                link.target = '_blank'
-                                link.rel = 'noopener noreferrer'
-                                document.body.appendChild(link)
-                                link.click()
-                                document.body.removeChild(link)
+                              <Button variant="outline" size="sm" onClick={async () => {
+                                try {
+                                  const res = await api.getDocumentUrl(doc.id)
+                                  if (res.success) {
+                                    const link = document.createElement('a')
+                                    link.href = res.data.url
+                                    link.download = doc.name
+                                    link.target = '_blank'
+                                    link.rel = 'noopener noreferrer'
+                                    document.body.appendChild(link)
+                                    link.click()
+                                    document.body.removeChild(link)
+                                  }
+                                } catch (err: any) {
+                                  toast.error(err.message || 'Failed to download document')
+                                }
                               }}>
                                 <Download className="w-4 h-4 mr-1" />
                                 Download
@@ -4674,18 +4688,25 @@ For questions, contact us at escrow@domilea.com`
 
               {transaction.status === 'completed' && userRole === 'buyer' && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
-                  <Button fullWidth size="lg" onClick={() => {
-                    transaction.sellerDocuments.forEach((doc) => {
-                      const link = document.createElement('a')
-                      link.href = doc.url
-                      link.download = doc.name
-                      link.target = '_blank'
-                      link.rel = 'noopener noreferrer'
-                      document.body.appendChild(link)
-                      link.click()
-                      document.body.removeChild(link)
-                    })
-                    toast.success('Downloading all documents...')
+                  <Button fullWidth size="lg" onClick={async () => {
+                    toast.success('Starting downloads...')
+                    for (const doc of transaction.sellerDocuments) {
+                      try {
+                        const res = await api.getDocumentUrl(doc.id)
+                        if (res.success) {
+                          const link = document.createElement('a')
+                          link.href = res.data.url
+                          link.download = doc.name
+                          link.target = '_blank'
+                          link.rel = 'noopener noreferrer'
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                        }
+                      } catch {
+                        toast.error(`Failed to download ${doc.name}`)
+                      }
+                    }
                   }}>
                     <Download className="w-5 h-5 mr-2" />
                     Download All Documents

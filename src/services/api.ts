@@ -2307,6 +2307,11 @@ class ApiService {
     });
   }
 
+  // Get a pre-signed download/preview URL for a document
+  async getDocumentUrl(documentId: string) {
+    return this.request<{ success: boolean; data: { url: string } }>(`/documents/${documentId}/url`);
+  }
+
   // ===========================
   // CONSULTATION METHODS
   // ===========================
