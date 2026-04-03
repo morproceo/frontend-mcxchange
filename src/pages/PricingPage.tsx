@@ -349,13 +349,14 @@ export default function PricingPage() {
             <p className="text-sm text-gray-600 mb-4">
               Full business credit reports — UCC filings, lien holders, judgments, tax liens, bankruptcy status, financial statements, and risk analysis.
             </p>
-            <div className="flex items-baseline gap-1 mb-4">
+            <div className="flex items-baseline gap-1 mb-2">
               <span className="text-2xl font-bold text-gray-900">2 credits</span>
               <span className="text-gray-500">/report</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Professional, Premium, Enterprise & VIP plans</p>
-            <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
-              Get Started
+            <p className="text-xs text-emerald-600 font-medium mb-1">Included with Professional, Premium, Enterprise & VIP plans</p>
+            <p className="text-xs text-gray-500 mb-4">Or <span className="font-semibold text-gray-700">$55 per report</span> — no subscription needed</p>
+            <button onClick={() => navigate('/credit-report-preview')} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
+              Buy a Report — $55
             </button>
           </div>
 
