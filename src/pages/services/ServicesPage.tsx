@@ -44,11 +44,14 @@ import {
   Award,
   History,
   Bell,
-  RefreshCw
+  RefreshCw,
+  Lock,
+  Crown
 } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import { useAuth } from '../../context/AuthContext'
 
 // FMCSA API types - comprehensive
 interface FMCSACarrier {
@@ -164,7 +167,61 @@ interface InsuranceHistory {
   bipdCodeDesc: string
 }
 
+// Trust Score calculation
+function calculateTrustGrade(carrier: FMCSACarrier): { grade: string; score: number; color: string; bgColor: string; borderColor: string } {
+  let score = 0
+
+  // Authority (25 pts)
+  if (carrier.allowedToOperate === 'Y') score += 25
+
+  // Insurance compliance (25 pts)
+  let insurancePoints = 0
+  let insuranceChecks = 0
+  if (carrier.bipdInsuranceRequired === 'Y') {
+    insuranceChecks++
+    if (carrier.bipdInsuranceOnFile === 'Y') insurancePoints++
+  }
+  if (carrier.cargoInsuranceRequired === 'Y') {
+    insuranceChecks++
+    if (carrier.cargoInsuranceOnFile === 'Y') insurancePoints++
+  }
+  if (carrier.bondInsuranceRequired === 'Y') {
+    insuranceChecks++
+    if (carrier.bondInsuranceOnFile === 'Y') insurancePoints++
+  }
+  score += insuranceChecks > 0 ? Math.round((insurancePoints / insuranceChecks) * 25) : 25
+
+  // Safety rating (20 pts)
+  const rating = carrier.safetyRating
+  if (rating === 'Satisfactory') score += 20
+  else if (rating === 'Conditional') score += 10
+  else if (rating === 'Unsatisfactory') score += 0
+  else score += 10 // Not rated = neutral
+
+  // OOS rates (15 pts)
+  const driverOosHigh = (carrier.driverOosRate || 0) > 5.51
+  const vehicleOosHigh = (carrier.vehicleOosRate || 0) > 20.72
+  if (!driverOosHigh && !vehicleOosHigh) score += 15
+  else if (driverOosHigh && vehicleOosHigh) score += 0
+  else score += 8
+
+  // Crash history (15 pts)
+  const crashes = carrier.crashTotal || 0
+  const fatal = carrier.fatalCrash || 0
+  if (crashes === 0) score += 15
+  else if (fatal > 0 || crashes > 5) score += 0
+  else if (crashes <= 2) score += 10
+  else score += 5
+
+  if (score >= 90) return { grade: 'A', score, color: 'text-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-400' }
+  if (score >= 75) return { grade: 'B', score, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-400' }
+  if (score >= 60) return { grade: 'C', score, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-400' }
+  if (score >= 40) return { grade: 'D', score, color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-400' }
+  return { grade: 'F', score, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-400' }
+}
+
 const ServicesPage = () => {
+  const { isAuthenticated } = useAuth()
   const [mcNumber, setMcNumber] = useState('')
   const [dotNumber, setDotNumber] = useState('')
   const [searchType, setSearchType] = useState<'mc' | 'dot'>('mc')
@@ -189,6 +246,38 @@ const ServicesPage = () => {
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
+
+  const BlurredSection = ({ children, title }: { children: React.ReactNode; title: string }) => (
+    <div className="relative">
+      <div className="pointer-events-none select-none max-h-[300px] overflow-hidden rounded-2xl">
+        {children}
+      </div>
+      <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-md bg-white/70 rounded-2xl">
+        <div className="text-center max-w-sm px-6">
+          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
+            <Lock className="w-7 h-7 text-white" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            {!isAuthenticated ? 'Create a Free Account' : 'Unlock Full Snapshot'}
+          </h3>
+          <p className="text-gray-500 text-sm mb-5">
+            {!isAuthenticated
+              ? `Sign up free to see ${title} and more carrier details.`
+              : `Upgrade to CarrierPulse for detailed ${title} and deep intelligence reports.`}
+          </p>
+          <Link to={!isAuthenticated ? '/register' : '/pricing'}>
+            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md">
+              {!isAuthenticated ? (
+                <><Lock className="w-4 h-4 mr-2" /> Sign Up Free</>
+              ) : (
+                <><Crown className="w-4 h-4 mr-2" /> View CarrierPulse Plans</>
+              )}
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
 
   const fetchCarrierData = async () => {
     const searchValue = searchType === 'mc' ? mcNumber : dotNumber
@@ -407,8 +496,8 @@ const ServicesPage = () => {
             </h1>
 
             <p className="text-lg lg:text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">
-              Instantly access comprehensive FMCSA carrier data including safety records,
-              authority status, insurance, inspections, and more.
+              Instantly check any carrier's trust score and operating status.
+              Get a quick snapshot of authority, safety, and compliance at a glance.
             </p>
 
             {/* Search Box */}
@@ -521,117 +610,150 @@ const ServicesPage = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Main Header Card */}
-              <Card className="overflow-hidden">
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 -m-6 mb-6 p-6 text-white">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-                          <Building2 className="w-7 h-7 text-white" />
+              {/* Carrier Scorecard */}
+              {(() => {
+                const trustGrade = calculateTrustGrade(carrierData)
+                return (
+                  <Card className="overflow-hidden">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      {/* Trust Grade Circle */}
+                      <div className="flex flex-col items-center justify-center lg:min-w-[180px]">
+                        <div className={`w-28 h-28 rounded-full border-4 ${trustGrade.borderColor} ${trustGrade.bgColor} flex items-center justify-center mb-2`}>
+                          <span className={`text-5xl font-black ${trustGrade.color}`}>{trustGrade.grade}</span>
                         </div>
-                        <div>
-                          <h2 className="text-2xl lg:text-3xl font-bold">{carrierData.legalName}</h2>
-                          {carrierData.dbaName && carrierData.dbaName !== carrierData.legalName && (
-                            <p className="text-indigo-200">DBA: {carrierData.dbaName}</p>
+                        <p className="text-sm font-semibold text-gray-700">Trust Score</p>
+                        <p className={`text-xs font-medium ${trustGrade.color}`}>{trustGrade.score}/100</p>
+                      </div>
+
+                      {/* Carrier Identity + Key Info */}
+                      <div className="flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                          <div>
+                            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">{carrierData.legalName}</h2>
+                            {carrierData.dbaName && carrierData.dbaName !== carrierData.legalName && (
+                              <p className="text-gray-500">DBA: {carrierData.dbaName}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-start sm:items-end gap-2">
+                            {getStatusBadge(carrierData.statusCode, carrierData.allowedToOperate === 'Y')}
+                            {carrierData.oosDate && (
+                              <span className="text-xs text-red-600">OOS: {carrierData.oosDate}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ID Badges */}
+                        <div className="flex flex-wrap gap-2 mb-5">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+                            <Hash className="w-3.5 h-3.5 text-gray-400" />MC: {carrierData.mcNumber || 'N/A'}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+                            <Hash className="w-3.5 h-3.5 text-gray-400" />DOT: {carrierData.dotNumber || 'N/A'}
+                          </span>
+                          {carrierData.addDate && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+                              <Calendar className="w-3.5 h-3.5 text-gray-400" />Since: {carrierData.addDate}
+                            </span>
                           )}
                         </div>
-                      </div>
 
-                      {/* ID Numbers */}
-                      <div className="flex flex-wrap gap-3 mt-4">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/20">
-                          <Hash className="w-4 h-4 text-indigo-200" />
-                          <span className="text-indigo-200">MC:</span>
-                          <span className="font-bold">{carrierData.mcNumber || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/20">
-                          <Hash className="w-4 h-4 text-indigo-200" />
-                          <span className="text-indigo-200">DOT:</span>
-                          <span className="font-bold">{carrierData.dotNumber || 'N/A'}</span>
-                        </div>
-                        {carrierData.addDate && (
-                          <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/20">
-                            <Calendar className="w-4 h-4 text-indigo-200" />
-                            <span className="text-indigo-200">Since:</span>
-                            <span className="font-bold">{carrierData.addDate}</span>
+                        {/* Free Stats - 4 indicators */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-center">
+                            <p className="text-xs text-gray-500 mb-1">Common Authority</p>
+                            {getAuthorityBadge(carrierData.commonAuthorityStatus)}
                           </div>
-                        )}
+                          <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-center">
+                            <TruckIcon className="w-6 h-6 text-blue-600 mx-auto mb-1" />
+                            <p className="text-2xl font-bold text-gray-900">{carrierData.totalPowerUnits || 0}</p>
+                            <p className="text-xs text-gray-500">Power Units</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
+                            <Users className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
+                            <p className="text-2xl font-bold text-gray-900">{carrierData.totalDrivers || 0}</p>
+                            <p className="text-xs text-gray-500">Drivers</p>
+                          </div>
+                          <div className={`p-3 rounded-xl ${trustGrade.bgColor} border ${trustGrade.borderColor} text-center`}>
+                            <ShieldCheck className={`w-6 h-6 ${trustGrade.color} mx-auto mb-1`} />
+                            <p className={`text-sm font-bold ${trustGrade.color}`}>Grade {trustGrade.grade}</p>
+                            <p className="text-xs text-gray-500">Overall</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <div className="flex flex-col items-start lg:items-end gap-2">
-                      {getStatusBadge(carrierData.statusCode, carrierData.allowedToOperate === 'Y')}
-                      {carrierData.oosDate && (
-                        <span className="text-sm text-red-200">
-                          OOS Date: {carrierData.oosDate}
-                        </span>
-                      )}
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200">
+                      <a
+                        href={`https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=${carrierData.dotNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View on SAFER
+                      </a>
+                      <button
+                        onClick={() => window.print()}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                      >
+                        <Printer className="w-4 h-4" />
+                        Print
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href)
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share
+                      </button>
+                    </div>
+                  </Card>
+                )
+              })()}
+
+              {/* CarrierPulse Upsell CTA */}
+              <Card className="bg-gradient-to-br from-indigo-50 via-purple-50 to-indigo-50 border-indigo-200/60">
+                <div className="flex flex-col lg:flex-row items-center gap-6 py-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-6 h-6 text-indigo-600" />
+                      <h3 className="text-xl font-bold text-gray-900">Want the full picture?</h3>
+                    </div>
+                    <p className="text-gray-600 mb-4 text-sm">
+                      CarrierPulse gives you deep intelligence reports beyond basic FMCSA data — everything you need for due diligence.
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {[
+                        'Chameleon Carrier Detection',
+                        'Safety Improvement Reports',
+                        'Insurance Gap Monitoring',
+                        'Authority Timeline Analysis',
+                        'Fleet & Equipment Intel',
+                        'BASIC Score Trends'
+                      ].map(f => (
+                        <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                          <CheckCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                          {f}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
-                    <TruckIcon className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <p className="text-3xl font-bold text-gray-900">{carrierData.totalPowerUnits || 0}</p>
-                    <p className="text-sm text-gray-600">Power Units</p>
+                  <div className="flex-shrink-0">
+                    <Link to={!isAuthenticated ? '/register' : '/pricing'}>
+                      <Button size="lg" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25">
+                        <Crown className="w-5 h-5 mr-2" />
+                        {!isAuthenticated ? 'Sign Up Free' : 'View CarrierPulse Plans'}
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
-                    <Users className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                    <p className="text-3xl font-bold text-gray-900">{carrierData.totalDrivers || 0}</p>
-                    <p className="text-sm text-gray-600">Drivers</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-purple-50 border border-purple-100 text-center">
-                    <ShieldCheck className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                    <div className="mt-1">{getSafetyRatingBadge(carrierData.safetyRating)}</div>
-                    <p className="text-sm text-gray-600 mt-1">Safety Rating</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 text-center">
-                    <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-                    <p className="text-3xl font-bold text-gray-900">{carrierData.crashTotal || 0}</p>
-                    <p className="text-sm text-gray-600">Crashes (24mo)</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-100 text-center">
-                    <FileText className="w-8 h-8 text-cyan-600 mx-auto mb-2" />
-                    <p className="text-3xl font-bold text-gray-900">{(carrierData.driverInsp || 0) + (carrierData.vehicleInsp || 0)}</p>
-                    <p className="text-sm text-gray-600">Inspections</p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200">
-                  <a
-                    href={`https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=${carrierData.dotNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    View on SAFER
-                  </a>
-                  <button
-                    onClick={() => window.print()}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Print Report
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href)
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share
-                  </button>
                 </div>
               </Card>
 
-              {/* Two Column Layout */}
+              {/* Detailed Data — Blurred for non-subscribers */}
+              <BlurredSection title="safety, insurance, inspections, and contact data">
               <div className="grid lg:grid-cols-2 gap-6">
                 {/* Left Column */}
                 <div className="space-y-6">
@@ -1481,6 +1603,7 @@ const ServicesPage = () => {
                   </div>
                 </div>
               </Card>
+              </BlurredSection>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1498,32 +1621,24 @@ const ServicesPage = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Search for a Carrier</h3>
               <p className="text-gray-600 mb-6">
-                Enter an MC or DOT number above to view comprehensive carrier information including safety records, authority status, insurance, and more.
+                Enter an MC or DOT number above to instantly see a carrier's trust score, authority status, and fleet overview.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  Operating Authority
+                  Trust Score (A-F)
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  Safety Ratings
+                  Operating Status
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  Insurance Status
+                  Authority Status
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  Inspection History
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Crash Data
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  BASIC Scores
+                  Fleet Size
                 </div>
               </div>
             </div>
