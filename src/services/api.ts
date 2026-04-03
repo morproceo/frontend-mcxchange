@@ -2324,6 +2324,46 @@ class ApiService {
   }
 
   // ===========================
+  // CREDENTIAL VAULT METHODS
+  // ===========================
+
+  async getTransactionCredentials(transactionId: string) {
+    return this.request<{ success: boolean; data: any[] }>(`/credentials/transaction/${transactionId}`);
+  }
+
+  async createTransactionCredential(data: { transactionId: string; label: string; username?: string; password: string }) {
+    return this.request<{ success: boolean; data: any }>('/credentials', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTransactionCredential(id: string, data: { label?: string; username?: string; password?: string }) {
+    return this.request<{ success: boolean; data: any }>(`/credentials/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTransactionCredential(id: string) {
+    return this.request<{ success: boolean; message: string }>(`/credentials/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async releaseCredentials(transactionId: string) {
+    return this.request<{ success: boolean; message: string }>(`/credentials/transaction/${transactionId}/release`, {
+      method: 'POST',
+    });
+  }
+
+  async revokeCredentialRelease(transactionId: string) {
+    return this.request<{ success: boolean; message: string }>(`/credentials/transaction/${transactionId}/revoke`, {
+      method: 'POST',
+    });
+  }
+
+  // ===========================
   // CONSULTATION METHODS
   // ===========================
 

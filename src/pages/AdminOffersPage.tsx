@@ -19,7 +19,9 @@ import {
   ShoppingCart,
   Loader2,
   RefreshCw,
-  Trash2
+  Trash2,
+  Send,
+  DollarSign
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -28,6 +30,7 @@ import api from '../services/api'
 interface Offer {
   id: string
   amount: number
+  sellerAmount?: number
   message?: string
   status: string
   isBuyNow?: boolean
@@ -49,6 +52,7 @@ interface Offer {
     mcNumber: string
     title: string
     price: number
+    askingPrice?: number
     status: string
   }
   buyer?: {
@@ -68,7 +72,7 @@ interface Offer {
   }
 }
 
-type FilterStatus = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACCEPTED'
+type FilterStatus = 'all' | 'PENDING_ADMIN' | 'FORWARDED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACCEPTED'
 
 const AdminOffersPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -76,6 +80,7 @@ const AdminOffersPage = () => {
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [adminNotes, setAdminNotes] = useState('')
+  const [sellerAmountInput, setSellerAmountInput] = useState('')
   const [processing, setProcessing] = useState(false)
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +121,9 @@ const AdminOffersPage = () => {
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; color: string; icon: any }> = {
-      'PENDING': { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+      'PENDING_ADMIN': { label: 'Awaiting Admin', color: 'bg-orange-100 text-orange-700', icon: Clock },
+      'FORWARDED': { label: 'Sent to Seller', color: 'bg-blue-100 text-blue-700', icon: Send },
+      'PENDING': { label: 'Pending Seller', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
       'APPROVED': { label: 'Approved', color: 'bg-green-100 text-green-700', icon: CheckCircle },
       'REJECTED': { label: 'Rejected', color: 'bg-red-100 text-red-700', icon: XCircle },
       'ACCEPTED': { label: 'Accepted', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
@@ -136,8 +143,8 @@ const AdminOffersPage = () => {
   })
 
   const stats = {
-    pending: offers.filter(o => o.status === 'PENDING').length,
-    approved: offers.filter(o => o.status === 'APPROVED').length,
+    pendingAdmin: offers.filter(o => o.status === 'PENDING_ADMIN').length,
+    forwarded: offers.filter(o => o.status === 'FORWARDED').length,
     accepted: offers.filter(o => o.status === 'ACCEPTED').length,
     buyNow: offers.filter(o => o.isBuyNow).length
   }
@@ -152,6 +159,27 @@ const AdminOffersPage = () => {
       fetchOffers()
     } catch (err: any) {
       alert(err.message || 'Failed to approve offer')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleForward = async () => {
+    if (!selectedOffer) return
+    const amount = parseFloat(sellerAmountInput)
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid seller amount')
+      return
+    }
+    setProcessing(true)
+    try {
+      await api.forwardOfferToSeller(selectedOffer.id, amount, adminNotes || undefined)
+      setShowDetailModal(false)
+      setAdminNotes('')
+      setSellerAmountInput('')
+      fetchOffers()
+    } catch (err: any) {
+      alert(err.message || 'Failed to forward offer')
     } finally {
       setProcessing(false)
     }
@@ -224,25 +252,25 @@ const AdminOffersPage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-yellow-50 border-yellow-200">
+        <Card className="bg-orange-50 border-orange-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-yellow-600" />
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-yellow-600">Pending Review</p>
-              <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
+              <p className="text-sm text-orange-600">Awaiting Review</p>
+              <p className="text-2xl font-bold text-orange-700">{stats.pendingAdmin}</p>
             </div>
           </div>
         </Card>
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-blue-50 border-blue-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Send className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-green-600">Approved</p>
-              <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
+              <p className="text-sm text-blue-600">Sent to Seller</p>
+              <p className="text-2xl font-bold text-blue-700">{stats.forwarded}</p>
             </div>
           </div>
         </Card>
@@ -291,10 +319,10 @@ const AdminOffersPage = () => {
               className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900"
             >
               <option value="all">All Status</option>
-              <option value="PENDING">Pending Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="PENDING_ADMIN">Awaiting Review</option>
+              <option value="FORWARDED">Sent to Seller</option>
               <option value="ACCEPTED">Accepted</option>
+              <option value="REJECTED">Rejected</option>
             </select>
           </div>
         </div>
@@ -504,9 +532,21 @@ const AdminOffersPage = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <span className="text-gray-600">Offer Amount</span>
+                    <span className="text-gray-600">Buyer Offer</span>
                     <span className="text-2xl font-bold text-green-600">${Number(selectedOffer.amount).toLocaleString()}</span>
                   </div>
+                  {selectedOffer.sellerAmount && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-gray-600">Seller Amount</span>
+                      <span className="text-lg font-semibold text-indigo-600">${Number(selectedOffer.sellerAmount).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {selectedOffer.sellerAmount && (
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-gray-500 text-sm">Platform Margin</span>
+                      <span className="text-sm font-semibold text-emerald-600">${(Number(selectedOffer.amount) - Number(selectedOffer.sellerAmount)).toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Buyer & Seller Info */}
@@ -543,8 +583,45 @@ const AdminOffersPage = () => {
                   </div>
                 )}
 
+                {/* Forward to Seller — set seller amount */}
+                {selectedOffer.status === 'PENDING_ADMIN' && (
+                  <div className="bg-indigo-50 rounded-xl p-4 space-y-4">
+                    <div className="flex gap-3">
+                      <Send className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-indigo-800">
+                        <p className="font-medium mb-1">Forward to Seller</p>
+                        <p className="text-indigo-700">
+                          Set the amount the seller will see. The difference between the buyer's offer and the seller amount is your margin.
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Seller Amount ($)</label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="number"
+                          value={sellerAmountInput}
+                          onChange={(e) => setSellerAmountInput(e.target.value)}
+                          placeholder={`Suggested: ${Number(selectedOffer.listing?.askingPrice || selectedOffer.amount).toLocaleString()}`}
+                          className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                      </div>
+                      {sellerAmountInput && parseFloat(sellerAmountInput) > 0 && (
+                        <div className="mt-2 flex items-center gap-4 text-sm">
+                          <span className="text-gray-500">Buyer pays: <strong className="text-gray-900">${Number(selectedOffer.amount).toLocaleString()}</strong></span>
+                          <span className="text-gray-500">Seller gets: <strong className="text-gray-900">${parseFloat(sellerAmountInput).toLocaleString()}</strong></span>
+                          <span className={`font-semibold ${Number(selectedOffer.amount) - parseFloat(sellerAmountInput) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            Margin: ${(Number(selectedOffer.amount) - parseFloat(sellerAmountInput)).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Admin Notes */}
-                {selectedOffer.status === 'PENDING' && (
+                {selectedOffer.status === 'PENDING_ADMIN' && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Notes (required for rejection)</h4>
                     <textarea
@@ -557,7 +634,7 @@ const AdminOffersPage = () => {
                   </div>
                 )}
 
-                {selectedOffer.adminNotes && selectedOffer.status !== 'PENDING' && (
+                {selectedOffer.adminNotes && selectedOffer.status !== 'PENDING_ADMIN' && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Admin Notes</h4>
                     <div className="bg-yellow-50 rounded-xl p-4">
@@ -567,15 +644,16 @@ const AdminOffersPage = () => {
                 )}
 
                 {/* Info Box */}
-                {selectedOffer.status === 'PENDING' && (
+                {selectedOffer.status === 'PENDING_ADMIN' && (
                   <div className="bg-blue-50 rounded-xl p-4">
                     <div className="flex gap-3">
                       <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-800">
-                        <p className="font-medium mb-1">Approval Flow</p>
+                        <p className="font-medium mb-1">Admin Review Flow</p>
                         <p className="text-blue-700">
-                          Upon approval, the buyer will be notified and prompted to pay a deposit.
-                          Once paid, a transaction room will be created for both parties.
+                          <strong>Forward:</strong> Sets a seller amount and sends the offer to the seller for acceptance. <br />
+                          <strong>Approve:</strong> Skips the seller and creates a transaction directly. <br />
+                          <strong>Reject:</strong> Declines the offer and notifies the buyer.
                         </p>
                       </div>
                     </div>
@@ -584,29 +662,38 @@ const AdminOffersPage = () => {
               </div>
 
               <div className="p-6 border-t border-gray-100 flex gap-3">
-                {selectedOffer.status === 'PENDING' && (
+                {selectedOffer.status === 'PENDING_ADMIN' && (
                   <>
                     <Button
                       variant="outline"
-                      fullWidth
                       onClick={handleReject}
                       loading={processing}
                       className="text-red-600 border-red-200 hover:bg-red-50"
                     >
                       <XCircle className="w-4 h-4 mr-2" />
-                      Reject Offer
+                      Reject
                     </Button>
                     <Button
-                      fullWidth
+                      variant="outline"
                       onClick={handleApprove}
                       loading={processing}
                     >
                       <Check className="w-4 h-4 mr-2" />
-                      Approve Offer
+                      Approve Direct
+                    </Button>
+                    <Button
+                      fullWidth
+                      onClick={handleForward}
+                      loading={processing}
+                      disabled={!sellerAmountInput || parseFloat(sellerAmountInput) <= 0}
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Forward to Seller
                     </Button>
                   </>
                 )}
-                {selectedOffer.status !== 'PENDING' && (
+                {selectedOffer.status !== 'PENDING_ADMIN' && (
                   <Button
                     fullWidth
                     variant="outline"
