@@ -35,7 +35,7 @@ const Navbar = () => {
 
   const toolLinks = [
     { name: 'CarrierPulse', href: '/carrier-pulse-preview', icon: Activity, desc: 'Carrier intelligence platform', comingSoon: false },
-    { name: 'Credit Reports', href: '/buyer/credit-report', icon: FileSearch, desc: 'Business credit intelligence — $55/report', comingSoon: false },
+    { name: 'Credit Reports', href: '/credit-report-preview', icon: FileSearch, desc: 'Business credit intelligence — $55/report', comingSoon: false },
     { name: 'Chameleon Check', href: '/pricing', icon: ShieldAlert, desc: 'Detect reincarnated carriers', comingSoon: false },
     { name: 'Safety Improvement Report', href: '/pricing', icon: Shield, desc: 'BASIC scores & safety analysis', comingSoon: false },
     { name: 'Eva AI', href: '#', icon: Bot, desc: 'AI compliance management', comingSoon: true },
