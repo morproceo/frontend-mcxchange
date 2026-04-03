@@ -2413,7 +2413,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
         setActiveDot(dot)
         setDotInput(dot)
         setActiveTab('overview')
-        const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse')
+        const basePath = window.location.pathname.replace(/\/carrier-pulse(-preview)?(\/.*)?$/, '/carrier-pulse$1')
         window.history.pushState(null, '', `${basePath}/${dot}`)
       } catch (err: any) {
         setSearchError(`Could not resolve MC# ${cleaned}. Try using a DOT number instead.`)
@@ -2424,7 +2424,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
       setSearchError(null)
       setActiveDot(cleaned)
       setActiveTab('overview')
-      const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse')
+      const basePath = window.location.pathname.replace(/\/carrier-pulse(-preview)?(\/.*)?$/, '/carrier-pulse$1')
       window.history.pushState(null, '', `${basePath}/${cleaned}`)
     }
   }
@@ -2432,7 +2432,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
   const handleSearchAnother = () => {
     setActiveDot(undefined)
     setDotInput('')
-    const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse')
+    const basePath = window.location.pathname.replace(/\/carrier-pulse(-preview)?(\/.*)?$/, '/carrier-pulse$1')
     window.history.pushState(null, '', basePath)
   }
 
@@ -2681,7 +2681,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                 {recentSearches.map((s) => (
                   <button
                     key={s.dotNumber}
-                    onClick={() => { setDotInput(s.dotNumber); setActiveDot(s.dotNumber); const basePath = window.location.pathname.replace(/\/carrier-pulse.*/, '/carrier-pulse'); window.history.pushState(null, '', `${basePath}/${s.dotNumber}`) }}
+                    onClick={() => { setDotInput(s.dotNumber); setActiveDot(s.dotNumber); const basePath = window.location.pathname.replace(/\/carrier-pulse(-preview)?(\/.*)?$/, '/carrier-pulse$1'); window.history.pushState(null, '', `${basePath}/${s.dotNumber}`) }}
                     className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center gap-3">
@@ -2808,14 +2808,18 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
                               <Lock className="w-8 h-8 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Unlock Full Report</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                              {!user ? 'Create a Free Account' : 'Unlock Full Report'}
+                            </h3>
                             <p className="text-gray-500 text-sm mb-6">
-                              Subscribe to CarrierPulse to access detailed {activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'authority' ? 'authority & compliance data' : 'this section'}.
+                              {!user
+                                ? `Sign up free to access detailed ${activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'authority' ? 'authority & compliance data' : 'carrier intelligence'}.`
+                                : `Subscribe to CarrierPulse to access detailed ${activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'authority' ? 'authority & compliance data' : 'this section'}.`}
                             </p>
-                            <Link to="/pricing">
+                            <Link to={!user ? '/register' : '/pricing'}>
                               <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-                                <Crown className="w-4 h-4 mr-2" />
-                                View Plans
+                                {!user ? <Lock className="w-4 h-4 mr-2" /> : <Crown className="w-4 h-4 mr-2" />}
+                                {!user ? 'Sign Up Free' : 'View Plans'}
                               </Button>
                             </Link>
                           </div>

@@ -150,6 +150,7 @@ function App() {
               <Route path="services/admin" element={<AdminServicesPage />} />
               <Route path="drivers" element={<DriversLandingPage />} />
               <Route path="carrier-pulse-preview" element={<CarrierPulsePreviewPage />} />
+              <Route path="carrier-pulse-preview/:dotNumber" element={<CarrierPulsePreviewPage />} />
               <Route path="credit-report-preview" element={<CreditReportPreviewPage />} />
               <Route path="chameleon-check-preview" element={<ChameleonCheckPreviewPage />} />
               <Route path="safety-report-preview" element={<SafetyReportPreviewPage />} />
