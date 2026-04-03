@@ -56,13 +56,20 @@ import {
   CircleDollarSign,
   CheckCheck,
   EyeOff,
-  Settings
+  Settings,
+  Plus,
+  Trash2,
+  Copy,
+  KeyRound,
+  Circle,
+  Pencil,
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import AgreementApprovalPanel from '../components/AgreementApprovalPanel'
 import { useAuth } from '../context/AuthContext'
-import { TransactionRoom, TransactionStatus, TransactionMessage, TransactionDocument } from '../types'
+import { TransactionRoom, TransactionStatus, TransactionMessage, TransactionDocument, TransactionCredential } from '../types'
+import { REQUIRED_DOCUMENTS } from '../constants/documents'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -89,6 +96,17 @@ const TransactionRoomPage = () => {
   const [approving, setApproving] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showDocumentPreview, setShowDocumentPreview] = useState<string | null>(null)
+
+  // Document upload type tracking
+  const [uploadDocType, setUploadDocType] = useState<string>('OTHER')
+
+  // Credential vault state
+  const [credentials, setCredentials] = useState<TransactionCredential[]>([])
+  const [showCredentialForm, setShowCredentialForm] = useState(false)
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null)
+  const [credentialForm, setCredentialForm] = useState({ label: '', username: '', password: '' })
+  const [credentialSaving, setCredentialSaving] = useState(false)
+  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set())
 
   // Buyer workflow state
   const [buyerStep, setBuyerStep] = useState<BuyerStep>('confirm-intent')
@@ -1041,6 +1059,14 @@ const TransactionRoomPage = () => {
     }
 
     fetchTransaction()
+  }, [transactionId])
+
+  // Fetch credentials when transaction loads
+  useEffect(() => {
+    if (!transactionId) return
+    api.getTransactionCredentials(transactionId)
+      .then(res => { if (res.success && res.data) setCredentials(res.data) })
+      .catch(() => {})
   }, [transactionId])
 
   // Handle deposit payment success/cancelled query params from Stripe redirect
@@ -4586,177 +4612,457 @@ For questions, contact us at escrow@domilea.com`
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
           >
+            {/* Hidden file input for uploads */}
+            {(userRole === 'seller' || userRole === 'admin') && (
+              <input
+                type="file"
+                id="transaction-doc-upload"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  e.target.value = ''
+                  try {
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    formData.append('type', uploadDocType)
+                    formData.append('transactionId', transactionId!)
+                    await api.uploadTransactionDocument(transactionId!, formData)
+                    toast.success('Document uploaded successfully')
+                    setUploadDocType('OTHER')
+                    const res = await api.getTransaction(transactionId!)
+                    if (res.success && res.data) setTransaction(res.data)
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to upload document')
+                    setUploadDocType('OTHER')
+                  }
+                }}
+              />
+            )}
+
+            {transaction.status !== 'completed' && userRole === 'buyer' && (
+              <div className="bg-yellow-50 rounded-xl p-4">
+                <div className="flex gap-3">
+                  <Lock className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">Documents Locked</p>
+                    <p className="text-yellow-700">
+                      Full document downloads will be available after transaction completion.
+                      You can preview documents during the review period.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== SECTION 1: Document Checklist ===== */}
             <Card>
-              <div className="flex items-center justify-between mb-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Required Documents</h3>
+                <p className="text-sm text-gray-500">
+                  {REQUIRED_DOCUMENTS.filter(d => d.required && transaction.sellerDocuments.some(doc => doc.type === d.id)).length} / {REQUIRED_DOCUMENTS.filter(d => d.required).length} required documents uploaded
+                </p>
+              </div>
+              <div className="space-y-3">
+                {REQUIRED_DOCUMENTS.map(reqDoc => {
+                  const matchingDoc = transaction.sellerDocuments.find(doc => doc.type === reqDoc.id)
+                  const isUploaded = !!matchingDoc
+                  return (
+                    <div key={reqDoc.id} className={`flex items-center justify-between p-4 rounded-xl border ${isUploaded ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`flex-shrink-0 ${isUploaded ? 'text-emerald-500' : 'text-gray-300'}`}>
+                          {isUploaded ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900 text-sm">{reqDoc.label}</p>
+                            {!reqDoc.required && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-semibold">Optional</span>}
+                            {matchingDoc?.verified && (
+                              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-semibold">
+                                <CheckCircle className="w-3 h-3" /> Verified
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">{reqDoc.description}</p>
+                          {matchingDoc && (
+                            <p className="text-xs text-emerald-600 mt-1">{matchingDoc.name} — uploaded {new Date(matchingDoc.uploadedAt).toLocaleDateString()}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0 ml-3">
+                        {matchingDoc && (
+                          <>
+                            <Button variant="outline" size="sm" onClick={async () => {
+                              try {
+                                const res = await api.getDocumentUrl(matchingDoc.id)
+                                if (res.success) setShowDocumentPreview(res.data.url)
+                              } catch (err: any) { toast.error(err.message || 'Preview failed') }
+                            }}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {(transaction.status === 'completed' || userRole !== 'buyer') && (
+                              <Button variant="outline" size="sm" onClick={async () => {
+                                try {
+                                  const res = await api.getDocumentUrl(matchingDoc.id)
+                                  if (res.success) { const a = document.createElement('a'); a.href = res.data.url; a.download = matchingDoc.name; a.target = '_blank'; a.rel = 'noopener noreferrer'; document.body.appendChild(a); a.click(); document.body.removeChild(a) }
+                                } catch (err: any) { toast.error(err.message || 'Download failed') }
+                              }}>
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {userRole === 'admin' && !matchingDoc.verified && (
+                              <Button size="sm" onClick={async () => {
+                                try {
+                                  await api.verifyDocument(matchingDoc.id, true)
+                                  toast.success('Document verified')
+                                  const res = await api.getTransaction(transactionId!)
+                                  if (res.success && res.data) setTransaction(res.data)
+                                } catch (err: any) { toast.error(err.message || 'Verify failed') }
+                              }}>
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        {!matchingDoc && (userRole === 'seller' || userRole === 'admin') && (
+                          <Button size="sm" onClick={() => {
+                            setUploadDocType(reqDoc.id)
+                            document.getElementById('transaction-doc-upload')?.click()
+                          }}>
+                            <Upload className="w-4 h-4 mr-1" />
+                            Upload
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+
+            {/* ===== SECTION 2: Additional Documents ===== */}
+            <Card>
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Transaction Documents</h3>
-                  <p className="text-sm text-gray-500">{transaction.sellerDocuments.length} documents uploaded</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
+                  <p className="text-sm text-gray-500">Any extra documents not in the checklist above</p>
                 </div>
                 {(userRole === 'seller' || userRole === 'admin') && (
-                  <>
-                    <input
-                      type="file"
-                      id="transaction-doc-upload"
-                      className="hidden"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0]
-                        if (!file) return
-                        e.target.value = ''
-                        try {
-                          const formData = new FormData()
-                          formData.append('file', file)
-                          formData.append('type', 'OTHER')
-                          await api.uploadTransactionDocument(transactionId!, formData)
-                          toast.success('Document uploaded successfully')
-                          // Refresh transaction data
-                          const res = await api.getTransaction(transactionId!)
-                          if (res.success && res.data) setTransaction(res.data)
-                        } catch (err: any) {
-                          toast.error(err.message || 'Failed to upload document')
-                        }
-                      }}
-                    />
-                    <Button variant="outline" onClick={() => document.getElementById('transaction-doc-upload')?.click()}>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Document
-                    </Button>
-                  </>
+                  <Button variant="outline" onClick={() => {
+                    setUploadDocType('OTHER')
+                    document.getElementById('transaction-doc-upload')?.click()
+                  }}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Additional
+                  </Button>
+                )}
+              </div>
+              {(() => {
+                const checklistTypes = new Set(REQUIRED_DOCUMENTS.map(d => d.id))
+                const additionalDocs = transaction.sellerDocuments.filter(doc => !checklistTypes.has(doc.type))
+                if (additionalDocs.length === 0) return (
+                  <p className="text-sm text-gray-400 text-center py-6">No additional documents uploaded yet.</p>
+                )
+                return (
+                  <div className="space-y-2">
+                    {additionalDocs.map(doc => (
+                      <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                            {getDocumentIcon(doc.type)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{doc.name}</p>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                              <span>by {doc.uploadedBy === 'seller' ? transaction.seller.name : 'Admin'}</span>
+                            </div>
+                          </div>
+                          {doc.verified && (
+                            <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                              <CheckCircle className="w-3 h-3" /> Verified
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={async () => {
+                            try {
+                              const res = await api.getDocumentUrl(doc.id)
+                              if (res.success) setShowDocumentPreview(res.data.url)
+                            } catch (err: any) { toast.error(err.message || 'Preview failed') }
+                          }}>
+                            <Eye className="w-4 h-4 mr-1" /> Preview
+                          </Button>
+                          {(transaction.status === 'completed' || userRole !== 'buyer') && (
+                            <Button variant="outline" size="sm" onClick={async () => {
+                              try {
+                                const res = await api.getDocumentUrl(doc.id)
+                                if (res.success) { const a = document.createElement('a'); a.href = res.data.url; a.download = doc.name; a.target = '_blank'; a.rel = 'noopener noreferrer'; document.body.appendChild(a); a.click(); document.body.removeChild(a) }
+                              } catch (err: any) { toast.error(err.message || 'Download failed') }
+                            }}>
+                              <Download className="w-4 h-4 mr-1" /> Download
+                            </Button>
+                          )}
+                          {userRole === 'admin' && !doc.verified && (
+                            <Button size="sm" onClick={async () => {
+                              try {
+                                await api.verifyDocument(doc.id, true)
+                                toast.success('Document verified')
+                                const res = await api.getTransaction(transactionId!)
+                                if (res.success && res.data) setTransaction(res.data)
+                              } catch (err: any) { toast.error(err.message || 'Verify failed') }
+                            }}>
+                              <CheckCircle className="w-4 h-4 mr-1" /> Verify
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </Card>
+
+            {/* ===== SECTION 3: Credential Vault ===== */}
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Credential Vault</h3>
+                    <p className="text-sm text-gray-500">Secure login credentials for the buyer</p>
+                  </div>
+                </div>
+                {(userRole === 'seller' || userRole === 'admin') && !showCredentialForm && (
+                  <Button variant="outline" onClick={() => {
+                    setEditingCredentialId(null)
+                    setCredentialForm({ label: '', username: '', password: '' })
+                    setShowCredentialForm(true)
+                  }}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Credential
+                  </Button>
                 )}
               </div>
 
-              {transaction.status !== 'completed' && userRole === 'buyer' && (
-                <div className="bg-yellow-50 rounded-xl p-4 mb-6">
+              {/* Info for seller */}
+              {(userRole === 'seller' || userRole === 'admin') && credentials.length === 0 && !showCredentialForm && (
+                <div className="bg-amber-50 rounded-xl p-4 mb-4">
                   <div className="flex gap-3">
-                    <Lock className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                    <div className="text-sm text-yellow-800">
-                      <p className="font-medium">Documents Locked</p>
-                      <p className="text-yellow-700">
-                        Full document downloads will be available after transaction completion.
-                        You can preview documents during the review period.
+                    <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium">Add login credentials the buyer will need</p>
+                      <p className="text-amber-700 mt-1">
+                        FMCSA portal, insurance portal, ELD provider, load board accounts, etc.
+                        Credentials are encrypted and only visible to the buyer after admin releases them and full payment is confirmed.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-6">
-                {Object.entries(groupedDocuments).map(([category, docs]) => (
-                  <div key={category}>
-                    <h4 className="font-medium text-gray-700 mb-3 capitalize flex items-center gap-2">
-                      {getDocumentIcon(category)}
-                      {category.replace('-', ' ')} Documents ({docs.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {docs.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
-                              {getDocumentIcon(doc.type)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{doc.name}</p>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                                <span>by {doc.uploadedBy === 'seller' ? transaction.seller.name : 'Admin'}</span>
-                              </div>
-                            </div>
-                            {doc.verified && (
-                              <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                <CheckCircle className="w-3 h-3" />
-                                Verified
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={async () => {
-                              try {
-                                const res = await api.getDocumentUrl(doc.id)
-                                if (res.success) setShowDocumentPreview(res.data.url)
-                              } catch (err: any) {
-                                toast.error(err.message || 'Failed to load document preview')
-                              }
-                            }}>
-                              <Eye className="w-4 h-4 mr-1" />
-                              Preview
-                            </Button>
-                            {(transaction.status === 'completed' || userRole !== 'buyer') && (
-                              <Button variant="outline" size="sm" onClick={async () => {
-                                try {
-                                  const res = await api.getDocumentUrl(doc.id)
-                                  if (res.success) {
-                                    const link = document.createElement('a')
-                                    link.href = res.data.url
-                                    link.download = doc.name
-                                    link.target = '_blank'
-                                    link.rel = 'noopener noreferrer'
-                                    document.body.appendChild(link)
-                                    link.click()
-                                    document.body.removeChild(link)
-                                  }
-                                } catch (err: any) {
-                                  toast.error(err.message || 'Failed to download document')
-                                }
-                              }}>
-                                <Download className="w-4 h-4 mr-1" />
-                                Download
-                              </Button>
-                            )}
-                            {userRole === 'admin' && !doc.verified && (
-                              <Button size="sm" onClick={async () => {
-                                try {
-                                  await api.verifyDocument(doc.id, true)
-                                  toast.success('Document verified')
-                                  const res = await api.getTransaction(transactionId!)
-                                  if (res.success && res.data) setTransaction(res.data)
-                                } catch (err: any) {
-                                  toast.error(err.message || 'Failed to verify document')
-                                }
-                              }}>
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Verify
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {/* Buyer locked message */}
+              {userRole === 'buyer' && credentials.length === 0 && (
+                <div className="bg-gray-50 rounded-xl p-6 text-center">
+                  <Lock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-600">Credentials Locked</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Login credentials will be available after full payment is confirmed and admin releases them.
+                  </p>
+                </div>
+              )}
 
-              {transaction.status === 'completed' && userRole === 'buyer' && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <Button fullWidth size="lg" onClick={async () => {
-                    toast.success('Starting downloads...')
-                    for (const doc of transaction.sellerDocuments) {
+              {/* Credential form (add/edit) */}
+              {showCredentialForm && (userRole === 'seller' || userRole === 'admin') && (
+                <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Label (e.g., FMCSA Portal Login)"
+                    value={credentialForm.label}
+                    onChange={e => setCredentialForm(prev => ({ ...prev, label: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Username / Email (optional)"
+                    value={credentialForm.username}
+                    onChange={e => setCredentialForm(prev => ({ ...prev, username: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Password"
+                    value={credentialForm.password}
+                    onChange={e => setCredentialForm(prev => ({ ...prev, password: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => { setShowCredentialForm(false); setEditingCredentialId(null) }}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" disabled={!credentialForm.label || !credentialForm.password || credentialSaving} onClick={async () => {
+                      setCredentialSaving(true)
                       try {
-                        const res = await api.getDocumentUrl(doc.id)
-                        if (res.success) {
-                          const link = document.createElement('a')
-                          link.href = res.data.url
-                          link.download = doc.name
-                          link.target = '_blank'
-                          link.rel = 'noopener noreferrer'
-                          document.body.appendChild(link)
-                          link.click()
-                          document.body.removeChild(link)
+                        if (editingCredentialId) {
+                          await api.updateTransactionCredential(editingCredentialId, {
+                            label: credentialForm.label,
+                            username: credentialForm.username || undefined,
+                            password: credentialForm.password,
+                          })
+                          toast.success('Credential updated')
+                        } else {
+                          await api.createTransactionCredential({
+                            transactionId: transactionId!,
+                            label: credentialForm.label,
+                            username: credentialForm.username || undefined,
+                            password: credentialForm.password,
+                          })
+                          toast.success('Credential added')
                         }
-                      } catch {
-                        toast.error(`Failed to download ${doc.name}`)
+                        const res = await api.getTransactionCredentials(transactionId!)
+                        if (res.success && res.data) setCredentials(res.data)
+                        setShowCredentialForm(false)
+                        setEditingCredentialId(null)
+                        setCredentialForm({ label: '', username: '', password: '' })
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to save credential')
+                      } finally {
+                        setCredentialSaving(false)
                       }
-                    }
-                  }}>
-                    <Download className="w-5 h-5 mr-2" />
-                    Download All Documents
-                  </Button>
+                    }}>
+                      {credentialSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                      {editingCredentialId ? 'Update' : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Credential list */}
+              {credentials.length > 0 && (
+                <div className="space-y-3">
+                  {credentials.map(cred => {
+                    const isVisible = visiblePasswords.has(cred.id)
+                    return (
+                      <div key={cred.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <KeyRound className="w-4 h-4 text-gray-400" />
+                            <span className="font-semibold text-sm text-gray-900">{cred.label}</span>
+                            {cred.releasedToBuyer ? (
+                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-semibold">Released</span>
+                            ) : (
+                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-semibold">Pending Release</span>
+                            )}
+                          </div>
+                          {(userRole === 'seller' || userRole === 'admin') && (
+                            <div className="flex gap-1">
+                              <button onClick={() => {
+                                setEditingCredentialId(cred.id)
+                                setCredentialForm({ label: cred.label, username: cred.username || '', password: cred.password })
+                                setShowCredentialForm(true)
+                              }} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={async () => {
+                                if (!confirm('Delete this credential?')) return
+                                try {
+                                  await api.deleteTransactionCredential(cred.id)
+                                  setCredentials(prev => prev.filter(c => c.id !== cred.id))
+                                  toast.success('Credential deleted')
+                                } catch (err: any) { toast.error(err.message || 'Delete failed') }
+                              }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {cred.username && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-gray-500 w-16">Username</span>
+                            <code className="text-sm bg-white px-2 py-1 rounded border border-gray-200 flex-1 font-mono">{cred.username}</code>
+                            <button onClick={() => { navigator.clipboard.writeText(cred.username!); toast.success('Copied') }} className="p-1 rounded hover:bg-gray-200 text-gray-400">
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-gray-500 w-16">Password</span>
+                          <code className="text-sm bg-white px-2 py-1 rounded border border-gray-200 flex-1 font-mono">
+                            {isVisible ? cred.password : '••••••••••'}
+                          </code>
+                          <button onClick={() => setVisiblePasswords(prev => {
+                            const next = new Set(prev)
+                            next.has(cred.id) ? next.delete(cred.id) : next.add(cred.id)
+                            return next
+                          })} className="p-1 rounded hover:bg-gray-200 text-gray-400">
+                            {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button onClick={() => { navigator.clipboard.writeText(cred.password); toast.success('Copied') }} className="p-1 rounded hover:bg-gray-200 text-gray-400">
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Admin release controls */}
+              {userRole === 'admin' && credentials.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  {credentials.some(c => c.releasedToBuyer) ? (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-emerald-600 font-medium flex items-center gap-2">
+                        <Unlock className="w-4 h-4" /> Credentials released to buyer
+                      </p>
+                      <Button variant="outline" size="sm" onClick={async () => {
+                        try {
+                          await api.revokeCredentialRelease(transactionId!)
+                          toast.success('Release revoked')
+                          const res = await api.getTransactionCredentials(transactionId!)
+                          if (res.success && res.data) setCredentials(res.data)
+                        } catch (err: any) { toast.error(err.message || 'Revoke failed') }
+                      }}>
+                        Revoke Release
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button fullWidth onClick={async () => {
+                      try {
+                        await api.releaseCredentials(transactionId!)
+                        toast.success('Credentials released to buyer')
+                        const res = await api.getTransactionCredentials(transactionId!)
+                        if (res.success && res.data) setCredentials(res.data)
+                      } catch (err: any) { toast.error(err.message || 'Release failed') }
+                    }}>
+                      <Unlock className="w-4 h-4 mr-2" />
+                      Release Credentials to Buyer
+                    </Button>
+                  )}
                 </div>
               )}
             </Card>
+
+            {/* Download All button for completed transactions */}
+            {transaction.status === 'completed' && userRole === 'buyer' && transaction.sellerDocuments.length > 0 && (
+              <Card>
+                <Button fullWidth size="lg" onClick={async () => {
+                  toast.success('Starting downloads...')
+                  for (const doc of transaction.sellerDocuments) {
+                    try {
+                      const res = await api.getDocumentUrl(doc.id)
+                      if (res.success) { const a = document.createElement('a'); a.href = res.data.url; a.download = doc.name; a.target = '_blank'; a.rel = 'noopener noreferrer'; document.body.appendChild(a); a.click(); document.body.removeChild(a) }
+                    } catch { toast.error(`Failed to download ${doc.name}`) }
+                  }
+                }}>
+                  <Download className="w-5 h-5 mr-2" />
+                  Download All Documents
+                </Button>
+              </Card>
+            )}
           </motion.div>
         )}
 

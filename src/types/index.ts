@@ -431,6 +431,18 @@ export interface TransactionDocument {
   uploadedAt: Date
 }
 
+export interface TransactionCredential {
+  id: string
+  transactionId: string
+  label: string
+  username: string | null
+  password: string
+  releasedToBuyer: boolean
+  releasedAt: Date | null
+  createdBy: string
+  createdAt: Date
+}
+
 export interface TransactionMessage {
   id: string
   transactionId: string
