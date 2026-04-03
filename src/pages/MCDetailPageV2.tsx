@@ -255,7 +255,7 @@ function VerificationPreviewOverlay() {
       </div>
 
       {/* Overlay card */}
-      <div className="absolute inset-0 flex items-start justify-center pt-8">
+      <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -326,7 +326,7 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, userCredits, u
       </div>
 
       {/* Overlay */}
-      <div className="absolute inset-0 flex items-start justify-center pt-8">
+      <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
