@@ -475,9 +475,9 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400">Active Authority</span>
               </div>
-              <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-sm select-none' : ''}`}>{mockCarrier.legalName}</h1>
+              <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-[6px] select-none pointer-events-none' : ''}`}>{mockCarrier.legalName}</h1>
               {mockCarrier.dbaName && (
-                <p className={`text-white/40 text-sm mt-1 font-medium ${!unlocked ? 'blur-sm select-none' : ''}`}>DBA: {mockCarrier.dbaName}</p>
+                <p className={`text-white/40 text-sm mt-1 font-medium ${!unlocked ? 'blur-[6px] select-none pointer-events-none' : ''}`}>DBA: {mockCarrier.dbaName}</p>
               )}
             </div>
 
@@ -3444,9 +3444,12 @@ export default function MCDetailPageV2() {
     locked: !canAccessAllTabs && t.id !== 'overview',
   }))
 
+  // Use real DOT number for API calls (backend provides _realDotNumber when dotNumber is masked)
+  const carrierDotNumber = listing?._realDotNumber || listing?.dotNumber
+
   // Carrier intelligence data from MorPro API
   const { carrierReport, loading: carrierLoading, error: carrierError } = useCarrierData(
-    USE_MOCK ? undefined : listing?.dotNumber
+    USE_MOCK ? undefined : carrierDotNumber
   )
 
   // FMCSA data (source of truth for BASIC scores, cargo, authority)
@@ -3455,7 +3458,7 @@ export default function MCDetailPageV2() {
   const [fmcsaAuthority, setFmcsaAuthority] = useState<FMCSAAuthorityHistory | null>(null)
   const fmcsaFetchedRef = useRef<string | null>(null)
   useEffect(() => {
-    const dot = listing?.dotNumber?.replace(/\D/g, '')
+    const dot = carrierDotNumber?.replace(/\D/g, '')
     if (!dot || USE_MOCK) return
     if (fmcsaFetchedRef.current === dot) return
     fmcsaFetchedRef.current = dot
@@ -3469,7 +3472,7 @@ export default function MCDetailPageV2() {
     api.fmcsaGetAuthorityHistory(dot)
       .then(res => { if (res.success && res.data) setFmcsaAuthority(res.data) })
       .catch(() => {})
-  }, [listing?.dotNumber])
+  }, [carrierDotNumber])
 
   // Map API data to V2 interfaces (memoized)
   const carrierDataCtx = useMemo<CarrierDataContextType>(() => {

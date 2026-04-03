@@ -105,6 +105,7 @@ export function useListing(listingId: string | undefined): UseListingResult {
 
       // Extended FMCSA fields
       dotNumber: data.dotNumber || '',
+      _realDotNumber: data._realDotNumber || undefined,
       legalName: data.legalName || '',
       dbaName: data.dbaName || '',
       city: data.city || '',
