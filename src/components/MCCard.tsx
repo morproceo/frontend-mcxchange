@@ -15,10 +15,9 @@ import {
   ClipboardCheck
 } from 'lucide-react'
 import { MCListing } from '../types'
-import TrustBadge from './ui/TrustBadge'
 import Card from './ui/Card'
 import { formatDistanceToNow } from 'date-fns'
-import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
+import { getPartialMCNumber } from '../utils/helpers'
 import clsx from 'clsx'
 
 const NATIONAL_DRIVER_OOS_RATE = 6.67
@@ -288,16 +287,6 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
               <span>Phone</span>
             </div>
           </div>
-        </div>
-
-        {/* Trust Badge */}
-        <div className="mb-3">
-          <TrustBadge
-            score={listing.trustScore}
-            level={getTrustLevel(listing.trustScore)}
-            verified={listing.verified}
-            size="sm"
-          />
         </div>
 
         {/* Footer */}
