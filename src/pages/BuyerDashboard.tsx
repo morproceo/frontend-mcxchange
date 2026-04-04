@@ -532,7 +532,7 @@ const BuyerDashboard = () => {
                     <span className="text-2xl font-bold text-amber-600">{userCredits}</span>
                     <span className="text-gray-500">credits remaining</span>
                   </div>
-                  <p className="text-sm text-gray-500">Use credits to unlock full MC details</p>
+                  <p className="text-sm text-gray-500">Use credits to unlock full listing details</p>
                 </div>
               </div>
               <Link to="/buyer/subscription">
