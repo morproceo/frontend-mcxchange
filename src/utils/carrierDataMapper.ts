@@ -481,7 +481,7 @@ export function mapToV2CarrierData(report: any, listing?: MCListingExtended): V2
     riskScore: 0,           // Not available yet from API
     safetyRating,
     insuranceStatus,
-    listingPrice: listing?.askingPrice || listing?.price || 0,
+    listingPrice: listing?.listingPrice || listing?.askingPrice || listing?.price || 0,
     description: listing?.description || '',
     operatingStatus,
     entityType: carrier.entityType || carrier.carrierOperation || 'Carrier',
