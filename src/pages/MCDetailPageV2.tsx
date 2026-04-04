@@ -595,7 +595,7 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
                 boxShadow: '0 0 30px rgba(99,102,241,0.08)',
               }}
             >
-              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Asking Price</p>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Listing Price</p>
               <p className="text-xl sm:text-2xl font-black text-white">{fmtCurrency(mockCarrier.listingPrice)}</p>
             </motion.div>
           </motion.div>
