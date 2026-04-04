@@ -223,69 +223,50 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
 
         {/* Safety Snapshot */}
         <div className={clsx('rounded-lg border p-2.5 mb-3', tier.safetyBg, tier.safetyBorder)}>
-          {listing.totalInspections != null ? (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                  <ClipboardCheck className="w-3 h-3 text-gray-400" />
-                  <span className="font-semibold tabular-nums">{listing.totalInspections}</span>
-                  <span>Inspections</span>
-                </div>
-                <div className="text-[11px]">
-                  {listing.crashTotal != null && listing.crashTotal > 0 ? (
-                    <span className={listing.fatalCrash ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold'}>
-                      {listing.crashTotal} Crash{listing.crashTotal !== 1 ? 'es' : ''}{listing.fatalCrash ? ` (${listing.fatalCrash} fatal)` : ''}
-                    </span>
-                  ) : (
-                    <span className="text-emerald-600 font-medium">0 Crashes</span>
-                  )}
-                </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <ClipboardCheck className="w-3 h-3 text-gray-400" />
+                <span className="font-semibold tabular-nums">{listing.totalInspections ?? 0}</span>
+                <span>Inspections</span>
               </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-500">Driver OOS</span>
-                <div className="flex items-center gap-1">
-                  {listing.driverOosRate != null ? (
-                    <>
-                      <span className={clsx('font-semibold tabular-nums', oosColors[getOosLevel(listing.driverOosRate, NATIONAL_DRIVER_OOS_RATE)])}>
-                        {listing.driverOosInsp ?? 0} ({listing.driverOosRate.toFixed(1)}%)
-                      </span>
-                      {getOosLevel(listing.driverOosRate, NATIONAL_DRIVER_OOS_RATE) === 'good' ? (
-                        <CheckCircle className="w-3 h-3 text-emerald-500" />
-                      ) : (
-                        <AlertTriangle className="w-3 h-3 text-amber-500" />
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">N/A</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-500">Vehicle OOS</span>
-                <div className="flex items-center gap-1">
-                  {listing.vehicleOosRate != null ? (
-                    <>
-                      <span className={clsx('font-semibold tabular-nums', oosColors[getOosLevel(listing.vehicleOosRate, NATIONAL_VEHICLE_OOS_RATE)])}>
-                        {listing.vehicleOosInsp ?? 0} ({listing.vehicleOosRate.toFixed(1)}%)
-                      </span>
-                      {getOosLevel(listing.vehicleOosRate, NATIONAL_VEHICLE_OOS_RATE) === 'good' ? (
-                        <CheckCircle className="w-3 h-3 text-emerald-500" />
-                      ) : (
-                        <AlertTriangle className="w-3 h-3 text-amber-500" />
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">N/A</span>
-                  )}
-                </div>
+              <div className="text-[11px]">
+                {(listing.crashTotal ?? 0) > 0 ? (
+                  <span className={listing.fatalCrash ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                    {listing.crashTotal} Crash{listing.crashTotal !== 1 ? 'es' : ''}{listing.fatalCrash ? ` (${listing.fatalCrash} fatal)` : ''}
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 font-medium">0 Crashes</span>
+                )}
               </div>
             </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 italic">
-              <ClipboardCheck className="w-3 h-3" />
-              <span>No inspection data available</span>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-500">Driver OOS</span>
+              <div className="flex items-center gap-1">
+                <span className={clsx('font-semibold tabular-nums', oosColors[getOosLevel(listing.driverOosRate, NATIONAL_DRIVER_OOS_RATE)])}>
+                  {listing.driverOosInsp ?? 0} ({(listing.driverOosRate ?? 0).toFixed(1)}%)
+                </span>
+                {getOosLevel(listing.driverOosRate, NATIONAL_DRIVER_OOS_RATE) === 'good' ? (
+                  <CheckCircle className="w-3 h-3 text-emerald-500" />
+                ) : (
+                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                )}
+              </div>
             </div>
-          )}
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-500">Vehicle OOS</span>
+              <div className="flex items-center gap-1">
+                <span className={clsx('font-semibold tabular-nums', oosColors[getOosLevel(listing.vehicleOosRate, NATIONAL_VEHICLE_OOS_RATE)])}>
+                  {listing.vehicleOosInsp ?? 0} ({(listing.vehicleOosRate ?? 0).toFixed(1)}%)
+                </span>
+                {getOosLevel(listing.vehicleOosRate, NATIONAL_VEHICLE_OOS_RATE) === 'good' ? (
+                  <CheckCircle className="w-3 h-3 text-emerald-500" />
+                ) : (
+                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Included in Sale */}
