@@ -59,6 +59,7 @@ interface Listing {
   visibility: string
   isPremium: boolean
   isVip: boolean
+  freeToUnlock: boolean
   city: string
   state: string
   address: string | null
@@ -186,6 +187,7 @@ const AdminListingDetailPage = () => {
     visibility: 'PUBLIC',
     isPremium: false,
     isVip: false,
+    freeToUnlock: false,
   })
 
   useEffect(() => {
@@ -256,6 +258,7 @@ const AdminListingDetailPage = () => {
         visibility: data.visibility || 'PUBLIC',
         isPremium: data.isPremium || false,
         isVip: data.isVip || false,
+        freeToUnlock: data.freeToUnlock || false,
       })
     } catch (err: any) {
       setError(err.message || 'Failed to load listing')
@@ -308,6 +311,7 @@ const AdminListingDetailPage = () => {
         visibility: formData.visibility,
         isPremium: formData.isPremium,
         isVip: formData.isVip,
+        freeToUnlock: formData.freeToUnlock,
       }
 
       await api.updateAdminListing(id, updateData)
@@ -448,6 +452,11 @@ const AdminListingDetailPage = () => {
               {formData.isVip && (
                 <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold flex items-center gap-1">
                   <Crown className="w-3 h-3" /> VIP
+                </span>
+              )}
+              {formData.freeToUnlock && (
+                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs font-bold flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> FREE
                 </span>
               )}
               <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(formData.status)}`}>
@@ -940,6 +949,17 @@ const AdminListingDetailPage = () => {
                         />
                         <span className="text-sm text-gray-700 flex items-center gap-1">
                           <Crown className="w-4 h-4 text-yellow-500" /> VIP Listing
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.freeToUnlock}
+                          onChange={(e) => handleInputChange('freeToUnlock', e.target.checked)}
+                          className="rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm text-gray-700 flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4 text-emerald-500" /> Free to Unlock
                         </span>
                       </label>
                     </div>
