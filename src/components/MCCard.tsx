@@ -11,7 +11,8 @@ import {
   Sparkles,
   Shield,
   Truck,
-  AlertTriangle
+  AlertTriangle,
+  ClipboardCheck
 } from 'lucide-react'
 import { MCListing } from '../types'
 import TrustBadge from './ui/TrustBadge'
@@ -19,6 +20,22 @@ import Card from './ui/Card'
 import { formatDistanceToNow } from 'date-fns'
 import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
 import clsx from 'clsx'
+
+const NATIONAL_DRIVER_OOS_RATE = 6.67
+const NATIONAL_VEHICLE_OOS_RATE = 22.26
+
+function getOosLevel(rate: number | undefined, nationalAvg: number): 'good' | 'warning' | 'danger' {
+  if (rate == null) return 'good'
+  if (rate <= nationalAvg) return 'good'
+  if (rate < nationalAvg * 1.5) return 'warning'
+  return 'danger'
+}
+
+const oosColors = {
+  good: 'text-emerald-600',
+  warning: 'text-amber-600',
+  danger: 'text-red-600',
+} as const
 
 interface MCCardProps {
   listing: MCListing
@@ -44,6 +61,8 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         priceColor: 'text-amber-700',
         buttonBg: 'bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600',
         glowClass: 'shadow-lg shadow-amber-100/50',
+        safetyBg: 'bg-amber-50/50',
+        safetyBorder: 'border-amber-100',
       }
     : isPremium
     ? {
@@ -57,6 +76,8 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         priceColor: 'text-violet-700',
         buttonBg: 'bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-600 hover:to-indigo-600',
         glowClass: 'shadow-lg shadow-violet-100/50',
+        safetyBg: 'bg-violet-50/50',
+        safetyBorder: 'border-violet-100',
       }
     : {
         badge: '',
@@ -69,6 +90,8 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         priceColor: 'text-gray-900',
         buttonBg: 'bg-gray-900 hover:bg-gray-800',
         glowClass: '',
+        safetyBg: 'bg-slate-50',
+        safetyBorder: 'border-gray-100',
       }
 
   const getAmazonScoreColor = (score: string | null) => {
@@ -198,6 +221,72 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
           )}
         </div>
 
+        {/* Safety Snapshot */}
+        <div className={clsx('rounded-lg border p-2.5 mb-3', tier.safetyBg, tier.safetyBorder)}>
+          {listing.totalInspections != null ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <ClipboardCheck className="w-3 h-3 text-gray-400" />
+                  <span className="font-semibold tabular-nums">{listing.totalInspections}</span>
+                  <span>Inspections</span>
+                </div>
+                <div className="text-[11px]">
+                  {listing.crashTotal != null && listing.crashTotal > 0 ? (
+                    <span className={listing.fatalCrash ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                      {listing.crashTotal} Crash{listing.crashTotal !== 1 ? 'es' : ''}{listing.fatalCrash ? ` (${listing.fatalCrash} fatal)` : ''}
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 font-medium">0 Crashes</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-500">Driver OOS</span>
+                <div className="flex items-center gap-1">
+                  {listing.driverOosRate != null ? (
+                    <>
+                      <span className={clsx('font-semibold tabular-nums', oosColors[getOosLevel(listing.driverOosRate, NATIONAL_DRIVER_OOS_RATE)])}>
+                        {listing.driverOosInsp ?? 0} ({listing.driverOosRate.toFixed(1)}%)
+                      </span>
+                      {getOosLevel(listing.driverOosRate, NATIONAL_DRIVER_OOS_RATE) === 'good' ? (
+                        <CheckCircle className="w-3 h-3 text-emerald-500" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3 text-amber-500" />
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">N/A</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-500">Vehicle OOS</span>
+                <div className="flex items-center gap-1">
+                  {listing.vehicleOosRate != null ? (
+                    <>
+                      <span className={clsx('font-semibold tabular-nums', oosColors[getOosLevel(listing.vehicleOosRate, NATIONAL_VEHICLE_OOS_RATE)])}>
+                        {listing.vehicleOosInsp ?? 0} ({listing.vehicleOosRate.toFixed(1)}%)
+                      </span>
+                      {getOosLevel(listing.vehicleOosRate, NATIONAL_VEHICLE_OOS_RATE) === 'good' ? (
+                        <CheckCircle className="w-3 h-3 text-emerald-500" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3 text-amber-500" />
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">N/A</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 italic">
+              <ClipboardCheck className="w-3 h-3" />
+              <span>No inspection data available</span>
+            </div>
+          )}
+        </div>
 
         {/* Included in Sale */}
         <div className="mb-3 flex items-center gap-3">
