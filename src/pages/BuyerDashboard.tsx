@@ -50,7 +50,7 @@ const GUIDE_STEPS = [
   {
     icon: '🪙',
     title: 'How Credits Work',
-    desc: 'Subscribe to a plan to get credits each month. Browse the marketplace freely — when you find a business you\'re interested in, use 1 credit to unlock the full details, documents, and seller contact info. Then make an offer.',
+    desc: 'Subscribe to a plan to get credits each month. Browse the marketplace freely — when you find a business you\'re interested in, use 1 credit to unlock the full details and documents. Then make an offer.',
   },
   {
     icon: '📊',
@@ -262,7 +262,7 @@ const BuyerDashboard = () => {
           id: listing.id,
           mcNumber: listing.mcNumber,
           dotNumber: listing.dotNumber,
-          title: listing.title || `MC Authority #${listing.mcNumber}`,
+          title: listing.title || `Trucking Business #${listing.mcNumber}`,
           description: listing.description || '',
           price: Number(listing.askingPrice) || 0,
           askingPrice: Number(listing.askingPrice) || 0,
@@ -984,7 +984,7 @@ const BuyerDashboard = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Unlocked MC Authorities</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Unlocked Trucking Businesses</h2>
                 <p className="text-gray-500">Full access to {unlockedListings.length} MC details</p>
               </div>
             </div>
