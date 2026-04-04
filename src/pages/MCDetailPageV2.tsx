@@ -3910,16 +3910,13 @@ export default function MCDetailPageV2() {
             <Eye className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div className="flex-1">
               <span className="text-sm font-semibold text-amber-800">Preview Mode</span>
-              <span className="text-sm text-amber-600 ml-1">— Verify your identity to see full details, MC/DOT numbers, and carrier data.</span>
+              <span className="text-sm text-amber-600 ml-1">— Buy a subscription to see full listing details, MC/DOT numbers, and carrier data.</span>
             </div>
-            <Button size="sm" variant="secondary" onClick={async () => {
-              try {
-                const response = await api.createVerificationSession()
-                if (response.success && response.data?.url) window.location.href = response.data.url
-              } catch {}
-            }}>
-              <Shield className="w-3.5 h-3.5 mr-1" />Verify Now
-            </Button>
+            <Link to="/buyer/subscription">
+              <Button size="sm" variant="secondary">
+                <CreditCard className="w-3.5 h-3.5 mr-1" />Buy Now
+              </Button>
+            </Link>
           </div>
         </div>
       )}
@@ -4023,24 +4020,21 @@ export default function MCDetailPageV2() {
                 {isPreviewMode ? (
                   <>
                     <div className="flex items-center gap-2 mb-4">
-                      <Shield className="w-5 h-5 text-amber-500" />
-                      <span className="font-semibold text-gray-900">Identity Verification</span>
+                      <CreditCard className="w-5 h-5 text-amber-500" />
+                      <span className="font-semibold text-gray-900">Subscription Required</span>
                     </div>
                     <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center mb-3">
-                      <Shield className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                      <CreditCard className="w-8 h-8 text-amber-500 mx-auto mb-2" />
                       <div className="font-bold text-gray-900 mb-1">Preview Mode</div>
-                      <div className="text-xs text-gray-500 mb-1">Verify your identity to unlock full details, make offers, and purchase.</div>
+                      <div className="text-xs text-gray-500 mb-1">Buy a subscription to see full listing details, make offers, and purchase.</div>
                     </div>
-                    <Button fullWidth onClick={async () => {
-                      try {
-                        const response = await api.createVerificationSession()
-                        if (response.success && response.data?.url) window.location.href = response.data.url
-                      } catch {}
-                    }}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      Verify Identity
-                    </Button>
-                    <p className="text-xs text-gray-400 text-center mt-2">Takes ~2 minutes</p>
+                    <Link to="/buyer/subscription">
+                      <Button fullWidth>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Buy Now
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-gray-400 text-center mt-2">Choose a plan that fits your needs</p>
                   </>
                 ) : isPremiumListing && !isUnlocked ? (
                   <>
@@ -4172,14 +4166,11 @@ export default function MCDetailPageV2() {
       {/* Mobile Sticky Bottom Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-40 shadow-lg">
         {isPreviewMode ? (
-          <Button fullWidth size="sm" onClick={async () => {
-            try {
-              const response = await api.createVerificationSession()
-              if (response.success && response.data?.url) window.location.href = response.data.url
-            } catch {}
-          }}>
-            <Shield className="w-4 h-4 mr-1" />Verify Identity to Unlock
-          </Button>
+          <Link to="/buyer/subscription" className="w-full">
+            <Button fullWidth size="sm">
+              <CreditCard className="w-4 h-4 mr-1" />Buy Subscription to Unlock
+            </Button>
+          </Link>
         ) : isPremiumListing && !isUnlocked ? (
           <div className="flex gap-3">
             {isAuthenticated && user?.role === 'buyer' && (
