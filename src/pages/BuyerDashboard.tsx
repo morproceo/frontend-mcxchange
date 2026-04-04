@@ -517,8 +517,7 @@ const BuyerDashboard = () => {
         {/* How It Works Guide */}
         <HowItWorksGuide />
 
-        {/* Identity Verification Banner */}
-        {!isIdentityVerified && <IdentityVerificationBanner />}
+
 
         {/* Credits Banner */}
         <Card className="mb-6 overflow-hidden">
