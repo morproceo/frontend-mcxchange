@@ -45,12 +45,12 @@ const GUIDE_STEPS = [
   {
     icon: '🪪',
     title: 'Verify Your Identity',
-    desc: 'MC authorities are high-value business assets. To protect both buyers and sellers, every user must verify their identity using a government-issued ID through Stripe Identity. It takes less than 2 minutes.',
+    desc: 'Trucking businesses listed on Domilea are high-value assets. To protect both buyers and sellers, every user must verify their identity using a government-issued ID through Stripe Identity. It takes less than 2 minutes.',
   },
   {
     icon: '🪙',
     title: 'How Credits Work',
-    desc: 'Subscribe to a plan to get credits each month. Browse the marketplace freely — when you find an MC you like, use 1 credit to unlock the full details, documents, and seller contact info. Then make an offer.',
+    desc: 'Subscribe to a plan to get credits each month. Browse the marketplace freely — when you find a business you\'re interested in, use 1 credit to unlock the full details, documents, and seller contact info. Then make an offer.',
   },
   {
     icon: '📊',
@@ -60,7 +60,7 @@ const GUIDE_STEPS = [
   {
     icon: '⚠️',
     title: 'Important Things to Know',
-    desc: 'When you purchase an MC authority, you are buying the full ownership of a legal business entity. Both buyer and seller must sign a Bill of Sale. Always do your due diligence using our tools before making an offer.',
+    desc: 'You are purchasing a full trucking business entity (LLC/Inc) — not just an MC or DOT number. FMCSA requires the transfer of the entire business. Both buyer and seller must sign a Bill of Sale. Always do your due diligence using our tools before making an offer.',
   },
 ]
 
