@@ -22,9 +22,7 @@ import {
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
 import api from '../services/api'
-import { getTrustLevel } from '../utils/helpers'
 
 interface PendingListing {
   id: string
@@ -381,11 +379,6 @@ const AdminDashboard = () => {
     return matchesSearch && matchesFilter
   })
 
-  const getTrustLevel = (score: number) => {
-    if (score >= 80) return 'high'
-    if (score >= 50) return 'medium'
-    return 'low'
-  }
 
   return (
     <div className="p-8">
@@ -559,12 +552,6 @@ const AdminDashboard = () => {
                       <div className="font-semibold text-gray-900">{listing.seller.name}</div>
                       <div className="text-xs text-gray-500">{listing.seller.email}</div>
                     </div>
-                    <TrustBadge
-                      score={listing.seller.trustScore}
-                      level={getTrustLevel(listing.seller.trustScore)}
-                      verified={listing.seller.verified}
-                      size="sm"
-                    />
                   </div>
                 </div>
 
@@ -863,15 +850,6 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Trust Score */}
-                    <div className="hidden md:block">
-                      <TrustBadge
-                        score={user.trustScore}
-                        level={getTrustLevel(user.trustScore)}
-                        verified={user.verified}
-                        size="sm"
-                      />
-                    </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">

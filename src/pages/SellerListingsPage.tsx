@@ -17,9 +17,7 @@ import {
 } from 'lucide-react'
 import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
 import EditListingModal from '../components/EditListingModal'
-import { getTrustLevel } from '../utils/helpers'
 import api from '../services/api'
 
 interface Listing {
@@ -260,14 +258,6 @@ const SellerListingsPage = () => {
                           <span className="capitalize">{formatStatus(listing.status)}</span>
                         </span>
                       </div>
-                      {listing.trustScore && (
-                        <TrustBadge
-                          score={listing.trustScore}
-                          level={getTrustLevel(listing.trustScore)}
-                          verified={true}
-                          size="sm"
-                        />
-                      )}
                     </div>
                     <div className="text-right flex-shrink-0 ml-2">
                       <div className="text-lg font-bold text-primary-600">
@@ -393,14 +383,6 @@ const SellerListingsPage = () => {
                           {getStatusIcon(listing.status)}
                           <span className="capitalize">{formatStatus(listing.status)}</span>
                         </span>
-                        {listing.trustScore && (
-                          <TrustBadge
-                            score={listing.trustScore}
-                            level={getTrustLevel(listing.trustScore)}
-                            verified={true}
-                            size="sm"
-                          />
-                        )}
                       </div>
                       <p className="text-gray-600 mb-3">{listing.title}</p>
 

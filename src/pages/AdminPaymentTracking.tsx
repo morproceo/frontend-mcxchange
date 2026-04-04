@@ -12,8 +12,6 @@ import {
 import GlassCard from '../components/ui/GlassCard'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel } from '../utils/helpers'
 
 const AdminPaymentTracking = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'received' | 'pending' | 'failed'>('all')
@@ -190,12 +188,6 @@ const AdminPaymentTracking = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <span className="text-white/90 font-semibold">{payment.userName}</span>
-                      <TrustBadge
-                        score={payment.trustScore}
-                        level={getTrustLevel(payment.trustScore)}
-                        verified={true}
-                        size="sm"
-                      />
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-x-6 gap-y-1 text-sm">

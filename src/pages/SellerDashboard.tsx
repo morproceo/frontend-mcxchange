@@ -21,7 +21,6 @@ import Button from '../components/ui/Button'
 import MCCard from '../components/MCCard'
 import api from '../services/api'
 import { MCListing } from '../types'
-import { getTrustLevel } from '../utils/helpers'
 import CarrierPulseOnboardingModal from '../components/CarrierPulseOnboardingModal'
 import MCPricingEstimator from '../components/MCPricingEstimator'
 import EditListingModal from '../components/EditListingModal'
@@ -124,7 +123,7 @@ const SellerDashboard = () => {
             isPremium: listing.isPremium || false,
             isVip: listing.isVip || false,
             trustScore: listing.trustScore || 70,
-            trustLevel: getTrustLevel(listing.trustScore || 70),
+            trustLevel: 'medium',
             verificationBadges: listing.verificationBadges || [],
             state: listing.state || '',
             amazonStatus: listing.amazonStatus || 'none',
@@ -428,7 +427,7 @@ const SellerDashboard = () => {
               fleetSize: l.fleetSize || 0, operationType: l.operationType || [],
               safetyRating: l.safetyRating || 'satisfactory', insuranceStatus: l.insuranceStatus || 'active',
               verified: l.verified || false, isPremium: l.isPremium || false, isVip: l.isVip || false,
-              trustScore: l.trustScore || 50, trustLevel: getTrustLevel(l.trustScore || 50),
+              trustScore: l.trustScore || 50, trustLevel: 'medium',
               views: l.views || 0, saves: l.saves || 0, state: l.state || '',
               createdAt: new Date(l.createdAt), verificationBadges: [],
               amazonStatus: l.amazonStatus || 'none', amazonRelayScore: l.amazonRelayScore || null,

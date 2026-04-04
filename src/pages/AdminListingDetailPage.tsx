@@ -40,8 +40,7 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Textarea from '../components/ui/Textarea'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel, formatPrice } from '../utils/helpers'
+import { formatPrice } from '../utils/helpers'
 import api from '../services/api'
 import { useFMCSAData } from '../hooks/useFMCSAData'
 
@@ -1007,12 +1006,6 @@ const AdminListingDetailPage = () => {
                           {listing.seller.companyName && (
                             <p className="text-xs text-gray-500">{listing.seller.companyName}</p>
                           )}
-                          <TrustBadge
-                            score={listing.seller.trustScore}
-                            level={getTrustLevel(listing.seller.trustScore)}
-                            verified={listing.seller.verified}
-                            size="sm"
-                          />
                         </div>
                       </div>
                       <div className="space-y-2 pt-2 border-t border-gray-100">

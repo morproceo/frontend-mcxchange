@@ -17,8 +17,6 @@ import {
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel } from '../utils/helpers'
 import { formatDistanceToNow } from 'date-fns'
 import api from '../services/api'
 import toast from 'react-hot-toast'
@@ -390,12 +388,6 @@ const BuyerOffersPage = () => {
                         </div>
                         <div className="font-semibold text-gray-900">{offer.seller.name}</div>
                       </div>
-                      <TrustBadge
-                        score={offer.seller.trustScore}
-                        level={getTrustLevel(offer.seller.trustScore)}
-                        verified={offer.seller.verified}
-                        size="sm"
-                      />
                     </div>
                   </div>
 

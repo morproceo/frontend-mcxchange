@@ -40,10 +40,9 @@ import {
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
 import api from '../services/api'
-import { getTrustLevel, formatPrice } from '../utils/helpers'
+import { formatPrice } from '../utils/helpers'
 import { MCListingExtended } from '../types'
 
 // Due Diligence Result Interface (from API)
@@ -214,7 +213,7 @@ const AdminReviewPage = () => {
             isPremium: data.isPremium || false,
             isVip: data.isVip || false,
             trustScore: data.trustScore || 70,
-            trustLevel: getTrustLevel(data.trustScore || 70),
+            trustLevel: 'medium',
             verificationBadges: data.verificationBadges || [],
             city: data.city || '',
             state: data.state || '',
@@ -1918,11 +1917,6 @@ const AdminReviewPage = () => {
                 </div>
               </div>
 
-              <TrustBadge
-                score={listing.seller.trustScore}
-                level={getTrustLevel(listing.seller.trustScore)}
-                verified={listing.seller.verified}
-              />
 
               <div className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-gray-500">

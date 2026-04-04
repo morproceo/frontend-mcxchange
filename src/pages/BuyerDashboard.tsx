@@ -27,12 +27,11 @@ import { useAuth } from '../context/AuthContext'
 import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import MCCard from '../components/MCCard'
 import api from '../services/api'
-import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
+import { getPartialMCNumber } from '../utils/helpers'
 import { FilterOptions, MCListing } from '../types'
 
 interface Payment {
@@ -158,7 +157,7 @@ const BuyerDashboard = () => {
           sellingWithEmail: listing.sellingWithEmail || false,
           sellingWithPhone: listing.sellingWithPhone || false,
           trustScore: listing.seller?.trustScore || 70,
-          trustLevel: getTrustLevel(listing.seller?.trustScore || 70),
+          trustLevel: 'medium',
           createdAt: new Date(listing.createdAt),
           seller: {
             id: listing.seller?.id || listing.sellerId,

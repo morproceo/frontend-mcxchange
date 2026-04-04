@@ -44,7 +44,6 @@ import {
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
-import TrustBadge from '../components/ui/TrustBadge'
 import api from '../services/api'
 
 interface UserData {
@@ -238,11 +237,6 @@ const AdminUsersPage = () => {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const getTrustLevel = (score: number) => {
-    if (score >= 80) return 'high'
-    if (score >= 50) return 'medium'
-    return 'low'
-  }
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -767,15 +761,6 @@ const AdminUsersPage = () => {
                   </div>
                 </div>
 
-                {/* Trust Score */}
-                <div className="hidden md:block">
-                  <TrustBadge
-                    score={user.trustScore}
-                    level={getTrustLevel(user.trustScore)}
-                    verified={user.verified}
-                    size="sm"
-                  />
-                </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 relative">
@@ -985,15 +970,6 @@ const AdminUsersPage = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Trust Score */}
-                <div className="flex justify-center">
-                  <TrustBadge
-                    score={selectedUser.trustScore}
-                    level={getTrustLevel(selectedUser.trustScore)}
-                    verified={selectedUser.verified}
-                    size="lg"
-                  />
-                </div>
 
                 {/* Contact Info */}
                 <div className="grid md:grid-cols-2 gap-4">

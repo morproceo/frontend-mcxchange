@@ -42,8 +42,6 @@ import {
   User,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel } from '../utils/helpers'
 import { DomileaLogoFull, DomileaIcon } from '../components/ui/DomileaLogo'
 import TalkToMariaModal from '../components/TalkToMariaModal'
 import clsx from 'clsx'

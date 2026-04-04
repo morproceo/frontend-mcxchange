@@ -38,11 +38,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import TrustBadge from '../components/ui/TrustBadge'
 import Textarea from '../components/ui/Textarea'
 import Input from '../components/ui/Input'
 import { formatDistanceToNow } from 'date-fns'
-import { getPartialMCNumber, getTrustLevel } from '../utils/helpers'
+import { getPartialMCNumber } from '../utils/helpers'
 import { useListing } from '../hooks/useListing'
 import { useFMCSAData } from '../hooks/useFMCSAData'
 import api from '../services/api'
@@ -501,12 +500,6 @@ const MCDetailPage = () => {
                 </div>
               </div>
 
-              <TrustBadge
-                score={listing.trustScore}
-                level={getTrustLevel(listing.trustScore)}
-                verified={listing.verified}
-                size="lg"
-              />
 
               <div className="mt-6 flex flex-wrap gap-2">
                 {listing.verificationBadges.map((badge) => (

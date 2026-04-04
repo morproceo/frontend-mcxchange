@@ -51,8 +51,6 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Textarea from '../components/ui/Textarea'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel } from '../utils/helpers'
 import api from '../services/api'
 
 interface Listing {
@@ -1858,14 +1856,6 @@ const AdminAllListingsPage = () => {
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">{selectedListing.seller.name}</p>
-                              <div className="flex items-center gap-1">
-                                <TrustBadge
-                                  score={selectedListing.seller.trustScore}
-                                  level={getTrustLevel(selectedListing.seller.trustScore)}
-                                  verified={selectedListing.seller.verified}
-                                  size="sm"
-                                />
-                              </div>
                             </div>
                           </div>
                           <div className="space-y-1">

@@ -26,8 +26,7 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Textarea from '../components/ui/Textarea'
-import TrustBadge from '../components/ui/TrustBadge'
-import { getTrustLevel, formatPrice } from '../utils/helpers'
+import { formatPrice } from '../utils/helpers'
 import { api } from '../services/api'
 
 interface PendingListing {
@@ -361,14 +360,6 @@ const AdminPendingReviewPage = () => {
                           {listing.seller?.email || 'No email'}
                         </div>
                       </div>
-                      {listing.seller?.trustScore && (
-                        <TrustBadge
-                          score={listing.seller.trustScore}
-                          level={getTrustLevel(listing.seller.trustScore)}
-                          verified={listing.seller.verified || false}
-                          size="sm"
-                        />
-                      )}
                     </div>
 
                     {/* Cargo Types */}
