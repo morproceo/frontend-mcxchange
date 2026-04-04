@@ -43,9 +43,14 @@ import { FilterOptions, MCListing } from '../types'
 // ============================================================
 const GUIDE_STEPS = [
   {
+    icon: '⚠️',
+    title: 'Important Things to Know',
+    desc: 'You are purchasing a full trucking business entity (LLC/Inc) — not just an MC or DOT number. FMCSA requires the transfer of the entire business. Both buyer and seller must sign a Bill of Sale. Always do your due diligence using our tools before making an offer.',
+  },
+  {
     icon: '🪪',
     title: 'Verify Your Identity',
-    desc: 'Trucking businesses listed on Domilea are high-value assets. To protect both buyers and sellers, every user must verify their identity using a government-issued ID through Stripe Identity. It takes less than 2 minutes.',
+    desc: 'Identity verification is required only for buyers looking to purchase a trucking business. If you are only looking to use our tools (Carrier Pulse, Chameleon Check, etc.), you do not need to verify. Verification uses a government-issued ID through Stripe Identity and takes less than 2 minutes.',
   },
   {
     icon: '🪙',
@@ -56,11 +61,6 @@ const GUIDE_STEPS = [
     icon: '📊',
     title: 'AI-Powered Tools',
     desc: 'Our AI analyzes safety records, compliance history, and authority data to flag potential risks. You also get access to credit reports, a 24/7 AI assistant, and dedicated support on higher-tier plans.',
-  },
-  {
-    icon: '⚠️',
-    title: 'Important Things to Know',
-    desc: 'You are purchasing a full trucking business entity (LLC/Inc) — not just an MC or DOT number. FMCSA requires the transfer of the entire business. Both buyer and seller must sign a Bill of Sale. Always do your due diligence using our tools before making an offer.',
   },
 ]
 
