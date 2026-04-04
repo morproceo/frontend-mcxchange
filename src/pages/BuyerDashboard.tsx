@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Heart,
   MessageSquare,
@@ -21,7 +21,11 @@ import {
   CreditCard,
   Receipt,
   DollarSign,
-  Crown
+  Crown,
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  ArrowRight
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
@@ -33,6 +37,131 @@ import MCCard from '../components/MCCard'
 import api from '../services/api'
 import { getPartialMCNumber } from '../utils/helpers'
 import { FilterOptions, MCListing } from '../types'
+
+// ============================================================
+// HOW IT WORKS — inline guide (replaces old welcome animation)
+// ============================================================
+const GUIDE_STEPS = [
+  {
+    icon: '🪪',
+    title: 'Verify Your Identity',
+    desc: 'MC authorities are high-value business assets. To protect both buyers and sellers, every user must verify their identity using a government-issued ID through Stripe Identity. It takes less than 2 minutes.',
+  },
+  {
+    icon: '🪙',
+    title: 'How Credits Work',
+    desc: 'Subscribe to a plan to get credits each month. Browse the marketplace freely — when you find an MC you like, use 1 credit to unlock the full details, documents, and seller contact info. Then make an offer.',
+  },
+  {
+    icon: '📊',
+    title: 'AI-Powered Tools',
+    desc: 'Our AI analyzes safety records, compliance history, and authority data to flag potential risks. You also get access to credit reports, a 24/7 AI assistant, and dedicated support on higher-tier plans.',
+  },
+  {
+    icon: '⚠️',
+    title: 'Important Things to Know',
+    desc: 'When you purchase an MC authority, you are buying the full ownership of a legal business entity. Both buyer and seller must sign a Bill of Sale. Always do your due diligence using our tools before making an offer.',
+  },
+]
+
+function HowItWorksGuide() {
+  const [expanded, setExpanded] = useState(() => {
+    return localStorage.getItem('mcx_how_it_works_collapsed') !== 'true'
+  })
+  const [activeStep, setActiveStep] = useState(0)
+
+  const toggle = () => {
+    const next = !expanded
+    setExpanded(next)
+    if (!next) localStorage.setItem('mcx_how_it_works_collapsed', 'true')
+    else localStorage.removeItem('mcx_how_it_works_collapsed')
+  }
+
+  return (
+    <Card className="mb-6 overflow-hidden">
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between -m-6 p-4 hover:bg-gray-50 transition-colors rounded-xl"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
+          <div className="text-left">
+            <div className="font-bold text-gray-900">How the Process Works on Domilea</div>
+            <div className="text-xs text-gray-500">Everything you need to know before buying</div>
+          </div>
+        </div>
+        {expanded ? (
+          <ChevronDown className="w-5 h-5 text-gray-400" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        )}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-6 mt-2">
+              {/* Step indicators */}
+              <div className="flex gap-2 mb-5">
+                {GUIDE_STEPS.map((step, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveStep(i)}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                      i === activeStep
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'bg-gray-50 text-gray-500 border border-gray-100 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="mr-1.5">{step.icon}</span>
+                    <span className="hidden sm:inline">{step.title}</span>
+                    <span className="sm:hidden">Step {i + 1}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Active step content */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeStep}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl p-5 border border-gray-100"
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="text-3xl flex-shrink-0">{GUIDE_STEPS[activeStep].icon}</span>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg mb-2">{GUIDE_STEPS[activeStep].title}</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">{GUIDE_STEPS[activeStep].desc}</p>
+                    </div>
+                  </div>
+                  {activeStep < GUIDE_STEPS.length - 1 && (
+                    <button
+                      onClick={() => setActiveStep(activeStep + 1)}
+                      className="mt-4 flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      Next <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
+  )
+}
 
 interface Payment {
   id: string
@@ -385,6 +514,9 @@ const BuyerDashboard = () => {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
+        {/* How It Works Guide */}
+        <HowItWorksGuide />
+
         {/* Identity Verification Banner */}
         {!isIdentityVerified && <IdentityVerificationBanner />}
 
