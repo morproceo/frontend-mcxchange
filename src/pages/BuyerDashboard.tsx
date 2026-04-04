@@ -60,7 +60,7 @@ const GUIDE_STEPS = [
   {
     icon: '📊',
     title: 'AI-Powered Tools',
-    desc: 'Our AI analyzes safety records, compliance history, and authority data to flag potential risks. You also get access to credit reports, a 24/7 AI assistant, and dedicated support on higher-tier plans.',
+    desc: 'Our AI analyzes safety records, compliance history, and authority data to flag potential risks. Credit reports are available with select subscription plans or can be purchased individually. You also get access to a 24/7 AI assistant and dedicated support on higher-tier plans. Please note: all tools are provided for informational purposes only — buyers are responsible for conducting their own due diligence, and Domilea is not liable for any errors or omissions in the data provided.',
   },
 ]
 
