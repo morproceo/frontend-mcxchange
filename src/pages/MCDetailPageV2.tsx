@@ -3910,7 +3910,7 @@ export default function MCDetailPageV2() {
             <Eye className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div className="flex-1">
               <span className="text-sm font-semibold text-amber-800">Preview Mode</span>
-              <span className="text-sm text-amber-600 ml-1">— Buy a subscription to see full listing details, MC/DOT numbers, and carrier data.</span>
+              <span className="text-sm text-amber-600 ml-1">— Buy a subscription to see full listing details.</span>
             </div>
             <Link to="/buyer/subscription">
               <Button size="sm" variant="secondary">
