@@ -119,10 +119,13 @@ const MarketplacePage = () => {
 
         // Transform backend data to frontend format
         const transformedListings: MCListing[] = (response.data || response.listings || []).map((listing: any) => {
-          // Parse FMCSA data if available
+          // Parse FMCSA data if available — handle both flat and nested (snapshot) formats
           let fmcsa: any = null
           if (listing.fmcsaData) {
-            try { fmcsa = typeof listing.fmcsaData === 'string' ? JSON.parse(listing.fmcsaData) : listing.fmcsaData } catch {}
+            try {
+              const raw = typeof listing.fmcsaData === 'string' ? JSON.parse(listing.fmcsaData) : listing.fmcsaData
+              fmcsa = raw?.carrier || raw
+            } catch {}
           }
 
           return {
@@ -164,8 +167,8 @@ const MarketplacePage = () => {
             saves: listing.saves || 0,
             createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
             updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
-            // FMCSA safety snapshot
-            totalInspections: fmcsa?.totalInspections ?? undefined,
+            // FMCSA safety snapshot — totalInspections from SAFER, fallback to driverInsp (every inspection includes driver)
+            totalInspections: fmcsa?.totalInspections ?? fmcsa?.driverInsp ?? fmcsa?.totalDriverInspections ?? undefined,
             driverOosInsp: fmcsa?.driverOosInsp ?? fmcsa?.driverOosInspections ?? undefined,
             driverOosRate: fmcsa?.driverOosRate ?? undefined,
             vehicleOosInsp: fmcsa?.vehicleOosInsp ?? fmcsa?.vehicleOosInspections ?? undefined,
