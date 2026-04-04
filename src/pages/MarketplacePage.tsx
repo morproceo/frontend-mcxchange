@@ -165,7 +165,7 @@ const MarketplacePage = () => {
             createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
             updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
             // FMCSA safety snapshot
-            totalInspections: fmcsa?.totalInspections ?? (fmcsa?.driverInsp != null && fmcsa?.vehicleInsp != null ? (fmcsa.driverInsp + fmcsa.vehicleInsp) : undefined),
+            totalInspections: fmcsa?.totalInspections ?? undefined,
             driverOosInsp: fmcsa?.driverOosInsp ?? fmcsa?.driverOosInspections ?? undefined,
             driverOosRate: fmcsa?.driverOosRate ?? undefined,
             vehicleOosInsp: fmcsa?.vehicleOosInsp ?? fmcsa?.vehicleOosInspections ?? undefined,
