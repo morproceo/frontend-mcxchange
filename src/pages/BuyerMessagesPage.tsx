@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Send, Search, MessageSquare, User } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -225,11 +225,11 @@ const BuyerMessagesPage = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mb-2">
-                        {conv.listingTitle || 'MC Authority Inquiry'}
+                        {conv.listingTitle || 'Business Inquiry'}
                       </div>
                       <div className="text-xs text-gray-600 line-clamp-1">{conv.lastMessage}</div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: true })}
+                        {format(new Date(conv.lastMessageAt), 'MMM d, yyyy h:mm a')}
                       </div>
                     </button>
                   ))}
@@ -251,7 +251,7 @@ const BuyerMessagesPage = () => {
                         {selectedConversationData?.participantName || 'Support Team'}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {selectedConversationData?.listingTitle || 'MC Authority Inquiry'}
+                        {selectedConversationData?.listingTitle || 'Business Inquiry'}
                       </div>
                     </div>
                   </div>
@@ -272,7 +272,7 @@ const BuyerMessagesPage = () => {
                         >
                           <p className="text-sm mb-1">{msg.content}</p>
                           <div className="text-xs opacity-70">
-                            {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                            {format(new Date(msg.createdAt), 'MMM d, yyyy h:mm a')}
                           </div>
                         </div>
                       </div>

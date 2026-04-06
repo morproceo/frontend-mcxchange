@@ -25,7 +25,7 @@ import {
   X,
   Ban
 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Textarea from '../components/ui/Textarea'
@@ -680,7 +680,7 @@ void statusConfig[conversation.status].icon
                     </div>
                     <p className="text-sm text-gray-600 line-clamp-2 mb-2">{conversation.lastMessage}</p>
                     <div className="flex items-center justify-between text-xs text-gray-400">
-                      <span>{formatDistanceToNow(new Date(conversation.lastMessageAt), { addSuffix: true })}</span>
+                      <span>{format(new Date(conversation.lastMessageAt), 'MMM d, yyyy h:mm a')}</span>
                       {conversation.unreadCount > 0 && (
                         <span className="flex items-center gap-1">
                           <MessageSquare className="w-3 h-3" />
@@ -735,7 +735,7 @@ void statusConfig[conversation.status].icon
                           <Hash className="w-3 h-3" />
                           {selectedConversation.mcNumber ? `MC ${selectedConversation.mcNumber}` : 'MC Inquiry'}
                         </span>
-                        <span>{formatDistanceToNow(new Date(selectedConversation.lastMessageAt), { addSuffix: true })}</span>
+                        <span>{format(new Date(selectedConversation.lastMessageAt), 'MMM d, yyyy h:mm a')}</span>
                       </div>
                     </div>
                   </div>
@@ -864,7 +864,7 @@ void statusConfig[conversation.status].icon
                           <p className="text-sm sm:text-base break-words">{msg.content}</p>
                         </div>
                         <div className={`text-xs text-gray-400 mt-1 ${isAdmin ? 'text-right mr-2' : 'ml-2'}`}>
-                          {isAdmin ? 'Admin' : selectedConversation.participantName} • {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                          {isAdmin ? 'Admin' : selectedConversation.participantName} • {format(new Date(msg.createdAt), 'MMM d, yyyy h:mm a')}
                         </div>
                       </div>
                       {isAdmin && (

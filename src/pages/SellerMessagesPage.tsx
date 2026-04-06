@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Send, Search, MessageSquare, User, Loader2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -255,7 +255,7 @@ const SellerMessagesPage = () => {
                       </div>
                       <div className="text-xs text-gray-600 line-clamp-1">{conv.lastMessage}</div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: true })}
+                        {format(new Date(conv.lastMessageAt), 'MMM d, yyyy h:mm a')}
                       </div>
                     </button>
                   ))}
@@ -296,7 +296,7 @@ const SellerMessagesPage = () => {
                         >
                           <p className="text-sm mb-1">{msg.content}</p>
                           <div className="text-xs opacity-70">
-                            {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                            {format(new Date(msg.createdAt), 'MMM d, yyyy h:mm a')}
                           </div>
                         </div>
                       </div>
