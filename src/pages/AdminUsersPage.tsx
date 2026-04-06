@@ -927,11 +927,11 @@ const AdminUsersPage = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className={`sticky top-0 p-6 rounded-t-2xl text-white ${
+              <div className={`sticky top-0 p-4 rounded-t-2xl text-white ${
                 selectedUser.role === 'ADMIN'
                   ? 'bg-gradient-to-r from-indigo-600 to-purple-600'
                   : selectedUser.role === 'SELLER'
@@ -939,18 +939,18 @@ const AdminUsersPage = () => {
                   : 'bg-gradient-to-r from-purple-600 to-pink-600'
               }`}>
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold">
                       {getInitials(selectedUser.name)}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-2xl font-bold">{selectedUser.name}</h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold">{selectedUser.name}</h2>
                         {selectedUser.verified && (
                           <Shield className="w-5 h-5 text-emerald-300" />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-white/80">
+                      <div className="flex items-center gap-2 text-sm text-white/80">
                         <span>{selectedUser.role.charAt(0) + selectedUser.role.slice(1).toLowerCase()}</span>
                         <span>•</span>
                         <span>{selectedUser.status.charAt(0) + selectedUser.status.slice(1).toLowerCase()}</span>
@@ -969,14 +969,14 @@ const AdminUsersPage = () => {
                 </div>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-4 space-y-3">
 
                 {/* Contact Info */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center justify-between">
                       <span className="flex items-center gap-2">
-                        <User className="w-5 h-5 text-indigo-600" />
+                        <User className="w-4 h-4 text-indigo-600" />
                         Contact Information
                       </span>
                       {!isEditingProfile ? (
@@ -1011,7 +1011,7 @@ const AdminUsersPage = () => {
                       )}
                     </h3>
                     {isEditingProfile ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Name</label>
                           <input
@@ -1100,12 +1100,12 @@ const AdminUsersPage = () => {
                     )}
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-indigo-600" />
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-indigo-600" />
                       Account Details
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-500">Role</span>
                         <div className="flex items-center gap-2">
@@ -1194,23 +1194,23 @@ const AdminUsersPage = () => {
                 </div>
 
                 {/* Subscription Info */}
-                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Crown className="w-5 h-5 text-indigo-600" />
+                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-indigo-600" />
                     Subscription
                   </h3>
                   {userDetails?.data?.subscription || selectedUser.subscription ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <p className={`text-lg font-bold ${getSubscriptionBadge((userDetails?.data?.subscription || selectedUser.subscription)?.plan || '').includes('purple') ? 'text-purple-700' : (userDetails?.data?.subscription || selectedUser.subscription)?.plan === 'ENTERPRISE' ? 'text-amber-700' : (userDetails?.data?.subscription || selectedUser.subscription)?.plan === 'VIP_ACCESS' ? 'text-pink-700' : 'text-blue-700'}`}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-2 bg-white rounded-lg">
+                        <p className={`text-sm font-bold ${getSubscriptionBadge((userDetails?.data?.subscription || selectedUser.subscription)?.plan || '').includes('purple') ? 'text-purple-700' : (userDetails?.data?.subscription || selectedUser.subscription)?.plan === 'ENTERPRISE' ? 'text-amber-700' : (userDetails?.data?.subscription || selectedUser.subscription)?.plan === 'VIP_ACCESS' ? 'text-pink-700' : 'text-blue-700'}`}>
                           {formatPlanName((userDetails?.data?.subscription || selectedUser.subscription)?.plan || '')}
                         </p>
                         <p className="text-xs text-gray-500">Plan</p>
                       </div>
-                      <div className="text-center p-3 bg-white rounded-lg">
+                      <div className="text-center p-2 bg-white rounded-lg">
                         <div className="flex items-center justify-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${getSubscriptionStatusColor((userDetails?.data?.subscription || selectedUser.subscription)?.status || '')}`} />
-                          <p className="text-lg font-bold text-gray-900">
+                          <p className="text-sm font-bold text-gray-900">
                             {((userDetails?.data?.subscription || selectedUser.subscription)?.status || '').charAt(0) + ((userDetails?.data?.subscription || selectedUser.subscription)?.status || '').slice(1).toLowerCase().replace(/_/g, ' ')}
                           </p>
                         </div>
@@ -1218,7 +1218,7 @@ const AdminUsersPage = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center p-4 bg-white rounded-lg">
+                    <div className="text-center p-2 bg-white rounded-lg">
                       <p className="text-gray-400 text-sm">No active subscription</p>
                     </div>
                   )}
@@ -1226,26 +1226,26 @@ const AdminUsersPage = () => {
 
                 {/* Activity Stats */}
                 {selectedUser._count && (
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-indigo-600" />
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-indigo-600" />
                       Activity Statistics
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{selectedUser._count.listings}</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="text-center p-2 bg-white rounded-lg">
+                        <p className="text-lg font-bold text-gray-900">{selectedUser._count.listings}</p>
                         <p className="text-xs text-gray-500">Listings</p>
                       </div>
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{selectedUser._count.sentOffers}</p>
+                      <div className="text-center p-2 bg-white rounded-lg">
+                        <p className="text-lg font-bold text-gray-900">{selectedUser._count.sentOffers}</p>
                         <p className="text-xs text-gray-500">Offers Sent</p>
                       </div>
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{selectedUser._count.buyerTransactions}</p>
+                      <div className="text-center p-2 bg-white rounded-lg">
+                        <p className="text-lg font-bold text-gray-900">{selectedUser._count.buyerTransactions}</p>
                         <p className="text-xs text-gray-500">Purchases</p>
                       </div>
-                      <div className="text-center p-3 bg-white rounded-lg">
-                        <p className="text-2xl font-bold text-gray-900">{selectedUser._count.sellerTransactions}</p>
+                      <div className="text-center p-2 bg-white rounded-lg">
+                        <p className="text-lg font-bold text-gray-900">{selectedUser._count.sellerTransactions}</p>
                         <p className="text-xs text-gray-500">Sales</p>
                       </div>
                     </div>
@@ -1253,22 +1253,22 @@ const AdminUsersPage = () => {
                 )}
 
                 {/* Credits Management */}
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Coins className="w-5 h-5 text-amber-600" />
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-600" />
                     Credits Management
                   </h3>
 
                   {/* Current Credits Display */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="text-center p-3 bg-white rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="text-center p-2 bg-white rounded-lg">
+                      <p className="text-lg font-bold text-gray-900">
                         {userDetails?.data?.totalCredits ?? userDetails?.totalCredits ?? 0}
                       </p>
                       <p className="text-xs text-gray-500">Total Credits</p>
                     </div>
-                    <div className="text-center p-3 bg-white rounded-lg">
-                      <p className="text-2xl font-bold text-emerald-600">
+                    <div className="text-center p-2 bg-white rounded-lg">
+                      <p className="text-lg font-bold text-emerald-600">
                         {(userDetails?.data?.totalCredits ?? userDetails?.totalCredits ?? 0) -
                          (userDetails?.data?.usedCredits ?? userDetails?.usedCredits ?? 0)}
                       </p>
@@ -1277,7 +1277,7 @@ const AdminUsersPage = () => {
                   </div>
 
                   {/* Quick Adjust */}
-                  <div className="bg-white rounded-lg p-4 border border-amber-100">
+                  <div className="bg-white rounded-lg p-3 border border-amber-100">
                     <div className="text-xs font-medium text-gray-500 mb-2">Quick Adjust Credits</div>
                     <div className="flex gap-2 mb-2">
                       <input
@@ -1332,7 +1332,7 @@ const AdminUsersPage = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
                   <Button
                     variant="outline"
                     onClick={() => {
