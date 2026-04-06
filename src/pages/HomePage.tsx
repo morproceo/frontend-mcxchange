@@ -25,6 +25,13 @@ import {
   Loader2,
   Hash,
   XCircle,
+  Activity,
+  Gauge,
+  Radar,
+  FileBarChart,
+  BarChart3,
+  Truck,
+  Umbrella,
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -246,60 +253,6 @@ const HomePage = () => {
               </Link>
             </div>
 
-            {/* Carrier Search Widget */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="max-w-lg mx-auto mt-8 mb-6"
-            >
-              <div className="rounded-2xl bg-white/[0.06] border border-white/[0.12] backdrop-blur-sm p-4">
-                <p className="text-xs text-gray-400 font-medium mb-3 flex items-center gap-1.5">
-                  <Search className="w-3.5 h-3.5" />
-                  Free Carrier Intelligence Preview
-                </p>
-                {/* MC / DOT Toggle */}
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    onClick={() => { setSearchType('mc'); setSearchError(null) }}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${searchType === 'mc' ? 'bg-indigo-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
-                  >MC Number</button>
-                  <button
-                    onClick={() => { setSearchType('dot'); setSearchError(null) }}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${searchType === 'dot' ? 'bg-indigo-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
-                  >DOT Number</button>
-                </div>
-                {/* Search Input */}
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <input
-                      type="text"
-                      value={searchValue}
-                      onChange={(e) => { setSearchValue(e.target.value); setSearchError(null) }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCarrierSearch()}
-                      placeholder={searchType === 'mc' ? 'Enter MC number (e.g. 123456)' : 'Enter DOT number (e.g. 1234567)'}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white/[0.08] border border-white/[0.15] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400/50"
-                    />
-                  </div>
-                  <button
-                    onClick={handleCarrierSearch}
-                    disabled={searchLoading}
-                    className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                    Search
-                  </button>
-                </div>
-                {searchError && (
-                  <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
-                    <XCircle className="w-3.5 h-3.5" />
-                    {searchError}
-                  </p>
-                )}
-              </div>
-            </motion.div>
-
             <button
               onClick={() => setIsConsultationOpen(true)}
               className="text-sm text-gray-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
@@ -324,6 +277,194 @@ const HomePage = () => {
               </div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ─── Carrier Pulse — Search + Value Proposition ────── */}
+      <section className="relative py-16 bg-gradient-to-b from-[#1e293b] to-[#0f172a] overflow-hidden">
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-5">
+              <Activity className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-xs font-semibold text-cyan-300 uppercase tracking-wider">Carrier Intelligence</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Stop Guessing. Start <span className="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">Knowing.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-base sm:text-lg">
+              FMCSA gives you raw data. CarrierPulse tells you what it means — health scores, risk detection, safety grades, and actionable recommendations all in one place.
+            </p>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+            {/* Left: Search + What You Get */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              {/* Search Card */}
+              <div className="rounded-2xl bg-white/[0.05] border border-white/[0.1] backdrop-blur-sm p-6 mb-6">
+                <h3 className="text-lg font-bold text-white mb-1">Search Any Carrier — Free Preview</h3>
+                <p className="text-sm text-gray-400 mb-4">Enter an MC or DOT number to see what CarrierPulse reveals.</p>
+
+                {/* MC / DOT Toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => { setSearchType('mc'); setSearchError(null) }}
+                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${searchType === 'mc' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'bg-white/10 text-gray-400 hover:text-white hover:bg-white/15'}`}
+                  >MC Number</button>
+                  <button
+                    onClick={() => { setSearchType('dot'); setSearchError(null) }}
+                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${searchType === 'dot' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'bg-white/10 text-gray-400 hover:text-white hover:bg-white/15'}`}
+                  >DOT Number</button>
+                </div>
+
+                {/* Search Input */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input
+                      type="text"
+                      value={searchValue}
+                      onChange={(e) => { setSearchValue(e.target.value); setSearchError(null) }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCarrierSearch()}
+                      placeholder={searchType === 'mc' ? 'Enter MC number (e.g. 123456)' : 'Enter DOT number (e.g. 1234567)'}
+                      className="w-full pl-9 pr-3 py-3 rounded-xl bg-white/[0.08] border border-white/[0.15] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400/50 transition-all"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCarrierSearch}
+                    disabled={searchLoading}
+                    className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-600/25"
+                  >
+                    {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    Search
+                  </button>
+                </div>
+                {searchError && (
+                  <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" />
+                    {searchError}
+                  </p>
+                )}
+              </div>
+
+              {/* What CarrierPulse gives you */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/[0.08] p-5">
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  What you get with CarrierPulse
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { icon: Gauge, label: 'Health Score (0-100)', desc: 'Weighted score across safety, compliance, insurance, fleet & history' },
+                    { icon: Radar, label: 'Chameleon Detection', desc: 'Catch carriers hiding behind new MC numbers after shutdowns' },
+                    { icon: FileBarChart, label: 'Safety Improvement Report', desc: 'Prioritized action plan with grades A+ to D' },
+                    { icon: BarChart3, label: 'Industry Benchmarks', desc: 'Compare OOS rates, clean inspection rates vs national averages' },
+                    { icon: TrendingUp, label: 'Violation Trends', desc: '24-month trends showing if safety is improving or worsening' },
+                    { icon: Umbrella, label: 'Insurance Gap Analysis', desc: 'Coverage gaps, pending cancellations & renewal timeline' },
+                  ].map((feature) => (
+                    <div key={feature.label} className="flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                        <feature.icon className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-white">{feature.label}</p>
+                        <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{feature.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right: FMCSA vs CarrierPulse Comparison */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="rounded-2xl bg-white/[0.05] border border-white/[0.1] backdrop-blur-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-white/[0.08]">
+                  <h3 className="text-lg font-bold text-white">FMCSA Free Tools vs CarrierPulse</h3>
+                  <p className="text-xs text-gray-400 mt-1">See what you're missing with free FMCSA data alone</p>
+                </div>
+
+                <div className="divide-y divide-white/[0.06]">
+                  {/* Header Row */}
+                  <div className="grid grid-cols-[1fr,80px,80px] px-6 py-2.5 bg-white/[0.03]">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Feature</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">FMCSA</span>
+                    <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider text-center">Pulse</span>
+                  </div>
+
+                  {[
+                    { feature: 'MC/DOT Lookup & Authority Status', fmcsa: true, pulse: true },
+                    { feature: 'Raw BASIC Safety Scores', fmcsa: true, pulse: true },
+                    { feature: 'Inspection & Crash Records', fmcsa: true, pulse: true },
+                    { feature: 'Insurance Filing Status', fmcsa: true, pulse: true },
+                    { feature: 'Carrier Health Score (0-100)', fmcsa: false, pulse: true },
+                    { feature: 'Industry Benchmarks & Comparison', fmcsa: false, pulse: true },
+                    { feature: 'Violation Trend Analysis (24 mo)', fmcsa: false, pulse: true },
+                    { feature: 'Insurance Gap Detection', fmcsa: false, pulse: true },
+                    { feature: 'Coverage Amount Analysis', fmcsa: false, pulse: true },
+                    { feature: 'Fleet Age & VIN Inspection Data', fmcsa: false, pulse: true },
+                    { feature: 'Chameleon Carrier Detection', fmcsa: false, pulse: true, bundle: true },
+                    { feature: 'Safety Improvement Report', fmcsa: false, pulse: true, bundle: true },
+                    { feature: 'Prioritized Action Plan (A+ to D)', fmcsa: false, pulse: true, bundle: true },
+                  ].map((row, i) => (
+                    <div key={i} className={`grid grid-cols-[1fr,80px,80px] px-6 py-2.5 items-center ${!row.fmcsa ? 'bg-indigo-500/[0.03]' : ''}`}>
+                      <span className="text-sm text-gray-300">
+                        {row.feature}
+                        {row.bundle && <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-bold rounded bg-cyan-500/15 text-cyan-400 uppercase">Bundle</span>}
+                      </span>
+                      <span className="text-center">
+                        {row.fmcsa
+                          ? <CheckCircle className="w-4 h-4 text-gray-500 mx-auto" />
+                          : <XCircle className="w-4 h-4 text-gray-700 mx-auto" />
+                        }
+                      </span>
+                      <span className="text-center">
+                        <CheckCircle className="w-4 h-4 text-cyan-400 mx-auto" />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom CTA */}
+                <div className="px-6 py-5 bg-gradient-to-r from-indigo-600/10 to-cyan-600/10 border-t border-white/[0.08]">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Pulse Bundle</p>
+                      <p className="text-xs text-gray-400">Unlimited lookups + all tools — <span className="text-cyan-400 font-semibold">$14.99/mo</span></p>
+                    </div>
+                    <Link to="/pricing">
+                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/25">
+                        View Plans
+                        <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
