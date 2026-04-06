@@ -90,6 +90,13 @@ const ServicesPage = () => {
 
   const services = [
     {
+      icon: Users,
+      title: 'Driver Recruiting',
+      description: 'We recruit company drivers, owner operators for Amazon Relay, and lease drivers. Our recruiters are trained by the owner and understand the industry inside out.',
+      link: '/services/recruiting',
+      features: ['Company drivers, O/Os & lease drivers', '7-day average time to hire', 'Industry-trained recruiters']
+    },
+    {
       icon: Fuel,
       title: 'Fuel Program',
       description: 'Maximize your savings with our exclusive fuel discount network. Access discounts at all major truck stops nationwide.',
@@ -102,13 +109,6 @@ const ServicesPage = () => {
       description: 'Stay compliant and protect your business with comprehensive DOT safety compliance and risk management solutions.',
       link: '/services/safety',
       features: ['DOT compliance', 'Driver qualification files', 'Mock audits']
-    },
-    {
-      icon: Users,
-      title: 'Recruiting Services',
-      description: 'Find qualified drivers faster with our full-service recruiting solutions designed for motor carriers.',
-      link: '/services/recruiting',
-      features: ['Driver sourcing', 'Screening & verification', 'Onboarding support']
     },
     {
       icon: Truck,

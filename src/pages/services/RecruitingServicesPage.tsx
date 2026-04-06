@@ -4,17 +4,18 @@ import api from '../../services/api'
 import {
   Users,
   CheckCircle,
-  Search,
-  FileCheck,
-  UserCheck,
   Phone,
   Mail,
   ArrowRight,
-  Shield,
   Clock,
-  Target,
   Award,
-  Briefcase
+  Briefcase,
+  DollarSign,
+  Megaphone,
+  Zap,
+  Target,
+  TrendingUp,
+  Truck
 } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -50,56 +51,26 @@ const RecruitingServicesPage = () => {
     }
   }
 
-  const services = [
-    {
-      icon: Search,
-      title: 'Driver Sourcing',
-      description: 'We actively source qualified CDL drivers through job boards, social media, referral networks, and our proprietary database of pre-screened candidates.',
-      features: ['Multi-channel recruitment', 'Targeted advertising', 'Database of 50,000+ drivers']
-    },
-    {
-      icon: FileCheck,
-      title: 'Screening & Verification',
-      description: 'Comprehensive background checks, MVR reviews, employment verification, and drug screening to ensure you hire safe, qualified drivers.',
-      features: ['Background checks', 'MVR verification', 'Drug testing coordination']
-    },
-    {
-      icon: UserCheck,
-      title: 'Onboarding Support',
-      description: 'We handle the paperwork and orientation process so new drivers can get on the road faster while staying compliant.',
-      features: ['DQ file setup', 'Orientation coordination', 'Equipment training']
-    },
-    {
-      icon: Shield,
-      title: 'Retention Programs',
-      description: 'Reduce turnover with our driver retention strategies including satisfaction surveys, recognition programs, and exit interviews.',
-      features: ['Driver satisfaction surveys', 'Recognition programs', 'Exit interviews']
-    }
+  const pricing = [
+    { type: 'Company Driver', price: '$750', desc: 'Per hire — CDL company drivers ready to roll' },
+    { type: 'Lease / Lease-to-Purchase', price: '$800', desc: 'Per hire — drivers looking for lease or lease-to-purchase programs' },
+    { type: 'Owner Operator', price: '$1,000', desc: 'Per hire — independent owner operators including Amazon Relay' },
   ]
 
-  const driverTypes = [
-    'OTR Drivers',
-    'Regional Drivers',
-    'Local Drivers',
-    'Owner Operators',
+  const whatWeRecruit = [
+    'Company Drivers (OTR, Regional, Local)',
+    'Owner Operators for Amazon Relay',
+    'Owner Operators for Dry Van, Reefer, Flatbed',
+    'Lease & Lease-to-Purchase Drivers',
     'Team Drivers',
-    'Hazmat Drivers',
-    'Tanker Drivers',
-    'Flatbed Drivers'
-  ]
-
-  const stats = [
-    { value: '5,000+', label: 'Drivers placed' },
-    { value: '14', label: 'Day avg. time to hire' },
-    { value: '92%', label: '90-day retention rate' },
-    { value: '50K+', label: 'Driver database' }
+    'Hazmat & Tanker Endorsed Drivers',
   ]
 
   const process = [
-    { step: '01', title: 'Consultation', desc: 'We learn about your company, lanes, pay, and ideal driver profile.' },
-    { step: '02', title: 'Sourcing', desc: 'We actively recruit from multiple channels to find qualified candidates.' },
-    { step: '03', title: 'Screening', desc: 'Candidates are pre-screened, verified, and presented to you.' },
-    { step: '04', title: 'Onboarding', desc: 'We assist with paperwork, orientation, and getting drivers road-ready.' }
+    { step: '01', title: 'Consultation', desc: 'We learn your company, lanes, pay, equipment, and what kind of driver fits your operation.' },
+    { step: '02', title: 'Targeted Advertising', desc: 'We run ads and campaigns specifically for your carrier. No generic blasts — every ad is built around your company and what you offer.' },
+    { step: '03', title: 'Pre-Qualifying & Screening', desc: 'Our recruiters talk to every driver, verify their qualifications, and only send you candidates that actually match what you need.' },
+    { step: '04', title: 'Fast Placement', desc: 'We present qualified, ready-to-go drivers. With the right process on your end, we can have drivers hired within 7 days.' },
   ]
 
   return (
@@ -118,12 +89,12 @@ const RecruitingServicesPage = () => {
             </div>
 
             <h1 className="text-5xl lg:text-7xl font-bold mb-6 text-gray-900">
-              Recruiting Services
+              Driver Recruiting
             </h1>
 
             <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Find qualified CDL drivers faster with our full-service recruiting solutions.
-              We source, screen, and onboard so you can focus on growing your business.
+              We hire company drivers, owner operators for Amazon Relay, and lease drivers.
+              Our recruiters are fully trained by the owner and understand the trucking industry from the inside.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -147,7 +118,12 @@ const RecruitingServicesPage = () => {
       <section className="py-16 border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
+            {[
+              { value: '7', label: 'Day avg. time to hire' },
+              { value: '90%+', label: 'Retention rate' },
+              { value: '$750', label: 'Starting per hire' },
+              { value: '100%', label: 'Trained recruiters' },
+            ].map((stat, index) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
@@ -164,7 +140,7 @@ const RecruitingServicesPage = () => {
         </div>
       </section>
 
-      {/* Services Section */}
+      {/* What Makes Us Different */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0 }}
@@ -172,16 +148,32 @@ const RecruitingServicesPage = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold mb-4 text-gray-900">Full-Service Driver Recruiting</h2>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
-            We handle every step of the recruiting process so you can focus on running your business.
+          <h2 className="text-4xl font-bold mb-4 text-gray-900">We Don't Just Send You Anyone</h2>
+          <p className="text-xl text-gray-500 max-w-3xl mx-auto">
+            Our recruiters are completely trained by the owner. They understand the current market, compliance requirements, and what it takes to actually get a driver hired and in a truck.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {services.map((service, index) => (
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            {
+              icon: Award,
+              title: 'Industry-Trained Recruiters',
+              desc: 'Our team doesn\'t learn recruiting from a textbook. They\'re trained by the owner who has been in the trucking industry and understands how carriers operate, what drivers want, and how to match the two. They know the difference between OTR and regional, they understand Amazon Relay requirements, and they know what compliance means.'
+            },
+            {
+              icon: Zap,
+              title: 'Speed Wins in This Market',
+              desc: 'Drivers apply to a handful of companies at once. The carrier that moves fast gets the driver. If your hiring process takes 2-3 days just to tell a driver if he\'s approved — you\'ve already lost him. We work fast and efficient, and we look for carriers who operate the same way. Get the driver in the truck first.'
+            },
+            {
+              icon: Megaphone,
+              title: 'Dedicated Advertising',
+              desc: 'We run targeted advertising campaigns specifically for your carrier. Every ad highlights your company, your pay, your lanes, and what makes you a good place to drive for. This isn\'t mass blasting — it\'s strategic recruitment marketing that actually works.'
+            },
+          ].map((item, index) => (
             <motion.div
-              key={service.title}
+              key={item.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -190,21 +182,89 @@ const RecruitingServicesPage = () => {
               <Card hover className="h-full">
                 <div className="mb-6">
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-                    <service.icon className="w-7 h-7 text-gray-700" />
+                    <item.icon className="w-7 h-7 text-gray-700" />
                   </div>
                 </div>
+                <h3 className="text-2xl font-bold mb-3 text-gray-900">{item.title}</h3>
+                <p className="text-gray-500 leading-relaxed">{item.desc}</p>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
-                <h3 className="text-2xl font-bold mb-3 text-gray-900">{service.title}</h3>
-                <p className="text-gray-500 mb-6">{service.description}</p>
+      {/* The Reality Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-4xl font-bold mb-6 text-gray-900">The Current Market Reality</h2>
+              <div className="space-y-4 text-gray-600 text-lg leading-relaxed">
+                <p>
+                  The trucking market right now is simple: the carrier who moves fast, hires fast. Drivers are applying to multiple companies at the same time. They're going to pick the one that responds first, approves them quickly, and gets them working.
+                </p>
+                <p>
+                  If your process takes days to tell a driver whether he's approved or not — he's already signed with someone else. Our recruiters understand this. They pre-qualify candidates, present them ready to go, and work with carriers who have a fast check and fast hiring process.
+                </p>
+                <p>
+                  We can find you as many drivers as you need — company drivers, owner operators, Amazon Relay drivers — as long as you're ready to move when we bring them to you. That's how this works. Put the driver first, move fast, and your trucks stay full.
+                </p>
+              </div>
+            </motion.div>
 
-                <ul className="space-y-2">
-                  {service.features.map((feature) => (
-                    <li key={feature} className="flex items-center text-sm text-gray-600">
-                      <CheckCircle className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-0">
+                <div className="text-center py-8">
+                  <Target className="w-16 h-16 text-white mx-auto mb-6" />
+                  <h3 className="text-3xl font-bold text-white mb-2">Fast & Efficient Hiring</h3>
+                  <p className="text-gray-300 mb-6">We work fast. We expect our carrier partners to do the same.</p>
+                  <div className="text-5xl font-bold text-emerald-400 mb-2">7 Days</div>
+                  <p className="text-gray-400">Average time from job order to hired driver</p>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl font-bold mb-4 text-gray-900">Transparent Pricing</h2>
+          <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+            Simple per-hire pricing. No monthly fees, no hidden costs. You pay when we deliver a hired driver.
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          {pricing.map((item, index) => (
+            <motion.div
+              key={item.type}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card hover className="h-full text-center">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <DollarSign className="w-7 h-7 text-gray-700" />
+                </div>
+                <h3 className="text-lg font-bold mb-2 text-gray-900">{item.type}</h3>
+                <div className="text-4xl font-bold text-gray-900 mb-2">{item.price}</div>
+                <p className="text-sm text-gray-500">{item.desc}</p>
               </Card>
             </motion.div>
           ))}
@@ -220,13 +280,13 @@ const RecruitingServicesPage = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-4xl font-bold mb-6 text-gray-900">We Recruit All Driver Types</h2>
+              <h2 className="text-4xl font-bold mb-6 text-gray-900">Who We Recruit</h2>
               <p className="text-xl text-gray-500 mb-8">
-                Whether you need OTR drivers, local drivers, owner operators, or specialized drivers, we have the expertise and network to find them.
+                We specialize in recruiting company drivers, owner operators, and lease drivers across multiple freight types. If you need drivers for Amazon Relay, OTR, regional, or local work — we know how to find them.
               </p>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                {driverTypes.map((type) => (
+              <div className="grid sm:grid-cols-1 gap-4">
+                {whatWeRecruit.map((type) => (
                   <div key={type} className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                     <span className="text-gray-700">{type}</span>
@@ -240,14 +300,16 @@ const RecruitingServicesPage = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-0">
-                <div className="text-center py-8">
-                  <Target className="w-16 h-16 text-white mx-auto mb-6" />
-                  <h3 className="text-3xl font-bold text-white mb-2">Targeted Recruiting</h3>
-                  <p className="text-gray-300 mb-6">We don't just post ads. We actively hunt for the drivers you need.</p>
-                  <div className="text-5xl font-bold text-emerald-400 mb-2">14 Days</div>
-                  <p className="text-gray-400">Average time from job order to qualified candidate</p>
+              <Card hover className="h-full">
+                <div className="mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+                    <Truck className="w-7 h-7 text-gray-700" />
+                  </div>
                 </div>
+                <h3 className="text-2xl font-bold mb-3 text-gray-900">Amazon Relay Owner Operators</h3>
+                <p className="text-gray-500 leading-relaxed">
+                  We understand the Amazon Relay program and what it takes to recruit owner operators who are compliant and ready to haul. Our recruiters know the requirements, the process, and how to find drivers who are a good fit for relay work. If your carrier is set up on Amazon and you need O/Os, we can deliver.
+                </p>
               </Card>
             </motion.div>
           </div>
@@ -263,7 +325,7 @@ const RecruitingServicesPage = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl font-bold mb-4 text-gray-900">Our Recruiting Process</h2>
-          <p className="text-xl text-gray-500">From job order to driver onboarding</p>
+          <p className="text-xl text-gray-500">From consultation to hired driver — fast and efficient</p>
         </motion.div>
 
         <div className="grid md:grid-cols-4 gap-8">
@@ -285,7 +347,7 @@ const RecruitingServicesPage = () => {
         </div>
       </section>
 
-      {/* Why Choose Us */}
+      {/* What We Expect From Carriers */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -294,17 +356,17 @@ const RecruitingServicesPage = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold mb-4 text-gray-900">Why Carriers Choose Us</h2>
-            <p className="text-xl text-gray-500 max-w-2xl mx-auto">
-              We're not just recruiters. We're your partner in building a world-class driver team.
+            <h2 className="text-4xl font-bold mb-4 text-gray-900">What We Expect From Our Carrier Partners</h2>
+            <p className="text-xl text-gray-500 max-w-3xl mx-auto">
+              We deliver qualified drivers. But recruiting is a two-way street — carriers who hire fast, keep their trucks full.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: Clock, title: 'Fast Results', desc: 'Start receiving qualified candidates within days, not weeks. Our average time to hire is just 14 days.' },
-              { icon: Award, title: 'Quality Drivers', desc: 'Every candidate is pre-screened and verified. We only present drivers who meet your specific criteria.' },
-              { icon: Briefcase, title: 'Industry Expertise', desc: 'Our recruiters specialize in trucking. We understand your challenges and speak your language.' }
+              { icon: Zap, title: 'Fast Background Checks', desc: 'Run your checks quickly. A driver who waits 3-5 days for an answer is already talking to another carrier. Same-day or next-day turnaround is what wins.' },
+              { icon: Clock, title: 'Quick Decision Making', desc: 'When we present a qualified driver, be ready to make a decision. Tell the driver yes or no fast. In this market, hesitation means losing the hire.' },
+              { icon: TrendingUp, title: 'Competitive Offering', desc: 'Have competitive pay, clear expectations, and a straightforward onboarding process. Drivers pick the company that makes it easy to start working.' },
             ].map((item, index) => (
               <motion.div
                 key={item.title}
@@ -337,7 +399,7 @@ const RecruitingServicesPage = () => {
           >
             <h2 className="text-4xl font-bold mb-4 text-gray-900">Ready to Hire Drivers?</h2>
             <p className="text-xl text-gray-500">
-              Tell us about your driver needs and we'll create a customized recruiting plan.
+              Tell us what you need and we'll put together a recruiting plan for your carrier.
             </p>
           </motion.div>
 
@@ -406,10 +468,10 @@ const RecruitingServicesPage = () => {
                     onChange={(e) => setFormData({ ...formData, driverType: e.target.value })}
                     options={[
                       { value: '', label: 'Select driver type' },
-                      { value: 'otr', label: 'OTR Drivers' },
-                      { value: 'regional', label: 'Regional Drivers' },
-                      { value: 'local', label: 'Local Drivers' },
+                      { value: 'company', label: 'Company Drivers' },
                       { value: 'owner-op', label: 'Owner Operators' },
+                      { value: 'owner-op-amazon', label: 'Owner Operators (Amazon Relay)' },
+                      { value: 'lease', label: 'Lease / Lease-to-Purchase Drivers' },
                       { value: 'team', label: 'Team Drivers' },
                       { value: 'specialized', label: 'Specialized (Hazmat, Tanker, etc.)' }
                     ]}
@@ -418,15 +480,21 @@ const RecruitingServicesPage = () => {
 
                 <Textarea
                   label="Additional Details"
-                  placeholder="Tell us about your lanes, pay structure, home time, and ideal driver profile..."
+                  placeholder="Tell us about your lanes, pay structure, home time, and what kind of drivers you're looking for..."
                   rows={4}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 />
 
-                <Button type="submit" fullWidth size="lg">
-                  Get a Recruiting Plan
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                {error && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" fullWidth size="lg" disabled={loading}>
+                  {loading ? 'Submitting...' : 'Get a Recruiting Plan'}
+                  {!loading && <ArrowRight className="w-5 h-5 ml-2" />}
                 </Button>
               </form>
             )}
@@ -438,9 +506,9 @@ const RecruitingServicesPage = () => {
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Card className="bg-gradient-to-r from-gray-900 to-gray-800 border-0">
           <div className="text-center py-12">
-            <h2 className="text-4xl font-bold mb-4 text-white">Stop Struggling to Find Drivers</h2>
+            <h2 className="text-4xl font-bold mb-4 text-white">Ready to Fill Your Trucks?</h2>
             <p className="text-xl text-gray-300 mb-8">
-              Let our expert recruiters fill your trucks while you focus on your business.
+              We work fast, we work smart, and we deliver drivers who are ready to go. Let's talk.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
