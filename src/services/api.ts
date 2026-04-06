@@ -450,10 +450,10 @@ class ApiService {
     return this.request<any>(`/admin/listings${query ? `?${query}` : ''}`);
   }
 
-  async approveListing(listingId: string, notes?: string, listingPrice?: number) {
+  async approveListing(listingId: string, data?: { notes?: string; listingPrice?: number; freeToUnlock?: boolean }) {
     return this.request<any>(`/admin/listings/${listingId}/approve`, {
       method: 'POST',
-      body: JSON.stringify({ notes, listingPrice }),
+      body: JSON.stringify(data),
     });
   }
 
@@ -860,6 +860,10 @@ class ApiService {
 
   async getUnreadMessageCount() {
     return this.request<{ success: boolean; data: { count: number } }>('/messages/unread-count');
+  }
+
+  async getNavBadgeCounts() {
+    return this.request<{ success: boolean; data: { unreadMessages: number; newTransactions: number; activeClosings: number } }>('/notifications/nav-counts');
   }
 
   async sendInquiryToAdmin(listingId: string | undefined, content: string, contactPhone?: string) {

@@ -79,6 +79,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [buyerSubscriptionLoading, setBuyerSubscriptionLoading] = useState(false)
   const [hasStandaloneCarrierPulse, setHasStandaloneCarrierPulse] = useState(false)
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const [newTransactionCount, setNewTransactionCount] = useState(0)
+  const [activeClosingsCount, setActiveClosingsCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -142,25 +144,31 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
     }
   }, [user?.role])
 
-  // Fetch unread message count for admin (and refresh every 30s)
+  // Fetch nav badge counts (messages, transactions, closings) and refresh every 30s
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    if (!user?.role) {
       setUnreadMessageCount(0)
+      setNewTransactionCount(0)
+      setActiveClosingsCount(0)
       return
     }
 
     let isActive = true
-    const fetchUnread = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await api.getUnreadMessageCount()
-        if (isActive) setUnreadMessageCount(res.data?.count || 0)
+        const res = await api.getNavBadgeCounts()
+        if (isActive && res.data) {
+          setUnreadMessageCount(res.data.unreadMessages || 0)
+          setNewTransactionCount(res.data.newTransactions || 0)
+          setActiveClosingsCount(res.data.activeClosings || 0)
+        }
       } catch {
         // ignore
       }
     }
 
-    fetchUnread()
-    const interval = setInterval(fetchUnread, 30000)
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 30000)
 
     return () => {
       isActive = false
@@ -189,9 +197,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Package, label: 'My Listings', path: '/seller/listings' },
           { icon: Plus, label: 'Create Listing', path: '/seller/carrier-pulse' },
           { icon: MessageSquare, label: 'Offers', path: '/seller/offers' },
-          { icon: Handshake, label: 'Transactions', path: '/seller/transactions' },
+          { icon: Handshake, label: 'Transactions', path: '/seller/transactions', ...(newTransactionCount > 0 ? { badge: String(newTransactionCount), badgeColor: 'bg-red-500' } : {}) },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
-          { icon: MessageSquare, label: 'Messages', path: '/seller/messages' },
+          { icon: MessageSquare, label: 'Messages', path: '/seller/messages', ...(unreadMessageCount > 0 ? { badge: String(unreadMessageCount), badgeColor: 'bg-red-500' } : {}) },
           {
             label: 'Services',
             icon: Briefcase,
@@ -212,9 +220,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             : []),
           { icon: Unlock, label: 'Unlocked MCs', path: '/buyer/unlocked' },
           { icon: ShoppingCart, label: 'My Offers', path: '/buyer/offers' },
-          { icon: Handshake, label: 'Transactions', path: '/buyer/transactions' },
+          { icon: Handshake, label: 'Transactions', path: '/buyer/transactions', ...(newTransactionCount > 0 ? { badge: String(newTransactionCount), badgeColor: 'bg-red-500' } : {}) },
           { icon: Package, label: 'Purchases', path: '/buyer/purchases' },
-          { icon: MessageSquare, label: 'Messages', path: '/buyer/messages' },
+          { icon: MessageSquare, label: 'Messages', path: '/buyer/messages', ...(unreadMessageCount > 0 ? { badge: String(unreadMessageCount), badgeColor: 'bg-red-500' } : {}) },
           { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
           ...(hasPremiumAccess && !buyerSubscriptionLoading
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
@@ -255,8 +263,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             items: [
               { icon: MessageSquare, label: 'Inquiries', path: '/admin/messages', ...(unreadMessageCount > 0 ? { badge: String(unreadMessageCount), badgeColor: 'bg-red-500' } : {}) },
               { icon: Send, label: 'Offers', path: '/admin/offers' },
-              { icon: Scale, label: 'Active Closings', path: '/admin/active-closings' },
-              { icon: Handshake, label: 'Transactions', path: '/admin/transactions' },
+              { icon: Scale, label: 'Active Closings', path: '/admin/active-closings', ...(activeClosingsCount > 0 ? { badge: String(activeClosingsCount), badgeColor: 'bg-red-500' } : {}) },
+              { icon: Handshake, label: 'Transactions', path: '/admin/transactions', ...(newTransactionCount > 0 ? { badge: String(newTransactionCount), badgeColor: 'bg-red-500' } : {}) },
             ]
           },
           // Finance category
