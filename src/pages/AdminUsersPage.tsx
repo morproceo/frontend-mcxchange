@@ -771,6 +771,18 @@ const AdminUsersPage = () => {
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openUserDetail(user)
+                      setTimeout(() => handleEditProfile(), 100)
+                    }}
+                    title="Edit User"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </Button>
                   <div className="relative">
                     <Button
                       variant="ghost"
