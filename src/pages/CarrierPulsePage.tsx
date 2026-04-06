@@ -2607,104 +2607,214 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
   // SEARCH VIEW — no DOT entered
   // ==========================================
   if (!activeDot) {
+    const fmcsaComparison = [
+      { feature: 'MC/DOT Lookup & Authority Status', fmcsa: true, pulse: true },
+      { feature: 'Raw BASIC Safety Scores', fmcsa: true, pulse: true },
+      { feature: 'Inspection & Crash Records', fmcsa: true, pulse: true },
+      { feature: 'Insurance Filing Status', fmcsa: true, pulse: true },
+      { feature: 'Carrier Health Score (0-100)', fmcsa: false, pulse: true },
+      { feature: 'Industry Benchmarks & Comparison', fmcsa: false, pulse: true },
+      { feature: 'Violation Trend Analysis (24 mo)', fmcsa: false, pulse: true },
+      { feature: 'Insurance Gap Detection & Coverage Analysis', fmcsa: false, pulse: true },
+      { feature: 'Fleet Age & VIN Inspection Data', fmcsa: false, pulse: true },
+      { feature: 'Chameleon Carrier Detection', fmcsa: false, pulse: true, bundle: true },
+      { feature: 'Safety Improvement Report (A+ to D)', fmcsa: false, pulse: true, bundle: true },
+      { feature: 'Prioritized Action Plan', fmcsa: false, pulse: true, bundle: true },
+    ]
+
+    const pulseFeatures = [
+      { icon: Activity, label: 'Health Score (0-100)', desc: 'Weighted composite score across safety, compliance, insurance, fleet & history — one number to assess any carrier' },
+      { icon: ShieldAlert, label: 'Chameleon Detection', desc: 'Catch carriers hiding behind new MC numbers after shutdowns — analyzes shared EINs, officers, addresses & VINs' },
+      { icon: Zap, label: 'Safety Improvement Report', desc: 'Prioritized action plan with grades A+ to D — know exactly what a carrier needs to fix and in what order' },
+      { icon: BarChart3, label: 'Industry Benchmarks', desc: 'Compare OOS rates, clean inspection rates, and crash data vs national averages — instantly see who\'s above or below' },
+      { icon: TrendingUp, label: 'Violation Trends', desc: '24-month trend analysis showing if safety is improving, stable, or worsening — don\'t just see a snapshot, see the direction' },
+      { icon: Umbrella, label: 'Insurance Gap Analysis', desc: 'Find coverage gaps, pending cancellations & renewal timelines — know if a carrier\'s insurance is at risk before you do business' },
+    ]
+
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg text-center">
-          {/* Purchase success banner */}
-          {purchaseSuccess && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-              className="mb-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3"
-            >
-              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-800">CarrierPulse activated!</p>
-                <p className="text-xs text-emerald-600">You now have unlimited carrier lookups. Start searching below.</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Branding */}
-          <div className="mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
-              <Zap className="w-8 h-8 text-white" />
+      <div className="px-4 py-8 max-w-6xl mx-auto">
+        {/* Purchase success banner */}
+        {purchaseSuccess && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3"
+          >
+            <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">CarrierPulse activated!</p>
+              <p className="text-xs text-emerald-600">You now have unlimited carrier lookups. Start searching below.</p>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">CarrierPulse</h1>
-            <p className="text-gray-500 mt-2">Instant carrier intelligence by DOT or MC number</p>
+          </motion.div>
+        )}
+
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 mb-4">
+            <Activity className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Carrier Intelligence Platform</span>
           </div>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-3">CarrierPulse</h1>
+          <p className="text-gray-500 max-w-xl mx-auto">
+            FMCSA gives you raw data. CarrierPulse tells you what it means — health scores, risk detection, safety grades, and actionable recommendations.
+          </p>
+        </motion.div>
 
-          {/* Search Mode Toggle */}
-          <div className="flex justify-center mb-4">
-            <div className="inline-flex rounded-lg bg-gray-100 p-1">
-              <button
-                onClick={() => { setSearchMode('dot'); setSearchError(null) }}
-                className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${searchMode === 'dot' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                DOT Number
-              </button>
-              <button
-                onClick={() => { setSearchMode('mc'); setSearchError(null) }}
-                className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${searchMode === 'mc' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                MC Number
-              </button>
-            </div>
-          </div>
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          {/* Left: Search + Features */}
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+            {/* Search Card */}
+            <div className="rounded-2xl bg-white border-2 border-indigo-100 shadow-lg shadow-indigo-500/5 p-6 mb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Search Any Carrier</h3>
+              <p className="text-sm text-gray-500 mb-4">Enter a DOT or MC number to get full carrier intelligence.</p>
 
-          {/* Search Box */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={dotInput}
-                onChange={e => setDotInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder={searchMode === 'dot' ? 'Enter DOT number...' : 'Enter MC number...'}
-                className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-lg font-medium transition-all outline-none"
-                autoFocus
-              />
-            </div>
-            <button
-              onClick={handleSearch}
-              disabled={!dotInput.trim() || searchLoading}
-              className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold transition-colors flex items-center gap-2"
-            >
-              {searchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-              {searchLoading ? 'Looking up...' : 'Search'}
-            </button>
-          </div>
-
-          {searchError && (
-            <p className="mt-3 text-sm text-red-600">{searchError}</p>
-          )}
-
-          {/* Recent Searches */}
-          {recentSearches.length > 0 && (
-            <div className="mt-8 text-left">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Recent Searches</p>
-              <div className="space-y-1.5">
-                {recentSearches.map((s) => (
+              {/* Search Mode Toggle */}
+              <div className="flex justify-start mb-3">
+                <div className="inline-flex rounded-lg bg-gray-100 p-1">
                   <button
-                    key={s.dotNumber}
-                    onClick={() => { setDotInput(s.dotNumber); setActiveDot(s.dotNumber); const basePath = window.location.pathname.replace(/\/carrier-pulse(-preview)?(\/.*)?$/, '/carrier-pulse$1'); window.history.pushState(null, '', `${basePath}/${s.dotNumber}`) }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group"
+                    onClick={() => { setSearchMode('dot'); setSearchError(null) }}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${searchMode === 'dot' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
-                        <Hash className="w-4 h-4 text-gray-400 group-hover:text-indigo-500" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-gray-900">{s.carrierName}</p>
-                        <p className="text-xs text-gray-400">DOT {s.dotNumber}</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500" />
+                    DOT Number
                   </button>
+                  <button
+                    onClick={() => { setSearchMode('mc'); setSearchError(null) }}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${searchMode === 'mc' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    MC Number
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Box */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={dotInput}
+                    onChange={e => setDotInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                    placeholder={searchMode === 'dot' ? 'Enter DOT number...' : 'Enter MC number...'}
+                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-lg font-medium transition-all outline-none"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={handleSearch}
+                  disabled={!dotInput.trim() || searchLoading}
+                  className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-300 text-white font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+                >
+                  {searchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                  {searchLoading ? 'Looking up...' : 'Search'}
+                </button>
+              </div>
+
+              {searchError && (
+                <p className="mt-3 text-sm text-red-600">{searchError}</p>
+              )}
+            </div>
+
+            {/* Recent Searches */}
+            {recentSearches.length > 0 && (
+              <div className="rounded-2xl bg-white border border-gray-200 p-5 mb-6">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Recent Searches</p>
+                <div className="space-y-1.5">
+                  {recentSearches.map((s) => (
+                    <button
+                      key={s.dotNumber}
+                      onClick={() => { setDotInput(s.dotNumber); setActiveDot(s.dotNumber); const basePath = window.location.pathname.replace(/\/carrier-pulse(-preview)?(\/.*)?$/, '/carrier-pulse$1'); window.history.pushState(null, '', `${basePath}/${s.dotNumber}`) }}
+                      className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                          <Hash className="w-4 h-4 text-gray-400 group-hover:text-indigo-500" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-gray-900">{s.carrierName}</p>
+                          <p className="text-xs text-gray-400">DOT {s.dotNumber}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* What CarrierPulse gives you */}
+            <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-indigo-50/30 border border-gray-200 p-5">
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-indigo-600" />
+                What you get with CarrierPulse
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {pulseFeatures.map((feature) => (
+                  <div key={feature.label} className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-100 hover:border-indigo-100 hover:shadow-sm transition-all">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <feature.icon className="w-4.5 h-4.5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{feature.label}</p>
+                      <p className="text-xs text-gray-500 leading-relaxed mt-0.5">{feature.desc}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
+
+          {/* Right: FMCSA vs CarrierPulse Comparison */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-lg shadow-gray-200/50 overflow-hidden sticky top-6">
+              <div className="px-6 py-5 bg-gradient-to-r from-indigo-600 to-indigo-700">
+                <h3 className="text-lg font-bold text-white">FMCSA Free Tools vs CarrierPulse</h3>
+                <p className="text-sm text-indigo-200 mt-1">See what you're missing with free FMCSA data alone</p>
+              </div>
+
+              <div className="divide-y divide-gray-100">
+                {/* Header Row */}
+                <div className="grid grid-cols-[1fr,72px,72px] px-5 py-3 bg-gray-50">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Feature</span>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">FMCSA</span>
+                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider text-center">Pulse</span>
+                </div>
+
+                {fmcsaComparison.map((row, i) => (
+                  <div key={i} className={`grid grid-cols-[1fr,72px,72px] px-5 py-3 items-center ${!row.fmcsa ? 'bg-indigo-50/30' : ''}`}>
+                    <span className="text-sm text-gray-700">
+                      {row.feature}
+                      {row.bundle && <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-100 text-indigo-600 uppercase">Bundle</span>}
+                    </span>
+                    <span className="text-center">
+                      {row.fmcsa
+                        ? <CheckCircle className="w-4.5 h-4.5 text-gray-400 mx-auto" />
+                        : <XCircle className="w-4.5 h-4.5 text-gray-300 mx-auto" />
+                      }
+                    </span>
+                    <span className="text-center">
+                      <CheckCircle className="w-4.5 h-4.5 text-indigo-600 mx-auto" />
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom CTA */}
+              <div className="px-5 py-5 bg-gradient-to-r from-indigo-50 to-indigo-100/50 border-t border-indigo-100">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Pulse Bundle</p>
+                    <p className="text-xs text-gray-500">Unlimited lookups + all tools — <span className="text-indigo-600 font-bold">$14.99/mo</span></p>
+                  </div>
+                  <Link to="/pricing">
+                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/20">
+                      View Plans
+                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     )
   }
