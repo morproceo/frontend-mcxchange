@@ -14,7 +14,17 @@ import {
   XCircle,
   Hash,
   Phone,
-  Zap
+  Zap,
+  Activity,
+  Gauge,
+  Radar,
+  FileBarChart,
+  BarChart3,
+  TrendingUp,
+  Umbrella,
+  Sparkles,
+  ShieldAlert,
+  Eye,
 } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -29,8 +39,6 @@ const ServicesPage = () => {
   const [searchType, setSearchType] = useState<'mc' | 'dot'>('mc')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const FMCSA_API_KEY = '7ac73313fb4ddad3948ebb1a0ef6ccebed130f8b'
 
   const redirectToCarrierPulse = (dotNum: string) => {
     if (isAuthenticated && user) {
@@ -55,29 +63,15 @@ const ServicesPage = () => {
       const cleanNumber = searchValue.replace(/^(MC|DOT)[-\s]*/i, '').trim()
 
       if (searchType === 'dot') {
-        // DOT number — redirect directly
         redirectToCarrierPulse(cleanNumber)
         return
       }
 
-      // MC number — resolve to DOT first via FMCSA
-      const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/docket-number/${cleanNumber}?webKey=${FMCSA_API_KEY}`
-      const response = await fetch(url)
-
-      if (!response.ok) {
-        throw new Error('Carrier not found')
-      }
-
-      const data = await response.json()
-
-      if (data.content && data.content.length > 0) {
-        const carrier = data.content[0].carrier
-        const dotNum = carrier.dotNumber
-        if (dotNum) {
-          redirectToCarrierPulse(dotNum)
-        } else {
-          setError('Carrier found but no DOT number available.')
-        }
+      // MC number — resolve to DOT via backend API
+      const { default: api } = await import('../../services/api')
+      const res = await api.fmcsaLookupByMC(cleanNumber)
+      if (res.success && res.data?.dotNumber) {
+        redirectToCarrierPulse(res.data.dotNumber)
       } else {
         setError(`No carrier found with MC number ${cleanNumber}`)
       }
@@ -134,11 +128,20 @@ const ServicesPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section - Carrier Search Focused */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+      {/* Hero Section - Carrier Search */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#0f172a] to-[#1e293b]">
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '50px 50px',
+          }}
+        />
+        {/* Glow orbs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-indigo-500/15 blur-[100px]" />
+          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] rounded-full bg-cyan-500/10 blur-[100px]" />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
@@ -148,34 +151,33 @@ const ServicesPage = () => {
             transition={{ duration: 0.8 }}
             className="text-center max-w-4xl mx-auto"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm font-medium mb-6">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              Free FMCSA Carrier Lookup Tool
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.08] border border-white/[0.12] backdrop-blur-sm mb-6">
+              <Activity className="w-4 h-4 text-cyan-400" />
+              <span className="text-sm font-medium text-gray-300">Carrier Intelligence Platform</span>
             </div>
 
             <h1 className="text-4xl lg:text-6xl font-bold mb-6 text-white">
-              Carrier Snapshot
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
-                Search Tool
+              Carrier Search
+              <span className="block bg-gradient-to-r from-indigo-400 via-cyan-400 to-indigo-400 bg-clip-text text-transparent">
+                Powered by CarrierPulse
               </span>
             </h1>
 
-            <p className="text-lg lg:text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">
-              Instantly check any carrier's trust score and operating status.
-              Get a quick snapshot of authority, safety, and compliance at a glance.
+            <p className="text-lg lg:text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+              Go beyond raw FMCSA data. Get health scores, risk detection, safety grades, and actionable intelligence — all from one search.
             </p>
 
             {/* Search Box */}
             <div className="max-w-2xl mx-auto">
-              <Card className="p-6 shadow-2xl">
+              <div className="rounded-2xl bg-white/[0.06] border border-white/[0.1] backdrop-blur-sm p-6 shadow-2xl">
                 {/* Search Type Toggle */}
                 <div className="flex gap-2 mb-4">
                   <button
                     onClick={() => setSearchType('mc')}
-                    className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-4 rounded-xl font-medium transition-all ${
                       searchType === 'mc'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
+                        : 'bg-white/10 text-gray-400 hover:bg-white/15 hover:text-white'
                     }`}
                   >
                     <Hash className="w-4 h-4 inline mr-2" />
@@ -183,10 +185,10 @@ const ServicesPage = () => {
                   </button>
                   <button
                     onClick={() => setSearchType('dot')}
-                    className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-4 rounded-xl font-medium transition-all ${
                       searchType === 'dot'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
+                        : 'bg-white/10 text-gray-400 hover:bg-white/15 hover:text-white'
                     }`}
                   >
                     <Hash className="w-4 h-4 inline mr-2" />
@@ -197,32 +199,27 @@ const ServicesPage = () => {
                 {/* Search Input */}
                 <div className="flex gap-3">
                   <div className="flex-1 relative">
-                    <Input
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <input
+                      type="text"
                       placeholder={searchType === 'mc' ? 'Enter MC Number (e.g., 123456)' : 'Enter DOT Number (e.g., 1234567)'}
                       value={searchType === 'mc' ? mcNumber : dotNumber}
                       onChange={(e) => searchType === 'mc' ? setMcNumber(e.target.value) : setDotNumber(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      className="text-lg pl-4 pr-4 py-3"
+                      onKeyDown={(e) => e.key === 'Enter' && fetchCarrierData()}
+                      className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.08] border border-white/[0.15] text-white placeholder-gray-500 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400/50 transition-all"
                     />
                   </div>
-                  <Button
+                  <button
                     onClick={fetchCarrierData}
                     disabled={isLoading}
-                    size="lg"
-                    className="min-w-[160px] bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    className="px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/25"
                   >
                     {isLoading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Searching...
-                      </>
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Searching...</>
                     ) : (
-                      <>
-                        <Search className="w-5 h-5 mr-2" />
-                        Search
-                      </>
+                      <><Search className="w-5 h-5" /> Search</>
                     )}
-                  </Button>
+                  </button>
                 </div>
 
                 {/* Quick Examples */}
@@ -230,76 +227,168 @@ const ServicesPage = () => {
                   <span>Try:</span>
                   <button
                     onClick={() => { setSearchType('mc'); setMcNumber('384859'); }}
-                    className="text-indigo-600 hover:underline"
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors"
                   >
                     MC-384859
                   </button>
                   <button
                     onClick={() => { setSearchType('dot'); setDotNumber('2213110'); }}
-                    className="text-indigo-600 hover:underline"
+                    className="text-indigo-400 hover:text-indigo-300 transition-colors"
                   >
                     DOT-2213110
                   </button>
                 </div>
-              </Card>
+              </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Error & Empty States */}
-      <section className="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="max-w-2xl mx-auto mb-8"
-            >
+      {/* Error State */}
+      <AnimatePresence>
+        {error && (
+          <section className="py-4 max-w-3xl mx-auto px-4">
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3">
                 <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <p className="text-red-700">{error}</p>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </section>
+        )}
+      </AnimatePresence>
 
-        {!error && !isLoading && (
+      {/* Why CarrierPulse — FMCSA Comparison + Features */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16"
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
           >
-            <div className="max-w-md mx-auto">
-              <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
-                <Search className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Search for a Carrier</h3>
-              <p className="text-gray-600 mb-6">
-                Enter an MC or DOT number above to instantly see a carrier's trust score, authority status, and fleet overview.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Trust Score (A-F)
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Operating Status
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Authority Status
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Fleet Size
-                </div>
-              </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 mb-4">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Why CarrierPulse</span>
             </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              FMCSA Gives You Data. We Give You <span className="text-indigo-600">Answers.</span>
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Stop spending hours piecing together carrier information from multiple FMCSA pages. CarrierPulse consolidates, analyzes, and scores everything in one search.
+            </p>
           </motion.div>
-        )}
+
+          <div className="grid lg:grid-cols-2 gap-10 items-start">
+            {/* Left: Feature Cards */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="grid gap-4">
+                {[
+                  { icon: Gauge, label: 'Carrier Health Score (0-100)', desc: 'One number that tells you everything. Weighted across safety, compliance, insurance, fleet condition, and operating history — so you don\'t have to manually evaluate 50+ data points.', color: 'bg-indigo-50 border-indigo-100 text-indigo-600' },
+                  { icon: ShieldAlert, label: 'Chameleon Carrier Detection', desc: 'FMCSA doesn\'t flag this. We cross-reference shared EINs, officers, addresses, phone numbers, and VINs to detect carriers hiding behind new MC numbers after shutdowns.', color: 'bg-red-50 border-red-100 text-red-600', bundle: true },
+                  { icon: FileBarChart, label: 'Safety Improvement Report', desc: 'Not just data — a prioritized action plan. Get safety grades from A+ to D with specific recommendations ranked by critical, high, medium, and low priority.', color: 'bg-amber-50 border-amber-100 text-amber-600', bundle: true },
+                  { icon: BarChart3, label: 'Industry Benchmarks', desc: 'FMCSA shows your numbers but not how you stack up. We compare vehicle OOS rates, driver OOS rates, and clean inspection rates against national averages in real-time.', color: 'bg-emerald-50 border-emerald-100 text-emerald-600' },
+                  { icon: TrendingUp, label: '24-Month Violation Trends', desc: 'FMCSA gives you a snapshot. We show you the direction — is this carrier getting safer or more dangerous? See if violations are improving, stable, or worsening over time.', color: 'bg-blue-50 border-blue-100 text-blue-600' },
+                  { icon: Umbrella, label: 'Insurance Gap Analysis', desc: 'Find what FMCSA\'s insurance page hides: coverage gaps, pending cancellations, renewal timelines, and whether a carrier\'s insurance is actually sufficient for their operations.', color: 'bg-purple-50 border-purple-100 text-purple-600' },
+                ].map((feature) => (
+                  <motion.div
+                    key={feature.label}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-gray-100 hover:border-indigo-100 hover:shadow-md transition-all"
+                  >
+                    <div className={`w-11 h-11 rounded-xl ${feature.color} border flex items-center justify-center flex-shrink-0`}>
+                      <feature.icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-gray-900">{feature.label}</p>
+                        {feature.bundle && <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-100 text-indigo-600 uppercase">Bundle</span>}
+                      </div>
+                      <p className="text-sm text-gray-500 leading-relaxed">{feature.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Right: Comparison Table */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="rounded-2xl bg-white border border-gray-200 shadow-xl overflow-hidden sticky top-20">
+                <div className="px-6 py-5 bg-gradient-to-r from-[#0f172a] to-[#1e293b]">
+                  <h3 className="text-lg font-bold text-white">FMCSA Free Tools vs CarrierPulse</h3>
+                  <p className="text-sm text-gray-400 mt-1">What you get from FMCSA alone vs what CarrierPulse delivers</p>
+                </div>
+
+                <div className="divide-y divide-gray-100">
+                  {/* Header */}
+                  <div className="grid grid-cols-[1fr,72px,72px] px-5 py-3 bg-gray-50">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Feature</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">FMCSA</span>
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider text-center">Pulse</span>
+                  </div>
+
+                  {[
+                    { feature: 'MC/DOT Lookup & Authority Status', fmcsa: true, pulse: true },
+                    { feature: 'Raw BASIC Safety Scores', fmcsa: true, pulse: true },
+                    { feature: 'Inspection & Crash Records', fmcsa: true, pulse: true },
+                    { feature: 'Insurance Filing Status', fmcsa: true, pulse: true },
+                    { feature: 'Carrier Health Score (0-100)', fmcsa: false, pulse: true },
+                    { feature: 'Industry Benchmarks & Comparison', fmcsa: false, pulse: true },
+                    { feature: 'Violation Trend Analysis (24 mo)', fmcsa: false, pulse: true },
+                    { feature: 'Insurance Gap Detection', fmcsa: false, pulse: true },
+                    { feature: 'Coverage Amount Analysis', fmcsa: false, pulse: true },
+                    { feature: 'Fleet Age & VIN Inspection Data', fmcsa: false, pulse: true },
+                    { feature: 'Chameleon Carrier Detection', fmcsa: false, pulse: true, bundle: true },
+                    { feature: 'Safety Improvement Report', fmcsa: false, pulse: true, bundle: true },
+                    { feature: 'Prioritized Action Plan (A+ to D)', fmcsa: false, pulse: true, bundle: true },
+                  ].map((row, i) => (
+                    <div key={i} className={`grid grid-cols-[1fr,72px,72px] px-5 py-3 items-center ${!row.fmcsa ? 'bg-indigo-50/30' : ''}`}>
+                      <span className="text-sm text-gray-700">
+                        {row.feature}
+                        {row.bundle && <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-100 text-indigo-600 uppercase">Bundle</span>}
+                      </span>
+                      <span className="text-center">
+                        {row.fmcsa
+                          ? <CheckCircle className="w-4 h-4 text-gray-400 mx-auto" />
+                          : <XCircle className="w-4 h-4 text-gray-300 mx-auto" />
+                        }
+                      </span>
+                      <span className="text-center">
+                        <CheckCircle className="w-4 h-4 text-indigo-600 mx-auto" />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom CTA */}
+                <div className="px-5 py-5 bg-gradient-to-r from-indigo-50 to-indigo-100/50 border-t border-indigo-100">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Pulse Bundle</p>
+                      <p className="text-xs text-gray-500">Unlimited lookups + all tools — <span className="text-indigo-600 font-bold">$14.99/mo</span></p>
+                    </div>
+                    <Link to="/pricing">
+                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/20">
+                        View Plans
+                        <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </section>
 
       {/* Services Grid */}
@@ -357,9 +446,9 @@ const ServicesPage = () => {
 
       {/* CTA Section */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="bg-gradient-to-r from-indigo-600 to-purple-600 border-0 overflow-hidden relative">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+        <Card className="bg-gradient-to-r from-[#0f172a] to-[#1e293b] border-0 overflow-hidden relative">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] rounded-full bg-indigo-500/10 blur-[80px]" />
           </div>
           <div className="relative text-center py-12">
             <h2 className="text-4xl font-bold mb-4 text-white">Need Help with Compliance?</h2>
