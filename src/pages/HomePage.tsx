@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
@@ -22,10 +22,15 @@ import {
   AlertTriangle,
   EyeOff,
   ShieldOff,
+  Loader2,
+  Hash,
+  XCircle,
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import AnimatedCounter from '../components/v2/AnimatedCounter'
+import Input from '../components/ui/Input'
+import api from '../services/api'
 import TalkToMariaModal from '../components/TalkToMariaModal'
 
 // ── Data ──────────────────────────────────────────────────
@@ -125,7 +130,41 @@ const fadeUp = {
 // ── Component ──────────────────────────────────────────────
 
 const HomePage = () => {
+  const navigate = useNavigate()
   const [isConsultationOpen, setIsConsultationOpen] = useState(false)
+
+  // Carrier search state
+  const [searchType, setSearchType] = useState<'mc' | 'dot'>('mc')
+  const [searchValue, setSearchValue] = useState('')
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+
+  const handleCarrierSearch = async () => {
+    if (!searchValue.trim()) {
+      setSearchError(`Please enter a ${searchType === 'mc' ? 'MC' : 'DOT'} number`)
+      return
+    }
+    setSearchLoading(true)
+    setSearchError(null)
+    try {
+      const cleanNumber = searchValue.replace(/^(MC|DOT)[-\s]*/i, '').trim()
+      if (searchType === 'dot') {
+        navigate(`/carrier-pulse-preview/${cleanNumber}`)
+        return
+      }
+      // MC → resolve to DOT via backend API
+      const res = await api.fmcsaLookupByMC(cleanNumber)
+      if (res.success && res.data?.dotNumber) {
+        navigate(`/carrier-pulse-preview/${res.data.dotNumber}`)
+      } else {
+        setSearchError(`No carrier found with MC number ${cleanNumber}`)
+      }
+    } catch {
+      setSearchError('Unable to find carrier. Please check the number and try again.')
+    } finally {
+      setSearchLoading(false)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -206,6 +245,61 @@ const HomePage = () => {
                 </Button>
               </Link>
             </div>
+
+            {/* Carrier Search Widget */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="max-w-lg mx-auto mt-8 mb-6"
+            >
+              <div className="rounded-2xl bg-white/[0.06] border border-white/[0.12] backdrop-blur-sm p-4">
+                <p className="text-xs text-gray-400 font-medium mb-3 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5" />
+                  Free Carrier Intelligence Preview
+                </p>
+                {/* MC / DOT Toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => { setSearchType('mc'); setSearchError(null) }}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${searchType === 'mc' ? 'bg-indigo-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                  >MC Number</button>
+                  <button
+                    onClick={() => { setSearchType('dot'); setSearchError(null) }}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${searchType === 'dot' ? 'bg-indigo-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                  >DOT Number</button>
+                </div>
+                {/* Search Input */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input
+                      type="text"
+                      value={searchValue}
+                      onChange={(e) => { setSearchValue(e.target.value); setSearchError(null) }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCarrierSearch()}
+                      placeholder={searchType === 'mc' ? 'Enter MC number (e.g. 123456)' : 'Enter DOT number (e.g. 1234567)'}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white/[0.08] border border-white/[0.15] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400/50"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCarrierSearch}
+                    disabled={searchLoading}
+                    className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    Search
+                  </button>
+                </div>
+                {searchError && (
+                  <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" />
+                    {searchError}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+
             <button
               onClick={() => setIsConsultationOpen(true)}
               className="text-sm text-gray-400 hover:text-white transition-colors inline-flex items-center gap-1.5"

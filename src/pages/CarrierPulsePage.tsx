@@ -42,6 +42,7 @@ import DriverBreakdown from '../components/v2/DriverBreakdown'
 import FleetOwnershipBar from '../components/v2/FleetOwnershipBar'
 import DonutChart from '../components/v2/DonutChart'
 import InfoGrid from '../components/v2/InfoGrid'
+import PreviewBlurValue, { PreviewModeContext } from '../components/v2/PreviewBlurValue'
 import InsuranceGapTimeline from '../components/v2/InsuranceGapTimeline'
 import FleetAgeHistogram from '../components/v2/FleetAgeHistogram'
 import ViolationTrendChart from '../components/v2/ViolationTrendChart'
@@ -141,6 +142,7 @@ interface CarrierDataContextType {
   healthCategories: HealthCategory[]
   carrierLoading: boolean
   carrierError: string | null
+  previewMode: boolean
 }
 
 const CarrierDataContext = createContext<CarrierDataContextType | null>(null)
@@ -570,7 +572,7 @@ function OverviewTab() {
 // TAB 2: AUTHORITY & COMPLIANCE
 // ============================================================
 function AuthorityTab() {
-  const { carrier: c, authority, authorityHistory, authorityPending, cargoCapabilities } = useCarrierDataContext()
+  const { carrier: c, authority, authorityHistory, authorityPending, cargoCapabilities, previewMode: pm } = useCarrierDataContext()
   const opLevel = getStatusLevel('authority', c.operatingStatus)
 
   const cargoGroups = [
@@ -618,7 +620,7 @@ function AuthorityTab() {
         className={`rounded-xl border-2 p-6 text-center ${opLevel === 'excellent' ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}
       >
         <h2 className={`text-3xl font-black tracking-wide ${opLevel === 'excellent' ? 'text-emerald-700' : 'text-red-700'}`}>
-          {c.operatingStatus === 'authorized' ? 'AUTHORIZED' : 'NOT AUTHORIZED'}
+          <PreviewBlurValue>{c.operatingStatus === 'authorized' ? 'AUTHORIZED' : 'NOT AUTHORIZED'}</PreviewBlurValue>
         </h2>
         <p className={`text-sm mt-1 ${opLevel === 'excellent' ? 'text-emerald-600' : 'text-red-600'}`}>
           Operating authority status with FMCSA
@@ -643,11 +645,11 @@ function AuthorityTab() {
               <div className="p-4">
                 <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <StatusBadge level={level} label={auth.status.toUpperCase()} size="md" />
-                  {isPending && <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded uppercase">Pending</span>}
-                  {isReview && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase">Review</span>}
+                  <PreviewBlurValue><StatusBadge level={level} label={auth.status.toUpperCase()} size="md" /></PreviewBlurValue>
+                  {isPending && <PreviewBlurValue><span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded uppercase">Pending</span></PreviewBlurValue>}
+                  {isReview && <PreviewBlurValue><span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase">Review</span></PreviewBlurValue>}
                 </div>
-                {auth.grantedDate && <p className="text-xs text-gray-400 mt-2">Granted: {safeFmtDate(auth.grantedDate)}</p>}
+                {auth.grantedDate && <p className="text-xs text-gray-400 mt-2">Granted: <PreviewBlurValue>{safeFmtDate(auth.grantedDate)}</PreviewBlurValue></p>}
               </div>
             </Card>
           )
@@ -657,15 +659,15 @@ function AuthorityTab() {
       {/* Authority Risk Indicators */}
       <div className="grid grid-cols-3 gap-3">
         <div className={`rounded-lg p-4 text-center border ${c.totalRevocations === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-200'}`}>
-          <p className={`text-2xl font-bold ${c.totalRevocations === 0 ? 'text-emerald-600' : 'text-red-600'}`}>{c.totalRevocations}</p>
+          <p className={`text-2xl font-bold ${c.totalRevocations === 0 ? 'text-emerald-600' : 'text-red-600'}`}><PreviewBlurValue>{c.totalRevocations}</PreviewBlurValue></p>
           <p className="text-xs text-gray-500">Total Revocations</p>
         </div>
         <div className="rounded-lg p-4 text-center border bg-gray-50 border-gray-100">
-          <p className="text-2xl font-bold text-gray-800">{c.daysSinceLastRevocation ?? 'N/A'}</p>
+          <p className="text-2xl font-bold text-gray-800"><PreviewBlurValue>{c.daysSinceLastRevocation ?? 'N/A'}</PreviewBlurValue></p>
           <p className="text-xs text-gray-500">Days Since Last Revocation</p>
         </div>
         <div className="rounded-lg p-4 text-center border bg-gray-50 border-gray-100">
-          <p className="text-2xl font-bold text-indigo-600">{Math.floor(c.authorityAgeDays / 365)}y {Math.floor((c.authorityAgeDays % 365) / 30)}m</p>
+          <p className="text-2xl font-bold text-indigo-600"><PreviewBlurValue>{Math.floor(c.authorityAgeDays / 365)}y {Math.floor((c.authorityAgeDays % 365) / 30)}m</PreviewBlurValue></p>
           <p className="text-xs text-gray-500">Authority Age</p>
         </div>
       </div>
@@ -705,7 +707,7 @@ function AuthorityTab() {
               <div className="flex flex-wrap gap-2">
                 {group.items.map((item) => (
                   <span key={item.name}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-lg border ${item.active ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-gray-50 text-gray-400 border-gray-100 line-through'}`}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg border ${pm ? 'blur-[5px] select-none pointer-events-none' : ''} ${item.active ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-gray-50 text-gray-400 border-gray-100 line-through'}`}
                   >{item.name}</span>
                 ))}
               </div>
@@ -721,7 +723,7 @@ function AuthorityTab() {
           Authority History
           <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">CarrierOk</span>
         </h3>
-        <AuthorityTimeline events={[...authorityHistory].reverse()} />
+        <PreviewBlurValue variant="chart"><AuthorityTimeline events={[...authorityHistory].reverse()} /></PreviewBlurValue>
       </Card>
     </div>
   )
@@ -886,7 +888,7 @@ function InspectionRecordsPanel() {
 // TAB 3: SAFETY & INSPECTIONS
 // ============================================================
 function SafetyTab() {
-  const { carrier: c, basicScores, basicAlerts, violationBreakdown, issData, inspections, inspectionRecords, operations, crashes, crashRecords, violationTrend } = useCarrierDataContext()
+  const { carrier: c, basicScores, basicAlerts, violationBreakdown, issData, inspections, inspectionRecords, operations, crashes, crashRecords, violationTrend, previewMode: pm } = useCarrierDataContext()
   const [safetySub, setSafetySub] = useState<'overview' | 'basics' | 'inspections' | 'crashes'>('overview')
   const safetyLevel = getStatusLevel('safety', c.safetyRating)
 
@@ -953,18 +955,20 @@ function SafetyTab() {
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">FMCSA Safety Rating</p>
                   <h3 className={`text-3xl font-black tracking-wide uppercase ${safetyLevel === 'excellent' ? 'text-emerald-600' : safetyLevel === 'fair' ? 'text-amber-500' : safetyLevel === 'danger' ? 'text-red-600' : 'text-gray-500'}`}>
-                    {c.safetyRating === 'not-rated' ? 'Not Rated' : c.safetyRating}
+                    <PreviewBlurValue>{c.safetyRating === 'not-rated' ? 'Not Rated' : c.safetyRating}</PreviewBlurValue>
                   </h3>
                 </div>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Operating Status</p>
                   <h3 className={`text-3xl font-black tracking-wide uppercase ${c.operatingStatus === 'authorized' ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {c.operatingStatus === 'authorized' ? 'Authorized' : c.operatingStatus === 'not-authorized' ? 'Not Authorized' : c.operatingStatus}
+                    <PreviewBlurValue>{c.operatingStatus === 'authorized' ? 'Authorized' : c.operatingStatus === 'not-authorized' ? 'Not Authorized' : c.operatingStatus}</PreviewBlurValue>
                   </h3>
                   <p className="text-xs text-gray-400 mt-2">
+                    <PreviewBlurValue>
                     {c.powerUnits > 0 ? `${c.powerUnits} power unit${c.powerUnits !== 1 ? 's' : ''}` : ''}
                     {c.powerUnits > 0 && c.totalDriversCDL > 0 ? ' · ' : ''}
                     {c.totalDriversCDL > 0 ? `${c.totalDriversCDL} driver${c.totalDriversCDL !== 1 ? 's' : ''}` : ''}
+                    </PreviewBlurValue>
                   </p>
                 </div>
               </div>
@@ -973,7 +977,7 @@ function SafetyTab() {
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                   <h4 className="text-sm font-semibold text-gray-900">US Inspection Results for 24 months</h4>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Total Inspections: <strong className="text-gray-700">{inspections.totalInspections}</strong></p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Total Inspections: <strong className="text-gray-700"><PreviewBlurValue>{inspections.totalInspections}</PreviewBlurValue></strong></p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -986,7 +990,7 @@ function SafetyTab() {
                         <th className="text-center py-2.5 px-4 text-xs font-semibold text-gray-600">IEP</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       <tr className="border-b border-gray-100">
                         <td className="py-2.5 px-4 font-medium text-gray-700">Inspections</td>
                         <td className="py-2.5 px-4 text-center text-blue-600 font-semibold">{inspections.vehicleInspections}</td>
@@ -1037,7 +1041,7 @@ function SafetyTab() {
                         <th className="text-center py-2.5 px-4 text-xs font-semibold text-gray-600">Total</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       <tr>
                         <td className="py-2.5 px-4 font-medium text-gray-700">Crashes</td>
                         <td className={`py-2.5 px-4 text-center font-bold ${crashes.fatal > 0 ? 'text-red-600' : 'text-blue-600'}`}>{crashes.fatal}</td>
@@ -1075,7 +1079,7 @@ function SafetyTab() {
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       {basicScores.map((basic, i) => {
                         const isScored = basic.score != null
                         const ratio = isScored ? basic.score! / basic.threshold : 0
@@ -1105,7 +1109,7 @@ function SafetyTab() {
 
               <div>
                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">BASIC Percentile Gauges <span className="text-[10px] text-gray-400 font-normal">Higher = worse. Red zone = above threshold.</span></h4>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`grid grid-cols-2 lg:grid-cols-4 gap-4 ${pm ? 'blur-[4px] select-none pointer-events-none' : ''}`}>
                   {basicScores.map((basic, i) => (
                     <motion.div key={basic.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="bg-gray-50 rounded-xl border border-gray-200 p-3">
                       <SpeedometerGauge name={basic.name} score={basic.score} threshold={basic.threshold} alert={alertMap[basic.name] || false} />
@@ -1118,14 +1122,14 @@ function SafetyTab() {
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
                   <h4 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500" />Violation Breakdown by BASIC</h4>
                   <p className="text-xs text-gray-500 mb-4">{totalViolations} total violations across {totalInspections} inspections</p>
-                  <ViolationBreakdownChart violations={violationBreakdown} alerts={basicAlerts} />
+                  <PreviewBlurValue variant="chart"><ViolationBreakdownChart violations={violationBreakdown} alerts={basicAlerts} /></PreviewBlurValue>
                 </div>
               )}
 
               {violationTrend.length > 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
                   <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-indigo-500" />Violation Trend</h4>
-                  <ViolationTrendChart data={violationTrend} />
+                  <PreviewBlurValue variant="chart"><ViolationTrendChart data={violationTrend} /></PreviewBlurValue>
                 </div>
               )}
             </motion.div>
@@ -1133,7 +1137,7 @@ function SafetyTab() {
 
           {safetySub === 'inspections' && (
             <motion.div key="inspections" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 ${pm ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center">
                   <p className="text-2xl font-bold text-emerald-600">{operations.cleanInspectionRate}%</p><p className="text-xs text-gray-500 mt-1">Clean Rate</p>
                 </div>
@@ -1166,7 +1170,7 @@ function SafetyTab() {
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">Nat'l Avg %</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       {[
                         { type: 'Vehicle', insp: inspections.vehicleInspections, oos: inspections.vehicleOOS, rate: inspections.vehicleOOSRate, natl: inspections.nationalVehicleOOSRate },
                         { type: 'Driver', insp: inspections.driverInspections, oos: inspections.driverOOS, rate: inspections.driverOOSRate, natl: inspections.nationalDriverOOSRate },
@@ -1199,7 +1203,7 @@ function SafetyTab() {
                         <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase">OOS Rate</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       {operations.operatingStates.map((s, i) => (
                         <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                           <td className="py-2.5 px-4"><span className="font-medium text-gray-900">{s.state}</span> <span className="text-gray-400 text-xs">({s.stateCode})</span></td>
@@ -1219,7 +1223,7 @@ function SafetyTab() {
 
           {safetySub === 'crashes' && (
             <motion.div key="crashes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 ${pm ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
                 {[
                   { label: 'Fatal', value: crashes.fatal, color: crashes.fatal > 0 ? 'text-red-600' : 'text-emerald-600', bg: crashes.fatal > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200' },
                   { label: 'Injury', value: crashes.injury, color: crashes.injury > 0 ? 'text-yellow-600' : 'text-emerald-600', bg: crashes.injury > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200' },
@@ -1237,7 +1241,7 @@ function SafetyTab() {
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50"><h4 className="text-sm font-semibold text-gray-900">Crash Records</h4></div>
                 {crashRecords.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
+                  <div className={`divide-y divide-gray-100 ${pm ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
                     {crashRecords.map((crash) => (
                       <div key={crash.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
                         <div className="flex items-center gap-3">
@@ -1276,7 +1280,7 @@ function SafetyTab() {
 // TAB 4: INSURANCE
 // ============================================================
 function InsuranceTab() {
-  const { carrier: c, insurancePolicies, renewalTimeline, policyHistory, insuranceGaps } = useCarrierDataContext()
+  const { carrier: c, insurancePolicies, renewalTimeline, policyHistory, insuranceGaps, previewMode: pm } = useCarrierDataContext()
   const insLevel = getStatusLevel('insurance', c.insuranceStatus)
 
   return (
@@ -1286,13 +1290,13 @@ function InsuranceTab() {
       >
         <p className="text-sm text-gray-500 mb-1">Insurance Status</p>
         <h2 className={`text-3xl font-black tracking-wide uppercase ${statusColors[insLevel].text}`}>
-          {c.insuranceStatus === 'pending' ? 'CANCELLATION PENDING' : c.insuranceStatus === 'expired' ? 'EXPIRED' : 'CURRENT'}
+          <PreviewBlurValue>{c.insuranceStatus === 'pending' ? 'CANCELLATION PENDING' : c.insuranceStatus === 'expired' ? 'EXPIRED' : 'CURRENT'}</PreviewBlurValue>
         </h2>
       </motion.div>
 
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Coverage Analysis</h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className={`grid sm:grid-cols-3 gap-4 ${pm ? 'blur-[4px] select-none pointer-events-none' : ''}`}>
           {insurancePolicies.map((policy, i) => <CoverageBar key={i} label={`${policy.type} Coverage`} actual={policy.coverage} required={policy.required} />)}
         </div>
       </div>
@@ -1312,7 +1316,7 @@ function InsuranceTab() {
                 <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Expires</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
               {insurancePolicies.map((policy, i) => (
                 <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-2 px-3 font-medium">{policy.insurer}</td>
@@ -1331,7 +1335,7 @@ function InsuranceTab() {
 
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-indigo-500" />Renewal Timeline</h3>
-        <div className="flex items-center gap-1 overflow-x-auto pb-2">
+        <div className={`flex items-center gap-1 overflow-x-auto pb-2 ${pm ? 'blur-[5px] select-none pointer-events-none' : ''}`}>
           {renewalTimeline.map((renewal, i) => {
             const urgencyColors: Record<string, string> = { ok: 'bg-emerald-100 border-emerald-300 text-emerald-700', low: 'bg-emerald-100 border-emerald-300 text-emerald-700', medium: 'bg-yellow-100 border-yellow-300 text-yellow-700', warning: 'bg-yellow-100 border-yellow-300 text-yellow-700', high: 'bg-orange-100 border-orange-300 text-orange-700', expired: 'bg-gray-100 border-gray-300 text-gray-700', critical: 'bg-red-100 border-red-300 text-red-700' }
             return (
@@ -1349,10 +1353,10 @@ function InsuranceTab() {
 
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-indigo-500" />Policy Event History</h3>
-        <AuthorityTimeline events={policyHistory} />
+        <PreviewBlurValue variant="chart"><AuthorityTimeline events={policyHistory} /></PreviewBlurValue>
       </Card>
 
-      <InsuranceGapTimeline gaps={insuranceGaps} />
+      <PreviewBlurValue variant="chart"><InsuranceGapTimeline gaps={insuranceGaps} /></PreviewBlurValue>
     </div>
   )
 }
@@ -1361,7 +1365,7 @@ function InsuranceTab() {
 // TAB 5: FLEET & DRIVERS
 // ============================================================
 function FleetTab() {
-  const { carrier: c, trucks, trailers, sharedEquipment } = useCarrierDataContext()
+  const { carrier: c, trucks, trailers, sharedEquipment, previewMode: pm } = useCarrierDataContext()
   const avgYear = trucks.length > 0 ? Math.round(trucks.reduce((s, t) => s + t.year, 0) / trucks.length) : 0
 
   const makeCount: Record<string, number> = {}
@@ -1374,7 +1378,7 @@ function FleetTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className={`grid grid-cols-2 sm:grid-cols-5 gap-3 ${pm ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
         <ScoreCard icon={Truck} label="Trucks" value={trucks.length} level="good" />
         <ScoreCard icon={Package} label="Trailers" value={trailers.length} level="good" />
         <ScoreCard icon={Users} label="CDL Drivers" value={c.totalDriversCDL} level="good" />
@@ -1382,17 +1386,17 @@ function FleetTab() {
         <ScoreCard icon={MapPinned} label="Annual Miles" value={c.mcs150Mileage > 0 ? `${(c.mcs150Mileage / 1000000).toFixed(1)}M` : 'N/A'} level="good" subtitle="mi/yr" />
       </div>
 
-      <FleetOwnershipBar owned={c.ownedTractors} leased={c.termLeasedTractors} />
-      <DriverBreakdown totalCDL={c.totalDriversCDL} within100mi={c.driversInterstate100mi} beyond100mi={c.driversInterstateBeyond100mi} />
+      <PreviewBlurValue variant="chart"><FleetOwnershipBar owned={c.ownedTractors} leased={c.termLeasedTractors} /></PreviewBlurValue>
+      <PreviewBlurValue variant="chart"><DriverBreakdown totalCDL={c.totalDriversCDL} within100mi={c.driversInterstate100mi} beyond100mi={c.driversInterstateBeyond100mi} /></PreviewBlurValue>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className={`grid sm:grid-cols-2 gap-4 ${pm ? 'blur-[4px] select-none pointer-events-none' : ''}`}>
         <Card padding="md"><DonutChart segments={makeSegments} title="Fleet by Make" /></Card>
         <Card padding="md"><DonutChart segments={typeSegments} title="Trailers by Type" /></Card>
       </div>
 
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-indigo-500" />Fleet Age Distribution</h3>
-        <FleetAgeHistogram trucks={trucks} trailers={trailers} />
+        <PreviewBlurValue variant="chart"><FleetAgeHistogram trucks={trucks} trailers={trailers} /></PreviewBlurValue>
       </Card>
 
       <SharedEquipmentAlert data={sharedEquipment} />
@@ -1413,7 +1417,7 @@ function FleetTab() {
                 <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">OOS</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
               {trucks.map((truck, i) => (
                 <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-2 px-3 font-mono text-xs">{truck.vin}</td>
@@ -1445,7 +1449,7 @@ function FleetTab() {
                 <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Length</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
               {trailers.map((trailer, i) => (
                 <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-2 px-3 font-mono text-xs">{trailer.vin}</td>
@@ -1639,10 +1643,10 @@ function CreditReportTab() {
 // TAB 8: CHAMELEON CHECK
 // ============================================================
 function ChameleonTab() {
-  const { chameleonAnalysis, carrier, relatedCarriers } = useCarrierDataContext()
+  const { chameleonAnalysis, carrier, relatedCarriers, previewMode: pm } = useCarrierDataContext()
   return (
     <div className="space-y-6">
-      <ChameleonAlert analysis={chameleonAnalysis} />
+      <PreviewBlurValue variant="chart"><ChameleonAlert analysis={chameleonAnalysis} /></PreviewBlurValue>
 
       <Card padding="md">
         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -1678,35 +1682,35 @@ function ChameleonTab() {
           <div className="flex justify-between py-1.5 border-b border-gray-100">
             <span className="text-gray-500">Authority Age</span>
             <span className="font-medium text-gray-900">
-              {carrier.authorityAgeDays > 0
+              <PreviewBlurValue>{carrier.authorityAgeDays > 0
                 ? carrier.authorityAgeDays >= 365
                   ? `${Math.round(carrier.authorityAgeDays / 365)} years`
                   : `${Math.round(carrier.authorityAgeDays / 30)} months`
-                : 'Unknown'}
+                : 'Unknown'}</PreviewBlurValue>
             </span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-gray-100">
             <span className="text-gray-500">Revocations</span>
             <span className={`font-medium ${carrier.totalRevocations > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-              {carrier.totalRevocations}
+              <PreviewBlurValue>{carrier.totalRevocations}</PreviewBlurValue>
             </span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-gray-100">
             <span className="text-gray-500">EIN</span>
-            <span className="font-medium font-mono text-gray-900">{carrier.ein || 'Not available'}</span>
+            <span className="font-medium font-mono text-gray-900"><PreviewBlurValue>{carrier.ein || 'Not available'}</PreviewBlurValue></span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-gray-100">
             <span className="text-gray-500">Related Carriers</span>
-            <span className="font-medium text-gray-900">{relatedCarriers.length}</span>
+            <span className="font-medium text-gray-900"><PreviewBlurValue>{relatedCarriers.length}</PreviewBlurValue></span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-gray-100">
             <span className="text-gray-500">Entity Type</span>
-            <span className="font-medium text-gray-900">{carrier.entityType}</span>
+            <span className="font-medium text-gray-900"><PreviewBlurValue>{carrier.entityType}</PreviewBlurValue></span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-gray-100">
             <span className="text-gray-500">Days Since Last Revocation</span>
             <span className="font-medium text-gray-900">
-              {carrier.daysSinceLastRevocation != null ? fmtNumber(carrier.daysSinceLastRevocation) : 'N/A'}
+              <PreviewBlurValue>{carrier.daysSinceLastRevocation != null ? fmtNumber(carrier.daysSinceLastRevocation) : 'N/A'}</PreviewBlurValue>
             </span>
           </div>
         </div>
@@ -1950,7 +1954,7 @@ function SafetyImprovementReportTab() {
   const {
     basicScores, basicAlerts, inspections, crashes, violationBreakdown,
     carrier, insurancePolicies, insuranceGaps, trucks, healthCategories,
-    violationTrend,
+    violationTrend, previewMode: pm,
   } = useCarrierDataContext()
 
   const recommendations = useMemo(() => generateSafetyRecommendations(
@@ -2013,7 +2017,7 @@ function SafetyImprovementReportTab() {
             </p>
           </div>
           <div className="text-center">
-            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradeColors[overallGrade]} flex items-center justify-center`}>
+            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradeColors[overallGrade]} flex items-center justify-center ${pm ? 'blur-[6px] select-none' : ''}`}>
               <span className="text-2xl font-black text-white">{overallGrade}</span>
             </div>
             <p className="text-xs text-gray-500 mt-1 font-medium">Safety Grade</p>
@@ -2021,7 +2025,7 @@ function SafetyImprovementReportTab() {
         </div>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+        <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 ${pm ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
           <div className="rounded-xl bg-white/70 p-3 text-center">
             <p className="text-2xl font-bold text-red-600">{criticalCount}</p>
             <p className="text-xs text-gray-500 font-medium">Critical</p>
@@ -2047,7 +2051,7 @@ function SafetyImprovementReportTab() {
           <Activity className="w-5 h-5 text-indigo-500" />
           Safety Snapshot
         </h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className={`grid sm:grid-cols-3 gap-4 ${pm ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
           <div className="rounded-xl bg-gray-50 p-4">
             <p className="text-xs text-gray-500 font-medium mb-1">Safety Rating</p>
             <p className={`text-lg font-bold capitalize ${
@@ -2102,7 +2106,7 @@ function SafetyImprovementReportTab() {
             <BarChart3 className="w-5 h-5 text-indigo-500" />
             BASIC Score Risk Map
           </h3>
-          <div className="space-y-3">
+          <div className={`space-y-3 ${pm ? 'blur-[5px] select-none pointer-events-none' : ''}`}>
             {basicScores.map((bs, i) => {
               const isScored = bs.score != null
               const pct = bs.percentile ?? 0
@@ -2160,7 +2164,7 @@ function SafetyImprovementReportTab() {
             Priority Action Plan
             <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{recommendations.length} items</span>
           </h3>
-          <div className="space-y-3">
+          <div className={`space-y-3 ${pm ? 'blur-[5px] select-none pointer-events-none' : ''}`}>
             {recommendations.map((rec) => {
               const colors = priorityColors[rec.priority]
               const isExpanded = expandedRec === rec.id
@@ -2454,7 +2458,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
         relatedCarriers: [], percentiles: [], monitoringAlerts: [], riskScoreTrend: [],
         contactHistory: fallbackContactHistory, vinInspections: [], networkSignals: [],
         benchmarks: [], chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
-        healthCategories: [], carrierLoading, carrierError,
+        healthCategories: [], carrierLoading, carrierError, previewMode,
       }
     }
 
@@ -2514,8 +2518,9 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
       healthCategories: healthResult.categories,
       carrierLoading: false,
       carrierError: null,
+      previewMode,
     }
-  }, [carrierReport, carrierLoading, carrierError, smsData, fmcsaCargoTypes, fmcsaAuthority, fmcsaInsurance])
+  }, [carrierReport, carrierLoading, carrierError, smsData, fmcsaCargoTypes, fmcsaAuthority, fmcsaInsurance, previewMode])
 
   const showSkeleton = carrierLoading && !carrierReport
 
@@ -2718,6 +2723,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
   }
 
   return (
+    <PreviewModeContext.Provider value={previewMode}>
     <CarrierDataContext.Provider value={carrierDataCtx}>
       <div className="space-y-6">
         {/* Error State */}
@@ -2799,30 +2805,61 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                         </div>
                       </div>
                     ) : previewMode && activeTab !== 'overview' ? (
-                      <div className="relative min-h-[500px]">
-                        <div className="pointer-events-none select-none">
-                          {tabContent[activeTab]}
-                        </div>
-                        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-md bg-white/60 rounded-2xl">
-                          <div className="text-center max-w-sm px-6">
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
-                              <Lock className="w-8 h-8 text-white" />
+                      <div className="relative">
+                        {/* Sticky CTA Banner */}
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="sticky top-0 z-30 mb-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 p-4 shadow-lg shadow-indigo-500/25"
+                        >
+                          <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                                <Eye className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-white font-semibold text-sm">Preview Mode</p>
+                                <p className="text-indigo-100 text-xs">
+                                  {activeTab === 'safety' ? 'Unlock full safety scores, BASIC analysis & inspection records'
+                                    : activeTab === 'insurance' ? 'Unlock full insurance coverage, policy details & gap analysis'
+                                    : activeTab === 'fleet' ? 'Unlock full fleet inventory, VIN details & driver data'
+                                    : activeTab === 'authority' ? 'Unlock full authority details, cargo capabilities & compliance data'
+                                    : activeTab === 'chameleon' ? 'Unlock chameleon carrier detection & related carrier analysis'
+                                    : 'Unlock detailed safety recommendations & action plan'}
+                                </p>
+                              </div>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">
-                              {!user ? 'Create a Free Account' : 'Unlock Full Report'}
-                            </h3>
-                            <p className="text-gray-500 text-sm mb-6">
-                              {!user
-                                ? `Sign up free to access detailed ${activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'authority' ? 'authority & compliance data' : 'carrier intelligence'}.`
-                                : `Subscribe to CarrierPulse to access detailed ${activeTab === 'safety' ? 'safety scores & inspections' : activeTab === 'insurance' ? 'insurance coverage & history' : activeTab === 'fleet' ? 'fleet & driver data' : activeTab === 'authority' ? 'authority & compliance data' : 'this section'}.`}
-                            </p>
                             <Link to={!user ? '/register' : '/pricing'}>
-                              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-                                {!user ? <Lock className="w-4 h-4 mr-2" /> : <Crown className="w-4 h-4 mr-2" />}
+                              <Button size="sm" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-sm whitespace-nowrap">
+                                {!user ? <Lock className="w-3.5 h-3.5 mr-1.5" /> : <Crown className="w-3.5 h-3.5 mr-1.5" />}
                                 {!user ? 'Sign Up Free' : 'View Plans'}
                               </Button>
                             </Link>
                           </div>
+                        </motion.div>
+
+                        {/* Tab content with granular blurs applied inside each tab */}
+                        {tabContent[activeTab]}
+
+                        {/* Bottom CTA */}
+                        <div className="mt-6 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-8 text-center">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
+                            <Lock className="w-7 h-7 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            {!user ? 'Ready to see the full picture?' : 'Unlock complete carrier intelligence'}
+                          </h3>
+                          <p className="text-gray-500 text-sm mb-4 max-w-md mx-auto">
+                            {!user
+                              ? 'Create a free account to access detailed carrier data across all tabs — safety scores, insurance, fleet data, and more.'
+                              : 'Subscribe to CarrierPulse for full access to unblurred carrier data, safety reports, and chameleon detection.'}
+                          </p>
+                          <Link to={!user ? '/register' : '/pricing'}>
+                            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                              {!user ? 'Create Free Account' : 'View Plans & Pricing'}
+                              <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     ) : (
@@ -2836,5 +2873,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
         )}
       </div>
     </CarrierDataContext.Provider>
+    </PreviewModeContext.Provider>
   )
 }
