@@ -3848,24 +3848,37 @@ For questions, contact us at escrow@domilea.com`
                             <FileText className="w-4 h-4 text-gray-400" />
                             <span className="text-sm text-gray-700 truncate max-w-[180px]">{doc.name}</span>
                           </div>
-                          {doc.verified ? (
-                            <span className="text-xs text-green-600 flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3" /> Verified
-                            </span>
-                          ) : (
-                            <Button size="sm" variant="outline" className="text-xs py-1 px-2" onClick={async () => {
+                          <div className="flex items-center gap-1">
+                            {doc.verified ? (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" /> Verified
+                              </span>
+                            ) : (
+                              <Button size="sm" variant="outline" className="text-xs py-1 px-2" onClick={async () => {
+                                try {
+                                  await api.verifyDocument(doc.id, true)
+                                  toast.success('Document verified')
+                                  await refreshTransaction()
+                                } catch (err: any) {
+                                  toast.error(err.message || 'Failed to verify document')
+                                }
+                              }}>
+                                Verify
+                              </Button>
+                            )}
+                            <Button size="sm" variant="danger" className="text-xs py-1 px-2" onClick={async () => {
+                              if (!confirm(`Delete "${doc.name}"?`)) return
                               try {
-                                await api.verifyDocument(doc.id, true)
-                                toast.success('Document verified')
-                                const res = await api.getTransaction(transactionId!)
-                                if (res.success && res.data) setTransaction(res.data)
+                                await api.deleteDocument(doc.id)
+                                toast.success('Document deleted')
+                                await refreshTransaction()
                               } catch (err: any) {
-                                toast.error(err.message || 'Failed to verify document')
+                                toast.error(err.message || 'Failed to delete')
                               }
                             }}>
-                              Verify
+                              <Trash2 className="w-3 h-3" />
                             </Button>
-                          )}
+                          </div>
                         </div>
                       ))}
                       <Button fullWidth variant="outline" size="sm" className="mt-2" onClick={() => setActiveTab('documents')}>
