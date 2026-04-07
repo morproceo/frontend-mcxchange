@@ -112,7 +112,7 @@ const AdminPendingReviewPage = () => {
     try {
       // Parse listing price - if empty, use asking price
       const priceToSet = listingPrice ? parseFloat(listingPrice) : undefined
-      await api.approveListing(selectedListing.id, approvalNotes || undefined, priceToSet)
+      await api.approveListing(selectedListing.id, { notes: approvalNotes || undefined, listingPrice: priceToSet })
       setPendingListings(prev => prev.filter(l => l.id !== selectedListing.id))
       setShowApproveModal(false)
       setApprovalNotes('')
