@@ -2439,11 +2439,11 @@ For questions, contact us at escrow@domilea.com`
                                 Purchase Agreement Document
                               </h4>
 
-                              {/* Upload Agreement (Seller or Admin) */}
-                              {!agreementDoc && (isSeller || isAdmin) && (
+                              {/* Upload Agreement (Admin only) */}
+                              {!agreementDoc && isAdmin && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
                                   <p className="text-sm text-blue-800 font-medium mb-2">
-                                    {isSeller ? 'Upload your purchase agreement' : 'Upload a purchase agreement for this transaction'}
+                                    Upload a purchase agreement for this transaction
                                   </p>
                                   <p className="text-xs text-blue-600 mb-3">
                                     Upload a PDF or Word document. Both parties will be able to review, download, and sign it.
@@ -2484,12 +2484,12 @@ For questions, contact us at escrow@domilea.com`
                                 </div>
                               )}
 
-                              {/* Waiting for seller to upload (buyer view) */}
-                              {!agreementDoc && isBuyer && (
+                              {/* Waiting for admin to upload (buyer/seller view) */}
+                              {!agreementDoc && (isBuyer || isSeller) && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
                                   <p className="text-sm text-gray-600 flex items-center gap-2">
                                     <Clock className="w-4 h-4" />
-                                    Waiting for seller to upload the purchase agreement...
+                                    Waiting for Domilea to upload the purchase agreement...
                                   </p>
                                 </div>
                               )}
