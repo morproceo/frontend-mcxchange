@@ -5196,6 +5196,18 @@ For questions, contact us at escrow@domilea.com`
                                 <CheckCircle className="w-4 h-4" />
                               </Button>
                             )}
+                            {userRole === 'admin' && (
+                              <Button variant="danger" size="sm" onClick={async () => {
+                                if (!confirm(`Delete "${matchingDoc.name}"?`)) return
+                                try {
+                                  await api.deleteDocument(matchingDoc.id)
+                                  toast.success('Document deleted')
+                                  await refreshTransaction()
+                                } catch (err: any) { toast.error(err.message || 'Delete failed') }
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </>
                         )}
                         {!matchingDoc && (userRole === 'seller' || userRole === 'admin') && (
@@ -5287,6 +5299,18 @@ For questions, contact us at escrow@domilea.com`
                               } catch (err: any) { toast.error(err.message || 'Verify failed') }
                             }}>
                               <CheckCircle className="w-4 h-4 mr-1" /> Verify
+                            </Button>
+                          )}
+                          {userRole === 'admin' && (
+                            <Button variant="danger" size="sm" onClick={async () => {
+                              if (!confirm(`Delete "${doc.name}"?`)) return
+                              try {
+                                await api.deleteDocument(doc.id)
+                                toast.success('Document deleted')
+                                await refreshTransaction()
+                              } catch (err: any) { toast.error(err.message || 'Delete failed') }
+                            }}>
+                              <Trash2 className="w-4 h-4 mr-1" /> Delete
                             </Button>
                           )}
                         </div>
