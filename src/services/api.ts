@@ -2341,6 +2341,13 @@ class ApiService {
     return this.request<{ success: boolean; data: { url: string } }>(`/documents/${documentId}/url`);
   }
 
+  // Delete a document
+  async deleteDocument(documentId: string) {
+    return this.request<{ success: boolean; message: string }>(`/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ===========================
   // CREDENTIAL VAULT METHODS
   // ===========================

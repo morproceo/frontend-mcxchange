@@ -2501,7 +2501,7 @@ For questions, contact us at escrow@domilea.com`
                               {/* Agreement uploaded — Show download & signing options */}
                               {agreementDoc && (
                                 <div className="space-y-3">
-                                  {/* Agreement file info + download */}
+                                  {/* Agreement file info + download + delete */}
                                   <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
                                     <div className="flex items-center gap-3">
                                       <FileText className="w-5 h-5 text-green-600" />
@@ -2512,23 +2512,43 @@ For questions, contact us at escrow@domilea.com`
                                         </p>
                                       </div>
                                     </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={async () => {
-                                        try {
-                                          const res = await api.getDocumentUrl(agreementDoc.id)
-                                          if (res.success && res.data?.url) {
-                                            window.open(res.data.url, '_blank')
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={async () => {
+                                          try {
+                                            const res = await api.getDocumentUrl(agreementDoc.id)
+                                            if (res.success && res.data?.url) {
+                                              window.open(res.data.url, '_blank')
+                                            }
+                                          } catch {
+                                            toast.error('Failed to get download link')
                                           }
-                                        } catch {
-                                          toast.error('Failed to get download link')
-                                        }
-                                      }}
-                                    >
-                                      <Download className="w-4 h-4 mr-1" />
-                                      Download
-                                    </Button>
+                                        }}
+                                      >
+                                        <Download className="w-4 h-4 mr-1" />
+                                        Download
+                                      </Button>
+                                      {isAdmin && (
+                                        <Button
+                                          variant="danger"
+                                          size="sm"
+                                          onClick={async () => {
+                                            if (!confirm('Delete this agreement and upload a new one?')) return
+                                            try {
+                                              await api.deleteDocument(agreementDoc.id)
+                                              toast.success('Agreement deleted. You can upload a new one.')
+                                              await refreshTransaction()
+                                            } catch (err: any) {
+                                              toast.error(err.message || 'Failed to delete')
+                                            }
+                                          }}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {/* Signing Options */}
@@ -3573,18 +3593,36 @@ For questions, contact us at escrow@domilea.com`
                                           <CheckCircle className="w-4 h-4 text-green-600" />
                                           <span className="text-sm font-medium text-green-800 truncate">{agreementFile?.name}</span>
                                         </div>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={async () => {
-                                            try {
-                                              const res = await api.getDocumentUrl(agreementFile!.id)
-                                              if (res.success && res.data?.url) window.open(res.data.url, '_blank')
-                                            } catch { toast.error('Failed to get download link') }
-                                          }}
-                                        >
-                                          <Download className="w-3 h-3" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={async () => {
+                                              try {
+                                                const res = await api.getDocumentUrl(agreementFile!.id)
+                                                if (res.success && res.data?.url) window.open(res.data.url, '_blank')
+                                              } catch { toast.error('Failed to get download link') }
+                                            }}
+                                          >
+                                            <Download className="w-3 h-3" />
+                                          </Button>
+                                          <Button
+                                            variant="danger"
+                                            size="sm"
+                                            onClick={async () => {
+                                              if (!confirm('Delete this agreement and upload a new one?')) return
+                                              try {
+                                                await api.deleteDocument(agreementFile!.id)
+                                                toast.success('Agreement deleted. You can upload a new one.')
+                                                await refreshTransaction()
+                                              } catch (err: any) {
+                                                toast.error(err.message || 'Failed to delete')
+                                              }
+                                            }}
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
                                       </div>
                                       <div className="text-xs space-y-1">
                                         <p className={buyerSigned ? 'text-green-600' : 'text-gray-500'}>
