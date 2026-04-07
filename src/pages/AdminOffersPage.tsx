@@ -53,6 +53,7 @@ interface Offer {
     title: string
     price: number
     askingPrice?: number
+    legalName?: string
     status: string
   }
   buyer?: {
@@ -365,6 +366,9 @@ const AdminOffersPage = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-gray-900">MC #{offer.listing?.mcNumber || 'N/A'}</h3>
+                            {offer.listing?.legalName && (
+                              <span className="text-sm text-gray-600">— {offer.listing.legalName}</span>
+                            )}
                             {offer.isBuyNow && (
                               <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex items-center gap-1">
                                 <ShoppingCart className="w-3 h-3" />
@@ -404,7 +408,7 @@ const AdminOffersPage = () => {
                         <p className="text-sm text-gray-500">Offer Amount</p>
                         <p className="text-xl font-bold text-gray-900">${Number(offer.amount).toLocaleString()}</p>
                         <p className="text-xs text-gray-400">
-                          Asking: ${Number(offer.listing?.price || 0).toLocaleString()}
+                          Asking: ${Number(offer.listing?.askingPrice || offer.listing?.price || 0).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -522,13 +526,18 @@ const AdminOffersPage = () => {
                         <Building2 className="w-6 h-6 text-gray-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">MC #{selectedOffer.listing?.mcNumber || 'N/A'}</h3>
+                        <h3 className="font-semibold text-gray-900">
+                          MC #{selectedOffer.listing?.mcNumber || 'N/A'}
+                          {selectedOffer.listing?.legalName && (
+                            <span className="text-gray-600 font-normal"> — {selectedOffer.listing.legalName}</span>
+                          )}
+                        </h3>
                         <p className="text-sm text-gray-500">{selectedOffer.listing?.title || 'N/A'}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Asking Price</p>
-                      <p className="text-lg font-bold text-gray-900">${Number(selectedOffer.listing?.price || 0).toLocaleString()}</p>
+                      <p className="text-lg font-bold text-gray-900">${Number(selectedOffer.listing?.askingPrice || selectedOffer.listing?.price || 0).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
