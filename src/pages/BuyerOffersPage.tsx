@@ -37,7 +37,9 @@ interface Offer {
     mcNumber: string
     dotNumber?: string
     title: string
-    price: number
+    askingPrice?: number
+    listingPrice?: number
+    price?: number
     status: string
     city?: string
     state?: string
@@ -357,19 +359,19 @@ const BuyerOffersPage = () => {
                     <div className="text-right ml-4">
                       <div className="text-sm text-gray-500 mb-1">Listing Price</div>
                       <div className="text-lg font-semibold text-gray-700 mb-2">
-                        ${offer.listing.price.toLocaleString()}
+                        ${(offer.listing.askingPrice ?? offer.listing.listingPrice ?? offer.listing.price ?? 0).toLocaleString()}
                       </div>
                       <div className="text-sm text-gray-500 mb-1">
                         {offer.isBuyNow ? 'Buy Now Price' : 'Your Offer'}
                       </div>
                       <div className="text-2xl font-bold text-gray-900">
-                        ${offer.amount.toLocaleString()}
+                        ${(offer.amount ?? 0).toLocaleString()}
                       </div>
                       {offer.status === 'COUNTERED' && offer.counterAmount && (
                         <>
                           <div className="text-sm text-gray-500 mt-2 mb-1">Counter Offer</div>
                           <div className="text-xl font-bold text-blue-600">
-                            ${offer.counterAmount.toLocaleString()}
+                            ${(offer.counterAmount ?? 0).toLocaleString()}
                           </div>
                         </>
                       )}
