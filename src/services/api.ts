@@ -1347,6 +1347,20 @@ class ApiService {
     });
   }
 
+  // Create final payment checkout (Stripe Connect split payment)
+  async createFinalPaymentCheckout(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        sessionId: string;
+        url: string;
+      };
+      message: string;
+    }>(`/transactions/${transactionId}/final-payment-checkout`, {
+      method: 'POST',
+    });
+  }
+
   // Record deposit payment (Zelle/Wire/Check)
   async recordDeposit(transactionId: string, paymentMethod: 'STRIPE' | 'ZELLE' | 'WIRE' | 'CHECK', reference?: string) {
     return this.request<{

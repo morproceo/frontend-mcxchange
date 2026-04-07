@@ -1164,6 +1164,55 @@ const TransactionRoomPage = () => {
     }
   }, [searchParams, transactionId, setSearchParams])
 
+  // Handle final payment success/cancelled query params from Stripe redirect
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment')
+
+    if (paymentStatus === 'success') {
+      toast.success('Payment submitted successfully! Awaiting admin verification.', {
+        duration: 5000,
+      })
+      searchParams.delete('payment')
+      setSearchParams(searchParams, { replace: true })
+
+      // Poll for transaction update
+      const pollPayment = async () => {
+        let attempts = 0
+        const poll = async () => {
+          if (attempts >= 5) return
+          attempts++
+          try {
+            const response = await api.getTransaction(transactionId!)
+            if (response.success && response.data) {
+              const txn = response.data
+              if (txn.status === 'PAYMENT_RECEIVED' || txn.status === 'COMPLETED' || txn.finalPaidAt) {
+                setTransaction(prev => ({
+                  ...prev,
+                  status: 'payment-received',
+                  finalPaymentPaid: true,
+                  workflow: { ...prev.workflow, currentStep: 'completed' as BuyerStep },
+                }))
+                setBuyerStep('completed')
+                toast.success('Payment confirmed!', { duration: 4000 })
+                return
+              }
+            }
+            setTimeout(poll, 2000)
+          } catch (err) {
+            console.error('Error polling for payment update:', err)
+          }
+        }
+        setTimeout(poll, 1000)
+      }
+      pollPayment()
+      setPaymentSubmitted(true)
+    } else if (paymentStatus === 'cancelled') {
+      toast.error('Payment was cancelled. You can try again when ready.')
+      searchParams.delete('payment')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, transactionId, setSearchParams])
+
   // Determine user role in this transaction
   const getUserRole = (): 'admin' | 'buyer' | 'seller' => {
     if (user?.role === 'admin') return 'admin'
@@ -2407,6 +2456,51 @@ For questions, contact us at escrow@domilea.com`
                       {/* Show different UI based on whether payment has been submitted */}
                       {!paymentSubmitted ? (
                         <>
+                          {/* Stripe Card Payment - Primary Option */}
+                          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4 mb-4">
+                            <h5 className="font-semibold text-indigo-800 mb-2 flex items-center gap-2">
+                              <CreditCard className="w-5 h-5" />
+                              Pay with Card
+                              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Instant & Secure</span>
+                            </h5>
+                            <p className="text-sm text-indigo-700 mb-4">
+                              Pay securely via Stripe. Funds are automatically split — the seller receives their payout directly.
+                            </p>
+                            <Button
+                              fullWidth
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                              onClick={async () => {
+                                try {
+                                  setSubmittingFinalPayment(true)
+                                  const response = await api.createFinalPaymentCheckout(transactionId!)
+                                  if (response.success && response.data?.url) {
+                                    window.location.href = response.data.url
+                                  } else {
+                                    toast.error('Failed to create payment session')
+                                  }
+                                } catch (err: any) {
+                                  toast.error(err.message || 'Failed to initiate payment')
+                                } finally {
+                                  setSubmittingFinalPayment(false)
+                                }
+                              }}
+                              disabled={submittingFinalPayment}
+                            >
+                              {submittingFinalPayment ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <CreditCard className="w-4 h-4 mr-2" />
+                              )}
+                              Pay ${transaction.finalPaymentAmount.toLocaleString()} with Card
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="flex-1 border-t border-gray-200" />
+                            <span className="text-xs text-gray-400 uppercase font-medium">or pay manually</span>
+                            <div className="flex-1 border-t border-gray-200" />
+                          </div>
+
                           {/* Payment Instructions */}
                           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                             <h5 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
