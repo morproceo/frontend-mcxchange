@@ -131,6 +131,10 @@ const TransactionRoomPage = () => {
   // Admin contract file state
   const [adminContractFile, setAdminContractFile] = useState<File | null>(null)
 
+  // Purchase agreement state
+  const [agreementUploading, setAgreementUploading] = useState(false)
+  const [signedCopyUploading, setSignedCopyUploading] = useState(false)
+
   // Final payment flow state
   const [finalPaymentMethod, setFinalPaymentMethod] = useState<'ZELLE' | 'WIRE'>('ZELLE')
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null)
@@ -1392,6 +1396,17 @@ For questions, contact us at escrow@domilea.com`
           depositPaid: !!txn.depositPaidAt,
           depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.depositPaidAt,
           finalPaymentPaid: !!txn.finalPaymentPaidAt,
+          sellerDocuments: txn.documents?.length > 0 ? txn.documents.map((doc: any) => ({
+            id: doc.id,
+            transactionId: txn.id,
+            uploadedBy: doc.uploadedBy || 'seller',
+            uploaderId: doc.uploaderId || txn.sellerId,
+            name: doc.name || doc.filename,
+            type: doc.type || 'document',
+            url: doc.url || '#',
+            verified: doc.verified ?? false,
+            uploadedAt: new Date(doc.createdAt || doc.uploadedAt),
+          })) : prev.sellerDocuments,
         }))
       }
     } catch (err) {
@@ -2389,32 +2404,251 @@ For questions, contact us at escrow@domilea.com`
                       }}
                       adminApproveLabel="Finalize & Send Payment Instructions"
                     >
-                      {/* Agreement Content */}
-                      <div className="bg-white rounded-xl p-4 mb-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-semibold text-gray-900">Purchase Agreement</h4>
-                          <Button variant="outline" size="sm">
-                            <Download className="w-4 h-4 mr-1" />
-                            Download PDF
-                          </Button>
+                      {/* Purchase Agreement Section */}
+                      <div className="space-y-4">
+                        {/* Agreement Summary */}
+                        <div className="bg-white rounded-xl p-4">
+                          <div className="border border-gray-200 rounded-lg p-4 text-sm">
+                            <p className="font-semibold mb-2">MC Authority Purchase Agreement</p>
+                            <p className="text-gray-600 mb-2">
+                              This agreement confirms the sale of MC Authority #{transaction.listing.mcNumber} from
+                              {' '}<span className="font-medium">{transaction.seller.name}</span> to
+                              {' '}<span className="font-medium">{transaction.buyer.name}</span> for the {isSeller ? 'asking price' : 'agreed price'} of
+                              {' '}<span className="font-medium">${isSeller ? (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
+                            </p>
+                            <p className="text-gray-500 text-xs">Generated: {new Date().toLocaleDateString()}</p>
+                          </div>
                         </div>
 
-                        <div className="border border-gray-200 rounded-lg p-4 text-sm">
-                          <p className="font-semibold mb-2">MC Authority Bill of Sale</p>
-                          <p className="text-gray-600 mb-2">
-                            This agreement confirms the sale of MC Authority #{transaction.listing.mcNumber} from
-                            {' '}<span className="font-medium">{transaction.seller.name}</span> to
-                            {' '}<span className="font-medium">{transaction.buyer.name}</span> for the {isSeller ? 'asking price' : 'agreed price'} of
-                            {' '}<span className="font-medium">${isSeller ? (transaction.listing.listingPrice ?? transaction.listing.askingPrice ?? transaction.listing.price ?? 0).toLocaleString() : transaction.agreedPrice.toLocaleString()}</span>.
-                          </p>
-                          <p className="text-gray-500 text-xs">Generated: {new Date().toLocaleDateString()}</p>
-                        </div>
+                        {/* Purchase Agreement Upload / Download */}
+                        {(() => {
+                          const agreementDoc = transaction.sellerDocuments.find(
+                            (d: any) => d.type === 'PURCHASE_AGREEMENT'
+                          )
+                          const buyerSignedDoc = transaction.sellerDocuments.find(
+                            (d: any) => d.type === 'SIGNED_AGREEMENT' && d.uploaderId === transaction.buyer.id
+                          )
+                          const sellerSignedDoc = transaction.sellerDocuments.find(
+                            (d: any) => d.type === 'SIGNED_AGREEMENT' && d.uploaderId === transaction.seller.id
+                          )
 
-                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          return (
+                            <div className="bg-white rounded-xl p-4 border border-gray-200">
+                              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <FileCheck className="w-5 h-5 text-blue-600" />
+                                Purchase Agreement Document
+                              </h4>
+
+                              {/* Upload Agreement (Seller or Admin) */}
+                              {!agreementDoc && (isSeller || isAdmin) && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                                  <p className="text-sm text-blue-800 font-medium mb-2">
+                                    {isSeller ? 'Upload your purchase agreement' : 'Upload a purchase agreement for this transaction'}
+                                  </p>
+                                  <p className="text-xs text-blue-600 mb-3">
+                                    Upload a PDF or Word document. Both parties will be able to review, download, and sign it.
+                                  </p>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="file"
+                                      className="hidden"
+                                      accept=".pdf,.doc,.docx"
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        e.target.value = ''
+                                        setAgreementUploading(true)
+                                        try {
+                                          const formData = new FormData()
+                                          formData.append('file', file)
+                                          formData.append('type', 'PURCHASE_AGREEMENT')
+                                          await api.uploadTransactionDocument(transactionId!, formData)
+                                          toast.success('Purchase agreement uploaded successfully!')
+                                          await refreshTransaction()
+                                        } catch (err: any) {
+                                          toast.error(err.message || 'Failed to upload agreement')
+                                        } finally {
+                                          setAgreementUploading(false)
+                                        }
+                                      }}
+                                    />
+                                    <Button variant="outline" size="sm" disabled={agreementUploading}>
+                                      {agreementUploading ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      ) : (
+                                        <Upload className="w-4 h-4 mr-2" />
+                                      )}
+                                      {agreementUploading ? 'Uploading...' : 'Select Agreement File'}
+                                    </Button>
+                                  </label>
+                                </div>
+                              )}
+
+                              {/* Waiting for seller to upload (buyer view) */}
+                              {!agreementDoc && isBuyer && (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
+                                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    Waiting for seller to upload the purchase agreement...
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Agreement uploaded — Show download & signing options */}
+                              {agreementDoc && (
+                                <div className="space-y-3">
+                                  {/* Agreement file info + download */}
+                                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div className="flex items-center gap-3">
+                                      <FileText className="w-5 h-5 text-green-600" />
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-900">{agreementDoc.name}</p>
+                                        <p className="text-xs text-gray-500">
+                                          Uploaded {new Date(agreementDoc.uploadedAt).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={async () => {
+                                        try {
+                                          const res = await api.getDocumentUrl(agreementDoc.id)
+                                          if (res.success && res.data?.url) {
+                                            window.open(res.data.url, '_blank')
+                                          }
+                                        } catch {
+                                          toast.error('Failed to get download link')
+                                        }
+                                      }}
+                                    >
+                                      <Download className="w-4 h-4 mr-1" />
+                                      Download
+                                    </Button>
+                                  </div>
+
+                                  {/* Signing Options */}
+                                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                                    <h5 className="text-sm font-semibold text-indigo-800 mb-2">How to Sign</h5>
+                                    <p className="text-xs text-indigo-700 mb-3">
+                                      Choose one option: sign electronically by clicking "Approve" below, or download the agreement, sign it physically, and upload the signed copy.
+                                    </p>
+
+                                    {/* Signed copies status */}
+                                    <div className="space-y-2 mb-3">
+                                      {/* Buyer signed copy */}
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-700">Buyer signed copy:</span>
+                                        {buyerSignedDoc ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-green-600 flex items-center gap-1">
+                                              <CheckCircle className="w-4 h-4" />
+                                              Uploaded
+                                            </span>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={async () => {
+                                                try {
+                                                  const res = await api.getDocumentUrl(buyerSignedDoc.id)
+                                                  if (res.success && res.data?.url) window.open(res.data.url, '_blank')
+                                                } catch { toast.error('Failed to get download link') }
+                                              }}
+                                            >
+                                              <Download className="w-3 h-3" />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400 text-xs">Not yet uploaded</span>
+                                        )}
+                                      </div>
+
+                                      {/* Seller signed copy */}
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-700">Seller signed copy:</span>
+                                        {sellerSignedDoc ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-green-600 flex items-center gap-1">
+                                              <CheckCircle className="w-4 h-4" />
+                                              Uploaded
+                                            </span>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={async () => {
+                                                try {
+                                                  const res = await api.getDocumentUrl(sellerSignedDoc.id)
+                                                  if (res.success && res.data?.url) window.open(res.data.url, '_blank')
+                                                } catch { toast.error('Failed to get download link') }
+                                              }}
+                                            >
+                                              <Download className="w-3 h-3" />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400 text-xs">Not yet uploaded</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Upload signed copy (buyer or seller, if they haven't uploaded one yet) */}
+                                    {((isBuyer && !buyerSignedDoc) || (isSeller && !sellerSignedDoc)) && (
+                                      <label className="block cursor-pointer">
+                                        <input
+                                          type="file"
+                                          className="hidden"
+                                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                          onChange={async (e) => {
+                                            const file = e.target.files?.[0]
+                                            if (!file) return
+                                            e.target.value = ''
+                                            setSignedCopyUploading(true)
+                                            try {
+                                              const formData = new FormData()
+                                              formData.append('file', file)
+                                              formData.append('type', 'SIGNED_AGREEMENT')
+                                              await api.uploadTransactionDocument(transactionId!, formData)
+                                              toast.success('Signed copy uploaded!')
+                                              await refreshTransaction()
+                                            } catch (err: any) {
+                                              toast.error(err.message || 'Failed to upload signed copy')
+                                            } finally {
+                                              setSignedCopyUploading(false)
+                                            }
+                                          }}
+                                        />
+                                        <Button variant="outline" size="sm" fullWidth disabled={signedCopyUploading}>
+                                          {signedCopyUploading ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                          ) : (
+                                            <Upload className="w-4 h-4 mr-2" />
+                                          )}
+                                          {signedCopyUploading ? 'Uploading...' : 'Upload Signed Copy'}
+                                        </Button>
+                                      </label>
+                                    )}
+
+                                    {/* Admin can view all signed copies */}
+                                    {isAdmin && (
+                                      <p className="text-xs text-indigo-600 mt-2">
+                                        {buyerSignedDoc && sellerSignedDoc
+                                          ? 'Both parties have uploaded signed copies.'
+                                          : `Waiting for ${!buyerSignedDoc ? 'buyer' : ''}${!buyerSignedDoc && !sellerSignedDoc ? ' and ' : ''}${!sellerSignedDoc ? 'seller' : ''} to upload signed copies.`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+
+                        {/* Disclaimer */}
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                           <p className="text-xs text-amber-700">
-                            <strong>Important:</strong> By approving this agreement, you confirm that all information is accurate
-                            and you agree to the terms of sale. All three parties (Buyer, Seller, and Admin) must approve
-                            before the transaction can proceed to final payment.
+                            <strong>Important:</strong> By clicking "Approve" below, you are electronically signing this agreement.
+                            Alternatively, download the agreement, sign it, and upload the signed copy above.
+                            All three parties (Buyer, Seller, and Admin) must approve before proceeding to final payment.
                           </p>
                         </div>
                       </div>
