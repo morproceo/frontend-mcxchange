@@ -2448,39 +2448,43 @@ For questions, contact us at escrow@domilea.com`
                                   <p className="text-xs text-blue-600 mb-3">
                                     Upload a PDF or Word document. Both parties will be able to review, download, and sign it.
                                   </p>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="file"
-                                      className="hidden"
-                                      accept=".pdf,.doc,.docx"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0]
-                                        if (!file) return
-                                        e.target.value = ''
-                                        setAgreementUploading(true)
-                                        try {
-                                          const formData = new FormData()
-                                          formData.append('file', file)
-                                          formData.append('type', 'PURCHASE_AGREEMENT')
-                                          await api.uploadTransactionDocument(transactionId!, formData)
-                                          toast.success('Purchase agreement uploaded successfully!')
-                                          await refreshTransaction()
-                                        } catch (err: any) {
-                                          toast.error(err.message || 'Failed to upload agreement')
-                                        } finally {
-                                          setAgreementUploading(false)
-                                        }
-                                      }}
-                                    />
-                                    <Button variant="outline" size="sm" disabled={agreementUploading}>
-                                      {agreementUploading ? (
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      ) : (
-                                        <Upload className="w-4 h-4 mr-2" />
-                                      )}
-                                      {agreementUploading ? 'Uploading...' : 'Select Agreement File'}
-                                    </Button>
-                                  </label>
+                                  <input
+                                    type="file"
+                                    id="panel-agreement-upload"
+                                    className="hidden"
+                                    accept=".pdf,.doc,.docx"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0]
+                                      if (!file) return
+                                      e.target.value = ''
+                                      setAgreementUploading(true)
+                                      try {
+                                        const formData = new FormData()
+                                        formData.append('file', file)
+                                        formData.append('type', 'PURCHASE_AGREEMENT')
+                                        await api.uploadTransactionDocument(transactionId!, formData)
+                                        toast.success('Purchase agreement uploaded successfully!')
+                                        await refreshTransaction()
+                                      } catch (err: any) {
+                                        toast.error(err.message || 'Failed to upload agreement')
+                                      } finally {
+                                        setAgreementUploading(false)
+                                      }
+                                    }}
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={agreementUploading}
+                                    onClick={() => document.getElementById('panel-agreement-upload')?.click()}
+                                  >
+                                    {agreementUploading ? (
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Upload className="w-4 h-4 mr-2" />
+                                    )}
+                                    {agreementUploading ? 'Uploading...' : 'Select Agreement File'}
+                                  </Button>
                                 </div>
                               )}
 
@@ -2593,9 +2597,10 @@ For questions, contact us at escrow@domilea.com`
 
                                     {/* Upload signed copy (buyer or seller, if they haven't uploaded one yet) */}
                                     {((isBuyer && !buyerSignedDoc) || (isSeller && !sellerSignedDoc)) && (
-                                      <label className="block cursor-pointer">
+                                      <>
                                         <input
                                           type="file"
+                                          id="signed-copy-upload"
                                           className="hidden"
                                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                           onChange={async (e) => {
@@ -2617,7 +2622,13 @@ For questions, contact us at escrow@domilea.com`
                                             }
                                           }}
                                         />
-                                        <Button variant="outline" size="sm" fullWidth disabled={signedCopyUploading}>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          fullWidth
+                                          disabled={signedCopyUploading}
+                                          onClick={() => document.getElementById('signed-copy-upload')?.click()}
+                                        >
                                           {signedCopyUploading ? (
                                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                           ) : (
@@ -2625,7 +2636,7 @@ For questions, contact us at escrow@domilea.com`
                                           )}
                                           {signedCopyUploading ? 'Uploading...' : 'Upload Signed Copy'}
                                         </Button>
-                                      </label>
+                                      </>
                                     )}
 
                                     {/* Admin can view all signed copies */}
@@ -3516,39 +3527,44 @@ For questions, contact us at escrow@domilea.com`
                                       <p className="text-sm text-indigo-700 mb-3">
                                         Upload a purchase agreement for buyer and seller to review and sign.
                                       </p>
-                                      <label className="block cursor-pointer">
-                                        <input
-                                          type="file"
-                                          className="hidden"
-                                          accept=".pdf,.doc,.docx"
-                                          onChange={async (e) => {
-                                            const file = e.target.files?.[0]
-                                            if (!file) return
-                                            e.target.value = ''
-                                            setAgreementUploading(true)
-                                            try {
-                                              const formData = new FormData()
-                                              formData.append('file', file)
-                                              formData.append('type', 'PURCHASE_AGREEMENT')
-                                              await api.uploadTransactionDocument(transactionId!, formData)
-                                              toast.success('Purchase agreement uploaded!')
-                                              await refreshTransaction()
-                                            } catch (err: any) {
-                                              toast.error(err.message || 'Failed to upload agreement')
-                                            } finally {
-                                              setAgreementUploading(false)
-                                            }
-                                          }}
-                                        />
-                                        <Button variant="outline" size="sm" fullWidth disabled={agreementUploading}>
-                                          {agreementUploading ? (
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                          ) : (
-                                            <Upload className="w-4 h-4 mr-2" />
-                                          )}
-                                          {agreementUploading ? 'Uploading...' : 'Upload Purchase Agreement'}
-                                        </Button>
-                                      </label>
+                                      <input
+                                        type="file"
+                                        id="admin-agreement-upload"
+                                        className="hidden"
+                                        accept=".pdf,.doc,.docx"
+                                        onChange={async (e) => {
+                                          const file = e.target.files?.[0]
+                                          if (!file) return
+                                          e.target.value = ''
+                                          setAgreementUploading(true)
+                                          try {
+                                            const formData = new FormData()
+                                            formData.append('file', file)
+                                            formData.append('type', 'PURCHASE_AGREEMENT')
+                                            await api.uploadTransactionDocument(transactionId!, formData)
+                                            toast.success('Purchase agreement uploaded!')
+                                            await refreshTransaction()
+                                          } catch (err: any) {
+                                            toast.error(err.message || 'Failed to upload agreement')
+                                          } finally {
+                                            setAgreementUploading(false)
+                                          }
+                                        }}
+                                      />
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        fullWidth
+                                        disabled={agreementUploading}
+                                        onClick={() => document.getElementById('admin-agreement-upload')?.click()}
+                                      >
+                                        {agreementUploading ? (
+                                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                          <Upload className="w-4 h-4 mr-2" />
+                                        )}
+                                        {agreementUploading ? 'Uploading...' : 'Upload Purchase Agreement'}
+                                      </Button>
                                     </>
                                   ) : (
                                     <>
