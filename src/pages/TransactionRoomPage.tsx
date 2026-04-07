@@ -3496,6 +3496,95 @@ For questions, contact us at escrow@domilea.com`
                             </div>
                           </div>
 
+                          {/* Purchase Agreement Upload (Admin) */}
+                          {userRole === 'admin' && (
+                            (() => {
+                              const hasAgreement = transaction.sellerDocuments.some((d: any) => d.type === 'PURCHASE_AGREEMENT')
+                              const buyerSigned = transaction.sellerDocuments.some((d: any) => d.type === 'SIGNED_AGREEMENT' && d.uploaderId === transaction.buyer.id)
+                              const sellerSigned = transaction.sellerDocuments.some((d: any) => d.type === 'SIGNED_AGREEMENT' && d.uploaderId === transaction.seller.id)
+                              const agreementFile = transaction.sellerDocuments.find((d: any) => d.type === 'PURCHASE_AGREEMENT')
+
+                              return (
+                                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                                  <h4 className="font-semibold text-indigo-800 mb-2 flex items-center gap-2">
+                                    <FileCheck className="w-4 h-4" />
+                                    Purchase Agreement
+                                  </h4>
+
+                                  {!hasAgreement ? (
+                                    <>
+                                      <p className="text-sm text-indigo-700 mb-3">
+                                        Upload a purchase agreement for buyer and seller to review and sign.
+                                      </p>
+                                      <label className="block cursor-pointer">
+                                        <input
+                                          type="file"
+                                          className="hidden"
+                                          accept=".pdf,.doc,.docx"
+                                          onChange={async (e) => {
+                                            const file = e.target.files?.[0]
+                                            if (!file) return
+                                            e.target.value = ''
+                                            setAgreementUploading(true)
+                                            try {
+                                              const formData = new FormData()
+                                              formData.append('file', file)
+                                              formData.append('type', 'PURCHASE_AGREEMENT')
+                                              await api.uploadTransactionDocument(transactionId!, formData)
+                                              toast.success('Purchase agreement uploaded!')
+                                              await refreshTransaction()
+                                            } catch (err: any) {
+                                              toast.error(err.message || 'Failed to upload agreement')
+                                            } finally {
+                                              setAgreementUploading(false)
+                                            }
+                                          }}
+                                        />
+                                        <Button variant="outline" size="sm" fullWidth disabled={agreementUploading}>
+                                          {agreementUploading ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                          ) : (
+                                            <Upload className="w-4 h-4 mr-2" />
+                                          )}
+                                          {agreementUploading ? 'Uploading...' : 'Upload Purchase Agreement'}
+                                        </Button>
+                                      </label>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-2 mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <CheckCircle className="w-4 h-4 text-green-600" />
+                                          <span className="text-sm font-medium text-green-800 truncate">{agreementFile?.name}</span>
+                                        </div>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={async () => {
+                                            try {
+                                              const res = await api.getDocumentUrl(agreementFile!.id)
+                                              if (res.success && res.data?.url) window.open(res.data.url, '_blank')
+                                            } catch { toast.error('Failed to get download link') }
+                                          }}
+                                        >
+                                          <Download className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                      <div className="text-xs space-y-1">
+                                        <p className={buyerSigned ? 'text-green-600' : 'text-gray-500'}>
+                                          {buyerSigned ? '✓ Buyer signed copy uploaded' : '○ Buyer signed copy: pending'}
+                                        </p>
+                                        <p className={sellerSigned ? 'text-green-600' : 'text-gray-500'}>
+                                          {sellerSigned ? '✓ Seller signed copy uploaded' : '○ Seller signed copy: pending'}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            })()
+                          )}
+
                           {/* Admin can approve after both parties approved */}
                           {transaction.buyerApproved && transaction.sellerApproved && !transaction.adminApproved && (
                             <div className="space-y-4">
