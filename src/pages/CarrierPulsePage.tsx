@@ -1082,19 +1082,20 @@ function SafetyTab() {
                     <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       {basicScores.map((basic, i) => {
                         const isScored = basic.score != null
-                        const ratio = isScored ? basic.score! / basic.threshold : 0
-                        const hasAlert = alertMap[basic.name] || false
+                        const exceedsThreshold = isScored && basic.score! >= basic.threshold
+                        const apiAlert = alertMap[basic.name] || false
+                        const hasAlert = exceedsThreshold || apiAlert
                         const violations = violationMap[basic.name] ?? 0
                         return (
                           <tr key={i} className={`border-b border-gray-50 hover:bg-gray-50 ${hasAlert ? 'bg-yellow-50/50' : ''}`}>
                             <td className="py-2.5 px-4 font-medium text-gray-900">{basic.name}{hasAlert && <span className="ml-1.5 inline-flex w-2 h-2 rounded-full bg-yellow-400" />}</td>
                             <td className="py-2.5 px-4 text-xs text-gray-500 hidden sm:table-cell">{basic.description}</td>
-                            <td className="py-2.5 px-4 text-right">{isScored ? <span className={`font-bold ${ratio >= 1 ? 'text-amber-600' : ratio >= 0.75 ? 'text-yellow-600' : 'text-emerald-600'}`}>{basic.score}%</span> : <span className="text-gray-400 text-xs">Not Scored</span>}</td>
+                            <td className="py-2.5 px-4 text-right">{isScored ? <span className={`font-bold ${exceedsThreshold ? 'text-amber-600' : basic.score! >= basic.threshold * 0.75 ? 'text-yellow-600' : 'text-emerald-600'}`}>{basic.score}%</span> : <span className="text-gray-400 text-xs">Not Scored</span>}</td>
                             <td className="py-2.5 px-4 text-right text-gray-400">{basic.threshold}%</td>
                             <td className="py-2.5 px-4 text-right text-gray-700">{violations}</td>
                             <td className="py-2.5 px-4 text-right">
-                              {hasAlert ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Alert</span>
-                                : isScored && basic.score! >= basic.threshold ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Exceeding</span>
+                              {exceedsThreshold ? <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">Exceeding</span>
+                                : apiAlert ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Alert</span>
                                 : isScored ? <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">OK</span>
                                 : violations > 0 ? <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">{violations} viol.</span>
                                 : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">No Data</span>}
