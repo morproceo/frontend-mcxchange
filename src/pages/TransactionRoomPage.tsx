@@ -2078,7 +2078,7 @@ For questions, contact us at escrow@domilea.com`
                     <Card className="border-2 border-blue-200 bg-blue-50/30">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                          <CreditCard className="w-6 h-6 text-blue-600" />
+                          <Banknote className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
                           <h3 className="text-lg font-bold text-gray-900">Deposit Payment</h3>
@@ -2095,179 +2095,47 @@ For questions, contact us at escrow@domilea.com`
                           This deposit will be held in escrow and applied to your final purchase price.
                         </div>
 
-                        {/* Payment Method Selection */}
-                        <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-3">Select Payment Method</label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              onClick={() => setPaymentMethod('card')}
-                              className={`p-4 rounded-xl border-2 transition-all ${
-                                paymentMethod === 'card'
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}
-                            >
-                              <CreditCard className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'card' ? 'text-blue-600' : 'text-gray-400'}`} />
-                              <p className={`font-medium ${paymentMethod === 'card' ? 'text-blue-700' : 'text-gray-700'}`}>Credit/Debit Card</p>
-                              <p className="text-xs text-gray-500 mt-1">Instant processing</p>
-                            </button>
-                            <button
-                              onClick={() => setPaymentMethod('zelle')}
-                              className={`p-4 rounded-xl border-2 transition-all ${
-                                paymentMethod === 'zelle'
-                                  ? 'border-purple-500 bg-purple-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}
-                            >
-                              <CircleDollarSign className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'zelle' ? 'text-purple-600' : 'text-gray-400'}`} />
-                              <p className={`font-medium ${paymentMethod === 'zelle' ? 'text-purple-700' : 'text-gray-700'}`}>Zelle Transfer</p>
-                              <p className="text-xs text-gray-500 mt-1">Manual verification</p>
-                            </button>
+                        <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
+                          <div className="flex items-start gap-3">
+                            <Banknote className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-indigo-800">
+                              <p className="font-medium mb-2">Secure Wire Transfer via Stripe</p>
+                              <p className="text-indigo-700">
+                                Click the button below to get unique bank details for your wire transfer. Stripe will automatically detect your wire and confirm the deposit.
+                              </p>
+                            </div>
                           </div>
                         </div>
-
-                        {/* Card Payment Info */}
-                        {paymentMethod === 'card' && (
-                          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                            <div className="flex items-start gap-3">
-                              <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div className="text-sm text-blue-800">
-                                <p className="font-medium mb-2">Secure Card Payment via Stripe</p>
-                                <p className="text-blue-700">
-                                  Click the button below to proceed to Stripe's secure checkout page where you can enter your card details safely.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Zelle Payment Instructions */}
-                        {paymentMethod === 'zelle' && (
-                          <div className="space-y-4">
-                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-                              <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
-                                <CircleDollarSign className="w-5 h-5" />
-                                Zelle Payment Instructions
-                              </h4>
-                              <div className="space-y-3 text-sm">
-                                <div className="bg-white rounded-lg p-3">
-                                  <p className="text-gray-500 text-xs mb-1">Send Zelle payment to:</p>
-                                  <p className="font-bold text-gray-900 text-lg">payments@domilea.com</p>
-                                </div>
-                                <div className="bg-white rounded-lg p-3">
-                                  <p className="text-gray-500 text-xs mb-1">Amount to send:</p>
-                                  <p className="font-bold text-gray-900 text-lg">$1,000.00</p>
-                                </div>
-                                <div className="bg-white rounded-lg p-3">
-                                  <p className="text-gray-500 text-xs mb-1">Include in memo/note:</p>
-                                  <p className="font-mono font-bold text-gray-900">TXN-{transaction.id}</p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-                              <div className="flex items-start gap-3">
-                                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                                <div className="text-sm text-amber-800">
-                                  <p className="font-medium mb-1">Important:</p>
-                                  <ul className="list-disc list-inside space-y-1 text-amber-700">
-                                    <li>Send exactly $1,000.00 - no more, no less</li>
-                                    <li>Include the transaction ID in your memo</li>
-                                    <li>Admin will verify and confirm within 24 hours</li>
-                                    <li>Do not close this page after confirming</li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-
-                            <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                              <input
-                                type="checkbox"
-                                checked={zelleSentConfirmed}
-                                onChange={(e) => setZelleSentConfirmed(e.target.checked)}
-                                className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                              />
-                              <span className="text-gray-700">
-                                I have sent the Zelle payment of <strong>$1,000.00</strong> to <strong>payments@domilea.com</strong>
-                              </span>
-                            </label>
-                          </div>
-                        )}
                       </div>
 
-                      {paymentMethod === 'card' && (
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                          <Shield className="w-4 h-4" />
-                          Secured by Stripe. Your payment information is encrypted.
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                        <Shield className="w-4 h-4" />
+                        Secured by Stripe. Wire transfers are irrevocable and fully verified.
+                      </div>
 
-                      {paymentMethod === 'card' ? (
-                        <Button
-                          fullWidth
-                          loading={processingPayment}
-                          onClick={async () => {
-                            setProcessingPayment(true)
-                            try {
-                              const response = await api.createTransactionDepositCheckout(transaction.id)
-                              if (response.success && response.data?.url) {
-                                // Redirect to Stripe Checkout
-                                window.location.href = response.data.url
-                              } else {
-                                alert('Failed to create checkout session. Please try again.')
-                                setProcessingPayment(false)
-                              }
-                            } catch (error) {
-                              console.error('Error creating checkout:', error)
-                              alert('An error occurred. Please try again.')
+                      <Button
+                        fullWidth
+                        loading={processingPayment}
+                        onClick={async () => {
+                          setProcessingPayment(true)
+                          try {
+                            const response = await api.createTransactionDepositCheckout(transaction.id)
+                            if (response.success && response.data?.url) {
+                              window.location.href = response.data.url
+                            } else {
+                              alert('Failed to create checkout session. Please try again.')
                               setProcessingPayment(false)
                             }
-                          }}
-                        >
-                          <Lock className="w-4 h-4 mr-2" />
-                          Pay $1,000 Deposit
-                        </Button>
-                      ) : (
-                        <Button
-                          fullWidth
-                          loading={processingPayment}
-                          disabled={!zelleSentConfirmed}
-                          variant={zelleSentConfirmed ? 'primary' : 'secondary'}
-                          onClick={async () => {
-                            setProcessingPayment(true)
-                            try {
-                              const response = await api.recordDeposit(transaction.id, 'ZELLE', `TXN-${transaction.id}`)
-                              if (response.success) {
-                                // Refresh transaction data to get updated status
-                                const txnResponse = await api.getTransaction(transaction.id)
-                                if (txnResponse.success && txnResponse.data) {
-                                  setTransaction(prev => ({
-                                    ...prev,
-                                    ...txnResponse.data,
-                                    workflow: {
-                                      ...prev.workflow,
-                                      currentStep: 'awaiting-admin',
-                                      depositPaymentMethod: 'zelle',
-                                      depositZellePending: true,
-                                      depositZelleSentAt: new Date()
-                                    }
-                                  }))
-                                }
-                              } else {
-                                alert('Failed to record deposit. Please try again.')
-                              }
-                            } catch (error) {
-                              console.error('Error recording deposit:', error)
-                              alert('An error occurred. Please try again.')
-                            } finally {
-                              setProcessingPayment(false)
-                            }
-                          }}
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          Confirm Zelle Payment Sent
-                        </Button>
-                      )}
+                          } catch (error) {
+                            console.error('Error creating checkout:', error)
+                            alert('An error occurred. Please try again.')
+                            setProcessingPayment(false)
+                          }
+                        }}
+                      >
+                        <Banknote className="w-4 h-4 mr-2" />
+                        Pay $1,000 Deposit via Wire Transfer
+                      </Button>
                     </Card>
                   )}
 
@@ -2760,246 +2628,34 @@ For questions, contact us at escrow@domilea.com`
                             </Button>
                           </div>
 
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="flex-1 border-t border-gray-200" />
-                            <span className="text-xs text-gray-400 uppercase font-medium">or pay manually</span>
-                            <div className="flex-1 border-t border-gray-200" />
+                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
+                            <Shield className="w-4 h-4" />
+                            Secured by Stripe. Wire transfers are irrevocable — no chargebacks or disputes.
                           </div>
-
-                          {/* Payment Instructions */}
-                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                            <h5 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                              <Banknote className="w-5 h-5" />
-                              Payment Instructions
-                            </h5>
-                            <p className="text-sm text-blue-700 mb-4">
-                              Please send the final payment using one of the methods below, then upload proof of payment.
-                            </p>
-
-                            {/* Payment Method Selection */}
-                            <div className="space-y-3">
-                              <div
-                                className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                                  finalPaymentMethod === 'ZELLE'
-                                    ? 'border-blue-500 bg-blue-100'
-                                    : 'border-gray-200 bg-white hover:border-blue-300'
-                                }`}
-                                onClick={() => setFinalPaymentMethod('ZELLE')}
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                    finalPaymentMethod === 'ZELLE' ? 'border-blue-600' : 'border-gray-300'
-                                  }`}>
-                                    {finalPaymentMethod === 'ZELLE' && (
-                                      <div className="w-3 h-3 rounded-full bg-blue-600" />
-                                    )}
-                                  </div>
-                                  <span className="font-semibold text-gray-900">Zelle</span>
-                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Recommended</span>
-                                </div>
-                                {finalPaymentMethod === 'ZELLE' && (
-                                  <div className="ml-8 mt-3 space-y-2">
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <Mail className="w-4 h-4 text-gray-500" />
-                                      <span className="text-gray-600">Email:</span>
-                                      <span className="font-mono font-medium text-gray-900">payments@mcxchange.com</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-2">
-                                      Send ${transaction.finalPaymentAmount.toLocaleString()} via Zelle to the email above.
-                                      Include transaction ID "{transactionId?.slice(-8)}" in the memo.
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div
-                                className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                                  finalPaymentMethod === 'WIRE'
-                                    ? 'border-blue-500 bg-blue-100'
-                                    : 'border-gray-200 bg-white hover:border-blue-300'
-                                }`}
-                                onClick={() => setFinalPaymentMethod('WIRE')}
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                    finalPaymentMethod === 'WIRE' ? 'border-blue-600' : 'border-gray-300'
-                                  }`}>
-                                    {finalPaymentMethod === 'WIRE' && (
-                                      <div className="w-3 h-3 rounded-full bg-blue-600" />
-                                    )}
-                                  </div>
-                                  <span className="font-semibold text-gray-900">Wire Transfer</span>
-                                </div>
-                                {finalPaymentMethod === 'WIRE' && (
-                                  <div className="ml-8 mt-3 space-y-2 text-sm">
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <span className="text-gray-500">Bank Name:</span>
-                                        <p className="font-medium text-gray-900">Chase Bank</p>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-500">Account Name:</span>
-                                        <p className="font-medium text-gray-900">Domilea LLC</p>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-500">Routing Number:</span>
-                                        <p className="font-mono font-medium text-gray-900">021000021</p>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-500">Account Number:</span>
-                                        <p className="font-mono font-medium text-gray-900">•••••••4567</p>
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-2">
-                                      Include transaction ID "{transactionId?.slice(-8)}" in the wire reference.
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Proof of Payment Upload */}
-                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-                            <h5 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
-                              <Upload className="w-5 h-5" />
-                              Upload Proof of Payment
-                            </h5>
-                            <p className="text-sm text-amber-700 mb-4">
-                              After sending the payment, upload a screenshot or confirmation of your {finalPaymentMethod === 'ZELLE' ? 'Zelle' : 'wire'} transfer.
-                            </p>
-
-                            {/* Reference Input */}
-                            <div className="mb-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                {finalPaymentMethod === 'ZELLE' ? 'Zelle Confirmation Number (optional)' : 'Wire Reference Number'}
-                              </label>
-                              <input
-                                type="text"
-                                value={paymentReference}
-                                onChange={(e) => setPaymentReference(e.target.value)}
-                                placeholder={finalPaymentMethod === 'ZELLE' ? 'Enter Zelle confirmation number' : 'Enter wire reference number'}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-
-                            {/* File Upload */}
-                            <div className="mb-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Payment Confirmation Screenshot *
-                              </label>
-                              <div className="border-2 border-dashed border-amber-300 rounded-lg p-4 text-center hover:border-amber-400 transition-colors">
-                                {paymentProofFile ? (
-                                  <div className="flex items-center justify-center gap-3">
-                                    <FileCheck className="w-8 h-8 text-green-600" />
-                                    <div className="text-left">
-                                      <p className="font-medium text-gray-900">{paymentProofFile.name}</p>
-                                      <p className="text-sm text-gray-500">
-                                        {(paymentProofFile.size / 1024 / 1024).toFixed(2)} MB
-                                      </p>
-                                    </div>
-                                    <button
-                                      onClick={() => setPaymentProofFile(null)}
-                                      className="p-1 hover:bg-gray-100 rounded-full"
-                                    >
-                                      <X className="w-5 h-5 text-gray-500" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <label className="cursor-pointer">
-                                    <input
-                                      type="file"
-                                      accept="image/*,.pdf"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0]
-                                        if (file) setPaymentProofFile(file)
-                                      }}
-                                    />
-                                    <Upload className="w-10 h-10 text-amber-400 mx-auto mb-2" />
-                                    <p className="text-sm text-gray-600">
-                                      Click to upload or drag and drop
-                                    </p>
-                                    <p className="text-xs text-gray-400">
-                                      PNG, JPG, or PDF up to 10MB
-                                    </p>
-                                  </label>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Submit Button */}
-                          <Button
-                            fullWidth
-                            loading={submittingFinalPayment}
-                            disabled={!paymentProofFile}
-                            onClick={async () => {
-                              if (!paymentProofFile) {
-                                toast.error('Please upload proof of payment')
-                                return
-                              }
-
-                              setSubmittingFinalPayment(true)
-                              try {
-                                // First upload the proof of payment
-                                const formData = new FormData()
-                                formData.append('file', paymentProofFile)
-                                formData.append('title', `Final Payment Proof - ${finalPaymentMethod}`)
-                                formData.append('description', `${finalPaymentMethod} payment confirmation for transaction ${transactionId}`)
-
-                                await api.uploadPaymentProof(transactionId!, formData)
-
-                                // Then record the final payment
-                                await api.recordFinalPayment(
-                                  transactionId!,
-                                  finalPaymentMethod,
-                                  paymentReference || undefined
-                                )
-
-                                setPaymentSubmitted(true)
-                                toast.success('Payment submitted successfully! Awaiting admin verification.')
-                              } catch (err: any) {
-                                console.error('Error submitting payment:', err)
-                                toast.error(err.message || 'Failed to submit payment')
-                              } finally {
-                                setSubmittingFinalPayment(false)
-                              }
-                            }}
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            Submit Payment for Verification
-                          </Button>
-
-                          <p className="text-xs text-gray-500 text-center mt-3">
-                            Your payment will be verified by our team within 1-2 business days.
-                            Once verified, all documents will be released.
-                          </p>
                         </>
                       ) : (
-                        /* Payment Submitted - Awaiting Admin Verification */
+                        /* Payment Initiated - Awaiting Wire */
                         <div className="text-center py-6">
-                          <div className="w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
-                            <Clock className="w-8 h-8 text-yellow-600" />
+                          <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Clock className="w-8 h-8 text-blue-600" />
                           </div>
-                          <h4 className="text-lg font-bold text-gray-900 mb-2">Payment Submitted</h4>
+                          <h4 className="text-lg font-bold text-gray-900 mb-2">Wire Transfer Initiated</h4>
                           <p className="text-gray-600 mb-4">
-                            Your {finalPaymentMethod === 'ZELLE' ? 'Zelle' : 'wire'} payment is being verified by our team.
+                            Follow the bank details provided by Stripe to complete your wire transfer.
                           </p>
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-left">
-                            <h5 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              Awaiting Admin Verification
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left">
+                            <h5 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                              <Banknote className="w-4 h-4" />
+                              Awaiting Wire Transfer
                             </h5>
-                            <ul className="text-sm text-yellow-700 space-y-1">
+                            <ul className="text-sm text-blue-700 space-y-1">
                               <li>• Payment amount: ${transaction.finalPaymentAmount.toLocaleString()}</li>
-                              <li>• Method: {finalPaymentMethod === 'ZELLE' ? 'Zelle' : 'Wire Transfer'}</li>
-                              {paymentReference && <li>• Reference: {paymentReference}</li>}
-                              <li>• Proof uploaded: Yes</li>
+                              <li>• Method: Wire Transfer</li>
+                              <li>• Stripe will automatically detect and confirm your wire</li>
                             </ul>
-                            <p className="text-xs text-yellow-600 mt-3">
-                              You will be notified once your payment is verified.
-                              This typically takes 1-2 business days.
+                            <p className="text-xs text-blue-600 mt-3">
+                              Wire transfers typically take 1-2 business days to arrive.
+                              You will be notified once the payment is confirmed.
                             </p>
                           </div>
                         </div>
