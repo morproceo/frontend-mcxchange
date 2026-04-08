@@ -917,7 +917,7 @@ function SafetyTab() {
   const totalViolations = Object.values(violationMap).reduce((a, b) => a + b, 0)
   const totalInspections = operations.totalInspections
   const activeAlertCount = Object.values(alertMap).filter(Boolean).length
-  const exceedingBasics = basicScores.filter(b => b.score != null && b.score >= b.threshold)
+  const exceedingBasics = basicScores.filter(b => b.score != null && b.score > b.threshold)
 
   const safetySubTabs = [
     { id: 'overview' as const, label: 'Overview' },
@@ -1082,7 +1082,7 @@ function SafetyTab() {
                     <tbody className={pm ? 'blur-[6px] select-none pointer-events-none' : ''}>
                       {basicScores.map((basic, i) => {
                         const isScored = basic.score != null
-                        const exceedsThreshold = isScored && basic.score! >= basic.threshold
+                        const exceedsThreshold = isScored && basic.score! > basic.threshold
                         const apiAlert = alertMap[basic.name] || false
                         const hasAlert = exceedsThreshold || apiAlert
                         const violations = violationMap[basic.name] ?? 0
@@ -2111,7 +2111,7 @@ function SafetyImprovementReportTab() {
             {basicScores.map((bs, i) => {
               const isScored = bs.score != null
               const pct = bs.percentile ?? 0
-              const isAboveThreshold = isScored && pct >= bs.threshold
+              const isAboveThreshold = isScored && pct > bs.threshold
               return (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-40 text-sm font-medium text-gray-700 truncate">{bs.name}</div>
@@ -2119,7 +2119,7 @@ function SafetyImprovementReportTab() {
                     <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          pct >= bs.threshold ? 'bg-red-500' : pct >= bs.threshold * 0.85 ? 'bg-orange-400' : 'bg-emerald-400'
+                          pct > bs.threshold ? 'bg-red-500' : pct >= bs.threshold * 0.85 ? 'bg-orange-400' : 'bg-emerald-400'
                         }`}
                         style={{ width: `${Math.max(pct, 2)}%` }}
                       />

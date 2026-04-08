@@ -526,7 +526,7 @@ export function mapToV2AuthorityData(report: any, fmcsaAuth?: any): V2AuthorityD
     if (!s) return 'inactive'
     const lower = String(s).toLowerCase().trim()
     // FMCSA returns: 'ACTIVE', 'A', 'ACTIVE - PENDING' etc.
-    if (lower === 'active' || lower === 'a' || lower.startsWith('active') || lower === 'y' || lower === 'yes') return 'active'
+    if (lower === 'active' || lower === 'a' || lower.startsWith('active') || lower === 'y' || lower === 'yes' || lower === 'grant' || lower === 'granted') return 'active'
     if (lower === 'revoked' || lower === 'r' || lower.startsWith('revok')) return 'revoked'
     // 'NONE', 'N/A', 'INACTIVE', 'I', 'PENDING', 'NOT AUTHORIZED', etc.
     return 'inactive'

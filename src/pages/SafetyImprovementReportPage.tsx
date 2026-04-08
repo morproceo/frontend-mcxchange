@@ -54,7 +54,7 @@ function getRiskColor(risk: string) {
 
 function getScoreColor(measure: number | null, threshold: number) {
   if (measure === null) return 'text-gray-400'
-  if (measure >= threshold) return 'text-red-600'
+  if (measure > threshold) return 'text-red-600'
   if (measure >= threshold * 0.75) return 'text-amber-600'
   return 'text-emerald-600'
 }
@@ -81,7 +81,7 @@ function buildSIR(smsData: any, carrierData: any): SIRData {
         measure: data?.measure ?? data?.percentile ?? null,
         threshold,
         percentile: data?.percentile ?? null,
-        alert: (data?.measure ?? 0) >= threshold || (data?.alert === true),
+        alert: (data?.measure ?? 0) > threshold || (data?.alert === true),
       })
     }
   }
@@ -95,7 +95,7 @@ function buildSIR(smsData: any, carrierData: any): SIRData {
         measure: b.measure ?? b.percentile ?? null,
         threshold,
         percentile: b.percentile ?? null,
-        alert: (b.measure ?? 0) >= threshold,
+        alert: (b.measure ?? 0) > threshold,
       })
     }
   }
@@ -109,7 +109,7 @@ function buildSIR(smsData: any, carrierData: any): SIRData {
   const recommendations: string[] = []
   for (const b of basics) {
     if (b.alert) {
-      recommendations.push(`${b.category} score (${b.measure}) exceeds the intervention threshold (${b.threshold}). Immediate corrective action recommended.`)
+      recommendations.push(`${b.category} score (${b.measure}) exceeds the intervention threshold (${b.threshold}%). Immediate corrective action recommended.`)
     } else if (b.measure !== null && b.measure >= b.threshold * 0.75) {
       recommendations.push(`${b.category} score (${b.measure}) is approaching the threshold (${b.threshold}). Proactive monitoring advised.`)
     }
