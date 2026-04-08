@@ -2725,11 +2725,11 @@ For questions, contact us at escrow@domilea.com`
                           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4 mb-4">
                             <h5 className="font-semibold text-indigo-800 mb-2 flex items-center gap-2">
                               <Banknote className="w-5 h-5" />
-                              Pay with Bank Account
+                              Pay with Wire Transfer
                               <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Secure & Automated</span>
                             </h5>
                             <p className="text-sm text-indigo-700 mb-4">
-                              Pay securely via bank transfer (ACH). Funds are automatically split — the seller receives their payout directly.
+                              Pay securely via wire transfer. Stripe provides unique bank details for your wire. Funds are automatically split — the seller receives their payout directly.
                             </p>
                             <Button
                               fullWidth
@@ -2756,7 +2756,7 @@ For questions, contact us at escrow@domilea.com`
                               ) : (
                                 <Banknote className="w-4 h-4 mr-2" />
                               )}
-                              Pay ${transaction.finalPaymentAmount.toLocaleString()} via Bank Transfer
+                              Pay ${transaction.finalPaymentAmount.toLocaleString()} via Wire Transfer
                             </Button>
                           </div>
 
