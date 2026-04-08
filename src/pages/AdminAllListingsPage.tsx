@@ -381,7 +381,7 @@ const AdminAllListingsPage = () => {
         id: item.id,
         mcNumber: item.mcNumber || '',
         dotNumber: item.dotNumber || '',
-        title: item.title || `MC Authority #${item.mcNumber}`,
+        title: item.title || `Trucking Business #${item.mcNumber}`,
         legalName: item.legalName || '',
         dbaName: item.dbaName || '',
         price: item.askingPrice || 0,
@@ -465,14 +465,21 @@ const AdminAllListingsPage = () => {
     setTelegramInspectionsLoading(true)
 
     try {
-      // Fetch SMS data using MC number — strip MC prefix for FMCSA API
-      const response = await api.fmcsaLookupByMC(listing.mcNumber.replace(/^MC-?/i, '').replace(/\D/g, ''))
-      if (response.success && response.data) {
-        // Calculate total inspections from driver + vehicle + hazmat
-        const total = (response.data.driverInsp || 0) +
-                      (response.data.vehicleInsp || 0) +
-                      (response.data.hazmatInsp || 0)
-        setTelegramInspections(total)
+      // Get DOT number from listing or via MC lookup, then fetch SMS data for accurate totalInspections
+      let dotNumber = listing.dotNumber
+      if (!dotNumber) {
+        const mcResponse = await api.fmcsaLookupByMC(listing.mcNumber.replace(/^MC-?/i, '').replace(/\D/g, ''))
+        if (mcResponse.success && mcResponse.data) {
+          dotNumber = mcResponse.data.dotNumber
+        }
+      }
+      if (dotNumber) {
+        const smsResponse = await api.fmcsaGetSMSData(dotNumber)
+        if (smsResponse.success && smsResponse.data) {
+          setTelegramInspections(smsResponse.data.totalInspections || 0)
+        } else {
+          setTelegramInspections(0)
+        }
       } else {
         setTelegramInspections(0)
       }
@@ -1173,7 +1180,7 @@ const AdminAllListingsPage = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">All Listings</h1>
-          <p className="text-gray-600 mt-1">View and manage all MC authority listings</p>
+          <p className="text-gray-600 mt-1">View and manage all trucking business listings</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={fetchListings} disabled={loading}>
@@ -3431,7 +3438,7 @@ const AdminAllListingsPage = () => {
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                       <Textarea
-                        placeholder="Describe the MC authority, operational history, and key selling points..."
+                        placeholder="Describe the trucking business, operational history, and key selling points..."
                         value={newUserWithListing.description}
                         onChange={(e) => setNewUserWithListing({ ...newUserWithListing, description: e.target.value })}
                         rows={3}
