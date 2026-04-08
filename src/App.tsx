@@ -48,6 +48,7 @@ const SellerEarningsPage = lazy(() => import('./pages/SellerEarningsPage'))
 const SellerDocumentsPage = lazy(() => import('./pages/SellerDocumentsPage'))
 const SellerTransactionsPage = lazy(() => import('./pages/SellerTransactionsPage'))
 const SellerMessagesPage = lazy(() => import('./pages/SellerMessagesPage'))
+const SellerPayoutSetupPage = lazy(() => import('./pages/SellerPayoutSetupPage'))
 
 const PulseBundlePage = lazy(() => import('./pages/PulseBundlePage'))
 
@@ -184,6 +185,7 @@ function App() {
               <Route path="documents" element={<SellerDocumentsPage />} />
               <Route path="transactions" element={<SellerTransactionsPage />} />
               <Route path="messages" element={<SellerMessagesPage />} />
+              <Route path="payout-setup" element={<SellerPayoutSetupPage />} />
               <Route path="carrier-pulse" element={<CarrierPulsePage />} />
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
               <Route path="chameleon-check" element={<ChameleonCheckPage />} />

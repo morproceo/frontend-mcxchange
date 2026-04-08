@@ -1776,6 +1776,50 @@ class ApiService {
     }>('/seller/stripe-history');
   }
 
+  // ============================================
+  // Seller Stripe Connect - Payout Setup
+  // ============================================
+
+  // Get seller's Connect account status
+  async getSellerConnectStatus() {
+    return this.request<{
+      success: boolean;
+      data: {
+        hasAccount: boolean;
+        accountId?: string;
+        isOnboarded: boolean;
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        detailsSubmitted: boolean;
+        error?: string;
+      };
+    }>('/seller/connect/status');
+  }
+
+  // Create or continue Stripe Connect onboarding
+  async createSellerConnectAccount() {
+    return this.request<{
+      success: boolean;
+      data: {
+        accountId: string;
+        onboardingUrl: string;
+      };
+      message: string;
+    }>('/seller/connect/create', {
+      method: 'POST',
+    });
+  }
+
+  // Get Stripe Express dashboard link for seller
+  async getSellerConnectDashboard() {
+    return this.request<{
+      success: boolean;
+      data: {
+        url: string;
+      };
+    }>('/seller/connect/dashboard');
+  }
+
   // Get seller's uploaded documents
   async getSellerDocuments() {
     return this.request<{

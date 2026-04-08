@@ -40,6 +40,7 @@ import {
   Truck,
   ClipboardList,
   User,
+  Banknote,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { DomileaLogoFull, DomileaIcon } from '../components/ui/DomileaLogo'
@@ -198,6 +199,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: Plus, label: 'Create Listing', path: '/seller/carrier-pulse' },
           { icon: MessageSquare, label: 'Offers', path: '/seller/offers' },
           { icon: Handshake, label: 'Transactions', path: '/seller/transactions', ...(newTransactionCount > 0 ? { badge: String(newTransactionCount), badgeColor: 'bg-red-500' } : {}) },
+          { icon: Banknote, label: 'Payout Setup', path: '/seller/payout-setup' },
           { icon: FileText, label: 'Documents', path: '/seller/documents' },
           { icon: MessageSquare, label: 'Messages', path: '/seller/messages', ...(unreadMessageCount > 0 ? { badge: String(unreadMessageCount), badgeColor: 'bg-red-500' } : {}) },
           {
