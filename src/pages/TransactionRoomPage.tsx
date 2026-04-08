@@ -1329,19 +1329,15 @@ const TransactionRoomPage = () => {
 
 Amount Due: $${transaction.finalPaymentAmount.toLocaleString()}
 
-Wire Transfer Details:
-Bank: Chase Bank
-Routing Number: 021000021
-Account Number: ****4567
-Account Name: Domilea Escrow LLC
+Payment Method: Wire Transfer via Stripe
+Click the "Pay via Wire Transfer" button above to get your unique bank details from Stripe.
+Stripe will provide routing and account numbers specific to your transaction.
 
-Reference: TXN-${transaction.id}
+Once your wire is received (typically 1-2 business days),
+payment is automatically confirmed and all MC authority documents
+and credentials will be released to you.
 
-Please include the reference number in your wire transfer memo.
-Once payment is received and verified (typically within 1-2 business days),
-all MC authority documents and credentials will be released to you.
-
-For questions, contact us at escrow@domilea.com`
+For questions, contact us at payments@domilea.com`
           }))
           await refreshTransaction()
         }
@@ -1493,7 +1489,7 @@ For questions, contact us at escrow@domilea.com`
             currentStep: 'final-payment',
             adminApprovedBillOfSaleAt: new Date()
           },
-          paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nWire/Zelle to: payments@domilea.com\nReference: TXN-${transaction.id}-FINAL`
+          paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nPayment Method: Wire Transfer via Stripe\nClick the "Pay via Wire Transfer" button to get unique bank details.\n\nFor questions: payments@domilea.com`
         }))
         // Clear the contract file state after successful approval
         setAdminContractFile(null)
@@ -2265,7 +2261,7 @@ For questions, contact us at escrow@domilea.com`
                               adminApprovedBillOfSaleAt: new Date(),
                               currentStep: 'final-payment'
                             },
-                            paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nWire/Zelle to: payments@domilea.com\nReference: TXN-${transaction.id}-FINAL`
+                            paymentInstructions: `Payment Instructions for Transaction #${transaction.id}\n\nAmount Due: $${transaction.finalPaymentAmount.toLocaleString()}\n\nPayment Method: Wire Transfer via Stripe\nClick the "Pay via Wire Transfer" button to get unique bank details.\n\nFor questions: payments@domilea.com`
                           }))
                           await refreshTransaction()
                         }
@@ -3385,39 +3381,20 @@ For questions, contact us at escrow@domilea.com`
                             <p className="text-xs text-orange-600">Payment instructions have been sent to the buyer.</p>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button
-                              fullWidth
-                              variant="primary"
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={handleAdminConfirmPayment}
-                              disabled={adminActionLoading}
-                            >
-                              {adminActionLoading ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                              )}
-                              Confirm Payment Received
-                            </Button>
-                            <Button
-                              fullWidth
-                              variant="outline"
-                              onClick={() => {
-                                setTransaction(prev => ({
-                                  ...prev,
-                                  workflow: {
-                                    ...prev.workflow,
-                                    finalPaymentZellePending: true,
-                                    finalPaymentZelleSentAt: new Date()
-                                  }
-                                }))
-                              }}
-                            >
-                              <CircleDollarSign className="w-4 h-4 mr-2" />
-                              Simulate Zelle Sent
-                            </Button>
-                          </div>
+                          <Button
+                            fullWidth
+                            variant="primary"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={handleAdminConfirmPayment}
+                            disabled={adminActionLoading}
+                          >
+                            {adminActionLoading ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                            )}
+                            Confirm Wire Payment Received
+                          </Button>
                         </div>
                       )}
 
@@ -3731,9 +3708,9 @@ For questions, contact us at escrow@domilea.com`
               {transaction.paymentInstructions && userRole === 'buyer' && (
                 <Card className="bg-amber-50 border-2 border-amber-200">
                   <div className="flex items-start gap-3">
-                    <CreditCard className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                    <Banknote className="w-6 h-6 text-amber-600 flex-shrink-0" />
                     <div>
-                      <h3 className="font-semibold text-amber-800 mb-2">Payment Instructions</h3>
+                      <h3 className="font-semibold text-amber-800 mb-2">Wire Transfer Instructions</h3>
                       <pre className="text-xs text-amber-700 whitespace-pre-wrap font-mono bg-amber-100 rounded-lg p-3 overflow-x-auto">
                         {transaction.paymentInstructions}
                       </pre>
