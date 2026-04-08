@@ -462,6 +462,10 @@ const TransactionRoomPage = () => {
     depositPaidAt: undefined as any,
     finalPaymentAmount: 0,
     finalPaymentPaid: false,
+    escrowStatus: null as string | null,
+    escrowAmount: null as number | null,
+    escrowConfirmedAt: null as Date | null,
+    escrowPaymentMethod: null as string | null,
     sellerDocuments: [],
     messages: [],
     createdAt: new Date(),
@@ -736,6 +740,10 @@ const TransactionRoomPage = () => {
             depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.depositPaidAt,
             finalPaymentAmount: txn.finalPaymentAmount || (txn.agreedPrice - (txn.depositAmount || 1000)) || prev.finalPaymentAmount,
             finalPaymentPaid: !!txn.finalPaymentPaidAt,
+            escrowStatus: txn.escrowStatus || prev.escrowStatus,
+            escrowAmount: txn.escrowAmount ? Number(txn.escrowAmount) : prev.escrowAmount,
+            escrowConfirmedAt: txn.escrowConfirmedAt ? new Date(txn.escrowConfirmedAt) : prev.escrowConfirmedAt,
+            escrowPaymentMethod: txn.escrowPaymentMethod || prev.escrowPaymentMethod,
             sellerDocuments: txn.documents?.length > 0 ? txn.documents.map((doc: any) => ({
               id: doc.id,
               transactionId: txn.id,
@@ -3719,17 +3727,137 @@ For questions, contact us at payments@domilea.com`
                 </Card>
               )}
 
-              {/* Admin Payment Action */}
-              {userRole === 'admin' && transaction.status === 'payment-pending' && (
+              {/* Admin Escrow & Payment Actions */}
+              {userRole === 'admin' && (transaction.status === 'payment-pending' || transaction.status === 'deposit-received' || transaction.status === 'in-review' || transaction.status === 'both-approved') && (
                 <Card className="bg-blue-50 border-2 border-blue-200">
-                  <h3 className="font-semibold text-blue-800 mb-2">Awaiting Payment</h3>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Payment instructions sent. Mark as complete once verified.
-                  </p>
-                  <Button onClick={() => setShowPaymentModal(true)} fullWidth>
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Mark Payment Received
-                  </Button>
+                  <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Escrow Management
+                  </h3>
+
+                  {/* Show current escrow status */}
+                  {transaction.escrowStatus === 'FUNDED' && transaction.escrowAmount ? (
+                    <div className="bg-green-100 border border-green-300 rounded-xl p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <span className="font-semibold text-green-800">Escrow Funded</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-700 mb-1">${transaction.escrowAmount.toLocaleString()}</p>
+                      <p className="text-xs text-green-600">
+                        Via {transaction.escrowPaymentMethod} &bull; Confirmed {transaction.escrowConfirmedAt?.toLocaleString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 mb-4">
+                      <p className="text-sm text-blue-700">
+                        Confirm buyer's payment into escrow. The seller will see this on their side.
+                      </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Amount Received ($)</label>
+                        <input
+                          type="number"
+                          id="escrow-amount"
+                          placeholder="e.g. 12000"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                        <select
+                          id="escrow-method"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="ZELLE">Zelle</option>
+                          <option value="WIRE">Wire Transfer</option>
+                          <option value="CHECK">Check</option>
+                          <option value="STRIPE">Stripe</option>
+                        </select>
+                      </div>
+                      <Button
+                        fullWidth
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={async () => {
+                          const amountInput = document.getElementById('escrow-amount') as HTMLInputElement
+                          const methodSelect = document.getElementById('escrow-method') as HTMLSelectElement
+                          const amount = parseFloat(amountInput?.value)
+                          const method = methodSelect?.value as 'ZELLE' | 'WIRE' | 'CHECK' | 'STRIPE'
+
+                          if (!amount || amount <= 0) {
+                            toast.error('Please enter a valid amount')
+                            return
+                          }
+
+                          try {
+                            const response = await api.adminConfirmEscrow(transactionId!, amount, method)
+                            if (response.success) {
+                              toast.success(response.message || 'Escrow confirmed!')
+                              setTransaction(prev => ({
+                                ...prev,
+                                escrowStatus: 'FUNDED',
+                                escrowAmount: amount,
+                                escrowConfirmedAt: new Date(),
+                                escrowPaymentMethod: method,
+                              }))
+                            }
+                          } catch (err: any) {
+                            toast.error(err.message || 'Failed to confirm escrow')
+                          }
+                        }}
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Confirm Payment to Escrow
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Mark payment complete button */}
+                  {transaction.status === 'payment-pending' && (
+                    <Button onClick={() => setShowPaymentModal(true)} fullWidth variant="outline" className="mt-2">
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Mark Transaction Complete
+                    </Button>
+                  )}
+                </Card>
+              )}
+
+              {/* Seller Escrow Status */}
+              {userRole === 'seller' && transaction.escrowStatus === 'FUNDED' && transaction.escrowAmount && (
+                <Card className="bg-green-50 border-2 border-green-200">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-green-800 mb-1">Funds Secured in Escrow</h3>
+                      <p className="text-3xl font-bold text-green-700 mb-2">${transaction.escrowAmount.toLocaleString()}</p>
+                      <p className="text-sm text-green-600">
+                        The buyer's payment has been received and is being held securely in escrow by Domilea.
+                        Funds will be released to you once the transaction is completed and all documents are transferred.
+                      </p>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-green-500">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Verified {transaction.escrowConfirmedAt?.toLocaleString()} via {transaction.escrowPaymentMethod}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Buyer Escrow Status */}
+              {userRole === 'buyer' && transaction.escrowStatus === 'FUNDED' && transaction.escrowAmount && (
+                <Card className="bg-blue-50 border-2 border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-blue-800 mb-1">Your Payment is in Escrow</h3>
+                      <p className="text-2xl font-bold text-blue-700 mb-2">${transaction.escrowAmount.toLocaleString()}</p>
+                      <p className="text-sm text-blue-600">
+                        Your payment is being held securely in escrow. It will only be released to the seller once all documents are verified and the MC authority transfer is complete.
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               )}
 

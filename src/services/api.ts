@@ -1530,6 +1530,23 @@ class ApiService {
     });
   }
 
+  // Admin confirm payment into escrow
+  async adminConfirmEscrow(transactionId: string, amount: number, paymentMethod: 'ZELLE' | 'WIRE' | 'CHECK' | 'STRIPE', notes?: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        escrowStatus: string;
+        escrowAmount: number;
+        escrowConfirmedAt: string;
+        escrowPaymentMethod: string;
+      };
+      message: string;
+    }>(`/transactions/${transactionId}/admin/confirm-escrow`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, paymentMethod, notes }),
+    });
+  }
+
   // Admin get available buyers for transaction creation
   async getAvailableBuyers(search?: string) {
     const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';

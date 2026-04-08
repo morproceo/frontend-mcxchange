@@ -176,6 +176,7 @@ export interface MCListing {
   // Premium listing
   isPremium: boolean
   isVip: boolean
+  freeToUnlock?: boolean
 
   // Documents
   documents: Document[]
@@ -406,6 +407,12 @@ export interface TransactionRoom {
   finalPaymentPaid: boolean
   finalPaymentPaidAt?: Date
   paymentInstructions?: string
+
+  // Escrow
+  escrowStatus?: string | null
+  escrowAmount?: number | null
+  escrowConfirmedAt?: Date | null
+  escrowPaymentMethod?: string | null
 
   // Documents shared in transaction
   sellerDocuments: TransactionDocument[]
