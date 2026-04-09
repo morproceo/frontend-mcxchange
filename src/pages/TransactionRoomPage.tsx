@@ -5002,13 +5002,13 @@ For questions, contact us at payments@domilea.com`
 
             {/* ===== SECTION 2: Additional Documents ===== */}
             <Card>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Additional Documents</h3>
                   <p className="text-sm text-gray-500">Any extra documents not in the checklist above</p>
                 </div>
                 {(userRole === 'seller' || userRole === 'admin') && (
-                  <Button variant="outline" onClick={() => {
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
                     setUploadDocType('OTHER')
                     document.getElementById('transaction-doc-upload')?.click()
                   }}>
@@ -5024,27 +5024,27 @@ For questions, contact us at payments@domilea.com`
                   <p className="text-sm text-gray-400 text-center py-6">No additional documents uploaded yet.</p>
                 )
                 return (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {additionalDocs.map(doc => (
-                      <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                      <div key={doc.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
                             {getDocumentIcon(doc.type)}
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{doc.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-gray-900 truncate">{doc.name}</p>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500">
                               <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
                               <span>by {doc.uploadedBy === 'seller' ? transaction.seller.name : 'Admin'}</span>
+                              {doc.verified && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                  <CheckCircle className="w-3 h-3" /> Verified
+                                </span>
+                              )}
                             </div>
                           </div>
-                          {doc.verified && (
-                            <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                              <CheckCircle className="w-3 h-3" /> Verified
-                            </span>
-                          )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 mt-3 pl-0 sm:pl-13">
                           <Button variant="outline" size="sm" onClick={async () => {
                             try {
                               const res = await api.getDocumentUrl(doc.id)
@@ -5097,16 +5097,16 @@ For questions, contact us at payments@domilea.com`
 
             {/* ===== SECTION 3: Credential Vault ===== */}
             <Card>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-amber-500" />
+                  <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0" />
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Credential Vault</h3>
                     <p className="text-sm text-gray-500">Secure login credentials for the buyer</p>
                   </div>
                 </div>
                 {(userRole === 'seller' || userRole === 'admin') && !showCredentialForm && (
-                  <Button variant="outline" onClick={() => {
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
                     setEditingCredentialId(null)
                     setCredentialForm({ label: '', username: '', password: '' })
                     setShowCredentialForm(true)
@@ -5216,9 +5216,9 @@ For questions, contact us at payments@domilea.com`
                     const isVisible = visiblePasswords.has(cred.id)
                     return (
                       <div key={cred.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <KeyRound className="w-4 h-4 text-gray-400" />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <KeyRound className="w-4 h-4 text-gray-400 flex-shrink-0" />
                             <span className="font-semibold text-sm text-gray-900">{cred.label}</span>
                             {cred.releasedToBuyer ? (
                               <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-semibold">Released</span>
@@ -5232,8 +5232,8 @@ For questions, contact us at payments@domilea.com`
                                 setEditingCredentialId(cred.id)
                                 setCredentialForm({ label: cred.label, username: cred.username || '', password: cred.password })
                                 setShowCredentialForm(true)
-                              }} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
-                                <Pencil className="w-3.5 h-3.5" />
+                              }} className="p-2 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
+                                <Pencil className="w-4 h-4" />
                               </button>
                               <button onClick={async () => {
                                 if (!confirm('Delete this credential?')) return
@@ -5242,35 +5242,35 @@ For questions, contact us at payments@domilea.com`
                                   setCredentials(prev => prev.filter(c => c.id !== cred.id))
                                   toast.success('Credential deleted')
                                 } catch (err: any) { toast.error(err.message || 'Delete failed') }
-                              }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
+                              }} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           )}
                         </div>
                         {cred.username && (
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs text-gray-500 w-16">Username</span>
-                            <code className="text-sm bg-white px-2 py-1 rounded border border-gray-200 flex-1 font-mono">{cred.username}</code>
-                            <button onClick={() => { navigator.clipboard.writeText(cred.username!); toast.success('Copied') }} className="p-1 rounded hover:bg-gray-200 text-gray-400">
-                              <Copy className="w-3.5 h-3.5" />
+                            <span className="text-xs text-gray-500 w-16 flex-shrink-0">Username</span>
+                            <code className="text-sm bg-white px-2 py-1 rounded border border-gray-200 flex-1 font-mono truncate min-w-0">{cred.username}</code>
+                            <button onClick={() => { navigator.clipboard.writeText(cred.username!); toast.success('Copied') }} className="p-2 rounded hover:bg-gray-200 text-gray-400 flex-shrink-0">
+                              <Copy className="w-4 h-4" />
                             </button>
                           </div>
                         )}
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-gray-500 w-16">Password</span>
-                          <code className="text-sm bg-white px-2 py-1 rounded border border-gray-200 flex-1 font-mono">
+                          <span className="text-xs text-gray-500 w-16 flex-shrink-0">Password</span>
+                          <code className="text-sm bg-white px-2 py-1 rounded border border-gray-200 flex-1 font-mono truncate min-w-0">
                             {isVisible ? cred.password : '••••••••••'}
                           </code>
                           <button onClick={() => setVisiblePasswords(prev => {
                             const next = new Set(prev)
                             next.has(cred.id) ? next.delete(cred.id) : next.add(cred.id)
                             return next
-                          })} className="p-1 rounded hover:bg-gray-200 text-gray-400">
-                            {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          })} className="p-2 rounded hover:bg-gray-200 text-gray-400 flex-shrink-0">
+                            {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
-                          <button onClick={() => { navigator.clipboard.writeText(cred.password); toast.success('Copied') }} className="p-1 rounded hover:bg-gray-200 text-gray-400">
-                            <Copy className="w-3.5 h-3.5" />
+                          <button onClick={() => { navigator.clipboard.writeText(cred.password); toast.success('Copied') }} className="p-2 rounded hover:bg-gray-200 text-gray-400 flex-shrink-0">
+                            <Copy className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
