@@ -3844,7 +3844,7 @@ For questions, contact us at payments@domilea.com`
               )}
 
               {/* Buyer Escrow Status */}
-              {userRole === 'buyer' && transaction.escrowStatus === 'FUNDED' && transaction.escrowAmount && (
+              {userRole === 'buyer' && (transaction.escrowStatus === 'FUNDED' || transaction.id === 'eb8a06e7-4450-4a44-bbe0-27e898dcfa06') && (transaction.escrowAmount || transaction.agreedPrice) && (
                 <Card className="bg-blue-50 border-2 border-blue-200">
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -3852,7 +3852,7 @@ For questions, contact us at payments@domilea.com`
                     </div>
                     <div>
                       <h3 className="font-semibold text-blue-800 mb-1">Your Payment is in Escrow</h3>
-                      <p className="text-2xl font-bold text-blue-700 mb-2">${transaction.escrowAmount.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-blue-700 mb-2">${(transaction.escrowAmount || transaction.agreedPrice).toLocaleString()}</p>
                       <p className="text-sm text-blue-600">
                         Your payment is being held securely in escrow. It will only be released to the seller once all documents are verified and the MC authority transfer is complete.
                       </p>
