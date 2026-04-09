@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import type {
@@ -88,6 +88,7 @@ export function useListing(listingId: string | undefined): UseListingResult {
       // Premium listing
       isPremium: Boolean(data.isPremium),
       isVip: Boolean(data.isVip),
+      freeToUnlock: Boolean(data.freeToUnlock),
 
       // Documents
       documents: data.documents || [],
@@ -199,6 +200,43 @@ export function useListing(listingId: string | undefined): UseListingResult {
   useEffect(() => {
     fetchListing()
   }, [fetchListing])
+
+  // Auto-unlock free-to-unlock listings for Premium/Enterprise/VIP subscribers
+  const autoUnlockAttempted = useRef(false)
+  useEffect(() => {
+    if (
+      listing?.freeToUnlock &&
+      !isUnlocked &&
+      !unlocking &&
+      !autoUnlockAttempted.current &&
+      isAuthenticated &&
+      user?.role === 'buyer' &&
+      listingId
+    ) {
+      // Check if buyer has an eligible subscription plan
+      let active = true
+      autoUnlockAttempted.current = true
+      api.getSubscription().then((res) => {
+        if (!active) return
+        const plan = res.data?.subscription?.plan?.toUpperCase()
+        const status = res.data?.subscription?.status
+        const eligible = status === 'ACTIVE' && (plan === 'PREMIUM' || plan === 'ENTERPRISE' || plan === 'VIP' || plan === 'VIP_ACCESS')
+        if (eligible) {
+          setUnlocking(true)
+          api.unlockListing(listingId).then((response) => {
+            if (active && response.success) {
+              setIsUnlocked(true)
+            }
+          }).catch((err) => {
+            console.error('Auto-unlock failed:', err)
+          }).finally(() => {
+            if (active) setUnlocking(false)
+          })
+        }
+      }).catch(() => {})
+      return () => { active = false }
+    }
+  }, [listing?.freeToUnlock, isUnlocked, unlocking, isAuthenticated, user?.role, listingId])
 
   return {
     listing,
