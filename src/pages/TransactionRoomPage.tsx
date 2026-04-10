@@ -1815,8 +1815,7 @@ For questions, contact us at payments@domilea.com`
           { id: 'timeline', label: 'Transaction Progress', icon: Clock },
           { id: 'parties', label: 'Buyer & Seller', icon: Users, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
           { id: 'business', label: 'Business Details', icon: Building2, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
-          // Documents tab - hidden for buyers until transaction is completed
-          { id: 'documents', label: 'Documents', icon: FileText, count: transaction.sellerDocuments.length, hidden: userRole === 'buyer' && transaction.status !== 'completed' },
+          { id: 'documents', label: 'Documents', icon: FileText, count: transaction.sellerDocuments.length },
           { id: 'messages', label: 'Messages', icon: MessageSquare, count: transaction.messages.length }
         ].filter(tab => !tab.hidden).map(tab => (
           <button
