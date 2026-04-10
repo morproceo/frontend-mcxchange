@@ -18,7 +18,12 @@ import {
   Mail,
   Phone,
   Hash,
-  Loader2
+  Loader2,
+  ExternalLink,
+  Ban,
+  RefreshCw,
+  CreditCard,
+  Landmark,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Card from '../components/ui/Card'
@@ -50,47 +55,37 @@ interface InvoiceData {
   notes: string
   dueDate: string
   issueDate: string
-}
-
-interface SavedInvoice {
-  id: string
-  invoiceNumber: string
-  invoiceType: string
-  userName: string
-  userEmail: string
-  mcNumber: string
-  total: number
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
-  issueDate: string
-  dueDate: string
-  paidDate?: string
+  paymentMethods: string[]
+  autoSend: boolean
 }
 
 const INVOICE_TYPES = [
-  { value: 'mc_sale', label: 'MC Authority Sale' },
+  { value: 'mc_sale', label: 'Trucking Business Sale' },
   { value: 'deposit', label: 'Deposit Payment' },
   { value: 'listing_fee', label: 'Listing Fee' },
   { value: 'platform_fee', label: 'Platform Fee' },
   { value: 'custom', label: 'Custom Invoice' },
 ]
 
-const generateInvoiceNumber = () => {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
-  return `INV-${year}${month}-${random}`
-}
+const PAYMENT_METHOD_OPTIONS = [
+  { value: 'us_bank_account', label: 'Bank Transfer / Wire (ACH)', icon: Landmark },
+  { value: 'card', label: 'Credit / Debit Card', icon: CreditCard },
+]
 
 const AdminInvoiceGenerator = () => {
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [showPreview, setShowPreview] = useState(false)
   const [sending, setSending] = useState(false)
+  const [savedInvoices, setSavedInvoices] = useState<any[]>([])
+  const [loadingInvoices, setLoadingInvoices] = useState(true)
+  const [invoiceFilter, setInvoiceFilter] = useState<string>('')
+  const [successMessage, setSuccessMessage] = useState<{ text: string; url?: string } | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-    invoiceNumber: generateInvoiceNumber(),
+    invoiceNumber: '',
     invoiceType: 'custom',
     userId: '',
     userName: '',
@@ -103,11 +98,11 @@ const AdminInvoiceGenerator = () => {
     notes: '',
     dueDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     issueDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentMethods: ['us_bank_account'],
+    autoSend: true,
   })
 
-  const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>([])
-
-  // Fetch users from API
+  // Fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -123,11 +118,31 @@ const AdminInvoiceGenerator = () => {
     fetchUsers()
   }, [])
 
+  // Fetch invoices from Stripe
+  const fetchInvoices = async (status?: string) => {
+    try {
+      setLoadingInvoices(true)
+      const response = await api.getAdminInvoices({
+        limit: 20,
+        status: status || undefined,
+      })
+      setSavedInvoices(response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch invoices:', err)
+    } finally {
+      setLoadingInvoices(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchInvoices(invoiceFilter)
+  }, [invoiceFilter])
+
   // Calculate totals
   const subtotal = invoiceData.lineItems.reduce(
     (sum, item) => sum + (item.quantity * item.unitPrice), 0
   )
-  const tax = 0 // No tax for now
+  const tax = 0
   const total = subtotal + tax
 
   const handleUserSelect = (userId: string) => {
@@ -149,7 +164,7 @@ const AdminInvoiceGenerator = () => {
 
     switch (type) {
       case 'mc_sale':
-        defaultLineItems = [{ id: '1', description: 'MC Authority Sale', quantity: 1, unitPrice: 0 }]
+        defaultLineItems = [{ id: '1', description: 'Trucking Business Sale', quantity: 1, unitPrice: 0 }]
         break
       case 'deposit':
         defaultLineItems = [{ id: '1', description: 'Transaction Deposit (10%)', quantity: 1, unitPrice: 0 }]
@@ -199,38 +214,20 @@ const AdminInvoiceGenerator = () => {
     })
   }
 
-  const handleGenerateInvoice = async () => {
-    if (!invoiceData.userName || !invoiceData.userEmail || total <= 0) {
-      alert('Please fill in all required fields and add at least one line item')
-      return
-    }
+  const togglePaymentMethod = (method: string) => {
+    setInvoiceData(prev => {
+      const methods = prev.paymentMethods.includes(method)
+        ? prev.paymentMethods.filter(m => m !== method)
+        : [...prev.paymentMethods, method]
+      // Must have at least one method
+      if (methods.length === 0) return prev
+      return { ...prev, paymentMethods: methods }
+    })
+  }
 
-    setSending(true)
-
-    // Simulate sending
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    const newInvoice: SavedInvoice = {
-      id: Date.now().toString(),
-      invoiceNumber: invoiceData.invoiceNumber,
-      invoiceType: invoiceData.invoiceType,
-      userName: invoiceData.userName,
-      userEmail: invoiceData.userEmail,
-      mcNumber: invoiceData.mcNumber,
-      total,
-      status: 'sent',
-      issueDate: invoiceData.issueDate,
-      dueDate: invoiceData.dueDate,
-    }
-
-    setSavedInvoices([newInvoice, ...savedInvoices])
-    setSending(false)
-
-    alert(`Invoice ${invoiceData.invoiceNumber} generated and sent to ${invoiceData.userEmail}`)
-
-    // Reset form
+  const resetForm = () => {
     setInvoiceData({
-      invoiceNumber: generateInvoiceNumber(),
+      invoiceNumber: '',
       invoiceType: 'custom',
       userId: '',
       userName: '',
@@ -243,7 +240,80 @@ const AdminInvoiceGenerator = () => {
       notes: '',
       dueDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
       issueDate: format(new Date(), 'yyyy-MM-dd'),
+      paymentMethods: ['us_bank_account'],
+      autoSend: true,
     })
+  }
+
+  const handleGenerateInvoice = async () => {
+    if (!invoiceData.userId || !invoiceData.userEmail || total <= 0) {
+      setErrorMessage('Please select a user and add at least one line item with a price')
+      setTimeout(() => setErrorMessage(null), 5000)
+      return
+    }
+
+    if (invoiceData.paymentMethods.length === 0) {
+      setErrorMessage('Please select at least one payment method')
+      setTimeout(() => setErrorMessage(null), 5000)
+      return
+    }
+
+    setSending(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    try {
+      const response = await api.createAdminInvoice({
+        userId: invoiceData.userId,
+        lineItems: invoiceData.lineItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+        dueDate: invoiceData.dueDate,
+        notes: invoiceData.notes,
+        invoiceType: invoiceData.invoiceType,
+        mcNumber: invoiceData.mcNumber,
+        paymentMethods: invoiceData.paymentMethods,
+        autoSend: invoiceData.autoSend,
+      })
+
+      const invNumber = response.data?.invoice?.number || response.data?.invoice?.id
+      setSuccessMessage({
+        text: `Invoice ${invNumber} created and sent to ${invoiceData.userEmail}`,
+        url: response.data?.hostedUrl || undefined,
+      })
+
+      resetForm()
+      fetchInvoices(invoiceFilter)
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to create invoice')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleVoidInvoice = async (invoiceId: string) => {
+    if (!confirm('Are you sure you want to void this invoice? This cannot be undone.')) return
+
+    try {
+      await api.voidAdminInvoice(invoiceId)
+      fetchInvoices(invoiceFilter)
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to void invoice')
+      setTimeout(() => setErrorMessage(null), 5000)
+    }
+  }
+
+  const handleResendInvoice = async (invoiceId: string) => {
+    try {
+      await api.sendAdminInvoice(invoiceId)
+      setSuccessMessage({ text: 'Invoice resent successfully' })
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to resend invoice')
+      setTimeout(() => setErrorMessage(null), 5000)
+    }
   }
 
   const handlePrint = () => {
@@ -257,14 +327,12 @@ const AdminInvoiceGenerator = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Invoice ${invoiceData.invoiceNumber}</title>
+          <title>Invoice Preview</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 40px; }
             .invoice-header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-            .company-info { }
             .company-name { font-size: 24px; font-weight: bold; color: #1a1a2e; }
             .company-details { color: #666; font-size: 14px; margin-top: 8px; }
-            .invoice-info { text-align: right; }
             .invoice-number { font-size: 20px; font-weight: bold; color: #1a1a2e; }
             .invoice-dates { color: #666; font-size: 14px; margin-top: 8px; }
             .bill-to { margin-bottom: 30px; }
@@ -292,27 +360,31 @@ const AdminInvoiceGenerator = () => {
     printWindow.print()
   }
 
-  const getStatusBadge = (status: SavedInvoice['status']) => {
-    const styles = {
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-600',
-      sent: 'bg-blue-100 text-blue-600',
+      open: 'bg-blue-100 text-blue-600',
       paid: 'bg-emerald-100 text-emerald-600',
-      overdue: 'bg-red-100 text-red-600',
-      cancelled: 'bg-gray-100 text-gray-400',
+      uncollectible: 'bg-red-100 text-red-600',
+      void: 'bg-gray-100 text-gray-400',
     }
-    const icons = {
+    const icons: Record<string, JSX.Element> = {
       draft: <FileText className="w-3 h-3" />,
-      sent: <Send className="w-3 h-3" />,
+      open: <Send className="w-3 h-3" />,
       paid: <CheckCircle className="w-3 h-3" />,
-      overdue: <AlertCircle className="w-3 h-3" />,
-      cancelled: <X className="w-3 h-3" />,
+      uncollectible: <AlertCircle className="w-3 h-3" />,
+      void: <X className="w-3 h-3" />,
     }
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
-        {icons[status]}
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+        {icons[status] || <Clock className="w-3 h-3" />}
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     )
+  }
+
+  const formatCents = (cents: number) => {
+    return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
   }
 
   return (
@@ -320,8 +392,56 @@ const AdminInvoiceGenerator = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Invoice Generator</h2>
-          <p className="text-gray-500">Create and send invoices to users</p>
+          <p className="text-gray-500">Create and send Stripe invoices with wire transfer / ACH / card payment options</p>
         </div>
+
+        {/* Success Message */}
+        <AnimatePresence>
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3"
+            >
+              <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-emerald-800 font-medium">{successMessage.text}</p>
+                {successMessage.url && (
+                  <a
+                    href={successMessage.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 text-sm hover:underline inline-flex items-center gap-1 mt-1"
+                  >
+                    View payment page <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+              <button onClick={() => setSuccessMessage(null)} className="text-emerald-400 hover:text-emerald-600">
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Error Message */}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <p className="text-red-800 flex-1">{errorMessage}</p>
+              <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-red-600">
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Invoice Form */}
@@ -331,15 +451,7 @@ const AdminInvoiceGenerator = () => {
 
               <div className="space-y-6">
                 {/* Invoice Details Row */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Number</label>
-                    <Input
-                      value={invoiceData.invoiceNumber}
-                      onChange={(e) => setInvoiceData({ ...invoiceData, invoiceNumber: e.target.value })}
-                      icon={<Hash className="w-4 h-4" />}
-                    />
-                  </div>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Issue Date</label>
                     <Input
@@ -370,9 +482,38 @@ const AdminInvoiceGenerator = () => {
                   />
                 </div>
 
+                {/* Payment Methods */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Accepted Payment Methods</label>
+                  <div className="flex flex-wrap gap-3">
+                    {PAYMENT_METHOD_OPTIONS.map(({ value, label, icon: Icon }) => {
+                      const isActive = invoiceData.paymentMethods.includes(value)
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => togglePaymentMethod(value)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${
+                            isActive
+                              ? 'border-secondary-500 bg-secondary-50 text-secondary-700'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          {label}
+                          {isActive && <CheckCircle className="w-4 h-4 text-secondary-500" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    Bank Transfer / Wire uses Stripe's hosted bank transfer instructions (ACH). Customer receives wire details via email.
+                  </p>
+                </div>
+
                 {/* User Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bill To</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bill To *</label>
                   <select
                     value={invoiceData.userId}
                     onChange={(e) => handleUserSelect(e.target.value)}
@@ -391,7 +532,7 @@ const AdminInvoiceGenerator = () => {
                   </select>
                 </div>
 
-                {/* Manual Entry or Selected User Details */}
+                {/* Selected User Details */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <Input
                     label="Name / Company *"
@@ -438,7 +579,7 @@ const AdminInvoiceGenerator = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {invoiceData.lineItems.map((item, index) => (
+                    {invoiceData.lineItems.map((item) => (
                       <div key={item.id} className="flex gap-3 items-start">
                         <div className="flex-1">
                           <Input
@@ -500,6 +641,27 @@ const AdminInvoiceGenerator = () => {
                   </div>
                 </div>
 
+                {/* Auto-send toggle */}
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={invoiceData.autoSend}
+                      onChange={(e) => setInvoiceData({ ...invoiceData, autoSend: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-secondary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary-600"></div>
+                  </label>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Auto-send to customer</span>
+                    <p className="text-xs text-gray-400">
+                      {invoiceData.autoSend
+                        ? 'Invoice will be finalized and emailed to the customer immediately'
+                        : 'Invoice will be saved as a draft — you can send it later'}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Notes / Terms</label>
@@ -515,17 +677,17 @@ const AdminInvoiceGenerator = () => {
                 <div className="flex gap-3 pt-4">
                   <Button
                     onClick={handleGenerateInvoice}
-                    disabled={sending || !invoiceData.userName || !invoiceData.userEmail || total <= 0}
+                    disabled={sending || !invoiceData.userId || !invoiceData.userEmail || total <= 0}
                   >
                     {sending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending...
+                        Creating Invoice...
                       </>
                     ) : (
                       <>
                         <Send className="w-4 h-4 mr-2" />
-                        Generate & Send
+                        {invoiceData.autoSend ? 'Create & Send Invoice' : 'Create Draft Invoice'}
                       </>
                     )}
                   </Button>
@@ -542,48 +704,155 @@ const AdminInvoiceGenerator = () => {
             </Card>
           </div>
 
-          {/* Recent Invoices */}
+          {/* Recent Invoices from Stripe */}
           <div>
             <Card>
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Invoices</h3>
-
-              <div className="space-y-3">
-                {savedInvoices.map((invoice) => (
-                  <div key={invoice.id} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-sm text-gray-900">{invoice.invoiceNumber}</div>
-                        <div className="text-xs text-gray-500">{invoice.userName}</div>
-                      </div>
-                      {getStatusBadge(invoice.status)}
-                    </div>
-
-                    <div className="text-lg font-bold text-secondary-600 mb-2">
-                      ${invoice.total.toLocaleString()}
-                    </div>
-
-                    <div className="text-xs text-gray-500 space-y-1">
-                      {invoice.mcNumber && <div>MC #{invoice.mcNumber}</div>}
-                      <div>Issued: {new Date(invoice.issueDate).toLocaleDateString()}</div>
-                      <div>Due: {new Date(invoice.dueDate).toLocaleDateString()}</div>
-                      {invoice.paidDate && (
-                        <div className="text-emerald-600">Paid: {new Date(invoice.paidDate).toLocaleDateString()}</div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2 mt-3">
-                      <Button variant="ghost" size="sm" fullWidth>
-                        <FileText className="w-3 h-3 mr-1" />
-                        View
-                      </Button>
-                      <Button variant="ghost" size="sm" fullWidth>
-                        <Download className="w-3 h-3 mr-1" />
-                        PDF
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Stripe Invoices</h3>
+                <button
+                  onClick={() => fetchInvoices(invoiceFilter)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
+
+              {/* Filter */}
+              <div className="mb-4">
+                <select
+                  value={invoiceFilter}
+                  onChange={(e) => setInvoiceFilter(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-lg bg-gray-50 border border-gray-200 focus:border-secondary-500 focus:outline-none"
+                >
+                  <option value="">All Invoices</option>
+                  <option value="draft">Draft</option>
+                  <option value="open">Open (Sent)</option>
+                  <option value="paid">Paid</option>
+                  <option value="void">Voided</option>
+                  <option value="uncollectible">Uncollectible</option>
+                </select>
+              </div>
+
+              {loadingInvoices ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : savedInvoices.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No invoices found</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                  {savedInvoices.map((invoice) => (
+                    <div key={invoice.id} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="font-semibold text-sm text-gray-900">
+                            {invoice.number || invoice.id?.slice(-8)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {invoice.customer_name || invoice.customer_email || 'Unknown'}
+                          </div>
+                        </div>
+                        {getStatusBadge(invoice.status)}
+                      </div>
+
+                      <div className="text-lg font-bold text-secondary-600 mb-2">
+                        {formatCents(invoice.amount_due || invoice.total || 0)}
+                      </div>
+
+                      <div className="text-xs text-gray-500 space-y-1">
+                        {invoice.metadata?.mcNumber && (
+                          <div>MC #{invoice.metadata.mcNumber}</div>
+                        )}
+                        {invoice.metadata?.invoiceType && (
+                          <div className="capitalize">{invoice.metadata.invoiceType.replace('_', ' ')}</div>
+                        )}
+                        <div>Created: {new Date(invoice.created * 1000).toLocaleDateString()}</div>
+                        {invoice.due_date && (
+                          <div>Due: {new Date(invoice.due_date * 1000).toLocaleDateString()}</div>
+                        )}
+                        {invoice.status === 'paid' && invoice.status_transitions?.paid_at && (
+                          <div className="text-emerald-600">
+                            Paid: {new Date(invoice.status_transitions.paid_at * 1000).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 mt-3">
+                        {invoice.hosted_invoice_url && (
+                          <a
+                            href={invoice.hosted_invoice_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1"
+                          >
+                            <Button variant="ghost" size="sm" fullWidth>
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
+                          </a>
+                        )}
+                        {invoice.invoice_pdf && (
+                          <a
+                            href={invoice.invoice_pdf}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1"
+                          >
+                            <Button variant="ghost" size="sm" fullWidth>
+                              <Download className="w-3 h-3 mr-1" />
+                              PDF
+                            </Button>
+                          </a>
+                        )}
+                        {invoice.status === 'open' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResendInvoice(invoice.id)}
+                              title="Resend invoice email"
+                            >
+                              <Send className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleVoidInvoice(invoice.id)}
+                              title="Void invoice"
+                            >
+                              <Ban className="w-3 h-3 text-red-500" />
+                            </Button>
+                          </>
+                        )}
+                        {invoice.status === 'draft' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResendInvoice(invoice.id)}
+                              title="Finalize and send"
+                            >
+                              <Send className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleVoidInvoice(invoice.id)}
+                              title="Void invoice"
+                            >
+                              <Ban className="w-3 h-3 text-red-500" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
         </div>
@@ -631,7 +900,7 @@ const AdminInvoiceGenerator = () => {
                     <div>
                       <div className="text-2xl font-bold text-gray-900">Domilea</div>
                       <div className="text-gray-500 text-sm mt-1">
-                        MC Authority Marketplace<br />
+                        Trucking Business Marketplace<br />
                         support@domilea.com<br />
                         www.domilea.com
                       </div>
@@ -639,7 +908,6 @@ const AdminInvoiceGenerator = () => {
                     <div className="text-right">
                       <div className="text-2xl font-bold text-gray-900">INVOICE</div>
                       <div className="text-gray-500 text-sm mt-1">
-                        {invoiceData.invoiceNumber}<br />
                         Issued: {new Date(invoiceData.issueDate).toLocaleDateString()}<br />
                         Due: {new Date(invoiceData.dueDate).toLocaleDateString()}
                       </div>
@@ -654,6 +922,18 @@ const AdminInvoiceGenerator = () => {
                       {invoiceData.userEmail && <div>{invoiceData.userEmail}</div>}
                       {invoiceData.userPhone && <div>{invoiceData.userPhone}</div>}
                       {invoiceData.mcNumber && <div>MC #{invoiceData.mcNumber}</div>}
+                    </div>
+                  </div>
+
+                  {/* Payment Methods */}
+                  <div className="mb-6">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Accepted Payment</div>
+                    <div className="flex gap-2">
+                      {invoiceData.paymentMethods.map(method => (
+                        <span key={method} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-600">
+                          {method === 'us_bank_account' ? <><Landmark className="w-3 h-3" /> Wire / ACH</> : <><CreditCard className="w-3 h-3" /> Card</>}
+                        </span>
+                      ))}
                     </div>
                   </div>
 

@@ -1465,6 +1465,73 @@ class ApiService {
     }>(`/admin/stripe/balance-transactions${query ? `?${query}` : ''}`);
   }
 
+  // ============================================
+  // Admin Invoices (Stripe)
+  // ============================================
+
+  async getAdminInvoices(params?: {
+    limit?: number;
+    startingAfter?: string;
+    status?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.startingAfter) searchParams.set('startingAfter', params.startingAfter);
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString();
+    return this.request<{
+      success: boolean;
+      data: any[];
+      hasMore: boolean;
+    }>(`/admin/invoices${query ? `?${query}` : ''}`);
+  }
+
+  async getAdminInvoice(invoiceId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>(`/admin/invoices/${invoiceId}`);
+  }
+
+  async createAdminInvoice(data: {
+    userId: string;
+    lineItems: Array<{ description: string; quantity: number; unitPrice: number }>;
+    dueDate?: string;
+    notes?: string;
+    invoiceType?: string;
+    mcNumber?: string;
+    paymentMethods?: string[];
+    autoSend?: boolean;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: {
+        invoice: any;
+        hostedUrl?: string;
+      };
+    }>('/admin/invoices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async sendAdminInvoice(invoiceId: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+    }>(`/admin/invoices/${invoiceId}/send`, {
+      method: 'POST',
+    });
+  }
+
+  async voidAdminInvoice(invoiceId: string) {
+    return this.request<{
+      success: boolean;
+    }>(`/admin/invoices/${invoiceId}/void`, {
+      method: 'POST',
+    });
+  }
+
   // Buyer approve transaction
   async buyerApproveTransaction(transactionId: string) {
     return this.request<{
