@@ -5488,9 +5488,9 @@ For questions, contact us at payments@domilea.com`
                 </div>
               </div>
               <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-100">
-                {showDocumentPreview.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                {showDocumentPreview.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i) ? (
                   <img src={showDocumentPreview} alt="Document" className="max-w-full max-h-full object-contain" />
-                ) : showDocumentPreview.match(/\.pdf$/i) ? (
+                ) : showDocumentPreview.match(/\.pdf(\?|$)/i) ? (
                   <iframe src={showDocumentPreview} className="w-full h-full min-h-[70vh]" title="Document Preview" />
                 ) : (
                   <div className="text-center py-12">
