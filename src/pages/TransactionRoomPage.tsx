@@ -1811,13 +1811,13 @@ For questions, contact us at payments@domilea.com`
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-gray-100 rounded-xl overflow-x-auto">
-        {[
+        {([
           { id: 'timeline', label: 'Transaction Progress', icon: Clock },
           { id: 'parties', label: 'Buyer & Seller', icon: Users, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
           { id: 'business', label: 'Business Details', icon: Building2, blur: userRole === 'buyer' && transaction.workflow.currentStep !== 'completed' },
           { id: 'documents', label: 'Documents', icon: FileText, count: transaction.sellerDocuments.length },
           { id: 'messages', label: 'Messages', icon: MessageSquare, count: transaction.messages.length }
-        ].filter(tab => !tab.hidden).map(tab => (
+        ] as Array<{ id: string; label: string; icon: any; blur?: boolean; count?: number; hidden?: boolean }>).filter(tab => !tab.hidden).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
