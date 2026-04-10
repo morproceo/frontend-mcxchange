@@ -752,7 +752,7 @@ const TransactionRoomPage = () => {
               name: doc.name || doc.filename,
               type: doc.type || 'document',
               url: doc.url || '#',
-              verified: doc.verified ?? false,
+              verified: doc.verified || doc.status === 'VERIFIED' || false,
               uploadedAt: new Date(doc.createdAt || doc.uploadedAt),
             })) : prev.sellerDocuments,
             messages: txn.messages?.length > 0 ? txn.messages.map((msg: any) => ({
@@ -2487,8 +2487,8 @@ For questions, contact us at payments@domilea.com`
                                       </div>
                                     </div>
 
-                                    {/* Upload signed copy (buyer or seller, if they haven't uploaded one yet) */}
-                                    {((isBuyer && !buyerSignedDoc) || (isSeller && !sellerSignedDoc)) && (
+                                    {/* Upload signed copy (buyer, seller, or admin if they haven't uploaded one yet) */}
+                                    {((isBuyer && !buyerSignedDoc) || (isSeller && !sellerSignedDoc) || (isAdmin && (!buyerSignedDoc || !sellerSignedDoc))) && (
                                       <>
                                         <input
                                           type="file"
@@ -4874,7 +4874,6 @@ For questions, contact us at payments@domilea.com`
                     const formData = new FormData()
                     formData.append('file', file)
                     formData.append('type', uploadDocType)
-                    formData.append('transactionId', transactionId!)
                     await api.uploadTransactionDocument(transactionId!, formData)
                     toast.success('Document uploaded successfully')
                     setUploadDocType('OTHER')
