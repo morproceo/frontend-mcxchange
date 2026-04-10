@@ -1562,7 +1562,7 @@ For questions, contact us at payments@domilea.com`
     }
   }
 
-  const groupedDocuments = transaction.sellerDocuments.reduce((acc, doc) => {
+  const groupedDocuments = (transaction.sellerDocuments || []).reduce((acc, doc) => {
     const category = doc.type
     if (!acc[category]) acc[category] = []
     acc[category].push(doc)
