@@ -564,12 +564,19 @@ const AdminAllListingsPage = () => {
   const [addListingAuthorityHistory, setAddListingAuthorityHistory] = useState<any>(null)
   const [addListingFmcsaCarrierData, setAddListingFmcsaCarrierData] = useState<any>(null)
 
-  // Seller search state
+  // Seller search state (for Add Listing)
   const [sellerSearchTerm, setSellerSearchTerm] = useState('')
   const [sellerSearchResults, setSellerSearchResults] = useState<any[]>([])
   const [sellerSearchLoading, setSellerSearchLoading] = useState(false)
   const [selectedSeller, setSelectedSeller] = useState<any>(null)
   const [showSellerDropdown, setShowSellerDropdown] = useState(false)
+
+  // Seller reassignment state (for Edit mode)
+  const [editSellerSearchTerm, setEditSellerSearchTerm] = useState('')
+  const [editSellerSearchResults, setEditSellerSearchResults] = useState<any[]>([])
+  const [editSellerSearchLoading, setEditSellerSearchLoading] = useState(false)
+  const [editSelectedSeller, setEditSelectedSeller] = useState<any>(null)
+  const [showEditSellerDropdown, setShowEditSellerDropdown] = useState(false)
 
   // Debounced seller search
   useEffect(() => {
@@ -595,6 +602,31 @@ const AdminAllListingsPage = () => {
 
     return () => clearTimeout(timer)
   }, [sellerSearchTerm])
+
+  // Debounced seller search for edit mode reassignment
+  useEffect(() => {
+    if (!editSellerSearchTerm || editSellerSearchTerm.length < 2) {
+      setEditSellerSearchResults([])
+      setShowEditSellerDropdown(false)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setEditSellerSearchLoading(true)
+        const response = await api.getAdminUsers({ search: editSellerSearchTerm, role: 'SELLER', limit: 10 })
+        setEditSellerSearchResults(response.users || [])
+        setShowEditSellerDropdown(true)
+      } catch (err) {
+        console.error('Edit seller search failed:', err)
+        setEditSellerSearchResults([])
+      } finally {
+        setEditSellerSearchLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [editSellerSearchTerm])
 
   // FMCSA lookup for Add Listing modal
   const handleAddListingFmcsaLookup = async () => {
@@ -844,6 +876,11 @@ const AdminAllListingsPage = () => {
     })
     setIsEditMode(true)
     setEditError(null)
+    // Initialize seller reassignment state with current seller
+    setEditSelectedSeller(listing.seller)
+    setEditSellerSearchTerm('')
+    setEditSellerSearchResults([])
+    setShowEditSellerDropdown(false)
   }
 
   const handleSaveEdit = async () => {
@@ -869,6 +906,7 @@ const AdminAllListingsPage = () => {
       }
 
       const response = await api.updateAdminListing(selectedListing.id, {
+        sellerId: editSelectedSeller && editSelectedSeller.id !== selectedListing.seller.id ? editSelectedSeller.id : undefined,
         mcNumber: editForm.mcNumber || undefined,
         dotNumber: editForm.dotNumber || undefined,
         legalName: editForm.legalName || undefined,
@@ -1585,6 +1623,78 @@ const AdminAllListingsPage = () => {
                 {isEditMode && editForm ? (
                   <>
                     {/* EDIT MODE */}
+                    {/* Seller Reassignment */}
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Users className="w-5 h-5 text-amber-600" />
+                        Assigned Seller
+                      </h3>
+                      {editSelectedSeller && (
+                        <div className="flex items-center gap-3 mb-3 p-3 bg-white rounded-lg border border-gray-200">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <User className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{editSelectedSeller.name}</p>
+                            <p className="text-sm text-gray-500">{editSelectedSeller.email}</p>
+                          </div>
+                          {editSelectedSeller.id !== selectedListing?.seller.id && (
+                            <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full">Changed</span>
+                          )}
+                        </div>
+                      )}
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Reassign to a different seller</label>
+                        <Input
+                          placeholder="Search sellers by name or email..."
+                          value={editSellerSearchTerm}
+                          onChange={(e: any) => setEditSellerSearchTerm(e.target.value)}
+                        />
+                        {editSellerSearchLoading && (
+                          <div className="absolute right-3 top-9">
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        {showEditSellerDropdown && editSellerSearchResults.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {editSellerSearchResults.map((user: any) => (
+                              <button
+                                key={user.id}
+                                className="w-full px-4 py-2.5 text-left hover:bg-indigo-50 flex items-center gap-3 border-b border-gray-50 last:border-0"
+                                onClick={() => {
+                                  setEditSelectedSeller({ id: user.id, name: user.name, email: user.email, phone: user.phone })
+                                  setEditSellerSearchTerm('')
+                                  setShowEditSellerDropdown(false)
+                                  setEditSellerSearchResults([])
+                                }}
+                              >
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                  <User className="w-4 h-4 text-indigo-600" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                                  <p className="text-xs text-gray-500">{user.email}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {showEditSellerDropdown && editSellerSearchResults.length === 0 && editSellerSearchTerm.length >= 2 && !editSellerSearchLoading && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-center text-sm text-gray-500">
+                            No sellers found
+                          </div>
+                        )}
+                      </div>
+                      {editSelectedSeller && editSelectedSeller.id !== selectedListing?.seller.id && (
+                        <button
+                          className="mt-2 text-sm text-gray-500 hover:text-gray-700 underline"
+                          onClick={() => setEditSelectedSeller(selectedListing?.seller || null)}
+                        >
+                          Revert to original seller
+                        </button>
+                      )}
+                    </div>
+
                     {/* Company Info */}
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">

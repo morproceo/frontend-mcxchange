@@ -469,6 +469,7 @@ class ApiService {
   }
 
   async updateAdminListing(listingId: string, data: {
+    sellerId?: string;
     mcNumber?: string;
     dotNumber?: string;
     legalName?: string;
