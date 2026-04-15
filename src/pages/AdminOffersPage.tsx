@@ -231,10 +231,10 @@ const AdminOffersPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Offer Management</h1>
-          <p className="text-gray-500">Review and manage buyer offers and buy now requests</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Offer Management</h1>
+          <p className="text-sm sm:text-base text-gray-500">Review and manage buyer offers and buy now requests</p>
         </div>
         <Button variant="outline" onClick={fetchOffers} disabled={loading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -356,18 +356,32 @@ const AdminOffersPage = () => {
                   setAdminNotes(offer.adminNotes || '')
                   setShowDetailModal(true)
                 }}>
+                  {/* Mobile: status badge + amount at top for quick scanning */}
+                  <div className="flex items-center justify-between mb-3 sm:hidden">
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
+                      <StatusIcon className="w-4 h-4" />
+                      {statusConfig.label}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-gray-900">${Number(offer.amount).toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">
+                        Ask: ${Number(offer.listing?.askingPrice || offer.listing?.price || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                     {/* MC Info */}
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
                           <Building2 className="w-5 h-5 text-gray-600" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <h3 className="font-semibold text-gray-900">MC #{offer.listing?.mcNumber || 'N/A'}</h3>
                             {offer.listing?.legalName && (
-                              <span className="text-sm text-gray-600">— {offer.listing.legalName}</span>
+                              <span className="text-sm text-gray-600 truncate">— {offer.listing.legalName}</span>
                             )}
                             {offer.isBuyNow && (
                               <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex items-center gap-1">
@@ -376,30 +390,30 @@ const AdminOffersPage = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500">{offer.listing?.title || 'N/A'}</p>
+                          <p className="text-sm text-gray-500 truncate">{offer.listing?.title || 'N/A'}</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-500">Buyer</p>
-                          <p className="font-medium text-gray-900 flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            {offer.buyer?.name || 'N/A'}
+                          <p className="font-medium text-gray-900 flex items-center gap-1 truncate">
+                            <User className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{offer.buyer?.name || 'N/A'}</span>
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Seller</p>
-                          <p className="font-medium text-gray-900 flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            {offer.seller?.name || 'N/A'}
+                          <p className="font-medium text-gray-900 flex items-center gap-1 truncate">
+                            <User className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{offer.seller?.name || 'N/A'}</span>
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Pricing */}
-                    <div className="flex flex-col items-start lg:items-end gap-2">
+                    {/* Pricing - hidden on mobile (shown at top instead) */}
+                    <div className="hidden sm:flex flex-col items-start lg:items-end gap-2">
                       <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
                         <StatusIcon className="w-4 h-4" />
                         {statusConfig.label}
@@ -413,11 +427,13 @@ const AdminOffersPage = () => {
                       </div>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="flex items-center gap-2">
-                      {offer.status === 'PENDING' && (
+                    {/* Quick Actions - full width on mobile */}
+                    <div className="flex items-center gap-2 sm:flex-col lg:flex-row">
+                      {offer.status === 'PENDING_ADMIN' && (
                         <Button
                           size="sm"
+                          fullWidth
+                          className="sm:w-auto"
                           onClick={(e) => {
                             e.stopPropagation()
                             setSelectedOffer(offer)
@@ -440,7 +456,7 @@ const AdminOffersPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs sm:text-sm text-gray-500">
                     <span>Submitted: {new Date(offer.createdAt).toLocaleDateString()} at {new Date(offer.createdAt).toLocaleTimeString()}</span>
                     {offer.adminReviewedAt && (
                       <span className="flex items-center gap-1 text-gray-500">
@@ -487,20 +503,24 @@ const AdminOffersPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:p-4"
             onClick={() => setShowDetailModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+              className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100">
+              {/* Drag handle for mobile */}
+              <div className="sm:hidden flex justify-center pt-2">
+                <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              </div>
+              <div className="p-4 sm:p-6 border-b border-gray-100">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold text-gray-900">Offer Details</h2>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Offer Details</h2>
                     {selectedOffer.isBuyNow && (
                       <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex items-center gap-1">
                         <ShoppingCart className="w-3 h-3" />
@@ -517,25 +537,25 @@ const AdminOffersPage = () => {
                 </div>
               </div>
 
-              <div className="p-6 overflow-y-auto space-y-6">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6">
                 {/* MC & Pricing */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-gray-600" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                           MC #{selectedOffer.listing?.mcNumber || 'N/A'}
                           {selectedOffer.listing?.legalName && (
-                            <span className="text-gray-600 font-normal"> — {selectedOffer.listing.legalName}</span>
+                            <span className="text-gray-600 font-normal block sm:inline"> — {selectedOffer.listing.legalName}</span>
                           )}
                         </h3>
-                        <p className="text-sm text-gray-500">{selectedOffer.listing?.title || 'N/A'}</p>
+                        <p className="text-sm text-gray-500 truncate">{selectedOffer.listing?.title || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right pl-13 sm:pl-0">
                       <p className="text-sm text-gray-500">Asking Price</p>
                       <p className="text-lg font-bold text-gray-900">${Number(selectedOffer.listing?.askingPrice || selectedOffer.listing?.price || 0).toLocaleString()}</p>
                     </div>
@@ -559,25 +579,25 @@ const AdminOffersPage = () => {
                 </div>
 
                 {/* Buyer & Seller Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 rounded-xl p-4">
-                    <h4 className="text-sm font-medium text-blue-800 mb-3">Buyer</h4>
-                    <p className="font-semibold text-gray-900">{selectedOffer.buyer?.name || 'N/A'}</p>
-                    <p className="text-sm text-gray-500">{selectedOffer.buyer?.email || 'N/A'}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-blue-50 rounded-xl p-3 sm:p-4">
+                    <h4 className="text-sm font-medium text-blue-800 mb-2 sm:mb-3">Buyer</h4>
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">{selectedOffer.buyer?.name || 'N/A'}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedOffer.buyer?.email || 'N/A'}</p>
                     {selectedOffer.buyer?.phone && (
-                      <p className="text-sm text-gray-500">{selectedOffer.buyer.phone}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">{selectedOffer.buyer.phone}</p>
                     )}
                     <div className="mt-2 flex items-center gap-1 text-sm">
                       <span className="text-gray-500">Trust Score:</span>
                       <span className="font-medium text-gray-900">{selectedOffer.buyer?.trustScore || 0}%</span>
                     </div>
                   </div>
-                  <div className="bg-purple-50 rounded-xl p-4">
-                    <h4 className="text-sm font-medium text-purple-800 mb-3">Seller</h4>
-                    <p className="font-semibold text-gray-900">{selectedOffer.seller?.name || 'N/A'}</p>
-                    <p className="text-sm text-gray-500">{selectedOffer.seller?.email || 'N/A'}</p>
+                  <div className="bg-purple-50 rounded-xl p-3 sm:p-4">
+                    <h4 className="text-sm font-medium text-purple-800 mb-2 sm:mb-3">Seller</h4>
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">{selectedOffer.seller?.name || 'N/A'}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedOffer.seller?.email || 'N/A'}</p>
                     {selectedOffer.seller?.phone && (
-                      <p className="text-sm text-gray-500">{selectedOffer.seller.phone}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">{selectedOffer.seller.phone}</p>
                     )}
                   </div>
                 </div>
@@ -617,7 +637,7 @@ const AdminOffersPage = () => {
                         />
                       </div>
                       {sellerAmountInput && parseFloat(sellerAmountInput) > 0 && (
-                        <div className="mt-2 flex items-center gap-4 text-sm">
+                        <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm">
                           <span className="text-gray-500">Buyer pays: <strong className="text-gray-900">${Number(selectedOffer.amount).toLocaleString()}</strong></span>
                           <span className="text-gray-500">Seller gets: <strong className="text-gray-900">${parseFloat(sellerAmountInput).toLocaleString()}</strong></span>
                           <span className={`font-semibold ${Number(selectedOffer.amount) - parseFloat(sellerAmountInput) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -670,43 +690,47 @@ const AdminOffersPage = () => {
                 )}
               </div>
 
-              <div className="p-6 border-t border-gray-100 flex gap-3">
+              <div className="p-4 sm:p-6 border-t border-gray-100">
                 {selectedOffer.status === 'PENDING_ADMIN' && (
-                  <>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <Button
-                      variant="outline"
-                      onClick={handleReject}
+                      fullWidth
+                      onClick={handleForward}
                       loading={processing}
-                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      disabled={!sellerAmountInput || parseFloat(sellerAmountInput) <= 0}
+                      className="bg-indigo-600 hover:bg-indigo-700 order-1 sm:order-3 sm:flex-1 py-3 sm:py-2"
                     >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
+                      <Send className="w-4 h-4 mr-2" />
+                      Forward to Seller
                     </Button>
                     <Button
+                      fullWidth
                       variant="outline"
                       onClick={handleApprove}
                       loading={processing}
+                      className="order-2 sm:order-2 sm:w-auto py-3 sm:py-2"
                     >
                       <Check className="w-4 h-4 mr-2" />
                       Approve Direct
                     </Button>
                     <Button
                       fullWidth
-                      onClick={handleForward}
+                      variant="outline"
+                      onClick={handleReject}
                       loading={processing}
-                      disabled={!sellerAmountInput || parseFloat(sellerAmountInput) <= 0}
-                      className="bg-indigo-600 hover:bg-indigo-700"
+                      className="text-red-600 border-red-200 hover:bg-red-50 order-3 sm:order-1 sm:w-auto py-3 sm:py-2"
                     >
-                      <Send className="w-4 h-4 mr-2" />
-                      Forward to Seller
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject
                     </Button>
-                  </>
+                  </div>
                 )}
                 {selectedOffer.status !== 'PENDING_ADMIN' && (
                   <Button
                     fullWidth
                     variant="outline"
                     onClick={() => setShowDetailModal(false)}
+                    className="py-3 sm:py-2"
                   >
                     Close
                   </Button>
