@@ -226,7 +226,7 @@ const BuyerOffersPage = () => {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -239,7 +239,7 @@ const BuyerOffersPage = () => {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <Card>
             <div className="text-center py-12">
@@ -258,13 +258,13 @@ const BuyerOffersPage = () => {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">My Offers</h2>
-            <p className="text-gray-500">Track and manage your submitted offers</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">My Offers</h2>
+            <p className="text-sm sm:text-base text-gray-500">Track and manage your submitted offers</p>
           </div>
           <Button variant="outline" onClick={fetchOffers}>
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -273,7 +273,7 @@ const BuyerOffersPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.label}
@@ -282,20 +282,20 @@ const BuyerOffersPage = () => {
               transition={{ delay: index * 0.1 }}
             >
               <Card>
-                <div className="text-sm text-gray-500 mb-1">{stat.label}</div>
-                <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+                <div className="text-xs sm:text-sm text-gray-500 mb-1">{stat.label}</div>
+                <div className={`text-2xl sm:text-3xl font-bold ${stat.color}`}>{stat.value}</div>
               </Card>
             </motion.div>
           ))}
         </div>
 
         {/* Filters */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {(['all', 'pending', 'accepted', 'approved', 'countered', 'rejected'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium capitalize transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeFilter === filter
                   ? 'bg-gray-900 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -332,22 +332,37 @@ const BuyerOffersPage = () => {
                 animate={{ opacity: 1, y: 0 }}
               >
                 <Card>
-                  <div className="flex items-start justify-between mb-4">
+                  {/* Mobile: status + amount summary at top */}
+                  <div className="flex items-center justify-between mb-3 sm:hidden">
+                    <span className={`${getStatusBgColor(offer.status, offer.isBuyNow)} px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 ${getStatusColor(offer.status, offer.isBuyNow)}`}>
+                      {getStatusIcon(offer.status, offer.isBuyNow)}
+                      <span>{getStatusLabel(offer.status, offer.isBuyNow)}</span>
+                    </span>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-900">${(offer.amount ?? 0).toLocaleString()}</div>
+                      <div className="text-xs text-gray-400">
+                        Ask: ${(offer.listing.askingPrice ?? offer.listing.listingPrice ?? offer.listing.price ?? 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="text-lg font-bold text-gray-900">MC-{offer.listing.mcNumber}</h3>
+                      <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900">MC-{offer.listing.mcNumber}</h3>
                         {offer.isBuyNow && (
                           <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
                             <ShoppingCart className="w-3 h-3" />
                             Buy Now
                           </span>
                         )}
-                        <span className={`${getStatusBgColor(offer.status, offer.isBuyNow)} px-3 py-1 rounded-full text-sm flex items-center gap-1.5 ${getStatusColor(offer.status, offer.isBuyNow)}`}>
+                        {/* Status badge - desktop only (mobile shows at top) */}
+                        <span className={`hidden sm:flex ${getStatusBgColor(offer.status, offer.isBuyNow)} px-3 py-1 rounded-full text-sm items-center gap-1.5 ${getStatusColor(offer.status, offer.isBuyNow)}`}>
                           {getStatusIcon(offer.status, offer.isBuyNow)}
                           <span>{getStatusLabel(offer.status, offer.isBuyNow)}</span>
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-1">{offer.listing.title}</p>
+                      <p className="text-sm text-gray-600 mb-1 truncate">{offer.listing.title}</p>
                       {offer.listing.city && offer.listing.state && (
                         <p className="text-xs text-gray-500 mb-2">{offer.listing.city}, {offer.listing.state}</p>
                       )}
@@ -356,7 +371,8 @@ const BuyerOffersPage = () => {
                       </div>
                     </div>
 
-                    <div className="text-right ml-4">
+                    {/* Pricing - desktop only (mobile shows at top) */}
+                    <div className="hidden sm:block text-right ml-4">
                       <div className="text-sm text-gray-500 mb-1">Listing Price</div>
                       <div className="text-lg font-semibold text-gray-700 mb-2">
                         ${(offer.listing.askingPrice ?? offer.listing.listingPrice ?? offer.listing.price ?? 0).toLocaleString()}
@@ -377,6 +393,14 @@ const BuyerOffersPage = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Counter offer - mobile inline display */}
+                  {offer.status === 'COUNTERED' && offer.counterAmount && (
+                    <div className="sm:hidden mb-4 bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-sm text-blue-700 font-medium">Counter Offer</span>
+                      <span className="text-lg font-bold text-blue-600">${(offer.counterAmount ?? 0).toLocaleString()}</span>
+                    </div>
+                  )}
 
                   {/* Seller Info */}
                   <div className="mb-4">
@@ -436,13 +460,48 @@ const BuyerOffersPage = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="flex gap-3 flex-wrap">
-                    <Link to={`/listing/${offer.listingId}`} className="flex-1 min-w-[140px]">
-                      <Button fullWidth variant="outline">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    {/* Primary action first on mobile */}
+                    {(offer.status === 'ACCEPTED' || offer.status === 'APPROVED') && offer.transaction && (
+                      <Button
+                        fullWidth
+                        onClick={() => navigate(`/transaction/${offer.transaction!.id}`)}
+                        className="sm:flex-1 py-3 sm:py-2"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        {offer.transaction.status === 'AWAITING_DEPOSIT' ? 'Go to Round Table' : 'View Transaction'}
+                      </Button>
+                    )}
+
+                    {offer.status === 'COUNTERED' && (
+                      <Button
+                        fullWidth
+                        onClick={() => handleAcceptCounter(offer.id)}
+                        disabled={acceptingCounterId === offer.id}
+                        className="sm:flex-1 py-3 sm:py-2"
+                      >
+                        {acceptingCounterId === offer.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                        )}
+                        Accept Counter
+                      </Button>
+                    )}
+
+                    <Link to={`/listing/${offer.listingId}`} className="sm:flex-1">
+                      <Button fullWidth variant="outline" className="py-3 sm:py-2">
                         <Eye className="w-4 h-4 mr-2" />
                         View Listing
                       </Button>
                     </Link>
+
+                    {offer.status === 'COUNTERED' && (
+                      <Button fullWidth variant="outline" className="sm:flex-1 py-3 sm:py-2">
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        New Offer
+                      </Button>
+                    )}
 
                     {(offer.status === 'PENDING' || offer.status === 'COUNTERED') && (
                       <Button
@@ -450,7 +509,7 @@ const BuyerOffersPage = () => {
                         variant="ghost"
                         onClick={() => handleWithdraw(offer.id)}
                         disabled={withdrawingId === offer.id}
-                        className="flex-1 min-w-[140px]"
+                        className="sm:flex-1 py-3 sm:py-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                       >
                         {withdrawingId === offer.id ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -458,39 +517,6 @@ const BuyerOffersPage = () => {
                           <Trash2 className="w-4 h-4 mr-2" />
                         )}
                         Withdraw
-                      </Button>
-                    )}
-
-                    {offer.status === 'COUNTERED' && (
-                      <>
-                        <Button
-                          fullWidth
-                          onClick={() => handleAcceptCounter(offer.id)}
-                          disabled={acceptingCounterId === offer.id}
-                          className="flex-1 min-w-[140px]"
-                        >
-                          {acceptingCounterId === offer.id ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                          )}
-                          Accept Counter
-                        </Button>
-                        <Button fullWidth variant="outline" className="flex-1 min-w-[140px]">
-                          <DollarSign className="w-4 h-4 mr-2" />
-                          New Offer
-                        </Button>
-                      </>
-                    )}
-
-                    {(offer.status === 'ACCEPTED' || offer.status === 'APPROVED') && offer.transaction && (
-                      <Button
-                        fullWidth
-                        onClick={() => navigate(`/transaction/${offer.transaction!.id}`)}
-                        className="flex-1 min-w-[140px]"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        {offer.transaction.status === 'AWAITING_DEPOSIT' ? 'Go to Round Table' : 'View Transaction'}
                       </Button>
                     )}
                   </div>
