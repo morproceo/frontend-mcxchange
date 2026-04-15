@@ -152,6 +152,13 @@ const AdminListingDetailPage = () => {
   const [csFullReport, setCsFullReport] = useState<any | null>(null)
   const [csError, setCsError] = useState<string | null>(null)
 
+  // Seller reassignment state
+  const [editSellerSearchTerm, setEditSellerSearchTerm] = useState('')
+  const [editSellerSearchResults, setEditSellerSearchResults] = useState<any[]>([])
+  const [editSellerSearchLoading, setEditSellerSearchLoading] = useState(false)
+  const [editSelectedSeller, setEditSelectedSeller] = useState<any>(null)
+  const [showEditSellerDropdown, setShowEditSellerDropdown] = useState(false)
+
   // Form state
   const [formData, setFormData] = useState({
     mcNumber: '',
@@ -195,6 +202,38 @@ const AdminListingDetailPage = () => {
       fetchListing()
     }
   }, [id])
+
+  // Initialize seller reassignment state when listing loads
+  useEffect(() => {
+    if (listing?.seller) {
+      setEditSelectedSeller(listing.seller)
+    }
+  }, [listing?.seller?.id])
+
+  // Debounced seller search for reassignment
+  useEffect(() => {
+    if (!editSellerSearchTerm || editSellerSearchTerm.length < 2) {
+      setEditSellerSearchResults([])
+      setShowEditSellerDropdown(false)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setEditSellerSearchLoading(true)
+        const response = await api.getAdminUsers({ search: editSellerSearchTerm, role: 'SELLER', limit: 10 })
+        setEditSellerSearchResults(response.users || [])
+        setShowEditSellerDropdown(true)
+      } catch (err) {
+        console.error('Seller search failed:', err)
+        setEditSellerSearchResults([])
+      } finally {
+        setEditSellerSearchLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [editSellerSearchTerm])
 
   // Auto-populate CreditSafe search name when tab opens
   useEffect(() => {
@@ -278,6 +317,7 @@ const AdminListingDetailPage = () => {
 
       // Build update data
       const updateData: any = {
+        sellerId: editSelectedSeller && listing?.seller && editSelectedSeller.id !== listing.seller.id ? editSelectedSeller.id : undefined,
         mcNumber: formData.mcNumber,
         dotNumber: formData.dotNumber,
         legalName: formData.legalName,
@@ -1009,45 +1049,95 @@ const AdminListingDetailPage = () => {
                   </div>
                 </Card>
 
-                {/* Seller Info */}
+                {/* Seller Info & Reassignment */}
                 {listing?.seller && (
                   <Card className="p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <User className="w-5 h-5 text-indigo-600" />
-                      Seller Information
+                      Assigned Seller
                     </h2>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <User className="w-6 h-6 text-indigo-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{listing.seller.name}</p>
-                          {listing.seller.companyName && (
-                            <p className="text-xs text-gray-500">{listing.seller.companyName}</p>
+                      {/* Current / Selected Seller */}
+                      {editSelectedSeller && (
+                        <div className={`flex items-center gap-3 p-3 rounded-lg border ${editSelectedSeller.id !== listing.seller.id ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <User className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{editSelectedSeller.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{editSelectedSeller.email}</p>
+                          </div>
+                          {editSelectedSeller.id !== listing.seller.id && (
+                            <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full flex-shrink-0">Changed</span>
                           )}
                         </div>
-                      </div>
-                      <div className="space-y-2 pt-2 border-t border-gray-100">
-                        <p className="text-sm text-gray-600 flex items-center gap-2">
-                          <Mail className="w-4 h-4" /> {listing.seller.email}
-                        </p>
-                        {listing.seller.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-2">
-                            <Phone className="w-4 h-4" /> {listing.seller.phone}
-                          </p>
+                      )}
+
+                      {/* Seller Search */}
+                      <div className="relative">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Reassign seller</label>
+                        <Input
+                          placeholder="Search by name or email..."
+                          value={editSellerSearchTerm}
+                          onChange={(e: any) => setEditSellerSearchTerm(e.target.value)}
+                        />
+                        {editSellerSearchLoading && (
+                          <div className="absolute right-3 top-7">
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          </div>
                         )}
-                        <p className="text-sm text-gray-600 flex items-center gap-2">
-                          <Calendar className="w-4 h-4" /> Member since {new Date(listing.seller.createdAt).toLocaleDateString()}
-                        </p>
+                        {showEditSellerDropdown && editSellerSearchResults.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {editSellerSearchResults.map((user: any) => (
+                              <button
+                                key={user.id}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 border-b border-gray-50 last:border-0"
+                                onClick={() => {
+                                  setEditSelectedSeller({ id: user.id, name: user.name, email: user.email, phone: user.phone, companyName: user.companyName })
+                                  setEditSellerSearchTerm('')
+                                  setShowEditSellerDropdown(false)
+                                  setEditSellerSearchResults([])
+                                }}
+                              >
+                                <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                  <User className="w-3.5 h-3.5 text-indigo-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {showEditSellerDropdown && editSellerSearchResults.length === 0 && editSellerSearchTerm.length >= 2 && !editSellerSearchLoading && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-center text-sm text-gray-500">
+                            No sellers found
+                          </div>
+                        )}
                       </div>
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => navigate(`/admin/users/${listing.seller.id}`)}
-                      >
-                        View Seller Profile
-                      </Button>
+
+                      {/* Revert link */}
+                      {editSelectedSeller && editSelectedSeller.id !== listing.seller.id && (
+                        <button
+                          type="button"
+                          className="text-xs text-gray-500 hover:text-gray-700 underline"
+                          onClick={() => setEditSelectedSeller(listing.seller)}
+                        >
+                          Revert to original seller
+                        </button>
+                      )}
+
+                      <div className="pt-2 border-t border-gray-100">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => navigate(`/admin/users/${(editSelectedSeller || listing.seller).id}`)}
+                        >
+                          View Seller Profile
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 )}
