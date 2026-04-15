@@ -74,8 +74,6 @@ const RegisterPage = () => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [smsMarketingConsent, setSmsMarketingConsent] = useState(false)
   const [smsTransactionalConsent, setSmsTransactionalConsent] = useState(false)
-  const [paymentPolicyAccepted, setPaymentPolicyAccepted] = useState(false)
-  const [noDisputeAccepted, setNoDisputeAccepted] = useState(false)
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string) => {
@@ -136,8 +134,8 @@ const RegisterPage = () => {
       return
     }
 
-    if (!termsAccepted || !paymentPolicyAccepted || !noDisputeAccepted) {
-      setError('You must accept all Terms of Service, Payment Policy, and Dispute Policy agreements')
+    if (!termsAccepted) {
+      setError('You must accept the Terms of Service and Privacy Policy')
       return
     }
 
@@ -369,7 +367,7 @@ const RegisterPage = () => {
                     className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50"
                   />
                   <span className="text-gray-700">
-                    I agree to the {role === 'seller' ? 'Seller User Agreement' : 'Buyer Terms of Service'} and Privacy Policy
+                    I agree to the {role === 'seller' ? 'Seller User Agreement' : 'Buyer Terms of Service'} and Privacy Policy, including all payment terms, subscription billing policies, deposit and refund policies, and dispute resolution provisions contained therein.
                   </span>
                 </label>
                 {!(termsRead && privacyRead) && (
@@ -378,46 +376,6 @@ const RegisterPage = () => {
                 {termsRead && privacyRead && (
                   <p className="text-xs text-green-600 mt-1.5 ml-7">You have read both documents</p>
                 )}
-              </div>
-
-              {/* Payment & Subscription Policy */}
-              <div className={`text-sm ${termsRead && privacyRead ? 'opacity-100' : 'opacity-50'}`}>
-                <label className={`flex items-start gap-3 ${termsRead && privacyRead ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
-                  <input
-                    type="checkbox"
-                    checked={paymentPolicyAccepted}
-                    onChange={(e) => {
-                      if (termsRead && privacyRead) {
-                        setPaymentPolicyAccepted(e.target.checked)
-                      }
-                    }}
-                    disabled={!termsRead || !privacyRead}
-                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50"
-                  />
-                  <span className="text-gray-700">
-                    I understand that <strong>all payments are final and non-refundable</strong>, including subscription fees, listing fees, deposits, and transaction payments. Subscriptions are billed month-to-month and can be cancelled by contacting info@domilea.com.
-                  </span>
-                </label>
-              </div>
-
-              {/* No Dispute/Chargeback Policy */}
-              <div className={`text-sm ${termsRead && privacyRead ? 'opacity-100' : 'opacity-50'}`}>
-                <label className={`flex items-start gap-3 ${termsRead && privacyRead ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
-                  <input
-                    type="checkbox"
-                    checked={noDisputeAccepted}
-                    onChange={(e) => {
-                      if (termsRead && privacyRead) {
-                        setNoDisputeAccepted(e.target.checked)
-                      }
-                    }}
-                    disabled={!termsRead || !privacyRead}
-                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50"
-                  />
-                  <span className="text-gray-700">
-                    I agree that I <strong>will not file chargebacks, bank disputes, or payment reversals</strong> with my bank or financial institution. I will contact Domilea at info@domilea.com to resolve any billing concerns. I acknowledge that Domilea is a <strong>marketing agency and transaction facilitation platform only</strong> and is not responsible for any product purchased.
-                  </span>
-                </label>
               </div>
             </div>
 
