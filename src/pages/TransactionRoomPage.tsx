@@ -113,6 +113,7 @@ const TransactionRoomPage = () => {
   const [intentConfirmed, setIntentConfirmed] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
+  const [customDepositAmount, setCustomDepositAmount] = useState('1000')
   const [cardNumber, setCardNumber] = useState('')
   const [cardExpiry, setCardExpiry] = useState('')
   const [cardCvc, setCardCvc] = useState('')
@@ -738,7 +739,7 @@ const TransactionRoomPage = () => {
             depositAmount: txn.depositAmount || prev.depositAmount,
             depositPaid: !!txn.depositPaidAt,
             depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.depositPaidAt,
-            finalPaymentAmount: txn.finalPaymentAmount || (txn.agreedPrice - (txn.depositAmount || 1000)) || prev.finalPaymentAmount,
+            finalPaymentAmount: txn.finalPaymentAmount || (txn.agreedPrice - (txn.depositAmount || 0)) || prev.finalPaymentAmount,
             finalPaymentPaid: !!txn.finalPaymentPaidAt,
             escrowStatus: txn.escrowStatus || prev.escrowStatus,
             escrowAmount: txn.escrowAmount ? Number(txn.escrowAmount) : prev.escrowAmount,
@@ -1862,7 +1863,7 @@ For questions, contact us at payments@domilea.com`
                   {[
                     { id: 'confirm-intent', label: 'Confirm Purchase Intent', icon: Target, description: 'Confirm you want to proceed with this MC purchase' },
                     { id: 'terms-agreement', label: 'Terms & Agreement', icon: ScrollText, description: 'Review and accept terms of service' },
-                    { id: 'deposit-payment', label: 'Deposit Payment', icon: CreditCard, description: 'Pay $1,000 refundable deposit' },
+                    { id: 'deposit-payment', label: 'Deposit Payment', icon: CreditCard, description: `Pay $${Number(customDepositAmount || 0).toLocaleString()} refundable deposit` },
                     { id: 'awaiting-admin', label: 'Admin Approval', icon: Shield, description: 'Waiting for admin to verify and approve' },
                     { id: 'bill-of-sale', label: 'Bill of Sale', icon: FileCheck, description: 'All parties review and approve agreement' },
                     { id: 'final-payment', label: 'Final Payment', icon: CircleDollarSign, description: 'Pay remaining balance' },
@@ -1993,7 +1994,7 @@ For questions, contact us at payments@domilea.com`
                         <div className="space-y-4 text-sm text-gray-700">
                           <div>
                             <h5 className="font-semibold text-red-600 mb-1">Deposit Refund Policy</h5>
-                            <p>The $1,000 deposit is <strong>refundable only under specific circumstances</strong>:</p>
+                            <p>The deposit is <strong>refundable only under specific circumstances</strong>:</p>
                             <ul className="list-disc ml-5 mt-1 space-y-1">
                               <li>If Domilea or the seller cancels the transaction</li>
                               <li>If material misrepresentation is discovered during due diligence</li>
@@ -2090,9 +2091,20 @@ For questions, contact us at payments@domilea.com`
                       </div>
 
                       <div className="bg-white rounded-xl p-4 mb-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-gray-600">Deposit Amount</span>
-                          <span className="text-2xl font-bold text-gray-900">$1,000.00</span>
+                        <div className="mb-4">
+                          <label className="block text-gray-600 mb-2">Deposit Amount</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-900">$</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="1000000"
+                              value={customDepositAmount}
+                              onChange={(e) => setCustomDepositAmount(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 text-2xl font-bold text-gray-900 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                              placeholder="Enter deposit amount"
+                            />
+                          </div>
                         </div>
                         <div className="text-sm text-gray-500 mb-4">
                           This deposit will be held in escrow and applied to your final purchase price.
@@ -2119,10 +2131,16 @@ For questions, contact us at payments@domilea.com`
                       <Button
                         fullWidth
                         loading={processingPayment}
+                        disabled={!customDepositAmount || Number(customDepositAmount) < 1}
                         onClick={async () => {
+                          const amount = Number(customDepositAmount)
+                          if (!amount || amount < 1) {
+                            alert('Please enter a valid deposit amount.')
+                            return
+                          }
                           setProcessingPayment(true)
                           try {
-                            const response = await api.createTransactionDepositCheckout(transaction.id)
+                            const response = await api.createTransactionDepositCheckout(transaction.id, amount)
                             if (response.success && response.data?.url) {
                               window.location.href = response.data.url
                             } else {
@@ -2137,7 +2155,7 @@ For questions, contact us at payments@domilea.com`
                         }}
                       >
                         <Banknote className="w-4 h-4 mr-2" />
-                        Pay $1,000 Deposit via Wire Transfer
+                        Pay ${Number(customDepositAmount || 0).toLocaleString()} Deposit via Wire Transfer
                       </Button>
                     </Card>
                   )}
@@ -2175,7 +2193,7 @@ For questions, contact us at payments@domilea.com`
                           <div className="bg-purple-50 rounded-lg p-4 text-sm text-left space-y-2">
                             <p><strong>Transaction ID:</strong> {transaction.id}</p>
                             <p><strong>Payment Method:</strong> Zelle</p>
-                            <p><strong>Amount:</strong> $1,000.00</p>
+                            <p><strong>Amount:</strong> ${transaction.depositAmount ? transaction.depositAmount.toLocaleString() : Number(customDepositAmount || 0).toLocaleString()}.00</p>
                             <p><strong>Sent At:</strong> {transaction.workflow.depositZelleSentAt?.toLocaleString()}</p>
                             <p><strong>Status:</strong> <span className="text-purple-600 font-medium">Pending Admin Verification</span></p>
                           </div>
@@ -2991,7 +3009,7 @@ For questions, contact us at payments@domilea.com`
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Amount Expected:</span>
-                          <span className="font-bold text-purple-600">$1,000.00</span>
+                          <span className="font-bold text-purple-600">${transaction.depositAmount ? transaction.depositAmount.toLocaleString() : Number(customDepositAmount || 0).toLocaleString()}.00</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Transaction Reference:</span>
@@ -3620,7 +3638,7 @@ For questions, contact us at payments@domilea.com`
                 <div className="relative">
                   {[
                     { step: 'Offer Submitted & Approved', completed: true, date: transaction.createdAt },
-                    { step: 'Deposit Payment ($1,000)', completed: transaction.depositPaid, date: transaction.depositPaidAt },
+                    { step: `Deposit Payment ($${transaction.depositAmount ? transaction.depositAmount.toLocaleString() : Number(customDepositAmount || 0).toLocaleString()})`, completed: transaction.depositPaid, date: transaction.depositPaidAt },
                     { step: 'Transaction Room Opened', completed: true, date: transaction.createdAt },
                     { step: 'Document Review Period', completed: transaction.buyerApproved || transaction.sellerApproved, date: null },
                     { step: 'Buyer Approval', completed: transaction.buyerApproved, date: transaction.buyerApprovedAt },

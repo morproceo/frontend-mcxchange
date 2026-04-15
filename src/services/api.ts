@@ -1335,7 +1335,7 @@ class ApiService {
   }
 
   // Create deposit checkout for a transaction (Stripe)
-  async createTransactionDepositCheckout(transactionId: string) {
+  async createTransactionDepositCheckout(transactionId: string, depositAmount?: number) {
     return this.request<{
       success: boolean;
       data: {
@@ -1344,6 +1344,7 @@ class ApiService {
       };
     }>(`/transactions/${transactionId}/deposit-checkout`, {
       method: 'POST',
+      body: JSON.stringify({ depositAmount }),
     });
   }
 
