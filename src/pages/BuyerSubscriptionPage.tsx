@@ -930,8 +930,7 @@ const BuyerSubscriptionPage = () => {
               </Button>
 
               <p className="text-xs text-center text-gray-500 mt-4">
-                By subscribing, you agree to our Terms of Service and Privacy Policy.
-                You can cancel your subscription at any time.
+                By subscribing, you confirm your agreement to our <a href="/terms" target="_blank" className="underline hover:text-gray-700">Terms of Service</a> and <a href="/privacy" target="_blank" className="underline hover:text-gray-700">Privacy Policy</a>, including the Payment Terms, Subscription Billing, and Dispute Prohibition policies (Article 7). Subscriptions are billed month-to-month. All payments are final and non-refundable. You may cancel at any time by contacting info@domilea.com.
               </p>
             </Card>
           </motion.div>

@@ -283,7 +283,7 @@ const BuyerPurchasesPage = () => {
             <div class="row"><span class="label">Status:</span><span class="value">${selectedTransaction.status}</span></div>
           </div>
           <div class="section">
-            <div class="section-title">MC Authority Details</div>
+            <div class="section-title">Trucking Business Details</div>
             <div class="row"><span class="label">MC Number:</span><span class="value">${selectedTransaction.listing.mcNumber}</span></div>
             ${selectedTransaction.listing.dotNumber ? `<div class="row"><span class="label">DOT Number:</span><span class="value">${selectedTransaction.listing.dotNumber}</span></div>` : ''}
             <div class="row"><span class="label">Title:</span><span class="value">${selectedTransaction.listing.title}</span></div>
@@ -308,7 +308,7 @@ const BuyerPurchasesPage = () => {
           </div>
           <div class="footer">
             <p>Thank you for your purchase!</p>
-            <p>Domilea - Your Trusted MC Authority Marketplace</p>
+            <p>Domilea - Your Trusted Trucking Business Marketplace</p>
             <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
           </div>
         </body>
@@ -513,7 +513,7 @@ const BuyerPurchasesPage = () => {
                 {activeTab === 'all' && (
                   <h3 className="text-lg font-bold text-gray-900 mb-4 mt-8 flex items-center gap-2">
                     <Truck className="w-5 h-5 text-green-600" />
-                    MC Authority Transactions
+                    Trucking Business Transactions
                   </h3>
                 )}
                 <div className="space-y-4">
@@ -683,7 +683,7 @@ const BuyerPurchasesPage = () => {
                   <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-bold text-gray-900 mb-2">No MC transactions yet</h3>
                   <p className="text-gray-500 mb-6">
-                    Start browsing the marketplace to find your next MC authority
+                    Start browsing the marketplace to find your next trucking business
                   </p>
                   <Link to="/marketplace">
                     <Button>Browse Marketplace</Button>
@@ -746,7 +746,7 @@ const BuyerPurchasesPage = () => {
                 {/* Company Header */}
                 <div className="text-center mb-8 pb-6 border-b-2 border-gray-900">
                   <h1 className="text-2xl font-bold text-gray-900">Domilea</h1>
-                  <p className="text-gray-500 mt-1">Your Trusted MC Authority Marketplace</p>
+                  <p className="text-gray-500 mt-1">Your Trusted Trucking Business Marketplace</p>
                   <p className="text-lg font-semibold text-gray-700 mt-3">INVOICE / RECEIPT</p>
                 </div>
 
@@ -781,11 +781,11 @@ const BuyerPurchasesPage = () => {
                   </div>
                 </div>
 
-                {/* MC Authority Details */}
+                {/* Trucking Business Details */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
                   <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
                     <Truck className="w-4 h-4" />
-                    MC Authority Details
+                    Trucking Business Details
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -894,14 +894,14 @@ const BuyerPurchasesPage = () => {
                     <span className="font-bold text-amber-800">ALL SALES ARE FINAL</span>
                   </div>
                   <p className="text-sm text-amber-700">
-                    This purchase is non-refundable. By completing this transaction, you acknowledge and agree to our terms of service.
+                    This purchase is non-refundable and non-reversible. By completing this transaction, you acknowledge and agree to our <a href="/terms" target="_blank" className="underline font-semibold">Terms of Service</a>, including that all final payments are final, chargebacks and bank disputes are prohibited, and Domilea is a marketing agency only — any product issues must be resolved directly with the seller.
                   </p>
                 </div>
 
                 {/* Footer */}
                 <div className="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
                   <p>Thank you for your purchase!</p>
-                  <p className="mt-1">Domilea - Your Trusted MC Authority Marketplace</p>
+                  <p className="mt-1">Domilea - Your Trusted Trucking Business Marketplace</p>
                   <p className="mt-2 text-xs">Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
                 </div>
               </div>

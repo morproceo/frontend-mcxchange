@@ -263,7 +263,7 @@ export const SellerTermsContent = () => {
 
       <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">10.7. Survival.</h3>
       <p className="text-gray-700 mb-4">
-        The rights and obligations set forth in Article 4 (Confidentiality), Article 5 (Intellectual Property), Article 7 (Limitation of Liability), Article 8 (Indemnification), and Article 9 (Dispute Resolution) shall survive the termination, expiration, or cancellation of this Agreement or your account for any reason.
+        The rights and obligations set forth in Article 4 (Confidentiality), Article 5 (Intellectual Property), Article 7 (Limitation of Liability), Article 8 (Indemnification), Article 9 (Dispute Resolution), and Article 11 (Payment Terms and Dispute Prohibition) shall survive the termination, expiration, or cancellation of this Agreement or your account for any reason.
       </p>
 
       <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">10.8. No Waiver.</h3>
@@ -276,34 +276,51 @@ export const SellerTermsContent = () => {
         You acknowledge that the Marketplace is not a data storage service or a &quot;record keeper&quot; for your regulatory compliance. While we may retain certain data for our own compliance purposes, we generally have no obligation to store, maintain, or provide you with copies of any Content, Listings, or Data Room logs you provide or access. You are solely responsible for creating and maintaining your own backups of your data and transaction records as required by the FMCSA, IRS, or other applicable laws. and then
       </p>
 
-      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 11: SMS/TEXT MESSAGING TERMS</h2>
+      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 11: PAYMENT TERMS; SUBSCRIPTION BILLING; DISPUTE PROHIBITION</h2>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.1. Description of SMS Services.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.1. Subscription Billing Terms; Month-to-Month; Cancellation.</h3>
+      <p className="text-gray-700 mb-4">
+        All subscription plans offered by the Marketplace are billed on a recurring month-to-month basis unless an annual billing option is explicitly selected at the time of purchase. Subscriptions automatically renew at the end of each billing cycle at the then-current rate unless cancelled prior to the renewal date. You may cancel your subscription at any time by submitting a written cancellation request to the Marketplace at info@domilea.com or through the account settings on the Platform. Upon cancellation, your subscription will remain active through the end of the current paid billing period, and no prorated refunds will be issued for the remaining days in that period. The Marketplace does not provide refunds for any subscription fees already charged. The Marketplace reserves the right to modify subscription pricing upon thirty (30) days&apos; written notice; continued use of the Platform after such notice constitutes acceptance of the updated pricing.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.2. All Payments Final; No Refunds.</h3>
+      <p className="text-gray-700 mb-4">
+        ALL PAYMENTS MADE THROUGH THE PLATFORM, INCLUDING BUT NOT LIMITED TO SUBSCRIPTION FEES, LISTING FEES, PREMIUM LISTING UPGRADES, AND TRANSACTION FEES, ARE FINAL AND NON-REFUNDABLE. By making a payment on the Platform, you acknowledge that you are making a voluntary, authorized payment with full knowledge of the services being provided and the terms governing such payment.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.3. PROHIBITION ON CHARGEBACKS, BANK DISPUTES, AND PAYMENT REVERSALS.</h3>
+      <p className="text-gray-700 mb-4">
+        YOU EXPRESSLY COVENANT AND AGREE THAT YOU SHALL NOT, UNDER ANY CIRCUMSTANCES, INITIATE, FILE, OR OTHERWISE PURSUE A CHARGEBACK, PAYMENT DISPUTE, BANK REVERSAL, CREDIT CARD DISPUTE, ACH REVERSAL, WIRE RECALL, OR ANY OTHER FORM OF PAYMENT REVERSAL (COLLECTIVELY, &quot;UNAUTHORIZED DISPUTE&quot;) WITH YOUR BANK, CREDIT CARD ISSUER, PAYMENT PROCESSOR, OR ANY FINANCIAL INSTITUTION REGARDING ANY PAYMENT MADE THROUGH THE PLATFORM. You acknowledge that all payments made on the Platform are authorized, voluntary, and made with full knowledge of the terms and conditions herein. Filing an Unauthorized Dispute constitutes a material breach of this Agreement and shall entitle the Marketplace to: (i) immediately suspend or permanently terminate your account; (ii) pursue collection of the disputed amount plus a $500 administrative processing fee; (iii) report the Unauthorized Dispute to relevant fraud databases and credit reporting agencies to the extent permitted by law; (iv) recover all attorneys&apos; fees, collection costs, and expenses incurred in connection with the Unauthorized Dispute; and (v) pursue all available legal remedies under applicable law. By clicking &quot;I Agree&quot; and accepting these Terms, you provide express, documented consent to all charges. IF YOU HAVE ANY ISSUE WITH A CHARGE, YOU AGREE TO CONTACT THE MARKETPLACE DIRECTLY AT INFO@DOMILEA.COM TO RESOLVE THE MATTER BEFORE TAKING ANY OTHER ACTION. You shall allow the Marketplace sixty (60) days to investigate and respond to any billing inquiry before pursuing any external remedy.
+      </p>
+
+      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 12: SMS/TEXT MESSAGING TERMS</h2>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">12.1. Description of SMS Services.</h3>
       <p className="text-gray-700 mb-4">
         By opting in to SMS communications from Domilea.CO, you may receive text messages including but not limited to: promotional materials and special offers, account notifications and alerts, transaction updates and order confirmations, appointment reminders, listing activity updates, and other service-related communications.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.2. Opt-Out Instructions.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">12.2. Opt-Out Instructions.</h3>
       <p className="text-gray-700 mb-4">
         You may opt out of receiving SMS messages at any time by texting <strong>STOP</strong> to any message you receive from Domilea.CO. Upon receipt of your STOP request, you will receive a one-time confirmation message and will no longer receive SMS messages from us. To resume messages, text <strong>START</strong>. For assistance, text <strong>HELP</strong> or contact us at info@domilea.com.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.3. Message Frequency and Data Rates.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">12.3. Message Frequency and Data Rates.</h3>
       <p className="text-gray-700 mb-4">
         Message frequency may vary based on your account activity and preferences. Up to 4 messages per month. Standard message and data rates may apply depending on your mobile carrier and plan. Domilea.CO is not responsible for any messaging or data charges imposed by your carrier.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.4. Carrier Liability Disclaimer.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">12.4. Carrier Liability Disclaimer.</h3>
       <p className="text-gray-700 mb-4">
         Mobile carriers are not liable for delayed or undelivered messages. Domilea.CO makes no guarantees regarding the delivery, timeliness, or accuracy of SMS messages. Service availability may be affected by your carrier, network conditions, or device compatibility.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.5. No Sharing of SMS Data.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">12.5. No Sharing of SMS Data.</h3>
       <p className="text-gray-700 mb-4">
         Domilea.CO will not share, sell, or disclose your phone number or SMS opt-in consent to any third parties or affiliates for marketing or promotional purposes. Your phone number will only be used by Domilea.CO to deliver the messages you have consented to receive.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">11.6. Age Restriction.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">12.6. Age Restriction.</h3>
       <p className="text-gray-700 mb-4">
         You must be at least 18 years of age to opt in to and use Domilea.CO&apos;s SMS messaging services. By opting in, you confirm that you are 18 years of age or older. If we become aware that a person under the age of 18 has opted in to our SMS services, we will promptly remove their phone number and opt-in consent from our records.
       </p>
@@ -488,7 +505,7 @@ export const BuyerTermsContent = () => {
 
       <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">6.8. Survival.</h3>
       <p className="text-gray-700 mb-4">
-        The rights and obligations set forth in Article 2 (Confidentiality and Non-Solicitation), Article 3 (Fee Integrity), Article 5 (Indemnification and Liability), and Article 6 (Dispute Resolution) shall survive the termination, expiration, or cancellation of this Agreement, the deactivation of Buyer’s account, or the conclusion of any transaction for the periods specified herein, or if no period is specified, indefinitely.
+        The rights and obligations set forth in Article 2 (Confidentiality and Non-Solicitation), Article 3 (Fee Integrity), Article 5 (Indemnification and Liability), Article 6 (Dispute Resolution), and Article 7 (Payment Terms, Deposit Policy, and Dispute Prohibition) shall survive the termination, expiration, or cancellation of this Agreement, the deactivation of Buyer’s account, or the conclusion of any transaction for the periods specified herein, or if no period is specified, indefinitely.
       </p>
 
       <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">6.9. Representations of Authority and Personal Liability for Fraud.</h3>
@@ -496,34 +513,61 @@ export const BuyerTermsContent = () => {
         If Buyer is an entity (e.g., corporation, LLC, or partnership), the individual executing this Agreement by clicking &quot;I Agree&quot; (the &quot;Signatory&quot;) represents and warrants that they are a duly authorized officer, agent, or representative of such entity with full legal authority to bind the entity to these Terms. Notwithstanding the foregoing, the Signatory expressly agrees that they shall be personally liable, jointly and severally with the purported Buyer, for all obligations, damages, indemnities, and fees arising under this Agreement in the event that: (i) the Buyer entity does not exist, is dissolved, or is not in good standing with its jurisdiction of formation at the time of execution; (ii) the Signatory lacks the actual authority to bind the entity; (iii) the Signatory utilizes a false identity, alias, or stolen credentials to access the Platform; or (iv) the corporate form is utilized to perpetuate a fraud or circumvent the Marketplace’s fee structure. The Signatory hereby knowingly and voluntarily waives any common law or statutory &quot;corporate shield&quot; or &quot;piercing the corporate veil&quot; defenses and agrees to indemnify the Marketplace for all legal costs incurred in establishing the Signatory’s personal liability under this Section.
       </p>
 
-      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 7: SMS/TEXT MESSAGING TERMS</h2>
+      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 7: PAYMENT TERMS; SUBSCRIPTION BILLING; DEPOSIT AND REFUND POLICY; DISPUTE PROHIBITION</h2>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.1. Description of SMS Services.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.1. Subscription Billing Terms; Month-to-Month; Cancellation.</h3>
+      <p className="text-gray-700 mb-4">
+        All subscription plans offered by the Marketplace are billed on a recurring month-to-month basis unless an annual billing option is explicitly selected by the Buyer at the time of purchase. Subscriptions automatically renew at the end of each billing cycle at the then-current rate unless cancelled prior to the renewal date. Buyer may cancel their subscription at any time by submitting a written cancellation request to the Marketplace at info@domilea.com or through the account settings on the Platform. Upon cancellation, Buyer&apos;s subscription will remain active through the end of the current paid billing period, and no prorated refunds will be issued for the remaining days in that period. Buyer acknowledges that the Marketplace does not provide refunds for any subscription fees already charged, and that cancellation does not entitle Buyer to a refund of any previously billed amounts. The Marketplace reserves the right to modify subscription pricing upon thirty (30) days&apos; written notice; continued use of the Platform after such notice constitutes acceptance of the updated pricing.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.2. Deposit Policy; Non-Refundable Deposits; Conditions for Refund.</h3>
+      <p className="text-gray-700 mb-4">
+        When Buyer submits a deposit in connection with the purchase of a motor carrier authority or any asset listed on the Platform, such deposit is made in consideration of the Marketplace and Seller reserving the asset and commencing the transaction process. BUYER EXPRESSLY ACKNOWLEDGES AND AGREES THAT ALL DEPOSITS ARE NON-REFUNDABLE IF BUYER DECIDES TO WITHDRAW FROM, ABANDON, OR OTHERWISE FAIL TO COMPLETE THE TRANSACTION FOR ANY REASON, INCLUDING BUT NOT LIMITED TO: (A) CHANGE OF MIND; (B) INABILITY TO SECURE FINANCING; (C) DISSATISFACTION WITH THE ASSET AFTER FURTHER DUE DILIGENCE; (D) FAILURE TO OBTAIN REGULATORY APPROVALS DUE TO BUYER&apos;S OWN REGULATORY HISTORY; OR (E) ANY OTHER REASON ATTRIBUTABLE TO BUYER&apos;S ACTIONS OR INACTIONS. Deposits shall be refundable to Buyer ONLY under the following limited circumstances: (i) the Seller fails to deliver required documents within the agreed-upon timeframe and such failure is verified by the Marketplace; (ii) the Seller voluntarily cancels or withdraws from the transaction; (iii) the Marketplace cancels the transaction due to material misrepresentation by the Seller; or (iv) the MC Authority fails FMCSA compliance verification through no fault of the Buyer. The determination of whether a refund condition has been met shall be made by the Marketplace in its sole and reasonable discretion. Buyer hereby waives any right to contest or dispute the Marketplace&apos;s refund determination through any means other than the binding arbitration process set forth in Article 6.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.3. Final Payments; All Sales Final; No Refunds on Completed Transactions.</h3>
+      <p className="text-gray-700 mb-4">
+        ALL FINAL PAYMENTS MADE THROUGH THE PLATFORM FOR THE PURCHASE OF ANY ASSET, MOTOR CARRIER AUTHORITY, OR BUSINESS ENTITY ARE FINAL, NON-REFUNDABLE, AND NON-REVERSIBLE. Once a final payment has been processed and the transaction has been completed (defined as the point at which the Marketplace confirms payment receipt and initiates or completes the transfer of the asset), Buyer shall have no right to a refund, reversal, or credit of any kind. Buyer acknowledges that prior to making the final payment, Buyer had the full and exclusive opportunity to conduct due diligence, inspect documents, verify regulatory standing, and assess the value of the asset. By proceeding with the final payment, Buyer confirms satisfaction with the asset and waives any right to rescind the transaction. If Buyer has any concerns, issues, or disputes regarding the quality, condition, regulatory status, or fitness of the purchased asset after the transaction is completed, Buyer agrees to contact the Seller directly to resolve any such issues. THE MARKETPLACE (DOMILEA.CO) IS A MARKETING AGENCY AND TRANSACTION FACILITATION PLATFORM ONLY. THE MARKETPLACE DOES NOT OWN, OPERATE, INSPECT, WARRANTY, OR GUARANTEE ANY ASSET LISTED ON THE PLATFORM AND IS NOT RESPONSIBLE FOR THE CONDITION, QUALITY, REGULATORY STANDING, OR FITNESS OF ANY PRODUCT OR ENTITY PURCHASED THROUGH THE PLATFORM. Buyer expressly agrees that the Marketplace shall bear no liability for any post-sale disputes between Buyer and Seller regarding the purchased asset, and that Buyer&apos;s sole recourse is against the Seller directly.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.4. PROHIBITION ON CHARGEBACKS, BANK DISPUTES, AND PAYMENT REVERSALS.</h3>
+      <p className="text-gray-700 mb-4">
+        BUYER EXPRESSLY COVENANTS AND AGREES THAT IT SHALL NOT, UNDER ANY CIRCUMSTANCES, INITIATE, FILE, OR OTHERWISE PURSUE A CHARGEBACK, PAYMENT DISPUTE, BANK REVERSAL, CREDIT CARD DISPUTE, ACH REVERSAL, WIRE RECALL, OR ANY OTHER FORM OF PAYMENT REVERSAL (COLLECTIVELY, &quot;UNAUTHORIZED DISPUTE&quot;) WITH BUYER&apos;S BANK, CREDIT CARD ISSUER, PAYMENT PROCESSOR, OR ANY FINANCIAL INSTITUTION REGARDING ANY PAYMENT MADE THROUGH THE PLATFORM, INCLUDING BUT NOT LIMITED TO SUBSCRIPTION FEES, DEPOSIT PAYMENTS, AND FINAL TRANSACTION PAYMENTS. Buyer acknowledges that all payments made on the Platform are authorized, voluntary, and made with full knowledge of the terms and conditions herein. Filing an Unauthorized Dispute constitutes a material breach of this Agreement and shall entitle the Marketplace to: (i) immediately suspend or permanently terminate Buyer&apos;s account; (ii) pursue collection of the disputed amount plus a $500 administrative processing fee; (iii) report the Unauthorized Dispute to relevant fraud databases and credit reporting agencies to the extent permitted by law; (iv) recover all attorneys&apos; fees, collection costs, and expenses incurred in connection with the Unauthorized Dispute; and (v) pursue all available legal remedies under applicable law. Buyer further acknowledges that by clicking &quot;I Agree&quot; and accepting these Terms, Buyer provides express, documented consent to all charges, and that any payment dispute filed in contradiction of this Section may be used as evidence of Buyer&apos;s breach of contract and bad faith. IF BUYER HAS ANY ISSUE WITH A CHARGE, BUYER AGREES TO CONTACT THE MARKETPLACE DIRECTLY AT INFO@DOMILEA.COM TO RESOLVE THE MATTER BEFORE TAKING ANY OTHER ACTION. Buyer shall allow the Marketplace sixty (60) days to investigate and respond to any billing inquiry before pursuing any external remedy.
+      </p>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.5. Marketplace Role Disclaimer; Marketing Agency; No Product Liability.</h3>
+      <p className="text-gray-700 mb-4">
+        Buyer explicitly acknowledges and agrees that Domilea.CO operates solely as a digital marketing agency and transaction facilitation platform. The Marketplace&apos;s role is limited to: (a) advertising motor carrier authorities and transportation entities for sale; (b) providing a secure platform for document exchange between buyers and sellers; and (c) facilitating the payment processing infrastructure for transactions. THE MARKETPLACE DOES NOT OWN, OPERATE, MANAGE, INSPECT, APPRAISE, GUARANTEE, OR ENDORSE ANY ASSET, BUSINESS, OR MOTOR CARRIER AUTHORITY LISTED ON THE PLATFORM. The Marketplace is not a party to the underlying sale transaction between Buyer and Seller and assumes no responsibility for the performance, condition, regulatory compliance, profitability, or suitability of any purchased asset. Buyer agrees that any and all claims, disputes, or complaints arising from the purchased asset—including but not limited to issues related to equipment condition, regulatory standing, insurance coverage, driver retention, customer contracts, financial performance, or any other aspect of the acquired business—shall be directed exclusively to the Seller. Buyer hereby releases and forever discharges the Marketplace from any and all claims, demands, causes of action, damages, or liabilities of any kind arising from or related to the condition, quality, or performance of any asset purchased through the Platform.
+      </p>
+
+      <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">ARTICLE 8: SMS/TEXT MESSAGING TERMS</h2>
+
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">8.1. Description of SMS Services.</h3>
       <p className="text-gray-700 mb-4">
         By opting in to SMS communications from Domilea.CO, you may receive text messages including but not limited to: promotional materials and special offers, account notifications and alerts, transaction updates and order confirmations, appointment reminders, listing activity updates, and other service-related communications.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.2. Opt-Out Instructions.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">8.2. Opt-Out Instructions.</h3>
       <p className="text-gray-700 mb-4">
         You may opt out of receiving SMS messages at any time by texting <strong>STOP</strong> to any message you receive from Domilea.CO. Upon receipt of your STOP request, you will receive a one-time confirmation message and will no longer receive SMS messages from us. To resume messages, text <strong>START</strong>. For assistance, text <strong>HELP</strong> or contact us at info@domilea.com.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.3. Message Frequency and Data Rates.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">8.3. Message Frequency and Data Rates.</h3>
       <p className="text-gray-700 mb-4">
         Message frequency may vary based on your account activity and preferences. Up to 4 messages per month. Standard message and data rates may apply depending on your mobile carrier and plan. Domilea.CO is not responsible for any messaging or data charges imposed by your carrier.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.4. Carrier Liability Disclaimer.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">8.4. Carrier Liability Disclaimer.</h3>
       <p className="text-gray-700 mb-4">
         Mobile carriers are not liable for delayed or undelivered messages. Domilea.CO makes no guarantees regarding the delivery, timeliness, or accuracy of SMS messages. Service availability may be affected by your carrier, network conditions, or device compatibility.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.5. No Sharing of SMS Data.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">8.5. No Sharing of SMS Data.</h3>
       <p className="text-gray-700 mb-4">
         Domilea.CO will not share, sell, or disclose your phone number or SMS opt-in consent to any third parties or affiliates for marketing or promotional purposes. Your phone number will only be used by Domilea.CO to deliver the messages you have consented to receive.
       </p>
 
-      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">7.6. Age Restriction.</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">8.6. Age Restriction.</h3>
       <p className="text-gray-700 mb-4">
         You must be at least 18 years of age to opt in to and use Domilea.CO&apos;s SMS messaging services. By opting in, you confirm that you are 18 years of age or older. If we become aware that a person under the age of 18 has opted in to our SMS services, we will promptly remove their phone number and opt-in consent from our records.
       </p>

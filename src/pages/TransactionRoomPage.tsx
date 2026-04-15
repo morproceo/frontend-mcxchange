@@ -112,6 +112,11 @@ const TransactionRoomPage = () => {
   const [buyerStep, setBuyerStep] = useState<BuyerStep>('confirm-intent')
   const [intentConfirmed, setIntentConfirmed] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [depositPolicyAccepted, setDepositPolicyAccepted] = useState(false)
+  const [finalPaymentPolicyAccepted, setFinalPaymentPolicyAccepted] = useState(false)
+  const [noDisputePolicyAccepted, setNoDisputePolicyAccepted] = useState(false)
+  const [contactSellerPolicyAccepted, setContactSellerPolicyAccepted] = useState(false)
+  const [marketingAgencyPolicyAccepted, setMarketingAgencyPolicyAccepted] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
   const [customDepositAmount, setCustomDepositAmount] = useState('1000')
   const [cardNumber, setCardNumber] = useState('')
@@ -2042,28 +2047,94 @@ For questions, contact us at payments@domilea.com`
                           <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                           <p className="text-sm text-red-800">
                             <strong>READ CAREFULLY:</strong> By proceeding, you acknowledge that you have read, understood, and agree to all terms above.
-                            You accept full responsibility for your purchase decision.
+                            You must individually acknowledge each policy below. You accept full responsibility for your purchase decision.
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3 mb-4">
-                        <input
-                          type="checkbox"
-                          id="terms-accept"
-                          checked={termsAccepted}
-                          onChange={(e) => setTermsAccepted(e.target.checked)}
-                          className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <label htmlFor="terms-accept" className="text-sm text-gray-700">
-                          I have read and agree to the Terms of Service, Deposit Refund Policy, and all disclaimers.
-                          I understand this is a binding agreement and I am proceeding at my own risk.
-                        </label>
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id="terms-accept"
+                            checked={termsAccepted}
+                            onChange={(e) => setTermsAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <label htmlFor="terms-accept" className="text-sm text-gray-700">
+                            I have read and agree to the <strong>Terms of Service</strong> and all disclaimers. I understand this is a binding agreement and I am proceeding at my own risk.
+                          </label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id="deposit-policy-accept"
+                            checked={depositPolicyAccepted}
+                            onChange={(e) => setDepositPolicyAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <label htmlFor="deposit-policy-accept" className="text-sm text-gray-700">
+                            I understand and agree that <strong>deposits are non-refundable</strong> if I decide to back out of the deal for any reason (change of mind, financing issues, dissatisfaction, etc.). Deposits are only refundable if the seller fails to deliver documents or cancels the sale.
+                          </label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id="final-payment-policy-accept"
+                            checked={finalPaymentPolicyAccepted}
+                            onChange={(e) => setFinalPaymentPolicyAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <label htmlFor="final-payment-policy-accept" className="text-sm text-gray-700">
+                            I understand and agree that <strong>all final payments are final, non-refundable, and non-reversible</strong>. Once payment is processed and the transaction is completed, I have no right to a refund or reversal of any kind.
+                          </label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id="no-dispute-policy-accept"
+                            checked={noDisputePolicyAccepted}
+                            onChange={(e) => setNoDisputePolicyAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <label htmlFor="no-dispute-policy-accept" className="text-sm text-gray-700">
+                            I agree that I <strong>will not file chargebacks, bank disputes, or payment reversals</strong> with my bank or financial institution for any payments made through this platform. I agree to contact Domilea directly at info@domilea.com to resolve any billing concerns.
+                          </label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id="contact-seller-policy-accept"
+                            checked={contactSellerPolicyAccepted}
+                            onChange={(e) => setContactSellerPolicyAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <label htmlFor="contact-seller-policy-accept" className="text-sm text-gray-700">
+                            I understand that if I have any issues with the purchased asset after the transaction is completed, I agree to <strong>contact the seller directly</strong> to resolve any disputes and will not hold Domilea responsible for the product.
+                          </label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            id="marketing-agency-policy-accept"
+                            checked={marketingAgencyPolicyAccepted}
+                            onChange={(e) => setMarketingAgencyPolicyAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <label htmlFor="marketing-agency-policy-accept" className="text-sm text-gray-700">
+                            I acknowledge that <strong>Domilea is a marketing agency and transaction facilitation platform only</strong>. Domilea does not own, inspect, warranty, or guarantee any asset listed on the platform and is not responsible for the condition, quality, or fitness of any product purchased.
+                          </label>
+                        </div>
                       </div>
 
                       <Button
                         fullWidth
-                        disabled={!termsAccepted}
+                        disabled={!termsAccepted || !depositPolicyAccepted || !finalPaymentPolicyAccepted || !noDisputePolicyAccepted || !contactSellerPolicyAccepted || !marketingAgencyPolicyAccepted}
                         onClick={() => {
                           setTransaction(prev => ({
                             ...prev,
