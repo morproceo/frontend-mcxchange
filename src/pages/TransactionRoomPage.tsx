@@ -94,6 +94,7 @@ const TransactionRoomPage = () => {
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   const [approving, setApproving] = useState(false)
+  const [releasingPayout, setReleasingPayout] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showDocumentPreview, setShowDocumentPreview] = useState<string | null>(null)
 
@@ -750,6 +751,10 @@ const TransactionRoomPage = () => {
             escrowAmount: txn.escrowAmount ? Number(txn.escrowAmount) : prev.escrowAmount,
             escrowConfirmedAt: txn.escrowConfirmedAt ? new Date(txn.escrowConfirmedAt) : prev.escrowConfirmedAt,
             escrowPaymentMethod: txn.escrowPaymentMethod || prev.escrowPaymentMethod,
+            sellerPayout: txn.sellerPayout ? Number(txn.sellerPayout) : prev.sellerPayout,
+            payoutStatus: txn.payoutStatus || prev.payoutStatus,
+            payoutReleasedAt: txn.payoutReleasedAt ? new Date(txn.payoutReleasedAt) : prev.payoutReleasedAt,
+            payoutTransferId: txn.payoutTransferId || prev.payoutTransferId,
             sellerDocuments: txn.documents?.length > 0 ? txn.documents.map((doc: any) => ({
               id: doc.id,
               transactionId: txn.id,
@@ -1375,6 +1380,28 @@ For questions, contact us at payments@domilea.com`
     setShowPaymentModal(false)
   }
 
+  // Admin: Release payout to seller
+  const handleReleasePayout = async () => {
+    if (!transactionId) return
+    setReleasingPayout(true)
+    try {
+      const response = await api.adminReleasePayout(transactionId)
+      if (response.success) {
+        toast.success(response.message || 'Payout released to seller!')
+        setTransaction(prev => ({
+          ...prev,
+          payoutStatus: 'RELEASED',
+          payoutReleasedAt: new Date(),
+          payoutTransferId: response.data?.transferId || null,
+        }))
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to release payout')
+    } finally {
+      setReleasingPayout(false)
+    }
+  }
+
   // Helper to refresh transaction data from API
   const refreshTransaction = async () => {
     if (!transactionId) return
@@ -1406,6 +1433,10 @@ For questions, contact us at payments@domilea.com`
           depositPaid: !!txn.depositPaidAt,
           depositPaidAt: txn.depositPaidAt ? new Date(txn.depositPaidAt) : prev.depositPaidAt,
           finalPaymentPaid: !!txn.finalPaymentPaidAt,
+          sellerPayout: txn.sellerPayout ?? prev.sellerPayout,
+          payoutStatus: txn.payoutStatus ?? prev.payoutStatus,
+          payoutReleasedAt: txn.payoutReleasedAt ? new Date(txn.payoutReleasedAt) : prev.payoutReleasedAt,
+          payoutTransferId: txn.payoutTransferId ?? prev.payoutTransferId,
           sellerDocuments: txn.documents?.length > 0 ? txn.documents.map((doc: any) => ({
             id: doc.id,
             transactionId: txn.id,
@@ -3949,6 +3980,100 @@ For questions, contact us at payments@domilea.com`
                 </Card>
               )}
 
+              {/* Admin Release Payout */}
+              {userRole === 'admin' && transaction.status === 'completed' && (
+                <Card className={transaction.payoutStatus === 'RELEASED' ? 'bg-green-50 border-2 border-green-200' : 'bg-amber-50 border-2 border-amber-200'}>
+                  <h3 className={`font-semibold mb-3 flex items-center gap-2 ${transaction.payoutStatus === 'RELEASED' ? 'text-green-800' : 'text-amber-800'}`}>
+                    <Banknote className="w-5 h-5" />
+                    Seller Payout
+                  </h3>
+
+                  {transaction.payoutStatus === 'RELEASED' ? (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <span className="font-semibold text-green-800">Payout Released</span>
+                      </div>
+                      <div className="bg-green-100 border border-green-300 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-green-700">Amount</span>
+                          <span className="text-lg font-bold text-green-800">
+                            ${Number(transaction.sellerPayout || transaction.agreedPrice).toLocaleString()}
+                          </span>
+                        </div>
+                        {transaction.payoutTransferId && (
+                          <div className="flex items-center justify-between text-xs text-green-600 mt-1">
+                            <span>Transfer ID</span>
+                            <span className="font-mono">{transaction.payoutTransferId}</span>
+                          </div>
+                        )}
+                        {transaction.payoutReleasedAt && (
+                          <div className="flex items-center justify-between text-xs text-green-600 mt-1">
+                            <span>Released</span>
+                            <span>{new Date(transaction.payoutReleasedAt).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-amber-700 mb-3">
+                        Transaction is complete. Release payment to the seller's connected Stripe account.
+                      </p>
+                      <div className="bg-amber-100 border border-amber-300 rounded-xl p-4 mb-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-amber-700">Seller Payout Amount</span>
+                          <span className="text-xl font-bold text-amber-900">
+                            ${Number(transaction.sellerPayout || transaction.agreedPrice).toLocaleString()}
+                          </span>
+                        </div>
+                        {transaction.sellerPayout && transaction.agreedPrice && (
+                          <div className="flex items-center justify-between text-xs text-amber-600 mt-1">
+                            <span>Platform Fee</span>
+                            <span>${(Number(transaction.agreedPrice) - Number(transaction.sellerPayout)).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        fullWidth
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        loading={releasingPayout}
+                        onClick={handleReleasePayout}
+                      >
+                        <Banknote className="w-4 h-4 mr-2" />
+                        Release Payout to Seller
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* Seller Payout Status */}
+              {userRole === 'seller' && transaction.status === 'completed' && transaction.payoutStatus === 'RELEASED' && (
+                <Card className="bg-green-50 border-2 border-green-200">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <Banknote className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-green-800 mb-1">Payout Released!</h3>
+                      <p className="text-2xl font-bold text-green-700 mb-2">
+                        ${Number(transaction.sellerPayout || transaction.agreedPrice).toLocaleString()}
+                      </p>
+                      <p className="text-sm text-green-600">
+                        Your payout has been sent to your connected bank account. It typically arrives within 2-3 business days.
+                      </p>
+                      {transaction.payoutReleasedAt && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-green-500">
+                          <CheckCircle className="w-3 h-3" />
+                          <span>Released on {new Date(transaction.payoutReleasedAt).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {/* Completed State */}
               {transaction.status === 'completed' && (
                 <Card className="bg-green-50 border-2 border-green-200">
@@ -3961,7 +4086,9 @@ For questions, contact us at payments@domilea.com`
                       {userRole === 'buyer'
                         ? 'All documents are now available for download.'
                         : userRole === 'seller'
-                        ? 'Payment will be processed within 2-3 business days.'
+                        ? transaction.payoutStatus === 'RELEASED'
+                          ? 'Your payout has been released to your connected bank account.'
+                          : 'Your payout will be released shortly by the admin.'
                         : 'All parties have been notified.'}
                     </p>
                     {userRole === 'buyer' && (

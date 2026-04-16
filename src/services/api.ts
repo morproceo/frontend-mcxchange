@@ -1616,6 +1616,22 @@ class ApiService {
     });
   }
 
+  // Admin release payout to seller
+  async adminReleasePayout(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        transferId: string;
+        amount: number;
+        payoutStatus: string;
+        payoutReleasedAt: string;
+      };
+      message: string;
+    }>(`/admin/transactions/${transactionId}/release-payout`, {
+      method: 'POST',
+    });
+  }
+
   // Admin get available buyers for transaction creation
   async getAvailableBuyers(search?: string) {
     const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';

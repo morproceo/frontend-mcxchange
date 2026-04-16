@@ -414,6 +414,12 @@ export interface TransactionRoom {
   escrowConfirmedAt?: Date | null
   escrowPaymentMethod?: string | null
 
+  // Payout
+  sellerPayout?: number | null
+  payoutStatus?: string | null
+  payoutReleasedAt?: Date | null
+  payoutTransferId?: string | null
+
   // Documents shared in transaction
   sellerDocuments: TransactionDocument[]
 
