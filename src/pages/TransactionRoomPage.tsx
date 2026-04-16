@@ -95,6 +95,9 @@ const TransactionRoomPage = () => {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [approving, setApproving] = useState(false)
   const [releasingPayout, setReleasingPayout] = useState(false)
+  const [selectedPayoutMethod, setSelectedPayoutMethod] = useState<'standard' | 'instant'>('standard')
+  const [instantEligible, setInstantEligible] = useState(false)
+  const [instantEligibleReason, setInstantEligibleReason] = useState<string | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showDocumentPreview, setShowDocumentPreview] = useState<string | null>(null)
 
@@ -1385,12 +1388,12 @@ For questions, contact us at payments@domilea.com`
     if (!transactionId) return
     setReleasingPayout(true)
     try {
-      const response = await api.adminReleasePayout(transactionId)
+      const response = await api.adminReleasePayout(transactionId, selectedPayoutMethod)
       if (response.success) {
         toast.success(response.message || 'Payout released to seller!')
         setTransaction(prev => ({
           ...prev,
-          payoutStatus: 'RELEASED',
+          payoutStatus: response.data?.payoutStatus || 'RELEASED',
           payoutReleasedAt: new Date(),
           payoutTransferId: response.data?.transferId || null,
         }))
@@ -1401,6 +1404,20 @@ For questions, contact us at payments@domilea.com`
       setReleasingPayout(false)
     }
   }
+
+  // Check instant payout eligibility when admin views a completed transaction
+  useEffect(() => {
+    if (userRole === 'admin' && transaction.status === 'completed' && !transaction.payoutStatus && transactionId) {
+      api.checkInstantPayoutEligibility(transactionId).then(res => {
+        if (res.success) {
+          setInstantEligible(res.data.eligible)
+          setInstantEligibleReason(res.data.reason || null)
+        }
+      }).catch(() => {
+        setInstantEligible(false)
+      })
+    }
+  }, [userRole, transaction.status, transaction.payoutStatus, transactionId])
 
   // Helper to refresh transaction data from API
   const refreshTransaction = async () => {
@@ -3982,23 +3999,31 @@ For questions, contact us at payments@domilea.com`
 
               {/* Admin Release Payout */}
               {userRole === 'admin' && transaction.status === 'completed' && (
-                <Card className={transaction.payoutStatus === 'RELEASED' ? 'bg-green-50 border-2 border-green-200' : 'bg-amber-50 border-2 border-amber-200'}>
-                  <h3 className={`font-semibold mb-3 flex items-center gap-2 ${transaction.payoutStatus === 'RELEASED' ? 'text-green-800' : 'text-amber-800'}`}>
+                <Card className={(transaction.payoutStatus === 'RELEASED' || transaction.payoutStatus === 'INSTANT_RELEASED') ? 'bg-green-50 border-2 border-green-200' : 'bg-amber-50 border-2 border-amber-200'}>
+                  <h3 className={`font-semibold mb-3 flex items-center gap-2 ${(transaction.payoutStatus === 'RELEASED' || transaction.payoutStatus === 'INSTANT_RELEASED') ? 'text-green-800' : 'text-amber-800'}`}>
                     <Banknote className="w-5 h-5" />
                     Seller Payout
                   </h3>
 
-                  {transaction.payoutStatus === 'RELEASED' ? (
+                  {(transaction.payoutStatus === 'RELEASED' || transaction.payoutStatus === 'INSTANT_RELEASED') ? (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="font-semibold text-green-800">Payout Released</span>
+                        <span className="font-semibold text-green-800">
+                          {transaction.payoutStatus === 'INSTANT_RELEASED' ? 'Instant Payout Sent' : 'Payout Released'}
+                        </span>
                       </div>
                       <div className="bg-green-100 border border-green-300 rounded-xl p-4">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm text-green-700">Amount</span>
                           <span className="text-lg font-bold text-green-800">
                             ${Number(transaction.sellerPayout || transaction.agreedPrice).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-green-600 mt-1">
+                          <span>Method</span>
+                          <span className="font-medium">
+                            {transaction.payoutStatus === 'INSTANT_RELEASED' ? 'Instant (Debit Card)' : 'Standard (Bank Account)'}
                           </span>
                         </div>
                         {transaction.payoutTransferId && (
@@ -4034,14 +4059,74 @@ For questions, contact us at payments@domilea.com`
                           </div>
                         )}
                       </div>
+
+                      {/* Payout method selection */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-amber-800 mb-2">Payout Method</label>
+                        <div className="space-y-2">
+                          <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                            selectedPayoutMethod === 'standard' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="payoutMethod"
+                              value="standard"
+                              checked={selectedPayoutMethod === 'standard'}
+                              onChange={() => setSelectedPayoutMethod('standard')}
+                              className="mt-1"
+                            />
+                            <div>
+                              <span className="font-medium text-gray-900">Standard Payout</span>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                Arrives in 2 business days to bank account. No extra fee.
+                              </p>
+                            </div>
+                          </label>
+                          <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                            selectedPayoutMethod === 'instant'
+                              ? instantEligible ? 'border-purple-500 bg-purple-50' : 'border-red-300 bg-red-50'
+                              : instantEligible ? 'border-gray-200 bg-white hover:border-gray-300' : 'border-gray-200 bg-gray-50 opacity-60'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="payoutMethod"
+                              value="instant"
+                              checked={selectedPayoutMethod === 'instant'}
+                              onChange={() => instantEligible && setSelectedPayoutMethod('instant')}
+                              disabled={!instantEligible}
+                              className="mt-1"
+                            />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">Instant Payout</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">
+                                  1% fee
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {instantEligible
+                                  ? 'Arrives in minutes to seller\'s debit card.'
+                                  : instantEligibleReason || 'Seller needs to add a debit card to their Stripe account.'
+                                }
+                              </p>
+                              {selectedPayoutMethod === 'instant' && instantEligible && (
+                                <p className="text-xs text-purple-600 mt-1 font-medium">
+                                  Instant fee: ${(Number(transaction.sellerPayout || transaction.agreedPrice) * 0.01).toFixed(2)} (deducted from seller's payout)
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
                       <Button
                         fullWidth
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className={selectedPayoutMethod === 'instant' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}
                         loading={releasingPayout}
                         onClick={handleReleasePayout}
                       >
                         <Banknote className="w-4 h-4 mr-2" />
-                        Release Payout to Seller
+                        {selectedPayoutMethod === 'instant' ? 'Send Instant Payout' : 'Release Standard Payout'}
                       </Button>
                     </div>
                   )}
@@ -4049,19 +4134,24 @@ For questions, contact us at payments@domilea.com`
               )}
 
               {/* Seller Payout Status */}
-              {userRole === 'seller' && transaction.status === 'completed' && transaction.payoutStatus === 'RELEASED' && (
+              {userRole === 'seller' && transaction.status === 'completed' && (transaction.payoutStatus === 'RELEASED' || transaction.payoutStatus === 'INSTANT_RELEASED') && (
                 <Card className="bg-green-50 border-2 border-green-200">
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
                       <Banknote className="w-6 h-6 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-green-800 mb-1">Payout Released!</h3>
+                      <h3 className="font-semibold text-green-800 mb-1">
+                        {transaction.payoutStatus === 'INSTANT_RELEASED' ? 'Instant Payout Sent!' : 'Payout Released!'}
+                      </h3>
                       <p className="text-2xl font-bold text-green-700 mb-2">
                         ${Number(transaction.sellerPayout || transaction.agreedPrice).toLocaleString()}
                       </p>
                       <p className="text-sm text-green-600">
-                        Your payout has been sent to your connected bank account. It typically arrives within 2-3 business days.
+                        {transaction.payoutStatus === 'INSTANT_RELEASED'
+                          ? 'Your instant payout has been sent to your debit card. It should arrive within minutes.'
+                          : 'Your payout has been sent to your connected bank account. It typically arrives within 2 business days.'
+                        }
                       </p>
                       {transaction.payoutReleasedAt && (
                         <div className="mt-2 flex items-center gap-2 text-xs text-green-500">
@@ -4086,8 +4176,10 @@ For questions, contact us at payments@domilea.com`
                       {userRole === 'buyer'
                         ? 'All documents are now available for download.'
                         : userRole === 'seller'
-                        ? transaction.payoutStatus === 'RELEASED'
-                          ? 'Your payout has been released to your connected bank account.'
+                        ? (transaction.payoutStatus === 'RELEASED' || transaction.payoutStatus === 'INSTANT_RELEASED')
+                          ? transaction.payoutStatus === 'INSTANT_RELEASED'
+                            ? 'Your instant payout has been sent to your debit card.'
+                            : 'Your payout has been released to your connected bank account.'
                           : 'Your payout will be released shortly by the admin.'
                         : 'All parties have been notified.'}
                     </p>

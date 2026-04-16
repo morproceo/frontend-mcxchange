@@ -1616,8 +1616,20 @@ class ApiService {
     });
   }
 
-  // Admin release payout to seller
-  async adminReleasePayout(transactionId: string) {
+  // Admin check instant payout eligibility for seller
+  async checkInstantPayoutEligibility(transactionId: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        eligible: boolean;
+        hasDebitCard: boolean;
+        reason?: string;
+      };
+    }>(`/admin/transactions/${transactionId}/instant-payout-eligibility`);
+  }
+
+  // Admin release payout to seller (standard or instant)
+  async adminReleasePayout(transactionId: string, payoutMethod: 'standard' | 'instant' = 'standard') {
     return this.request<{
       success: boolean;
       data: {
@@ -1625,10 +1637,14 @@ class ApiService {
         amount: number;
         payoutStatus: string;
         payoutReleasedAt: string;
+        payoutMethod: string;
+        instantPayoutId?: string;
+        instantPayoutFee?: number;
       };
       message: string;
     }>(`/admin/transactions/${transactionId}/release-payout`, {
       method: 'POST',
+      body: JSON.stringify({ payoutMethod }),
     });
   }
 
