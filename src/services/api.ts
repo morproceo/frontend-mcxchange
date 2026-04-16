@@ -864,7 +864,7 @@ class ApiService {
   }
 
   async getNavBadgeCounts() {
-    return this.request<{ success: boolean; data: { unreadMessages: number; newTransactions: number; activeClosings: number } }>('/notifications/nav-counts');
+    return this.request<{ success: boolean; data: { unreadMessages: number; newTransactions: number; activeClosings: number; paidConsultations: number } }>('/notifications/nav-counts');
   }
 
   async sendInquiryToAdmin(listingId: string | undefined, content: string, contactPhone?: string) {

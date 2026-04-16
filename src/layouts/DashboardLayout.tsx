@@ -82,6 +82,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
   const [newTransactionCount, setNewTransactionCount] = useState(0)
   const [activeClosingsCount, setActiveClosingsCount] = useState(0)
+  const [paidConsultationsCount, setPaidConsultationsCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -151,6 +152,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
       setUnreadMessageCount(0)
       setNewTransactionCount(0)
       setActiveClosingsCount(0)
+      setPaidConsultationsCount(0)
       return
     }
 
@@ -162,6 +164,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           setUnreadMessageCount(res.data.unreadMessages || 0)
           setNewTransactionCount(res.data.newTransactions || 0)
           setActiveClosingsCount(res.data.activeClosings || 0)
+          setPaidConsultationsCount(res.data.paidConsultations || 0)
         }
       } catch {
         // ignore
@@ -288,7 +291,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               { icon: Shield, label: 'Reported Items', path: '/admin/reported' },
               { icon: ShieldAlert, label: 'Account Disputes', path: '/admin/disputes' },
               { icon: Crown, label: 'Premium Requests', path: '/admin/premium-requests' },
-              { icon: MessageSquare, label: 'Consultations', path: '/admin/consultations' },
+              { icon: MessageSquare, label: 'Consultations', path: '/admin/consultations', ...(paidConsultationsCount > 0 ? { badge: String(paidConsultationsCount), badgeColor: 'bg-red-500' } : {}) },
             ]
           },
           // Tools category
