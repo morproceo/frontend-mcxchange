@@ -2357,6 +2357,10 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     }
     return t
   })
+  // Admin-only: Credit Report tab (Creditsafe pull, no charge to admins)
+  if (user?.role === 'admin') {
+    tabs.push({ id: 'credit-report', label: 'Credit Report', icon: DollarSign })
+  }
 
   // Sync URL param
   useEffect(() => {
@@ -2831,6 +2835,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     fleet: showSkeleton ? <CarrierLoadingSkeleton /> : <FleetTab />,
     chameleon: showSkeleton ? <CarrierLoadingSkeleton /> : <ChameleonTab />,
     'safety-improvement': showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyImprovementReportTab />,
+    'credit-report': showSkeleton ? <CarrierLoadingSkeleton /> : <CreditReportTab />,
   }
 
   return (

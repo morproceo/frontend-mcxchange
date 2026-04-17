@@ -259,9 +259,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
         ]
       case 'admin':
         return [
-          // Dashboard and Create Listing are standalone
+          // Dashboard, Create Listing, and CarrierPulse are standalone
           { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
           { icon: Plus, label: 'Create Listing', path: '/admin/create-listing' },
+          { icon: Activity, label: 'CarrierPulse', path: '/admin/carrier-pulse' },
           // Sales Pipeline category
           {
             label: 'Sales Pipeline',
@@ -303,7 +304,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
               { icon: CreditCard, label: 'Credit Reports', path: '/admin/creditsafe' },
               { icon: Send, label: 'Telegram Channel', path: '/admin/telegram' },
               { icon: Users, label: 'Facebook Groups', path: '/admin/facebook' },
-              { icon: Activity, label: 'CarrierPulse', path: '/admin/carrier-pulse' },
               { icon: ShieldAlert, label: 'Chameleon Check', path: '/admin/chameleon-check' },
               { icon: Shield, label: 'Safety Improvement Report', path: '/admin/safety-report' },
             ]
