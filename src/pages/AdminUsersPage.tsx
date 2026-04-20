@@ -119,6 +119,33 @@ const AdminUsersPage = () => {
   const [creditReason, setCreditReason] = useState<string>('')
   const [creditAdjusting, setCreditAdjusting] = useState(false)
 
+  // Manual deposit state
+  type DepositListing = {
+    transactionId: string
+    listingId: string
+    depositAmount: number
+    agreedPrice: number
+    mc: {
+      mcNumber: string
+      dotNumber: string
+      legalName: string
+      title: string
+      askingPrice: number
+      location: string
+    } | null
+  }
+  const [depositListings, setDepositListings] = useState<DepositListing[]>([])
+  const [depositListingsLoading, setDepositListingsLoading] = useState(false)
+  const [depositForm, setDepositForm] = useState({
+    transactionId: '',
+    amount: '',
+    paymentMethod: 'WIRE' as 'WIRE' | 'ZELLE' | 'CHECK' | 'STRIPE',
+    reference: '',
+    notes: '',
+  })
+  const [depositSaving, setDepositSaving] = useState(false)
+  const [depositFeedback, setDepositFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+
   // Role editing state
   const [editingRole, setEditingRole] = useState<string>('')
   const [roleUpdating, setRoleUpdating] = useState(false)
@@ -403,6 +430,9 @@ const AdminUsersPage = () => {
     setEditingRole(user.role)
     setBuyerPrefs(null)
     setUserMatches(null)
+    setDepositListings([])
+    setDepositForm({ transactionId: '', amount: '', paymentMethod: 'WIRE', reference: '', notes: '' })
+    setDepositFeedback(null)
     try {
       const details = await api.getAdminUserDetails(user.id)
       setUserDetails(details)
@@ -420,6 +450,53 @@ const AdminUsersPage = () => {
       } catch (err) {
         console.error('Failed to fetch buyer preferences/matches:', err)
       }
+    }
+    const isPaid = user.subscription?.status === 'ACTIVE'
+    if (isPaid) {
+      try {
+        setDepositListingsLoading(true)
+        const res = await api.getUserListingsForDeposit(user.id)
+        setDepositListings(res?.data ?? [])
+      } catch (err) {
+        console.error('Failed to fetch deposit listings:', err)
+      } finally {
+        setDepositListingsLoading(false)
+      }
+    }
+  }
+
+  const handleRecordManualDeposit = async () => {
+    if (!selectedUser) return
+    const amountNum = parseFloat(depositForm.amount)
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      setDepositFeedback({ type: 'error', msg: 'Enter a valid amount' })
+      return
+    }
+    if (!depositForm.transactionId && !depositForm.notes.trim()) {
+      setDepositFeedback({ type: 'error', msg: 'Pick an MC listing or add notes describing the MC' })
+      return
+    }
+    try {
+      setDepositSaving(true)
+      setDepositFeedback(null)
+      const res = await api.recordManualDeposit(selectedUser.id, {
+        amount: amountNum,
+        paymentMethod: depositForm.paymentMethod,
+        transactionId: depositForm.transactionId || undefined,
+        reference: depositForm.reference.trim() || undefined,
+        notes: depositForm.notes.trim() || undefined,
+      }) as any
+      setDepositFeedback({ type: 'success', msg: res?.message || 'Deposit recorded' })
+      setDepositForm({ transactionId: '', amount: '', paymentMethod: 'WIRE', reference: '', notes: '' })
+      try {
+        const listingsRes = await api.getUserListingsForDeposit(selectedUser.id)
+        setDepositListings(listingsRes?.data ?? [])
+      } catch {}
+    } catch (err: any) {
+      console.error('Failed to record manual deposit:', err)
+      setDepositFeedback({ type: 'error', msg: err?.message || 'Failed to record deposit' })
+    } finally {
+      setDepositSaving(false)
     }
   }
 
@@ -1478,6 +1555,127 @@ const AdminUsersPage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Manual Deposit Recording — paid users only */}
+                {selectedUser.subscription?.status === 'ACTIVE' && (
+                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-600" />
+                      Record Off-Platform Deposit
+                    </h3>
+                    <p className="text-xs text-gray-600 mb-3">
+                      User paid you directly (bank transfer, Zelle, wire, check). Pick the MC or, if it's not listed yet, describe it in notes.
+                    </p>
+
+                    <div className="bg-white rounded-lg p-3 border border-emerald-100 space-y-2">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">MC Listing (optional)</label>
+                        <select
+                          value={depositForm.transactionId}
+                          onChange={(e) => {
+                            const txId = e.target.value
+                            const match = depositListings.find(l => l.transactionId === txId)
+                            setDepositForm(prev => ({
+                              ...prev,
+                              transactionId: txId,
+                              amount: match && !prev.amount ? String(match.depositAmount) : prev.amount,
+                            }))
+                          }}
+                          disabled={depositListingsLoading}
+                          className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        >
+                          <option value="">
+                            {depositListingsLoading
+                              ? 'Loading…'
+                              : depositListings.length === 0
+                                ? '— No awaiting-deposit MCs — use notes below'
+                                : '— Not on platform (describe in notes) —'}
+                          </option>
+                          {depositListings.map((l) => (
+                            <option key={l.transactionId} value={l.transactionId}>
+                              {l.mc
+                                ? `MC-${l.mc.mcNumber} · ${l.mc.legalName} · $${Number(l.depositAmount).toLocaleString()} deposit`
+                                : `Transaction ${l.transactionId.slice(0, 8)}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Amount ($)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={depositForm.amount}
+                            onChange={(e) => setDepositForm(prev => ({ ...prev, amount: e.target.value }))}
+                            className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Payment Method</label>
+                          <select
+                            value={depositForm.paymentMethod}
+                            onChange={(e) => setDepositForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                            className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                          >
+                            <option value="WIRE">Wire</option>
+                            <option value="ZELLE">Zelle</option>
+                            <option value="CHECK">Check</option>
+                            <option value="STRIPE">Stripe (manual)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Reference / Confirmation # (optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Zelle confirmation #"
+                          value={depositForm.reference}
+                          onChange={(e) => setDepositForm(prev => ({ ...prev, reference: e.target.value }))}
+                          className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">
+                          Notes {depositForm.transactionId ? '(optional)' : '(required — describe the MC)'}
+                        </label>
+                        <textarea
+                          placeholder={depositForm.transactionId
+                            ? 'Any extra context about the deposit'
+                            : 'MC#, legal name, state, cargo type… anything to identify this MC'}
+                          value={depositForm.notes}
+                          onChange={(e) => setDepositForm(prev => ({ ...prev, notes: e.target.value }))}
+                          rows={3}
+                          className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        />
+                      </div>
+
+                      {depositFeedback && (
+                        <div className={`text-xs px-3 py-2 rounded-lg ${
+                          depositFeedback.type === 'success'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {depositFeedback.msg}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleRecordManualDeposit}
+                        disabled={depositSaving || !depositForm.amount || (!depositForm.transactionId && !depositForm.notes.trim())}
+                        className="w-full flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {depositSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                        {depositSaving ? 'Saving…' : 'Record Deposit'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">

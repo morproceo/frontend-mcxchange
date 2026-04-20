@@ -436,6 +436,57 @@ class ApiService {
     });
   }
 
+  async getUserListingsForDeposit(userId: string) {
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        transactionId: string;
+        listingId: string;
+        depositAmount: number;
+        agreedPrice: number;
+        status: string;
+        createdAt: string;
+        mc: {
+          mcNumber: string;
+          dotNumber: string;
+          legalName: string;
+          title: string;
+          askingPrice: number;
+          location: string;
+        } | null;
+      }>;
+    }>(`/admin/users/${userId}/listings-for-deposit`);
+  }
+
+  async recordManualDeposit(
+    userId: string,
+    payload: {
+      amount: number;
+      paymentMethod: 'ZELLE' | 'WIRE' | 'CHECK' | 'STRIPE';
+      transactionId?: string;
+      reference?: string;
+      notes?: string;
+    }
+  ) {
+    return this.request<{
+      success: boolean;
+      data: {
+        mode: 'linked' | 'standalone';
+        paymentId: string;
+        transactionId: string | null;
+        listingId: string | null;
+        amount: number;
+        paymentMethod: string;
+        reference: string | null;
+        notes: string | null;
+      };
+      message: string;
+    }>(`/admin/users/${userId}/manual-deposit`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   async getUserActivityLog(userId: string) {
     return this.request<{
       success: boolean;
