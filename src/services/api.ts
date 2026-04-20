@@ -350,6 +350,23 @@ class ApiService {
     });
   }
 
+  async getSubscriptionAnalytics() {
+    return this.request<ApiResponse<{
+      byPlan: Array<{
+        plan: string;
+        interval: 'monthly' | 'yearly' | 'unknown';
+        status: string;
+        count: number;
+        mrr: number;
+      }>;
+      totals: Record<string, number>;
+      totalSubscriptions: number;
+      mrrCents: number;
+      mrrDollars: number;
+      unmappedPriceIds: Array<{ priceId: string; count: number }>;
+    }>>(`/admin/analytics/subscriptions`);
+  }
+
   async adjustUserCredits(userId: string, amount: number, reason: string) {
     return this.request<{
       userId: string;

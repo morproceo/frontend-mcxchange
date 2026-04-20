@@ -18,7 +18,9 @@ import {
   Calendar,
   ShoppingCart,
   Package,
-  Loader2
+  Loader2,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -76,6 +78,26 @@ const AdminDashboard = () => {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
 
+  // Subscription analytics (live from Stripe)
+  type SubscriptionBucket = {
+    plan: string
+    interval: 'monthly' | 'yearly' | 'unknown'
+    status: string
+    count: number
+    mrr: number
+  }
+  type SubscriptionAnalytics = {
+    byPlan: SubscriptionBucket[]
+    totals: Record<string, number>
+    totalSubscriptions: number
+    mrrCents: number
+    mrrDollars: number
+    unmappedPriceIds: Array<{ priceId: string; count: number }>
+  }
+  const [subAnalytics, setSubAnalytics] = useState<SubscriptionAnalytics | null>(null)
+  const [subAnalyticsLoading, setSubAnalyticsLoading] = useState(true)
+  const [subAnalyticsError, setSubAnalyticsError] = useState<string | null>(null)
+
   // Fetch dashboard stats from API
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -95,6 +117,29 @@ const AdminDashboard = () => {
     fetchDashboardStats()
   }, [])
 
+  // Fetch subscription analytics from Stripe (via admin endpoint)
+  useEffect(() => {
+    const fetchSubAnalytics = async () => {
+      try {
+        setSubAnalyticsLoading(true)
+        setSubAnalyticsError(null)
+        const response = await api.getSubscriptionAnalytics()
+        if (response.success && response.data) {
+          setSubAnalytics(response.data)
+        } else {
+          setSubAnalyticsError('Failed to load subscription analytics')
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch subscription analytics:', err)
+        setSubAnalyticsError(err?.message || 'Failed to load subscription analytics')
+      } finally {
+        setSubAnalyticsLoading(false)
+      }
+    }
+
+    fetchSubAnalytics()
+  }, [])
+
   // Fetch pending listings from API
   useEffect(() => {
     const fetchPendingListings = async () => {
@@ -110,7 +155,7 @@ const AdminDashboard = () => {
           .map((listing: any) => ({
             id: listing.id,
             mcNumber: listing.mcNumber,
-            title: listing.title || `MC Authority #${listing.mcNumber}`,
+            title: listing.title || `Trucking Business #${listing.mcNumber}`,
             description: listing.description || '',
             price: listing.price || listing.askingPrice || 0,
             yearsActive: listing.yearsActive || 0,
@@ -415,6 +460,152 @@ const AdminDashboard = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Subscription Mix — live from Stripe */}
+        <Card className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-purple-50">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Subscription Mix</h3>
+                <p className="text-xs text-gray-500">Live from Stripe — who's actually paying for what</p>
+              </div>
+            </div>
+            {subAnalytics && (
+              <div className="text-right">
+                <div className="flex items-center gap-1 text-sm font-medium text-gray-900">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  ${subAnalytics.mrrDollars.toLocaleString(undefined, { maximumFractionDigits: 0 })} MRR
+                </div>
+                <div className="text-xs text-gray-500">{subAnalytics.totalSubscriptions} total subs</div>
+              </div>
+            )}
+          </div>
+
+          {subAnalyticsLoading && (
+            <div className="flex items-center justify-center py-8 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Loading subscription data from Stripe...
+            </div>
+          )}
+
+          {subAnalyticsError && !subAnalyticsLoading && (
+            <div className="py-4 px-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {subAnalyticsError}
+            </div>
+          )}
+
+          {subAnalytics && !subAnalyticsLoading && (() => {
+            // Aggregate by plan (combining monthly/yearly/status) for the main ranking
+            const perPlan = new Map<string, { plan: string; active: number; canceled: number; other: number; mrr: number }>()
+            for (const b of subAnalytics.byPlan) {
+              const row = perPlan.get(b.plan) || { plan: b.plan, active: 0, canceled: 0, other: 0, mrr: 0 }
+              if (b.status === 'active' || b.status === 'trialing') {
+                row.active += b.count
+                row.mrr += b.mrr
+              } else if (b.status === 'canceled') {
+                row.canceled += b.count
+              } else {
+                row.other += b.count
+              }
+              perPlan.set(b.plan, row)
+            }
+            const rows = Array.from(perPlan.values()).sort((a, b) => b.active - a.active)
+            const totalActive = rows.reduce((s, r) => s + r.active, 0)
+
+            if (rows.length === 0) {
+              return (
+                <div className="py-6 text-center text-sm text-gray-500">
+                  No subscriptions found in Stripe yet.
+                </div>
+              )
+            }
+
+            return (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+                        <th className="py-2 pr-4 font-medium">Plan</th>
+                        <th className="py-2 px-4 font-medium">Active</th>
+                        <th className="py-2 px-4 font-medium">% of Active</th>
+                        <th className="py-2 px-4 font-medium">Canceled</th>
+                        <th className="py-2 px-4 font-medium">Other</th>
+                        <th className="py-2 pl-4 font-medium text-right">MRR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, idx) => {
+                        const pct = totalActive > 0 ? (row.active / totalActive) * 100 : 0
+                        const mostPopular = idx === 0 && row.active > 0
+                        return (
+                          <tr key={row.plan} className="border-b border-gray-100 last:border-0">
+                            <td className="py-3 pr-4">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900 capitalize">
+                                  {row.plan.replace(/_/g, ' ').toLowerCase()}
+                                </span>
+                                {mostPopular && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                    Most popular
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 font-semibold">{row.active}</td>
+                            <td className="py-3 px-4 text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-purple-500" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs">{pct.toFixed(0)}%</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-gray-500">{row.canceled}</td>
+                            <td className="py-3 px-4 text-gray-500">{row.other}</td>
+                            <td className="py-3 pl-4 text-right text-gray-900 font-medium">
+                              ${(row.mrr / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Status totals */}
+                <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500">
+                  {Object.entries(subAnalytics.totals).map(([status, count]) => (
+                    <span key={status} className="px-2 py-1 rounded-md bg-gray-50 border border-gray-200">
+                      <span className="font-medium text-gray-700 capitalize">{status}:</span> {count}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Unmapped price IDs warning */}
+                {subAnalytics.unmappedPriceIds.length > 0 && (
+                  <div className="mt-4 py-3 px-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                    <div className="font-medium mb-1 flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      {subAnalytics.unmappedPriceIds.length} unmapped Stripe price{subAnalytics.unmappedPriceIds.length > 1 ? 's' : ''}
+                    </div>
+                    <div className="text-xs text-amber-700">
+                      These subs point at price IDs not configured in env vars (legacy or stale). Counts shown under "unknown" plan.
+                      <ul className="mt-1 list-disc list-inside font-mono">
+                        {subAnalytics.unmappedPriceIds.map((u) => (
+                          <li key={u.priceId}>{u.priceId} ({u.count})</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+        </Card>
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
