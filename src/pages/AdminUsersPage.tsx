@@ -314,6 +314,22 @@ const AdminUsersPage = () => {
     }
   }
 
+  const handleCancelSubscription = async (userId: string, planName: string) => {
+    if (!confirm(`Cancel this user's ${planName} subscription? This will immediately cancel it in Stripe and cannot be undone.`)) return
+    try {
+      const res = await api.cancelUserSubscription(userId)
+      fetchUsers()
+      if (showDetailModal && selectedUser?.id === userId) {
+        const details = await api.getAdminUserDetails(userId)
+        setUserDetails(details)
+      }
+      alert(res?.data?.message || 'Subscription cancelled')
+    } catch (err: any) {
+      console.error('Failed to cancel subscription:', err)
+      alert(err.message || 'Failed to cancel subscription')
+    }
+  }
+
   const handleUpdateRole = async () => {
     if (!selectedUser || !editingRole || editingRole === selectedUser.role) return
     try {
@@ -694,6 +710,18 @@ const AdminUsersPage = () => {
                         <Crown className="w-3 h-3" />
                         {formatPlanName(user.subscription.plan)}
                         <span className={`w-1.5 h-1.5 rounded-full inline-block ${getSubscriptionStatusColor(user.subscription.status)}`} />
+                        {user.subscription.status === 'ACTIVE' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCancelSubscription(user.id, formatPlanName(user.subscription!.plan))
+                            }}
+                            title="Cancel subscription (Stripe + DB)"
+                            className="ml-1 -mr-0.5 p-0.5 rounded hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-400 border border-gray-200">
