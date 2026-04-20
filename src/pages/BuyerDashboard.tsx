@@ -36,7 +36,8 @@ import Select from '../components/ui/Select'
 import MCCard from '../components/MCCard'
 import api from '../services/api'
 import { getPartialMCNumber } from '../utils/helpers'
-import { FilterOptions, MCListing } from '../types'
+import { FilterOptions, MCListing, BuyerPreferencesData } from '../types'
+import BuyerRequirementsForm from '../components/BuyerRequirementsForm'
 
 // ============================================================
 // HOW IT WORKS — inline guide (replaces old welcome animation)
@@ -234,7 +235,16 @@ interface BuyerOffer {
 const BuyerDashboard = () => {
   const { user, isIdentityVerified } = useAuth()
   const [savedListings] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace'>('marketplace')
+  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace' | 'preferences'>('marketplace')
+
+  // Buyer preferences + matches state
+  const [myPrefs, setMyPrefs] = useState<BuyerPreferencesData | null>(null)
+  const [myMatches, setMyMatches] = useState<{
+    hasPreferences: boolean
+    matches: Array<{ listing: any; matchScore: number; matchReasons: string[] }>
+  } | null>(null)
+  const [prefsLoading, setPrefsLoading] = useState(false)
+  const [prefsSaving, setPrefsSaving] = useState(false)
   // Credits from user data (will be 0 for new users)
   const userCredits = user?.totalCredits ? (user.totalCredits - (user.usedCredits || 0)) : 0
 
@@ -280,6 +290,7 @@ const BuyerDashboard = () => {
           isPremium: listing.isPremium || false,
           premium: listing.isPremium || false,
           isVip: listing.isVip || false,
+          freeToUnlock: listing.freeToUnlock || false,
           amazonStatus: (listing.amazonStatus || 'none').toLowerCase(),
           amazonRelayScore: listing.amazonRelayScore || null,
           highwaySetup: listing.highwaySetup || false,
@@ -390,6 +401,42 @@ const BuyerDashboard = () => {
 
     fetchOffers()
   }, [])
+
+  // Fetch buyer preferences + matches when entering the preferences tab
+  useEffect(() => {
+    if (activeTab !== 'preferences') return
+    const fetchPrefs = async () => {
+      try {
+        setPrefsLoading(true)
+        const [prefsRes, matchesRes] = await Promise.all([
+          api.getMyPreferences(),
+          api.getMyMatches(10),
+        ])
+        setMyPrefs(prefsRes?.data ?? null)
+        setMyMatches(matchesRes?.data ?? null)
+      } catch (err) {
+        console.error('Failed to fetch buyer preferences:', err)
+      } finally {
+        setPrefsLoading(false)
+      }
+    }
+    fetchPrefs()
+  }, [activeTab])
+
+  const handleSaveMyPreferences = async (data: Partial<BuyerPreferencesData>) => {
+    try {
+      setPrefsSaving(true)
+      const res = await api.updateMyPreferences(data)
+      setMyPrefs(res?.data ?? null)
+      const matchesRes = await api.getMyMatches(10)
+      setMyMatches(matchesRes?.data ?? null)
+    } catch (err: any) {
+      console.error('Failed to save preferences:', err)
+      alert(err?.message || 'Failed to save preferences')
+    } finally {
+      setPrefsSaving(false)
+    }
+  }
 
   // Marketplace state
   const [searchQuery, setSearchQuery] = useState('')
@@ -547,7 +594,7 @@ const BuyerDashboard = () => {
 
         {/* Tabs - Mobile Friendly */}
         <div className="mb-8">
-          <div className="grid grid-cols-3 gap-2 bg-gray-100 rounded-xl p-2">
+          <div className="grid grid-cols-4 gap-2 bg-gray-100 rounded-xl p-2">
             <button
               onClick={() => setActiveTab('overview')}
               className={`flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-lg font-medium transition-all ${
@@ -587,6 +634,18 @@ const BuyerDashboard = () => {
             >
               <Search className="w-5 h-5" />
               <span className="text-xs">Browse</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('preferences')}
+              className={`flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-lg font-medium transition-all ${
+                activeTab === 'preferences'
+                  ? 'bg-black text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="text-xs">What I Want</span>
             </button>
           </div>
         </div>
@@ -1122,6 +1181,78 @@ const BuyerDashboard = () => {
                     </Link>
                   </div>
                 </div>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Preferences Tab */}
+        {activeTab === 'preferences' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">What I'm Looking For</h2>
+              <p className="text-gray-500 mt-1">Tell us what you want in a business and we'll show you how well listings match.</p>
+            </div>
+
+            <Card>
+              {prefsLoading ? (
+                <div className="flex items-center justify-center py-8 text-gray-400">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Loading your preferences...
+                </div>
+              ) : (
+                <BuyerRequirementsForm
+                  initialValues={myPrefs}
+                  onSave={handleSaveMyPreferences}
+                  showAdminNotes={false}
+                  saving={prefsSaving}
+                />
+              )}
+            </Card>
+
+            {myMatches && myMatches.hasPreferences && (
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-emerald-600" />
+                    Your Top Matches
+                  </h3>
+                  <Link to="/marketplace" className="text-sm text-indigo-600 hover:underline">
+                    Browse all listings
+                  </Link>
+                </div>
+                {myMatches.matches.length === 0 ? (
+                  <p className="text-sm text-gray-500">No active listings yet. Check back soon.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {myMatches.matches.map((m) => (
+                      <Link
+                        to={`/mc/${m.listing.id}`}
+                        key={m.listing.id}
+                        className="flex items-start justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-sm transition-all"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-gray-900 truncate">
+                            MC#{m.listing.mcNumber} — {m.listing.title || m.listing.legalName}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {m.listing.state} · ${Number(m.listing.listingPrice || m.listing.askingPrice).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1 truncate" title={m.matchReasons.join(' · ')}>
+                            {m.matchReasons.slice(0, 4).join(' · ')}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-bold ${
+                          m.matchScore >= 80 ? 'bg-emerald-600 text-white'
+                            : m.matchScore >= 60 ? 'bg-amber-500 text-white'
+                            : 'bg-gray-300 text-gray-700'
+                        }`}>
+                          {m.matchScore}%
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </Card>
             )}
           </div>

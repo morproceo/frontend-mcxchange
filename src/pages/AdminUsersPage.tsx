@@ -45,6 +45,8 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import api from '../services/api'
+import BuyerRequirementsForm from '../components/BuyerRequirementsForm'
+import type { BuyerPreferencesData } from '../types'
 
 interface UserData {
   id: string
@@ -84,7 +86,7 @@ interface Pagination {
 
 const AdminUsersPage = () => {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'all' | 'buyers' | 'sellers' | 'admins' | 'blocked' | 'pending'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'buyers' | 'sellers' | 'admins' | 'blocked' | 'pending' | 'paid'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
   const [userDetails, setUserDetails] = useState<any>(null)
@@ -108,7 +110,8 @@ const AdminUsersPage = () => {
     admins: 0,
     blocked: 0,
     pending: 0,
-    verified: 0
+    verified: 0,
+    paid: 0,
   })
 
   // Credits adjustment state
@@ -161,6 +164,14 @@ const AdminUsersPage = () => {
   } | null>(null)
   const [activityTab, setActivityTab] = useState<'unlocked' | 'transactions'>('unlocked')
 
+  // Buyer preferences (admin view)
+  const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferencesData | null>(null)
+  const [prefsSaving, setPrefsSaving] = useState(false)
+  const [userMatches, setUserMatches] = useState<{
+    hasPreferences: boolean;
+    matches: Array<{ listing: any; matchScore: number; matchReasons: string[] }>;
+  } | null>(null)
+
   // Fetch users from API
   const fetchUsers = async () => {
     setLoading(true)
@@ -169,6 +180,7 @@ const AdminUsersPage = () => {
       // Map tab to role/status filter
       let role: string | undefined
       let status: string | undefined
+      let subscriptionStatus: string | undefined
 
       switch (activeTab) {
         case 'buyers':
@@ -186,6 +198,9 @@ const AdminUsersPage = () => {
         case 'pending':
           status = 'PENDING'
           break
+        case 'paid':
+          subscriptionStatus = 'ACTIVE'
+          break
       }
 
       const response = await api.getAdminUsers({
@@ -193,7 +208,8 @@ const AdminUsersPage = () => {
         limit: pagination.limit,
         search: searchTerm || undefined,
         role,
-        status
+        status,
+        subscriptionStatus,
       })
 
       setUsers(response.users)
@@ -211,7 +227,8 @@ const AdminUsersPage = () => {
         admins: allUsers.filter((u: UserData) => u.role === 'ADMIN').length,
         blocked: allUsers.filter((u: UserData) => u.status === 'BLOCKED').length,
         pending: allUsers.filter((u: UserData) => u.status === 'PENDING').length,
-        verified: allUsers.filter((u: UserData) => u.verified).length
+        verified: allUsers.filter((u: UserData) => u.verified).length,
+        paid: allUsers.filter((u: UserData) => u.subscription?.status === 'ACTIVE').length,
       })
     } catch (err: any) {
       setError(err.message || 'Failed to fetch users')
@@ -384,11 +401,41 @@ const AdminUsersPage = () => {
     setCreditAmount('')
     setCreditReason('')
     setEditingRole(user.role)
+    setBuyerPrefs(null)
+    setUserMatches(null)
     try {
       const details = await api.getAdminUserDetails(user.id)
       setUserDetails(details)
     } catch (err) {
       console.error('Failed to fetch user details:', err)
+    }
+    if (user.role === 'BUYER') {
+      try {
+        const [prefsRes, matchesRes] = await Promise.all([
+          api.getAdminUserPreferences(user.id),
+          api.getAdminUserMatches(user.id, 5),
+        ])
+        setBuyerPrefs(prefsRes?.data ?? null)
+        setUserMatches(matchesRes?.data ?? null)
+      } catch (err) {
+        console.error('Failed to fetch buyer preferences/matches:', err)
+      }
+    }
+  }
+
+  const handleSaveBuyerPreferences = async (data: Partial<BuyerPreferencesData>) => {
+    if (!selectedUser) return
+    try {
+      setPrefsSaving(true)
+      const res = await api.updateAdminUserPreferences(selectedUser.id, data)
+      setBuyerPrefs(res?.data ?? null)
+      const matchesRes = await api.getAdminUserMatches(selectedUser.id, 5)
+      setUserMatches(matchesRes?.data ?? null)
+    } catch (err: any) {
+      console.error('Failed to save preferences:', err)
+      alert(err?.message || 'Failed to save preferences')
+    } finally {
+      setPrefsSaving(false)
     }
   }
 
@@ -471,6 +518,7 @@ const AdminUsersPage = () => {
     { key: 'all', label: 'All Users', count: stats.total, icon: Users },
     { key: 'buyers', label: 'Buyers', count: stats.buyers, icon: ShoppingCart },
     { key: 'sellers', label: 'Sellers', count: stats.sellers, icon: Package },
+    { key: 'paid', label: 'Paid', count: stats.paid, icon: Crown },
     { key: 'admins', label: 'Admins', count: stats.admins, icon: Shield },
     { key: 'blocked', label: 'Blocked', count: stats.blocked, icon: Ban },
     { key: 'pending', label: 'Pending', count: stats.pending, icon: Clock }
@@ -1263,6 +1311,66 @@ const AdminUsersPage = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Buyer Requirements & Match Suggestions — only for BUYER role */}
+                {selectedUser.role === 'BUYER' && (
+                  <>
+                    <div className="p-4 bg-white rounded-xl border border-gray-200">
+                      <h3 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-indigo-600" />
+                        Buyer Requirements & Notes
+                      </h3>
+                      <BuyerRequirementsForm
+                        initialValues={buyerPrefs}
+                        onSave={handleSaveBuyerPreferences}
+                        showAdminNotes={true}
+                        saving={prefsSaving}
+                      />
+                      {buyerPrefs?.lastEditedBy && buyerPrefs?.lastEditedAt && (
+                        <p className="mt-3 text-xs text-gray-400">
+                          Last edited by {buyerPrefs.lastEditedBy.toLowerCase()} on {formatDate(buyerPrefs.lastEditedAt)}
+                        </p>
+                      )}
+                    </div>
+
+                    {userMatches && userMatches.hasPreferences && (
+                      <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                        <h3 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-emerald-600" />
+                          Top Matches for this Buyer
+                        </h3>
+                        {userMatches.matches.length === 0 ? (
+                          <p className="text-sm text-gray-500">No active listings yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {userMatches.matches.map((m) => (
+                              <div key={m.listing.id} className="flex items-start justify-between gap-3 p-3 bg-white rounded-lg border border-emerald-100">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm text-gray-900 truncate">
+                                    MC#{m.listing.mcNumber} — {m.listing.title || m.listing.legalName}
+                                  </p>
+                                  <p className="text-xs text-gray-500 truncate">
+                                    {m.listing.state} · ${Number(m.listing.listingPrice || m.listing.askingPrice).toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1 truncate" title={m.matchReasons.join(' · ')}>
+                                    {m.matchReasons.slice(0, 4).join(' · ')}
+                                  </p>
+                                </div>
+                                <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-bold ${
+                                  m.matchScore >= 80 ? 'bg-emerald-600 text-white'
+                                    : m.matchScore >= 60 ? 'bg-amber-500 text-white'
+                                    : 'bg-gray-300 text-gray-700'
+                                }`}>
+                                  {m.matchScore}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {/* Activity Stats */}
                 {selectedUser._count && (

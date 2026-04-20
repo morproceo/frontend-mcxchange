@@ -122,6 +122,22 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         </div>
       )}
 
+      {/* Match Score Badge (attached when buyer has preferences set) */}
+      {typeof listing.matchScore === 'number' && (
+        <div
+          className={clsx(
+            'absolute left-4 z-20 px-2 py-1 rounded-full text-xs font-bold shadow-sm',
+            !isStandard ? 'top-14' : 'top-4',
+            listing.matchScore >= 80 ? 'bg-emerald-600 text-white'
+              : listing.matchScore >= 60 ? 'bg-amber-500 text-white'
+              : 'bg-gray-200 text-gray-700'
+          )}
+          title={listing.matchReasons?.slice(0, 6).join(' · ')}
+        >
+          {listing.matchScore}% match
+        </div>
+      )}
+
       <div className="relative z-10">
         {/* Header */}
         <div className={clsx('rounded-xl -mx-2 -mt-2 mb-3 px-4 py-3', tier.headerBg)}>
@@ -177,6 +193,12 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
 
         {/* Platform Badges */}
         <div className="flex flex-wrap gap-1.5 mb-3">
+          {listing.freeToUnlock && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200">
+              <CheckCircle className="w-3 h-3 text-emerald-600" />
+              <span className="text-[11px] font-bold text-emerald-700">FREE</span>
+            </div>
+          )}
           {listing.amazonStatus === 'active' && (
             <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200">
               <span className="text-xs">📦</span>

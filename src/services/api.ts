@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  BuyerPreferencesData,
   AuthLoginResponse,
   AuthRegisterResponse,
   AuthTokens,
@@ -294,6 +295,7 @@ class ApiService {
     search?: string;
     role?: string;
     status?: string;
+    subscriptionStatus?: string;
   }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
@@ -301,6 +303,7 @@ class ApiService {
     if (params?.search) searchParams.set('search', params.search);
     if (params?.role) searchParams.set('role', params.role);
     if (params?.status) searchParams.set('status', params.status);
+    if (params?.subscriptionStatus) searchParams.set('subscriptionStatus', params.subscriptionStatus);
 
     const query = searchParams.toString();
     const response = await this.request<{
@@ -348,6 +351,58 @@ class ApiService {
     return this.request<ApiResponse<{ message: string; subscription: any }>>(`/admin/users/${userId}/cancel-subscription`, {
       method: 'POST',
     });
+  }
+
+  // ============================================
+  // Buyer Preferences (admin view)
+  // ============================================
+
+  async getAdminUserPreferences(userId: string) {
+    return this.request<ApiResponse<BuyerPreferencesData | null>>(`/admin/users/${userId}/preferences`);
+  }
+
+  async updateAdminUserPreferences(userId: string, data: Partial<BuyerPreferencesData>) {
+    return this.request<ApiResponse<BuyerPreferencesData>>(`/admin/users/${userId}/preferences`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAdminUserMatches(userId: string, limit = 10) {
+    return this.request<ApiResponse<{
+      hasPreferences: boolean;
+      matches: Array<{
+        listing: any;
+        matchScore: number;
+        matchReasons: string[];
+      }>;
+    }>>(`/admin/users/${userId}/matches?limit=${limit}`);
+  }
+
+  // ============================================
+  // Buyer Preferences (buyer-facing)
+  // ============================================
+
+  async getMyPreferences() {
+    return this.request<ApiResponse<BuyerPreferencesData | null>>(`/buyer/preferences`);
+  }
+
+  async updateMyPreferences(data: Partial<BuyerPreferencesData>) {
+    return this.request<ApiResponse<BuyerPreferencesData>>(`/buyer/preferences`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyMatches(limit = 10) {
+    return this.request<ApiResponse<{
+      hasPreferences: boolean;
+      matches: Array<{
+        listing: any;
+        matchScore: number;
+        matchReasons: string[];
+      }>;
+    }>>(`/buyer/matches?limit=${limit}`);
   }
 
   async getSubscriptionAnalytics() {

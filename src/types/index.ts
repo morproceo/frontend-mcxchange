@@ -191,6 +191,10 @@ export interface MCListing {
   createdAt: Date
   updatedAt: Date
   soldAt?: Date
+
+  // Match scoring (attached when caller is a buyer with preferences)
+  matchScore?: number
+  matchReasons?: string[]
 }
 
 // Extended listing details from backend (includes FMCSA data)
@@ -698,4 +702,29 @@ export interface StripeTransaction {
   receiptUrl: string | null
   refunded: boolean
   refundedAmount: number
+}
+
+// Buyer Preferences (what the buyer is looking to buy)
+export interface BuyerPreferencesData {
+  id?: string
+  userId?: string
+  minPrice?: number | null
+  maxPrice?: number | null
+  preferredStates?: string[] | null
+  cargoTypes?: string[] | null
+  minYearsActive?: number | null
+  minFleetSize?: number | null
+  preferredSafetyRating?: 'SATISFACTORY' | 'CONDITIONAL' | 'UNSATISFACTORY' | 'NONE' | null
+  needsAmazon?: boolean | null
+  minAmazonRelayScore?: string | null
+  needsHighway?: boolean | null
+  needsFactoring?: boolean | null
+  needsRmis?: boolean | null
+  needsEmail?: boolean | null
+  needsPhone?: boolean | null
+  needsInsurance?: boolean | null
+  buyerNotes?: string | null
+  adminNotes?: string | null
+  lastEditedBy?: 'BUYER' | 'ADMIN' | null
+  lastEditedAt?: string | null
 }
