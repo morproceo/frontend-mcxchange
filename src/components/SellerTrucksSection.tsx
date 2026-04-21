@@ -1,26 +1,11 @@
 import { useState } from 'react'
 import { Truck as TruckIcon, X } from 'lucide-react'
-
-interface TruckPhoto {
-  id: string
-  url: string
-}
-
-interface TruckItem {
-  id: string
-  make: string
-  model: string
-  year: number | null
-  mileage: number | null
-  vin: string | null
-  condition: string | null
-  description: string | null
-  photos?: TruckPhoto[]
-}
+import type { ListingTruck } from '../types'
 
 interface Props {
-  trucks: TruckItem[] | undefined
+  trucks: ListingTruck[] | undefined
   isUnlocked: boolean
+  embedded?: boolean
 }
 
 const conditionColor = (c: string | null | undefined) => {
@@ -41,13 +26,15 @@ const conditionColor = (c: string | null | undefined) => {
 const fmtMiles = (n: number | null) =>
   n == null ? null : `${n.toLocaleString()} mi`
 
-const SellerTrucksSection = ({ trucks, isUnlocked }: Props) => {
+const SellerTrucksSection = ({ trucks, isUnlocked, embedded = false }: Props) => {
   const [lightbox, setLightbox] = useState<string | null>(null)
 
   if (!trucks || trucks.length === 0) return null
 
+  const outerClass = embedded ? '' : 'max-w-7xl mx-auto px-4 my-6'
+
   return (
-    <div className="max-w-7xl mx-auto px-4 my-6">
+    <div className={outerClass}>
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">

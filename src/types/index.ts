@@ -127,6 +127,26 @@ export type ListingVisibility = 'public' | 'private' | 'unlisted'
 // Insurance status enum
 export type InsuranceStatus = 'active' | 'expired' | 'pending'
 
+// Truck included with the listing
+export type TruckCondition = 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'
+
+export interface ListingTruckPhoto {
+  id: string
+  url: string
+}
+
+export interface ListingTruck {
+  id: string
+  make: string
+  model: string
+  year: number | null
+  mileage: number | null
+  vin: string | null
+  condition: TruckCondition | null
+  description: string | null
+  photos?: ListingTruckPhoto[]
+}
+
 export interface MCListing {
   id: string
   mcNumber: string
@@ -172,6 +192,7 @@ export interface MCListing {
   // What's Included
   sellingWithEmail: boolean
   sellingWithPhone: boolean
+  trucks?: ListingTruck[]
 
   // Premium listing
   isPremium: boolean
