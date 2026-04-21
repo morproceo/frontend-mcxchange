@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Heart,
@@ -25,7 +25,8 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Lock
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import IdentityVerificationBanner from '../components/IdentityVerificationBanner'
@@ -234,14 +235,19 @@ interface BuyerOffer {
 
 const BuyerDashboard = () => {
   const { user, isIdentityVerified } = useAuth()
+  const [searchParams] = useSearchParams()
   const [savedListings] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace' | 'preferences'>('marketplace')
+  const initialTab = (() => {
+    const t = searchParams.get('tab')
+    return t === 'overview' || t === 'unlocked' || t === 'marketplace' || t === 'preferences' ? t : 'marketplace'
+  })()
+  const [activeTab, setActiveTab] = useState<'overview' | 'unlocked' | 'marketplace' | 'preferences'>(initialTab)
 
   // Buyer preferences + matches state
   const [myPrefs, setMyPrefs] = useState<BuyerPreferencesData | null>(null)
   const [myMatches, setMyMatches] = useState<{
     hasPreferences: boolean
-    matches: Array<{ listing: any; matchScore: number; matchReasons: string[] }>
+    matches: Array<{ listing: any; matchScore: number; matchReasons: string[]; isUnlocked?: boolean }>
   } | null>(null)
   const [prefsLoading, setPrefsLoading] = useState(false)
   const [prefsSaving, setPrefsSaving] = useState(false)
@@ -1225,32 +1231,59 @@ const BuyerDashboard = () => {
                   <p className="text-sm text-gray-500">No active listings yet. Check back soon.</p>
                 ) : (
                   <div className="space-y-2">
-                    {myMatches.matches.map((m) => (
-                      <Link
-                        to={`/mc/${m.listing.id}`}
-                        key={m.listing.id}
-                        className="flex items-start justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-sm transition-all"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900 truncate">
-                            MC#{m.listing.mcNumber} — {m.listing.title || m.listing.legalName}
-                          </p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {m.listing.state} · ${Number(m.listing.listingPrice || m.listing.askingPrice).toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1 truncate" title={m.matchReasons.join(' · ')}>
-                            {m.matchReasons.slice(0, 4).join(' · ')}
-                          </p>
-                        </div>
-                        <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-bold ${
-                          m.matchScore >= 80 ? 'bg-emerald-600 text-white'
-                            : m.matchScore >= 60 ? 'bg-amber-500 text-white'
-                            : 'bg-gray-300 text-gray-700'
-                        }`}>
-                          {m.matchScore}%
-                        </span>
-                      </Link>
-                    ))}
+                    {myMatches.matches.map((m) => {
+                      const companyName = m.listing.legalName || m.listing.title || 'Motor Carrier'
+                      return (
+                        <Link
+                          to={`/mc/${m.listing.id}`}
+                          key={m.listing.id}
+                          className="flex items-start justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-emerald-300 hover:shadow-sm transition-all"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-gray-900 truncate flex items-center gap-1.5">
+                              {!m.isUnlocked && <Lock className="w-3 h-3 text-gray-400 shrink-0" />}
+                              {m.isUnlocked ? (
+                                <>
+                                  MC#{m.listing.mcNumber}
+                                  {m.listing.dotNumber && <> · DOT#{m.listing.dotNumber}</>}
+                                  <span className="mx-1">—</span>
+                                  {companyName}
+                                </>
+                              ) : (
+                                <>
+                                  MC#
+                                  <span className="blur-[5px] select-none pointer-events-none tracking-wider">
+                                    000000
+                                  </span>
+                                  <span> · DOT#</span>
+                                  <span className="blur-[5px] select-none pointer-events-none tracking-wider">
+                                    0000000
+                                  </span>
+                                  <span className="mx-1">—</span>
+                                  <span className="blur-[5px] select-none pointer-events-none">
+                                    Company Name Hidden
+                                  </span>
+                                </>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {m.listing.state} · ${Number(m.listing.listingPrice || m.listing.askingPrice).toLocaleString()}
+                              {!m.isUnlocked && <span className="ml-2 text-gray-400">· Unlock for 1 credit</span>}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1 truncate" title={m.matchReasons.join(' · ')}>
+                              {m.matchReasons.slice(0, 4).join(' · ')}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-bold ${
+                            m.matchScore >= 80 ? 'bg-emerald-600 text-white'
+                              : m.matchScore >= 60 ? 'bg-amber-500 text-white'
+                              : 'bg-gray-300 text-gray-700'
+                          }`}>
+                            {m.matchScore}%
+                          </span>
+                        </Link>
+                      )
+                    })}
                   </div>
                 )}
               </Card>

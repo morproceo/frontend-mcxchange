@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -11,7 +12,8 @@ import {
   Phone,
   CheckCircle,
   Loader2,
-  BadgeCheck
+  BadgeCheck,
+  Target
 } from 'lucide-react'
 import MCCard from '../components/MCCard'
 import SoldMCCard from '../components/SoldMCCard'
@@ -20,7 +22,74 @@ import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
 import { api } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import { FilterOptions, TrustLevel, AmazonStatus, MCListing } from '../types'
+
+type MatchEntry = {
+  listing: MCListing
+  matchScore: number
+  matchReasons: string[]
+  isUnlocked: boolean
+}
+
+// Map a raw backend listing record to the MCListing shape used across the marketplace.
+const transformListing = (listing: any): MCListing => {
+  let fmcsa: any = null
+  if (listing.fmcsaData) {
+    try {
+      const raw = typeof listing.fmcsaData === 'string' ? JSON.parse(listing.fmcsaData) : listing.fmcsaData
+      fmcsa = raw?.carrier || raw
+    } catch {}
+  }
+  return {
+    id: listing.id,
+    mcNumber: listing.mcNumber,
+    sellerId: listing.sellerId,
+    seller: listing.seller || { id: listing.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
+    title: listing.title,
+    description: listing.description || '',
+    price: parseFloat(listing.listingPrice || listing.askingPrice || listing.price) || 0,
+    askingPrice: parseFloat(listing.askingPrice || listing.price) || 0,
+    listingPrice: listing.listingPrice ? parseFloat(listing.listingPrice) : undefined,
+    trustScore: listing.seller?.trustScore || 50,
+    trustLevel: ((listing.seller?.trustScore || 50) >= 80 ? 'high' : (listing.seller?.trustScore || 50) >= 50 ? 'medium' : 'low') as TrustLevel,
+    verified: listing.seller?.verified || false,
+    verificationBadges: [],
+    yearsActive: listing.yearsActive || 0,
+    operationType: (() => {
+      if (!listing.cargoTypes) return []
+      if (Array.isArray(listing.cargoTypes)) return listing.cargoTypes
+      try { return JSON.parse(listing.cargoTypes) } catch { return [] }
+    })(),
+    fleetSize: listing.fleetSize || 0,
+    safetyRating: (listing.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
+    insuranceStatus: listing.insuranceOnFile ? 'active' : 'pending',
+    state: listing.state,
+    city: listing.city || undefined,
+    amazonStatus: (listing.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
+    amazonRelayScore: listing.amazonRelayScore,
+    highwaySetup: listing.highwaySetup || false,
+    sellingWithEmail: listing.sellingWithEmail || false,
+    sellingWithPhone: listing.sellingWithPhone || false,
+    isPremium: listing.isPremium || false,
+    isVip: listing.isVip || false,
+    freeToUnlock: listing.freeToUnlock || false,
+    documents: [],
+    status: (listing.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
+    visibility: (listing.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
+    views: listing.views || 0,
+    saves: listing.saves || 0,
+    createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
+    updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
+    totalInspections: fmcsa?.totalInspections ?? fmcsa?.driverInsp ?? fmcsa?.totalDriverInspections ?? undefined,
+    driverOosInsp: fmcsa?.driverOosInsp ?? fmcsa?.driverOosInspections ?? undefined,
+    driverOosRate: fmcsa?.driverOosRate ?? undefined,
+    vehicleOosInsp: fmcsa?.vehicleOosInsp ?? fmcsa?.vehicleOosInspections ?? undefined,
+    vehicleOosRate: fmcsa?.vehicleOosRate ?? undefined,
+    crashTotal: fmcsa?.crashTotal ?? fmcsa?.totalCrashes ?? undefined,
+    fatalCrash: fmcsa?.fatalCrash ?? fmcsa?.fatalCrashes ?? undefined,
+  }
+}
 
 // US States for filter
 const US_STATES = [
@@ -78,6 +147,7 @@ const US_STATES = [
 ]
 
 const MarketplacePage = () => {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [savedListings, setSavedListings] = useState<Set<string>>(new Set())
@@ -85,6 +155,8 @@ const MarketplacePage = () => {
   const [soldListings, setSoldListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [matches, setMatches] = useState<MatchEntry[]>([])
+  const [hasPreferences, setHasPreferences] = useState(false)
 
   const [filters, setFilters] = useState<FilterOptions>({
     priceMin: undefined,
@@ -117,66 +189,7 @@ const MarketplacePage = () => {
           amazonStatus: filters.amazonStatus === 'all' ? undefined : filters.amazonStatus,
         })
 
-        // Transform backend data to frontend format
-        const transformedListings: MCListing[] = (response.data || response.listings || []).map((listing: any) => {
-          // Parse FMCSA data if available — handle both flat and nested (snapshot) formats
-          let fmcsa: any = null
-          if (listing.fmcsaData) {
-            try {
-              const raw = typeof listing.fmcsaData === 'string' ? JSON.parse(listing.fmcsaData) : listing.fmcsaData
-              fmcsa = raw?.carrier || raw
-            } catch {}
-          }
-
-          return {
-            id: listing.id,
-            mcNumber: listing.mcNumber,
-            sellerId: listing.sellerId,
-            seller: listing.seller || { id: listing.sellerId, name: 'Unknown', email: '', role: 'seller', verified: false, trustScore: 50, memberSince: new Date(), completedDeals: 0, reviews: [] },
-            title: listing.title,
-            description: listing.description || '',
-            price: parseFloat(listing.listingPrice || listing.askingPrice || listing.price) || 0,
-            askingPrice: parseFloat(listing.askingPrice || listing.price) || 0,
-            listingPrice: listing.listingPrice ? parseFloat(listing.listingPrice) : undefined,
-            trustScore: listing.seller?.trustScore || 50,
-            trustLevel: (listing.seller?.trustScore || 50) >= 80 ? 'high' : (listing.seller?.trustScore || 50) >= 50 ? 'medium' : 'low',
-            verified: listing.seller?.verified || false,
-            verificationBadges: [],
-            yearsActive: listing.yearsActive || 0,
-            operationType: (() => {
-              if (!listing.cargoTypes) return [];
-              if (Array.isArray(listing.cargoTypes)) return listing.cargoTypes;
-              try { return JSON.parse(listing.cargoTypes); } catch { return []; }
-            })(),
-            fleetSize: listing.fleetSize || 0,
-            safetyRating: (listing.safetyRating?.toLowerCase() || 'not-rated') as 'satisfactory' | 'conditional' | 'unsatisfactory' | 'not-rated',
-            insuranceStatus: listing.insuranceOnFile ? 'active' : 'pending',
-            state: listing.state,
-            city: listing.city || undefined,
-            amazonStatus: (listing.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
-            amazonRelayScore: listing.amazonRelayScore,
-            highwaySetup: listing.highwaySetup || false,
-            sellingWithEmail: listing.sellingWithEmail || false,
-            sellingWithPhone: listing.sellingWithPhone || false,
-            isPremium: listing.isPremium || false,
-            isVip: listing.isVip || false,
-            documents: [],
-            status: (listing.status?.toLowerCase().replace('_', '-') || 'active') as 'active' | 'pending-verification' | 'sold' | 'reserved' | 'suspended',
-            visibility: (listing.visibility?.toLowerCase() || 'public') as 'public' | 'private' | 'unlisted',
-            views: listing.views || 0,
-            saves: listing.saves || 0,
-            createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
-            updatedAt: listing.updatedAt ? new Date(listing.updatedAt) : new Date(),
-            // FMCSA safety snapshot — totalInspections from SAFER, fallback to driverInsp (every inspection includes driver)
-            totalInspections: fmcsa?.totalInspections ?? fmcsa?.driverInsp ?? fmcsa?.totalDriverInspections ?? undefined,
-            driverOosInsp: fmcsa?.driverOosInsp ?? fmcsa?.driverOosInspections ?? undefined,
-            driverOosRate: fmcsa?.driverOosRate ?? undefined,
-            vehicleOosInsp: fmcsa?.vehicleOosInsp ?? fmcsa?.vehicleOosInspections ?? undefined,
-            vehicleOosRate: fmcsa?.vehicleOosRate ?? undefined,
-            crashTotal: fmcsa?.crashTotal ?? fmcsa?.totalCrashes ?? undefined,
-            fatalCrash: fmcsa?.fatalCrash ?? fmcsa?.fatalCrashes ?? undefined,
-          }
-        })
+        const transformedListings: MCListing[] = (response.data || response.listings || []).map(transformListing)
 
         setListings(transformedListings)
 
@@ -214,6 +227,38 @@ const MarketplacePage = () => {
 
     fetchListings()
   }, [searchQuery, filters.priceMin, filters.priceMax, filters.state, filters.amazonStatus])
+
+  // Fetch personalized matches for authenticated buyers who have saved preferences.
+  useEffect(() => {
+    if (user?.role !== 'buyer') {
+      setMatches([])
+      setHasPreferences(false)
+      return
+    }
+    const fetchMatches = async () => {
+      try {
+        const res = await api.getMyMatches(6)
+        const data = (res as any).data
+        if (!data?.hasPreferences) {
+          setHasPreferences(false)
+          setMatches([])
+          return
+        }
+        setHasPreferences(true)
+        const entries: MatchEntry[] = (data.matches || []).map((m: any) => ({
+          listing: transformListing(m.listing),
+          matchScore: m.matchScore,
+          matchReasons: m.matchReasons || [],
+          isUnlocked: !!m.isUnlocked,
+        }))
+        setMatches(entries)
+      } catch (err) {
+        console.error('Failed to fetch matches:', err)
+        setMatches([])
+      }
+    }
+    fetchMatches()
+  }, [user?.id, user?.role])
 
   const handleSaveListing = (id: string) => {
     setSavedListings(prev => {
@@ -642,6 +687,77 @@ const MarketplacePage = () => {
           </div>
         )}
 
+        {/* Recommended for You — personalized matches based on "What I Want" preferences */}
+        {user?.role === 'buyer' && hasPreferences && matches.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-emerald-600 shadow-md shadow-indigo-200/50">
+                <Target className="w-4 h-4 text-white" />
+                <span className="text-sm font-bold text-white tracking-wide">RECOMMENDED FOR YOU</span>
+              </div>
+              <div className="flex-1 h-px bg-gradient-to-r from-indigo-200 to-transparent" />
+              <Link to="/buyer/dashboard?tab=preferences" className="text-xs text-indigo-600 hover:underline whitespace-nowrap">
+                Edit preferences
+              </Link>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {matches.map((m) => (
+                <div key={m.listing.id} className="relative">
+                  <div className="absolute top-3 right-3 z-10">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-md ${
+                        m.matchScore >= 80
+                          ? 'bg-emerald-600 text-white'
+                          : m.matchScore >= 60
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-gray-700 text-white'
+                      }`}
+                      title={m.matchReasons.join(' · ')}
+                    >
+                      {m.matchScore}% match
+                    </span>
+                  </div>
+                  <MCCard
+                    listing={m.listing}
+                    onSave={handleSaveListing}
+                    isSaved={savedListings.has(m.listing.id)}
+                  />
+                  {m.matchReasons.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {m.matchReasons.slice(0, 3).map((reason, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-xs text-indigo-700"
+                        >
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recommended — preferences not set yet nudge for buyers */}
+        {user?.role === 'buyer' && !hasPreferences && (
+          <Card className="mb-6 border-2 border-dashed border-indigo-200 bg-indigo-50/30">
+            <div className="flex items-start gap-3">
+              <Target className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 text-sm">Get personalized recommendations</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Tell us what you're looking for and we'll score every listing against your criteria.
+                </p>
+              </div>
+              <Link to="/buyer/dashboard?tab=preferences">
+                <Button size="sm">Set preferences</Button>
+              </Link>
+            </div>
+          </Card>
+        )}
+
         {/* Results */}
         <div className="mb-4 flex items-center justify-between">
           <p className="text-gray-500">
@@ -655,7 +771,7 @@ const MarketplacePage = () => {
             <div className="text-center py-12">
               <Loader2 className="w-16 h-16 text-primary-500 mx-auto mb-4 animate-spin" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">Loading listings...</h3>
-              <p className="text-gray-500">Fetching available MC authorities</p>
+              <p className="text-gray-500">Fetching available trucking businesses</p>
             </div>
           </Card>
         )}
