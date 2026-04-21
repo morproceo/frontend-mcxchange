@@ -100,7 +100,7 @@ const TruckFormSection = ({ value, onChange }: Props) => {
               : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'
           }`}
         >
-          No, MC only
+          No
         </button>
       </div>
 
