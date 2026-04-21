@@ -793,6 +793,7 @@ class ApiService {
     amazonStatus?: string;
     sort?: string;
     status?: string;
+    authorityType?: 'CARRIER' | 'BROKER' | 'FREIGHT_FORWARDER';
   }) {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
@@ -804,6 +805,7 @@ class ApiService {
     if (params?.amazonStatus) searchParams.set('amazonStatus', params.amazonStatus);
     if (params?.sort) searchParams.set('sort', params.sort);
     if (params?.status) searchParams.set('status', params.status);
+    if (params?.authorityType) searchParams.set('authorityType', params.authorityType);
 
     const query = searchParams.toString();
     return this.request<any>(`/listings${query ? `?${query}` : ''}`);
@@ -1226,6 +1228,7 @@ class ApiService {
     cargoTypes?: string[];
     fmcsaData?: string;
     authorityHistory?: string;
+    authorityType?: 'CARRIER' | 'BROKER' | 'FREIGHT_FORWARDER';
     insuranceHistory?: string;
     insuranceCompany?: string;
     monthlyInsurancePremium?: number;
