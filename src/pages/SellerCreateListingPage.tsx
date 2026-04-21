@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import TruckFormSection, { TruckFormValue } from '../components/TruckFormSection'
 
 export default function SellerCreateListingPage() {
   const navigate = useNavigate()
@@ -60,6 +61,7 @@ export default function SellerCreateListingPage() {
   const [sellingWithEmail, setSellingWithEmail] = useState('')
   const [insuranceCompany, setInsuranceCompany] = useState('')
   const [monthlyInsurancePremium, setMonthlyInsurancePremium] = useState('')
+  const [trucks, setTrucks] = useState<TruckFormValue[]>([])
 
   // Submit state
   const [submitting, setSubmitting] = useState(false)
@@ -149,6 +151,18 @@ export default function SellerCreateListingPage() {
         else if (r.includes('unsatisfactory')) safetyRating = 'UNSATISFACTORY'
       }
 
+      const truckPayload = trucks
+        .filter((t) => t.make.trim() && t.model.trim())
+        .map((t) => ({
+          make: t.make.trim(),
+          model: t.model.trim(),
+          year: t.year ? parseInt(t.year, 10) : null,
+          mileage: t.mileage ? parseInt(t.mileage, 10) : null,
+          vin: t.vin.trim() || null,
+          condition: t.condition || null,
+          description: t.description.trim() || null,
+        }))
+
       const response = await api.createListing({
         mcNumber: pulseMC || carrier.mcNumber || '',
         dotNumber: carrier.dotNumber,
@@ -177,9 +191,28 @@ export default function SellerCreateListingPage() {
         sellingWithPhone: sellingWithPhone === 'yes',
         insuranceCompany: insuranceCompany || undefined,
         monthlyInsurancePremium: parseFloat(monthlyInsurancePremium) || undefined,
+        trucks: truckPayload.length > 0 ? truckPayload : undefined,
       })
 
       if (response.success) {
+        // Upload photos for any trucks that have them. Truck IDs come back
+        // attached to the created listing's trucks[] field.
+        const createdTrucks = (response.data?.trucks || []) as Array<{ id: string }>
+        const trucksWithPhotos = trucks.filter((t) => t.photos.length > 0)
+        if (createdTrucks.length > 0 && trucksWithPhotos.length > 0) {
+          // createMany preserves the order we submitted in, so zip photos by index.
+          for (let i = 0; i < trucks.length && i < createdTrucks.length; i++) {
+            const photos = trucks[i].photos
+            const truckId = createdTrucks[i]?.id
+            if (photos.length > 0 && truckId) {
+              try {
+                await api.uploadTruckPhotos(truckId, photos)
+              } catch (photoErr) {
+                console.error('Truck photo upload failed', photoErr)
+              }
+            }
+          }
+        }
         setCreatedListing(response.data)
         setPageState('success')
       } else {
@@ -383,7 +416,7 @@ export default function SellerCreateListingPage() {
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                    placeholder="e.g. Well-Maintained MC Authority with Clean Safety Record"
+                    placeholder="e.g. Well-Maintained Trucking Business with Clean Safety Record"
                   />
                 </div>
 
@@ -421,7 +454,7 @@ export default function SellerCreateListingPage() {
                 <p className="text-sm font-semibold text-amber-800 mb-1">Whole Business Sale Required</p>
                 <p className="text-sm text-amber-700">
                   You must sell the entire business entity (LLC, Inc., etc.) — not just the trucking authority.
-                  The MC authority is tied to the legal entity and cannot be transferred separately.
+                  The trucking business is tied to the legal entity and cannot be transferred separately.
                 </p>
               </div>
             </div>
@@ -578,6 +611,9 @@ export default function SellerCreateListingPage() {
                 </div>
               </div>
             </div>
+
+            {/* Trucks included in this sale */}
+            <TruckFormSection value={trucks} onChange={setTrucks} />
 
             {/* Insurance Details */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

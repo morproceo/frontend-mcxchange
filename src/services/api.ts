@@ -1230,6 +1230,15 @@ class ApiService {
     insuranceCompany?: string;
     monthlyInsurancePremium?: number;
     submitForReview?: boolean;
+    trucks?: Array<{
+      make: string;
+      model: string;
+      year?: number | null;
+      mileage?: number | null;
+      vin?: string | null;
+      condition?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | null;
+      description?: string | null;
+    }>;
   }) {
     return this.request<{
       success: boolean;
@@ -1239,6 +1248,49 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Trucks
+  async getListingTrucks(listingId: string) {
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        make: string;
+        model: string;
+        year: number | null;
+        mileage: number | null;
+        vin: string | null;
+        condition: string | null;
+        description: string | null;
+        photos: Array<{ id: string; url: string }>;
+      }>;
+    }>(`/listings/${listingId}/trucks`);
+  }
+
+  async uploadTruckPhotos(truckId: string, files: File[]) {
+    const formData = new FormData();
+    files.forEach((f) => formData.append('photos', f));
+    const token = this.getToken();
+    const res = await fetch(`${API_BASE_URL}/trucks/${truckId}/photos`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || 'Failed to upload photos');
+    return json as { success: boolean; data: Array<{ id: string; url: string }> };
+  }
+
+  async deleteTruck(truckId: string) {
+    return this.request<{ success: boolean }>(`/trucks/${truckId}`, { method: 'DELETE' });
+  }
+
+  async deleteTruckPhoto(truckId: string, photoId: string) {
+    return this.request<{ success: boolean }>(
+      `/trucks/${truckId}/photos/${photoId}`,
+      { method: 'DELETE' }
+    );
   }
 
   // Unlock a listing (uses 1 credit)

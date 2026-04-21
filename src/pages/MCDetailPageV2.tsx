@@ -30,6 +30,7 @@ import { useListing } from '../hooks/useListing'
 import { api } from '../services/api'
 
 import CreditReportView from '../components/v2/CreditReportView'
+import SellerTrucksSection from '../components/SellerTrucksSection'
 import TabNav, { TabItem } from '../components/v2/TabNav'
 import CircularGauge from '../components/v2/CircularGauge'
 import SpeedometerGauge from '../components/v2/SpeedometerGauge'
@@ -307,10 +308,11 @@ function VerificationPreviewOverlay() {
 // ============================================================
 // LOCKED TAB OVERLAY — shown when user clicks a tab that requires unlock
 // ============================================================
-function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, userCredits, unlocking, userRole, onUnlock, onPremiumRequest, onNavigate }: {
+function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, freeToUnlock, userCredits, unlocking, userRole, onUnlock, onPremiumRequest, onNavigate }: {
   tabLabel: string
   isAuthenticated: boolean
   isPremium: boolean
+  freeToUnlock?: boolean
   userCredits: number
   unlocking: boolean
   userRole?: string
@@ -375,30 +377,54 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, userCredits, u
                 </div>
               ) : userRole === 'buyer' ? (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Coins className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm text-gray-600">Cost: <strong className="text-gray-900">1 Credit</strong></span>
-                    <span className="text-gray-300">|</span>
-                    <span className="text-sm text-gray-600">You have: <strong className={userCredits > 0 ? 'text-emerald-600' : 'text-red-500'}>{userCredits}</strong></span>
-                  </div>
-                  <Button
-                    fullWidth
-                    size="lg"
-                    onClick={onUnlock}
-                    disabled={userCredits < 1 || unlocking}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                  >
-                    {unlocking ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
-                    ) : (
-                      <><Unlock className="w-4 h-4 mr-2" />Unlock Full MC — 1 Credit</>
-                    )}
-                  </Button>
-                  {userCredits < 1 && (
-                    <Button fullWidth variant="secondary" size="sm" onClick={() => onNavigate('/buyer/subscription')}>
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      {(userCredits === 0) ? 'Get a Subscription' : 'Buy More Credits'}
-                    </Button>
+                  {freeToUnlock ? (
+                    <>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <CheckCircle className="w-4 h-4 text-emerald-500" />
+                        <span className="text-sm font-semibold text-emerald-600">Free with Subscription</span>
+                      </div>
+                      <Button
+                        fullWidth
+                        size="lg"
+                        onClick={onUnlock}
+                        disabled={unlocking}
+                        className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                      >
+                        {unlocking ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
+                        ) : (
+                          <><Unlock className="w-4 h-4 mr-2" />Unlock Free</>
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Coins className="w-4 h-4 text-yellow-500" />
+                        <span className="text-sm text-gray-600">Cost: <strong className="text-gray-900">1 Credit</strong></span>
+                        <span className="text-gray-300">|</span>
+                        <span className="text-sm text-gray-600">You have: <strong className={userCredits > 0 ? 'text-emerald-600' : 'text-red-500'}>{userCredits}</strong></span>
+                      </div>
+                      <Button
+                        fullWidth
+                        size="lg"
+                        onClick={onUnlock}
+                        disabled={userCredits < 1 || unlocking}
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                      >
+                        {unlocking ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
+                        ) : (
+                          <><Unlock className="w-4 h-4 mr-2" />Unlock Full MC — 1 Credit</>
+                        )}
+                      </Button>
+                      {userCredits < 1 && (
+                        <Button fullWidth variant="secondary" size="sm" onClick={() => onNavigate('/buyer/subscription')}>
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          {(userCredits === 0) ? 'Get a Subscription' : 'Buy More Credits'}
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               ) : null}
@@ -3924,6 +3950,12 @@ export default function MCDetailPageV2() {
       {/* Hero Header */}
       <HeroHeader unlocked={!!canAccessAllTabs} />
 
+      {/* Trucks included in the sale (shown if seller attached any) */}
+      <SellerTrucksSection
+        trucks={(listing as any)?.trucks}
+        isUnlocked={!!canAccessAllTabs}
+      />
+
       {/* Tab Navigation */}
       <TabNav tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -3945,6 +3977,7 @@ export default function MCDetailPageV2() {
                     tabLabel={tabs.find(t => t.id === activeTab)?.label || ''}
                     isAuthenticated={isAuthenticated}
                     isPremium={isPremiumListing}
+                    freeToUnlock={listing?.freeToUnlock}
                     userCredits={userCredits}
                     unlocking={unlocking}
                     userRole={user?.role}
@@ -4121,20 +4154,35 @@ export default function MCDetailPageV2() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <Button
-                          fullWidth
-                          onClick={handleUnlockWithCredit}
-                          disabled={userCredits < 1 || unlocking}
-                          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                        >
-                          {unlocking ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
-                          ) : (
-                            <><Unlock className="w-4 h-4 mr-2" />Unlock Full MC with 1 Credit</>
-                          )}
-                        </Button>
+                        {listing?.freeToUnlock ? (
+                          <Button
+                            fullWidth
+                            onClick={handleUnlockWithCredit}
+                            disabled={unlocking}
+                            className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                          >
+                            {unlocking ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
+                            ) : (
+                              <><Unlock className="w-4 h-4 mr-2" />Unlock Free</>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            fullWidth
+                            onClick={handleUnlockWithCredit}
+                            disabled={userCredits < 1 || unlocking}
+                            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                          >
+                            {unlocking ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unlocking...</>
+                            ) : (
+                              <><Unlock className="w-4 h-4 mr-2" />Unlock Full MC with 1 Credit</>
+                            )}
+                          </Button>
+                        )}
 
-                        {user?.totalCredits === 0 ? (
+                        {!listing?.freeToUnlock && user?.totalCredits === 0 ? (
                           <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-center">
                             <p className="text-xs text-red-600 mb-2">You don't have a subscription yet</p>
                             <Link to="/buyer/subscription">
