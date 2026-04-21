@@ -1,25 +1,9 @@
 import { useState } from 'react'
 import { Truck as TruckIcon, X } from 'lucide-react'
-
-interface TruckPhoto {
-  id: string
-  url: string
-}
-
-interface TruckItem {
-  id: string
-  make: string
-  model: string
-  year: number | null
-  mileage: number | null
-  vin: string | null
-  condition: string | null
-  description: string | null
-  photos?: TruckPhoto[]
-}
+import type { ListingTruck } from '../types'
 
 interface Props {
-  trucks: TruckItem[] | undefined
+  trucks: ListingTruck[] | undefined
   isUnlocked: boolean
 }
 

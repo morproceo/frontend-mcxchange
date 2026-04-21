@@ -130,6 +130,9 @@ export function useListing(listingId: string | undefined): UseListingResult {
       isUnlocked: Boolean(data.isUnlocked),
       isSaved: Boolean(data.isSaved),
       isOwner: Boolean(data.isOwner),
+
+      // Trucks included with the sale
+      trucks: Array.isArray(data.trucks) ? data.trucks : undefined,
     }
   }, [])
 

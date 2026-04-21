@@ -291,6 +291,10 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
         </div>
 
         {/* Included in Sale */}
+        {(() => {
+          const truckCount = listing.trucks?.length ?? 0
+          const truckLabel = truckCount > 1 ? `${truckCount} Trucks` : 'Truck'
+          return (
         <div className="mb-3 flex items-center gap-3">
           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Includes</div>
           <div className="flex items-center gap-3">
@@ -308,8 +312,18 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
               {listing.sellingWithPhone ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
               <span>Phone</span>
             </div>
+            <div className={clsx(
+              'flex items-center gap-1 text-xs font-medium',
+              truckCount > 0 ? 'text-emerald-600' : 'text-gray-300'
+            )}>
+              {truckCount > 0 ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+              <Truck className="w-3.5 h-3.5" />
+              <span>{truckLabel}</span>
+            </div>
           </div>
         </div>
+          )
+        })()}
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">

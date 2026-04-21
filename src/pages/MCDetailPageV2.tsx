@@ -439,7 +439,7 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, freeToUnlock, 
 // ============================================================
 // HERO HEADER
 // ============================================================
-function HeroHeader({ unlocked }: { unlocked: boolean }) {
+function HeroHeader({ unlocked, truckCount }: { unlocked: boolean; truckCount: number }) {
   const { carrier: mockCarrier } = useCarrierDataContext()
   const healthColor = mockCarrier.carrierHealthScore >= 80 ? '#34d399' : mockCarrier.carrierHealthScore >= 60 ? '#fbbf24' : '#f87171'
   const healthRadius = 30
@@ -623,6 +623,12 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
             >
               <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Listing Price</p>
               <p className="text-xl sm:text-2xl font-black text-white">{fmtCurrency(mockCarrier.listingPrice)}</p>
+              {truckCount > 0 && (
+                <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                  <Truck className="w-3 h-3" />
+                  <span>{truckCount === 1 ? 'Includes truck' : `Includes ${truckCount} trucks`}</span>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         </div>
@@ -3948,11 +3954,11 @@ export default function MCDetailPageV2() {
       )}
 
       {/* Hero Header */}
-      <HeroHeader unlocked={!!canAccessAllTabs} />
+      <HeroHeader unlocked={!!canAccessAllTabs} truckCount={listing?.trucks?.length ?? 0} />
 
       {/* Trucks included in the sale (shown if seller attached any) */}
       <SellerTrucksSection
-        trucks={(listing as any)?.trucks}
+        trucks={listing?.trucks}
         isUnlocked={!!canAccessAllTabs}
       />
 
