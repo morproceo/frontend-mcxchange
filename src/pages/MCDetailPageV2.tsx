@@ -439,7 +439,13 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, freeToUnlock, 
 // ============================================================
 // HERO HEADER
 // ============================================================
-function HeroHeader({ unlocked }: { unlocked: boolean }) {
+const AUTHORITY_TYPE_CHIP: Record<string, { label: string; classes: string }> = {
+  CARRIER: { label: 'Carrier', classes: 'bg-cyan-500/10 border-cyan-400/30 text-cyan-300' },
+  BROKER: { label: 'Broker', classes: 'bg-amber-500/10 border-amber-400/30 text-amber-300' },
+  FREIGHT_FORWARDER: { label: 'Freight Forwarder', classes: 'bg-violet-500/10 border-violet-400/30 text-violet-300' },
+}
+
+function HeroHeader({ unlocked, authorityType }: { unlocked: boolean; authorityType: 'CARRIER' | 'BROKER' | 'FREIGHT_FORWARDER' }) {
   const { carrier: mockCarrier } = useCarrierDataContext()
   const healthColor = mockCarrier.carrierHealthScore >= 80 ? '#34d399' : mockCarrier.carrierHealthScore >= 60 ? '#fbbf24' : '#f87171'
   const healthRadius = 30
@@ -500,6 +506,9 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400">Active Authority</span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${AUTHORITY_TYPE_CHIP[authorityType].classes}`}>
+                  {AUTHORITY_TYPE_CHIP[authorityType].label}
+                </span>
               </div>
               <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-[6px] select-none pointer-events-none' : ''}`}>{mockCarrier.legalName}</h1>
               {mockCarrier.dbaName && (
@@ -3465,10 +3474,22 @@ export default function MCDetailPageV2() {
 
   // Mark non-overview tabs as locked until listing is unlocked (admins and listing owners bypass)
   const canAccessAllTabs = isUnlocked || user?.role === 'admin' || isListingOwner
-  const visibleTabs = tabs.map(t => ({
-    ...t,
-    locked: !canAccessAllTabs && t.id !== 'overview',
-  }))
+  const authorityType = listing?.authorityType ?? 'CARRIER'
+  const carrierOnlyTabIds = new Set(['truck', 'fleet', 'safety'])
+  const visibleTabs = tabs
+    .filter(t => authorityType === 'CARRIER' || !carrierOnlyTabIds.has(t.id))
+    .map(t => ({
+      ...t,
+      locked: !canAccessAllTabs && t.id !== 'overview' && t.id !== 'truck',
+    }))
+
+  // If the current tab disappears because authorityType changed (e.g. a broker
+  // listing finished loading while Fleet was selected), fall back to overview.
+  useEffect(() => {
+    if (!visibleTabs.some(t => t.id === activeTab)) {
+      setActiveTab('overview')
+    }
+  }, [visibleTabs, activeTab])
 
   // Use real DOT number for API calls (backend provides _realDotNumber when dotNumber is masked)
   const carrierDotNumber = listing?._realDotNumber || listing?.dotNumber
@@ -3948,7 +3969,7 @@ export default function MCDetailPageV2() {
       )}
 
       {/* Hero Header */}
-      <HeroHeader unlocked={!!canAccessAllTabs} />
+      <HeroHeader unlocked={!!canAccessAllTabs} authorityType={authorityType} />
 
       {/* Trucks included in the sale (shown if seller attached any) */}
       <SellerTrucksSection

@@ -110,6 +110,16 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
     ? `${listing.city}, ${listing.state}`
     : listing.state
 
+  const authorityType = listing.authorityType ?? 'CARRIER'
+  const isBroker = authorityType === 'BROKER'
+  const isFreightForwarder = authorityType === 'FREIGHT_FORWARDER'
+  const authorityChipClass = isBroker
+    ? 'bg-amber-50 text-amber-700 border-amber-200'
+    : isFreightForwarder
+    ? 'bg-violet-50 text-violet-700 border-violet-200'
+    : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+  const authorityChipLabel = isBroker ? 'Broker' : isFreightForwarder ? 'Freight Forwarder' : 'Carrier'
+
   return (
     <Card hover className={clsx('group relative overflow-hidden', tier.cardBorder, tier.glowClass)}>
       {/* Tier Badge */}
@@ -151,6 +161,14 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
               <div className="flex items-center gap-1.5 text-sm text-gray-600">
                 <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                 <span className="font-medium truncate">{locationDisplay}</span>
+                <span
+                  className={clsx(
+                    'ml-1 inline-flex items-center px-1.5 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider',
+                    authorityChipClass,
+                  )}
+                >
+                  {authorityChipLabel}
+                </span>
               </div>
             </div>
 
@@ -182,7 +200,7 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
               <Calendar className="w-3.5 h-3.5" />
               <span className="font-medium">{listing.yearsActive} yrs</span>
             </div>
-            {listing.fleetSize > 0 && (
+            {authorityType === 'CARRIER' && listing.fleetSize > 0 && (
               <div className="flex items-center gap-1" title="Fleet Size">
                 <Truck className="w-3.5 h-3.5" />
                 <span className="font-medium">{listing.fleetSize}</span>
@@ -242,7 +260,8 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
           )}
         </div>
 
-        {/* Safety Snapshot */}
+        {/* Safety Snapshot — only for carriers (brokers have no fleet inspections) */}
+        {authorityType === 'CARRIER' && (
         <div className={clsx('rounded-lg border p-2.5 mb-3', tier.safetyBg, tier.safetyBorder)}>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -289,6 +308,7 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Included in Sale */}
         <div className="mb-3 flex items-center gap-3">

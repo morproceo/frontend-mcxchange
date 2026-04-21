@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import type {
   MCListingExtended,
   AmazonStatus,
+  AuthorityType,
   SafetyRating,
   ListingStatus,
   ListingVisibility
@@ -80,6 +81,9 @@ export function useListing(listingId: string | undefined): UseListingResult {
       amazonStatus: normalizeAmazonStatus(data.amazonStatus),
       amazonRelayScore: data.amazonRelayScore || null,
       highwaySetup: Boolean(data.highwaySetup),
+
+      // Authority type — defaults to CARRIER for legacy rows that predate this field
+      authorityType: normalizeAuthorityType(data.authorityType),
 
       // What's Included
       sellingWithEmail: Boolean(data.sellingWithEmail),
@@ -300,6 +304,14 @@ function normalizeVisibility(visibility: string | undefined): ListingVisibility 
   if (normalized === 'private') return 'private'
   if (normalized === 'unlisted') return 'unlisted'
   return 'public'
+}
+
+function normalizeAuthorityType(value: string | undefined | null): AuthorityType {
+  if (!value) return 'CARRIER'
+  const normalized = value.toUpperCase()
+  if (normalized === 'BROKER') return 'BROKER'
+  if (normalized === 'FREIGHT_FORWARDER') return 'FREIGHT_FORWARDER'
+  return 'CARRIER'
 }
 
 export default useListing

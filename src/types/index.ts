@@ -127,6 +127,12 @@ export type ListingVisibility = 'public' | 'private' | 'unlisted'
 // Insurance status enum
 export type InsuranceStatus = 'active' | 'expired' | 'pending'
 
+// Authority type enum — whether the MC authority being sold is a motor carrier,
+// a freight broker, or a freight forwarder. Drives UI branching on the detail
+// page and marketplace card (carriers have fleet/trucks/safety signals; brokers
+// don't).
+export type AuthorityType = 'CARRIER' | 'BROKER' | 'FREIGHT_FORWARDER'
+
 export interface MCListing {
   id: string
   mcNumber: string
@@ -168,6 +174,11 @@ export interface MCListing {
   amazonStatus: AmazonStatus
   amazonRelayScore: AmazonRelayScore
   highwaySetup: boolean
+
+  // Authority type (carrier / broker / freight forwarder) — drives UI branching.
+  // Optional because older code paths (mock data, admin review construction) predate
+  // this field; consumers treat missing as CARRIER.
+  authorityType?: AuthorityType
 
   // What's Included
   sellingWithEmail: boolean

@@ -20,6 +20,17 @@ import {
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import TruckFormSection, { TruckFormValue } from '../components/TruckFormSection'
+import type { AuthorityType } from '../types'
+
+function deriveAuthorityTypeFromMorPro(authority: any): AuthorityType {
+  if (!authority?.statuses) return 'CARRIER'
+  const active = (s: any) => typeof s === 'string' && /^(A|ACTIVE)$/i.test(s)
+  const carrierActive = active(authority.statuses.common?.status) || active(authority.statuses.contract?.status)
+  const brokerActive = active(authority.statuses.broker?.status)
+  if (carrierActive) return 'CARRIER'
+  if (brokerActive) return 'BROKER'
+  return 'CARRIER'
+}
 
 export default function SellerCreateListingPage() {
   const navigate = useNavigate()
@@ -62,6 +73,8 @@ export default function SellerCreateListingPage() {
   const [insuranceCompany, setInsuranceCompany] = useState('')
   const [monthlyInsurancePremium, setMonthlyInsurancePremium] = useState('')
   const [trucks, setTrucks] = useState<TruckFormValue[]>([])
+  const [authorityType, setAuthorityType] = useState<AuthorityType>('CARRIER')
+  const [authorityBlock, setAuthorityBlock] = useState<any>(null)
 
   // Submit state
   const [submitting, setSubmitting] = useState(false)
@@ -103,6 +116,8 @@ export default function SellerCreateListingPage() {
           mcNumber: carrier.mcNumber || pulseMC || '',
           cargoTypes: report.cargo ? Object.entries(report.cargo).filter(([, v]) => v === true).map(([k]) => k) : [],
         })
+        setAuthorityBlock(report.authority || null)
+        setAuthorityType(deriveAuthorityTypeFromMorPro(report.authority))
         setTitle(`${carrier.legalName || 'Carrier'} - DOT #${cleanDot}`)
       } else {
         setSearchError('Carrier data not found for this DOT number.')
@@ -184,6 +199,8 @@ export default function SellerCreateListingPage() {
         bondAmount: carrier.bondOnFile || undefined,
         cargoTypes: carrier.cargoTypes || [],
         fmcsaData: JSON.stringify(carrier),
+        authorityType,
+        authorityHistory: authorityBlock ? JSON.stringify(authorityBlock) : undefined,
         amazonStatus: amazonStatus === 'yes' ? 'ACTIVE' : amazonStatus === 'no' ? 'NONE' : undefined,
         amazonRelayScore: amazonRelayScore || undefined,
         highwaySetup: highwaySetup === 'yes',
@@ -191,7 +208,7 @@ export default function SellerCreateListingPage() {
         sellingWithPhone: sellingWithPhone === 'yes',
         insuranceCompany: insuranceCompany || undefined,
         monthlyInsurancePremium: parseFloat(monthlyInsurancePremium) || undefined,
-        trucks: truckPayload.length > 0 ? truckPayload : undefined,
+        trucks: authorityType === 'CARRIER' && truckPayload.length > 0 ? truckPayload : undefined,
       })
 
       if (response.success) {
@@ -397,6 +414,36 @@ export default function SellerCreateListingPage() {
                     <p className="text-[10px] uppercase tracking-wider text-white/30">{s.label}</p>
                     <p className="text-sm font-bold text-white/90">{s.value}</p>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Authority Type */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-indigo-500" />
+                Authority Type
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                We pre-filled this based on FMCSA — confirm or change if you're selling a different authority type.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([
+                  { id: 'CARRIER', label: 'Motor Carrier', hint: 'Operates trucks, hauls freight' },
+                  { id: 'BROKER', label: 'Freight Broker', hint: 'Arranges freight, no fleet' },
+                  { id: 'FREIGHT_FORWARDER', label: 'Freight Forwarder', hint: 'Consolidates + ships freight' },
+                ] as { id: AuthorityType; label: string; hint: string }[]).map(opt => (
+                  <button
+                    type="button"
+                    key={opt.id}
+                    onClick={() => setAuthorityType(opt.id)}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${
+                      authorityType === opt.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${authorityType === opt.id ? 'text-indigo-700' : 'text-gray-900'}`}>{opt.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{opt.hint}</p>
+                  </button>
                 ))}
               </div>
             </div>
@@ -612,8 +659,8 @@ export default function SellerCreateListingPage() {
               </div>
             </div>
 
-            {/* Trucks included in this sale */}
-            <TruckFormSection value={trucks} onChange={setTrucks} />
+            {/* Trucks included in this sale (carriers only — brokers have no fleet) */}
+            {authorityType === 'CARRIER' && <TruckFormSection value={trucks} onChange={setTrucks} />}
 
             {/* Insurance Details */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
