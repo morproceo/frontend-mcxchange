@@ -164,6 +164,7 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_CARRIER_DATA === 'true'
 
 const tabs: TabItem[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'truck', label: 'Truck', icon: Truck },
   { id: 'authority', label: 'Authority & Compliance', icon: Shield },
   { id: 'safety', label: 'Safety & Inspections', icon: Activity },
   { id: 'insurance', label: 'Insurance', icon: Umbrella },
@@ -439,7 +440,7 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, freeToUnlock, 
 // ============================================================
 // HERO HEADER
 // ============================================================
-function HeroHeader({ unlocked, truckCount }: { unlocked: boolean; truckCount: number }) {
+function HeroHeader({ unlocked, truckCount, onTruckClick }: { unlocked: boolean; truckCount: number; onTruckClick?: () => void }) {
   const { carrier: mockCarrier } = useCarrierDataContext()
   const healthColor = mockCarrier.carrierHealthScore >= 80 ? '#34d399' : mockCarrier.carrierHealthScore >= 60 ? '#fbbf24' : '#f87171'
   const healthRadius = 30
@@ -624,10 +625,14 @@ function HeroHeader({ unlocked, truckCount }: { unlocked: boolean; truckCount: n
               <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/35">Listing Price</p>
               <p className="text-xl sm:text-2xl font-black text-white">{fmtCurrency(mockCarrier.listingPrice)}</p>
               {truckCount > 0 && (
-                <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                <button
+                  type="button"
+                  onClick={onTruckClick}
+                  className="mt-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 hover:text-emerald-200 transition-colors"
+                >
                   <Truck className="w-3 h-3" />
-                  <span>{truckCount === 1 ? 'Includes truck' : `Includes ${truckCount} trucks`}</span>
-                </div>
+                  <span>{truckCount === 1 ? 'Includes truck — view' : `Includes ${truckCount} trucks — view`}</span>
+                </button>
               )}
             </motion.div>
           </motion.div>
@@ -3471,10 +3476,14 @@ export default function MCDetailPageV2() {
 
   // Mark non-overview tabs as locked until listing is unlocked (admins and listing owners bypass)
   const canAccessAllTabs = isUnlocked || user?.role === 'admin' || isListingOwner
-  const visibleTabs = tabs.map(t => ({
-    ...t,
-    locked: !canAccessAllTabs && t.id !== 'overview',
-  }))
+  const truckCount = listing?.trucks?.length ?? 0
+  const visibleTabs = tabs
+    .filter(t => t.id !== 'truck' || truckCount > 0)
+    .map(t => ({
+      ...t,
+      label: t.id === 'truck' && truckCount > 1 ? `${truckCount} Trucks` : t.label,
+      locked: !canAccessAllTabs && t.id !== 'overview' && t.id !== 'truck',
+    }))
 
   // Use real DOT number for API calls (backend provides _realDotNumber when dotNumber is masked)
   const carrierDotNumber = listing?._realDotNumber || listing?.dotNumber
@@ -3912,6 +3921,7 @@ export default function MCDetailPageV2() {
 
   const tabContent: Record<string, JSX.Element> = {
     overview: showSkeleton ? <CarrierLoadingSkeleton /> : <OverviewTab />,
+    truck: <SellerTrucksSection trucks={listing?.trucks} isUnlocked={!!canAccessAllTabs} embedded />,
     authority: showSkeleton ? <CarrierLoadingSkeleton /> : <AuthorityTab />,
     safety: showSkeleton ? <CarrierLoadingSkeleton /> : <SafetyTab />,
     insurance: showSkeleton ? <CarrierLoadingSkeleton /> : <InsuranceTab />,
@@ -3954,13 +3964,7 @@ export default function MCDetailPageV2() {
       )}
 
       {/* Hero Header */}
-      <HeroHeader unlocked={!!canAccessAllTabs} truckCount={listing?.trucks?.length ?? 0} />
-
-      {/* Trucks included in the sale (shown if seller attached any) */}
-      <SellerTrucksSection
-        trucks={listing?.trucks}
-        isUnlocked={!!canAccessAllTabs}
-      />
+      <HeroHeader unlocked={!!canAccessAllTabs} truckCount={truckCount} onTruckClick={() => setActiveTab('truck')} />
 
       {/* Tab Navigation */}
       <TabNav tabs={visibleTabs} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -3978,7 +3982,7 @@ export default function MCDetailPageV2() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                {!canAccessAllTabs && activeTab !== 'overview' ? (
+                {!canAccessAllTabs && activeTab !== 'overview' && activeTab !== 'truck' ? (
                   <LockedTabOverlay
                     tabLabel={tabs.find(t => t.id === activeTab)?.label || ''}
                     isAuthenticated={isAuthenticated}
