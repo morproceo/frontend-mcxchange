@@ -43,6 +43,7 @@ import Textarea from '../components/ui/Textarea'
 import { formatPrice } from '../utils/helpers'
 import api from '../services/api'
 import { useFMCSAData } from '../hooks/useFMCSAData'
+import SellerTrucksSection from '../components/SellerTrucksSection'
 
 interface Listing {
   id: string
@@ -741,6 +742,9 @@ const AdminListingDetailPage = () => {
                     />
                   </div>
                 </Card>
+
+                {/* Trucks Included in Sale (admin sees VIN unmasked) */}
+                <SellerTrucksSection trucks={(listing as any)?.trucks} isUnlocked={true} />
 
                 {/* Safety & Insurance */}
                 <Card className="p-6">
