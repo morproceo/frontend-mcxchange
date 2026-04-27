@@ -439,11 +439,20 @@ function LockedTabOverlay({ tabLabel, isAuthenticated, isPremium, freeToUnlock, 
 // ============================================================
 // HERO HEADER
 // ============================================================
-function HeroHeader({ unlocked }: { unlocked: boolean }) {
+const AUTHORITY_TYPE_PILL_LABELS: Record<string, string> = {
+  MOTOR_CARRIER: 'Motor Carrier',
+  BROKER: 'Broker Authority',
+  MOTOR_CARRIER_AND_BROKER: 'Carrier + Broker',
+  FREIGHT_FORWARDER: 'Freight Forwarder',
+}
+
+function HeroHeader({ unlocked, authorityType }: { unlocked: boolean; authorityType?: string }) {
   const { carrier: mockCarrier } = useCarrierDataContext()
   const healthColor = mockCarrier.carrierHealthScore >= 80 ? '#34d399' : mockCarrier.carrierHealthScore >= 60 ? '#fbbf24' : '#f87171'
   const healthRadius = 30
   const healthCirc = 2 * Math.PI * healthRadius
+  const normalizedAuthorityType = authorityType || 'MOTOR_CARRIER'
+  const isBrokerish = normalizedAuthorityType === 'BROKER' || normalizedAuthorityType === 'MOTOR_CARRIER_AND_BROKER'
 
   return (
     <div className="max-w-7xl mx-auto px-0 sm:px-4 pt-0 sm:pt-8">
@@ -497,9 +506,20 @@ function HeroHeader({ unlocked }: { unlocked: boolean }) {
             className="flex items-start justify-between gap-4"
           >
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400">Active Authority</span>
+              <div className="flex items-center gap-3 mb-1 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-400">Active Authority</span>
+                </div>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${
+                    isBrokerish
+                      ? 'bg-indigo-500/15 border-indigo-400/40 text-indigo-200'
+                      : 'bg-white/[0.06] border-white/10 text-white/70'
+                  }`}
+                >
+                  {AUTHORITY_TYPE_PILL_LABELS[normalizedAuthorityType] || normalizedAuthorityType}
+                </span>
               </div>
               <h1 className={`text-2xl sm:text-4xl font-black text-white tracking-tight ${!unlocked ? 'blur-[6px] select-none pointer-events-none' : ''}`}>{mockCarrier.legalName}</h1>
               {mockCarrier.dbaName && (
@@ -3948,7 +3968,7 @@ export default function MCDetailPageV2() {
       )}
 
       {/* Hero Header */}
-      <HeroHeader unlocked={!!canAccessAllTabs} />
+      <HeroHeader unlocked={!!canAccessAllTabs} authorityType={(listing as any)?.authorityType} />
 
       {/* Trucks included in the sale (shown if seller attached any) */}
       <SellerTrucksSection

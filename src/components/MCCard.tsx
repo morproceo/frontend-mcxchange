@@ -12,7 +12,8 @@ import {
   Shield,
   Truck,
   AlertTriangle,
-  ClipboardCheck
+  ClipboardCheck,
+  Briefcase
 } from 'lucide-react'
 import { MCListing } from '../types'
 import Card from './ui/Card'
@@ -197,6 +198,24 @@ const MCCard = ({ listing, onSave, isSaved }: MCCardProps) => {
             <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200">
               <CheckCircle className="w-3 h-3 text-emerald-600" />
               <span className="text-[11px] font-bold text-emerald-700">FREE</span>
+            </div>
+          )}
+          {listing.authorityType === 'BROKER' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 border border-indigo-200">
+              <Briefcase className="w-3 h-3 text-indigo-600" />
+              <span className="text-[11px] font-bold text-indigo-700">Broker</span>
+            </div>
+          )}
+          {listing.authorityType === 'MOTOR_CARRIER_AND_BROKER' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 border border-indigo-200">
+              <Briefcase className="w-3 h-3 text-indigo-600" />
+              <span className="text-[11px] font-bold text-indigo-700">Carrier + Broker</span>
+            </div>
+          )}
+          {listing.authorityType === 'FREIGHT_FORWARDER' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 border border-indigo-200">
+              <Briefcase className="w-3 h-3 text-indigo-600" />
+              <span className="text-[11px] font-bold text-indigo-700">Forwarder</span>
             </div>
           )}
           {listing.amazonStatus === 'active' && (

@@ -70,6 +70,7 @@ export interface ApiListing {
   bondAmount?: number;
   amazonStatus?: string;
   amazonRelayScore?: string;
+  authorityType?: string;
   highwaySetup?: boolean;
   sellingWithEmail?: boolean;
   sellingWithPhone?: boolean;

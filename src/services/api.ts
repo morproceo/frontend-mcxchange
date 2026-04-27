@@ -791,6 +791,7 @@ class ApiService {
     maxPrice?: number;
     state?: string;
     amazonStatus?: string;
+    authorityType?: string;
     sort?: string;
     status?: string;
   }) {
@@ -802,6 +803,7 @@ class ApiService {
     if (params?.maxPrice) searchParams.set('maxPrice', params.maxPrice.toString());
     if (params?.state) searchParams.set('state', params.state);
     if (params?.amazonStatus) searchParams.set('amazonStatus', params.amazonStatus);
+    if (params?.authorityType) searchParams.set('authorityType', params.authorityType);
     if (params?.sort) searchParams.set('sort', params.sort);
     if (params?.status) searchParams.set('status', params.status);
 
@@ -1218,6 +1220,7 @@ class ApiService {
     bondAmount?: number;
     amazonStatus?: string;
     amazonRelayScore?: string;
+    authorityType?: string;
     highwaySetup?: boolean;
     sellingWithEmail?: boolean;
     sellingWithPhone?: boolean;
