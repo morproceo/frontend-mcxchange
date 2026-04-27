@@ -289,7 +289,10 @@ const CreateListingPage = () => {
     monthlyInsurancePremium: '',
 
     // RMIS
-    rmisSetup: ''
+    rmisSetup: '',
+
+    // Authority type being sold
+    authorityType: 'MOTOR_CARRIER' as 'MOTOR_CARRIER' | 'BROKER' | 'MOTOR_CARRIER_AND_BROKER' | 'FREIGHT_FORWARDER'
   })
 
   // Track if we came from CarrierPulse
@@ -307,6 +310,21 @@ const CreateListingPage = () => {
   const [authorityHistory, setAuthorityHistory] = useState<any>(null)
   const [insuranceHistory, setInsuranceHistory] = useState<any[]>([])
   const [fmcsaCarrierData, setFmcsaCarrierData] = useState<any>(null)
+  const [authorityTypeTouched, setAuthorityTypeTouched] = useState(false)
+
+  // Pre-fill the seller's authority-type selection based on FMCSA-active authorities
+  useEffect(() => {
+    if (!authorityHistory || authorityTypeTouched) return
+    const carrierActive =
+      authorityHistory.commonAuthorityStatus === 'ACTIVE' ||
+      authorityHistory.contractAuthorityStatus === 'ACTIVE'
+    const brokerActive = authorityHistory.brokerAuthorityStatus === 'ACTIVE'
+    let derived: typeof formData.authorityType = 'MOTOR_CARRIER'
+    if (carrierActive && brokerActive) derived = 'MOTOR_CARRIER_AND_BROKER'
+    else if (brokerActive) derived = 'BROKER'
+    else if (carrierActive) derived = 'MOTOR_CARRIER'
+    setFormData(prev => ({ ...prev, authorityType: derived }))
+  }, [authorityHistory, authorityTypeTouched])
 
   // Auto-fetch FMCSA data when coming from CarrierPulse
   useEffect(() => {
@@ -595,6 +613,7 @@ const CreateListingPage = () => {
         insuranceOnFile: formData.insuranceStatus === 'active',
         amazonStatus: formData.amazonStatus?.toUpperCase() || 'NONE',
         amazonRelayScore: formData.amazonRelayScore || undefined,
+        authorityType: formData.authorityType,
         highwaySetup: formData.highwaySetup === 'yes',
         sellingWithEmail: formData.sellingWithEmail === 'yes',
         sellingWithPhone: formData.sellingWithPhone === 'yes',
@@ -977,6 +996,55 @@ const CreateListingPage = () => {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                </GlassCard>
+
+                {/* Authority Type — what is being sold */}
+                <GlassCard>
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30 flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-indigo-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">What are you selling?</h3>
+                      <p className="text-sm text-gray-500">
+                        Tell buyers which type of FMCSA authority this listing represents.
+                        {authorityHistory ? ' Pre-filled from FMCSA — adjust if needed.' : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { value: 'MOTOR_CARRIER', label: 'Motor Carrier', sub: 'Common / Contract' },
+                      { value: 'BROKER', label: 'Broker', sub: 'Brokerage authority' },
+                      { value: 'MOTOR_CARRIER_AND_BROKER', label: 'Carrier + Broker', sub: 'Dual authority' },
+                      { value: 'FREIGHT_FORWARDER', label: 'Freight Forwarder', sub: 'Forwarder authority' },
+                    ].map((option) => {
+                      const selected = formData.authorityType === option.value
+                      return (
+                        <motion.button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setAuthorityTypeTouched(true)
+                            setFormData({ ...formData, authorityType: option.value as typeof formData.authorityType })
+                          }}
+                          className={`p-4 rounded-xl border-2 transition-all text-center ${
+                            selected
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className={`text-sm font-semibold ${selected ? 'text-indigo-700' : 'text-gray-700'}`}>
+                            {option.label}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">{option.sub}</div>
+                        </motion.button>
+                      )
+                    })}
+                  </div>
                 </GlassCard>
 
                 {/* Entry Audit Card */}

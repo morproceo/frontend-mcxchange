@@ -127,6 +127,20 @@ export type ListingVisibility = 'public' | 'private' | 'unlisted'
 // Insurance status enum
 export type InsuranceStatus = 'active' | 'expired' | 'pending'
 
+// Authority type — what kind of FMCSA authority is being sold
+export type AuthorityType =
+  | 'MOTOR_CARRIER'
+  | 'BROKER'
+  | 'MOTOR_CARRIER_AND_BROKER'
+  | 'FREIGHT_FORWARDER'
+
+export const AUTHORITY_TYPE_LABELS: Record<AuthorityType, string> = {
+  MOTOR_CARRIER: 'Motor Carrier',
+  BROKER: 'Broker',
+  MOTOR_CARRIER_AND_BROKER: 'Motor Carrier + Broker',
+  FREIGHT_FORWARDER: 'Freight Forwarder',
+}
+
 export interface MCListing {
   id: string
   mcNumber: string
@@ -168,6 +182,9 @@ export interface MCListing {
   amazonStatus: AmazonStatus
   amazonRelayScore: AmazonRelayScore
   highwaySetup: boolean
+
+  // Authority type being sold (motor carrier, broker, both, freight forwarder)
+  authorityType?: AuthorityType
 
   // What's Included
   sellingWithEmail: boolean
@@ -298,6 +315,7 @@ export interface FilterOptions {
   // New filters
   state?: string
   amazonStatus?: AmazonStatus | 'all'
+  authorityTypes?: AuthorityType[]
   hasHighway?: boolean
   hasEmail?: boolean
   hasPhone?: boolean

@@ -13,7 +13,8 @@ import {
   CheckCircle,
   Loader2,
   BadgeCheck,
-  Target
+  Target,
+  Briefcase
 } from 'lucide-react'
 import MCCard from '../components/MCCard'
 import SoldMCCard from '../components/SoldMCCard'
@@ -23,7 +24,7 @@ import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
 import { api } from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { FilterOptions, TrustLevel, AmazonStatus, MCListing } from '../types'
+import { FilterOptions, TrustLevel, AmazonStatus, AuthorityType, AUTHORITY_TYPE_LABELS, MCListing } from '../types'
 
 type MatchEntry = {
   listing: MCListing
@@ -68,6 +69,7 @@ const transformListing = (listing: any): MCListing => {
     city: listing.city || undefined,
     amazonStatus: (listing.amazonStatus?.toLowerCase() || 'none') as AmazonStatus,
     amazonRelayScore: listing.amazonRelayScore,
+    authorityType: listing.authorityType || 'MOTOR_CARRIER',
     highwaySetup: listing.highwaySetup || false,
     sellingWithEmail: listing.sellingWithEmail || false,
     sellingWithPhone: listing.sellingWithPhone || false,
@@ -168,6 +170,7 @@ const MarketplacePage = () => {
     verified: undefined,
     state: undefined,
     amazonStatus: undefined,
+    authorityTypes: undefined,
     hasHighway: undefined,
     hasEmail: undefined,
     hasPhone: undefined,
@@ -187,6 +190,9 @@ const MarketplacePage = () => {
           maxPrice: filters.priceMax,
           state: filters.state,
           amazonStatus: filters.amazonStatus === 'all' ? undefined : filters.amazonStatus,
+          authorityType: filters.authorityTypes && filters.authorityTypes.length > 0
+            ? filters.authorityTypes.join(',')
+            : undefined,
         })
 
         const transformedListings: MCListing[] = (response.data || response.listings || []).map(transformListing)
@@ -226,7 +232,7 @@ const MarketplacePage = () => {
     }
 
     fetchListings()
-  }, [searchQuery, filters.priceMin, filters.priceMax, filters.state, filters.amazonStatus])
+  }, [searchQuery, filters.priceMin, filters.priceMax, filters.state, filters.amazonStatus, filters.authorityTypes])
 
   // Fetch personalized matches for authenticated buyers who have saved preferences.
   useEffect(() => {
@@ -280,6 +286,7 @@ const MarketplacePage = () => {
     if (filters.yearsActiveMin) count++
     if (filters.state) count++
     if (filters.amazonStatus && filters.amazonStatus !== 'all') count++
+    if (filters.authorityTypes && filters.authorityTypes.length > 0) count++
     if (filters.hasHighway) count++
     if (filters.hasEmail) count++
     if (filters.hasPhone) count++
@@ -316,6 +323,12 @@ const MarketplacePage = () => {
       // Amazon status filter
       if (filters.amazonStatus && filters.amazonStatus !== 'all') {
         if (listing.amazonStatus !== filters.amazonStatus) return false
+      }
+
+      // Authority type filter
+      if (filters.authorityTypes && filters.authorityTypes.length > 0) {
+        const lt = listing.authorityType || 'MOTOR_CARRIER'
+        if (!filters.authorityTypes.includes(lt)) return false
       }
 
       // Highway filter
@@ -377,6 +390,7 @@ const MarketplacePage = () => {
       verified: undefined,
       state: undefined,
       amazonStatus: undefined,
+      authorityTypes: undefined,
       hasHighway: undefined,
       hasEmail: undefined,
       hasPhone: undefined,
@@ -425,6 +439,33 @@ const MarketplacePage = () => {
 
             {/* Quick Filter Chips */}
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setFilters(prev => {
+                    const set = new Set(prev.authorityTypes || [])
+                    const hasBroker = set.has('BROKER') || set.has('MOTOR_CARRIER_AND_BROKER')
+                    if (hasBroker) {
+                      set.delete('BROKER')
+                      set.delete('MOTOR_CARRIER_AND_BROKER')
+                    } else {
+                      set.add('BROKER')
+                      set.add('MOTOR_CARRIER_AND_BROKER')
+                    }
+                    const next = Array.from(set) as AuthorityType[]
+                    return { ...prev, authorityTypes: next.length > 0 ? next : undefined }
+                  })
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  (filters.authorityTypes?.includes('BROKER') || filters.authorityTypes?.includes('MOTOR_CARRIER_AND_BROKER'))
+                    ? 'bg-indigo-50 border border-indigo-200 text-indigo-700'
+                    : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                Broker
+                {(filters.authorityTypes?.includes('BROKER') || filters.authorityTypes?.includes('MOTOR_CARRIER_AND_BROKER')) && <CheckCircle className="w-3.5 h-3.5" />}
+              </button>
+
               <button
                 onClick={() => setFilters(prev => ({ ...prev, amazonStatus: prev.amazonStatus === 'active' ? undefined : 'active' as AmazonStatus }))}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
@@ -598,6 +639,37 @@ const MarketplacePage = () => {
                       { value: 'false', label: 'Unverified' }
                     ]}
                   />
+
+                  {/* Authority Type (multi-select) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Authority Type</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(Object.keys(AUTHORITY_TYPE_LABELS) as AuthorityType[]).map((t) => {
+                        const selected = filters.authorityTypes?.includes(t) || false
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => {
+                              setFilters(prev => {
+                                const set = new Set(prev.authorityTypes || [])
+                                if (set.has(t)) set.delete(t); else set.add(t)
+                                const next = Array.from(set) as AuthorityType[]
+                                return { ...prev, authorityTypes: next.length > 0 ? next : undefined }
+                              })
+                            }}
+                            className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
+                              selected
+                                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            {AUTHORITY_TYPE_LABELS[t]}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
 
                   {/* Sort By */}
                   <Select
