@@ -12,7 +12,7 @@ import type {
   V2MonitoringAlert, V2RiskScoreTrend, V2InsuranceGap, V2ViolationTrend,
   V2RelatedCarrier, V2CarrierPercentile, V2DocumentItem,
   V2VinInspection, V2NetworkSignal, V2BenchmarkData,
-  V2ChameleonAnalysis, V2ChameleonFlag, ChameleonSeverity,
+  V2ChameleonAnalysis, V2ChameleonFlag, ChameleonSeverity, V2ChameleonLinkedCarrier,
 } from '../components/v2/mockData'
 
 // ============================================================
@@ -1917,106 +1917,238 @@ export function detectChameleonCarrier(report: any, listing?: MCListingExtended)
   const relatedList: any[] = Array.isArray(related) ? related : []
 
   // ------------------------------------------------------------------
-  // 1. RELATED CARRIERS WITH REVOKED STATUS
-  //    The strongest chameleon signal: another carrier sharing identity
-  //    markers that has been revoked by FMCSA.
+  // 1. RELATED CARRIERS — group by DOT, dedupe shared fields per carrier.
+  //    MorPro returns one row per (carrier × sharedField), so the same
+  //    DOT appears multiple times if it shares more than one identity
+  //    marker. We collapse to one entry per DOT with sharedFields[].
   // ------------------------------------------------------------------
-  for (const r of relatedList) {
-    const status = String(r.operatingStatus || r.status || '').toLowerCase()
-    const isRevoked = status === 'revoked' || status === 'r' || status === 'inactive-revoked'
-    const isInactive = status === 'inactive' || status === 'n' || status === 'not authorized'
-    const sharedField = (r.sharedField || r.shared_field || 'unknown').toLowerCase()
-    const otherName = r.legalName || r.legal_name || 'Unknown carrier'
-    const otherDot = String(r.dotNumber || r.dot_number || '')
+  type LinkedAccum = V2ChameleonLinkedCarrier & { rawStatus: string }
+  const linkedByDot = new Map<string, LinkedAccum>()
 
-    if (isRevoked || isInactive) {
-      relatedRevokedCarriers.push({
+  for (const r of relatedList) {
+    const otherDot = String(r.dotNumber || r.dot_number || '')
+    if (!otherDot) continue
+    const rawStatus = String(r.operatingStatus || r.status || '').toLowerCase()
+    const status: 'active' | 'inactive' | 'revoked' =
+      rawStatus === 'revoked' || rawStatus === 'r' || rawStatus === 'inactive-revoked' ? 'revoked'
+      : rawStatus === 'a' || rawStatus === 'active' || rawStatus === 'y' ? 'active'
+      : 'inactive'
+    const sharedField = String(r.sharedField || r.shared_field || 'unknown').toLowerCase()
+
+    const existing = linkedByDot.get(otherDot)
+    if (existing) {
+      if (!existing.sharedFields.includes(sharedField)) existing.sharedFields.push(sharedField)
+    } else {
+      linkedByDot.set(otherDot, {
+        mcNumber: r.mcNumber || r.mc_number || '',
         dotNumber: otherDot,
-        legalName: otherName,
-        sharedField,
-        status: isRevoked ? 'revoked' : 'inactive',
+        legalName: r.legalName || r.legal_name || 'Unknown carrier',
+        dbaName: r.dbaName || r.dba_name || '',
+        status,
+        sharedFields: [sharedField],
+        powerUnits: parseInt(r.powerUnits ?? r.total_power_units ?? 0) || 0,
+        location: r.location || r.city_state || '',
+        rawStatus,
       })
     }
+  }
 
-    if (isRevoked) {
-      // Shared EIN with revoked carrier — strongest signal
-      if (sharedField === 'ein') {
-        flags.push({
-          signal: 'Shared EIN with revoked carrier',
-          severity: 'critical',
-          points: 35,
-          detail: 'This carrier shares an Employer Identification Number (EIN) with a carrier whose authority was revoked by FMCSA. A shared EIN means the same legal entity is operating under a different MC number — a primary indicator of chameleon carrier behavior.',
-          evidence: `Shares EIN with ${otherName} (DOT ${otherDot}), status: REVOKED`,
-        })
-      }
+  const linkedCarriers: V2ChameleonLinkedCarrier[] = Array.from(linkedByDot.values()).map(
+    ({ rawStatus: _r, ...rest }) => rest
+  )
 
-      // Shared officer/principal with revoked carrier
-      if (sharedField === 'officer' || sharedField === 'principal') {
-        flags.push({
-          signal: 'Shared officer with revoked carrier',
-          severity: 'critical',
-          points: 30,
-          detail: 'An officer or principal of this carrier is also listed on a carrier whose authority was revoked. FMCSA tracks beneficial ownership to prevent individuals from circumventing safety enforcement by opening new companies.',
-          evidence: `Shares officer/principal with ${otherName} (DOT ${otherDot}), status: REVOKED`,
-        })
-      }
+  // Identifier helper for evidence/labels — prefer MC#, fall back to DOT#
+  const idOf = (lc: { mcNumber: string; dotNumber: string }): string =>
+    lc.mcNumber ? `MC-${String(lc.mcNumber).replace(/^MC-?/i, '')} (DOT ${lc.dotNumber})` : `DOT ${lc.dotNumber}`
 
-      // Shared address with revoked carrier
-      if (sharedField === 'address') {
-        flags.push({
-          signal: 'Shared address with revoked carrier',
-          severity: 'high',
-          points: 20,
-          detail: 'This carrier operates from the same physical address as a carrier whose authority was revoked. While shared addresses can occur legitimately (e.g., shared warehouses), combined with other signals this is a strong chameleon indicator.',
-          evidence: `Shares address with ${otherName} (DOT ${otherDot}), status: REVOKED`,
-        })
-      }
+  // Severity-to-points mapping for active-sharing flags. Lower than revoked
+  // counterparts because corporate sister entities legitimately share these.
+  // Active-sharing total contribution is capped below to avoid false positives.
+  const activeWeights: Record<string, { signal: string; severity: ChameleonSeverity; points: number; detail: string }> = {
+    ein: {
+      signal: 'Same EIN as another active MC',
+      severity: 'high',
+      points: 25,
+      detail: 'This carrier shares an Employer Identification Number (EIN) with another currently active MC. A shared EIN means the same legal entity is operating under multiple authorities simultaneously — review whether this is a legitimate corporate structure or an attempt to spread safety risk across MC numbers.',
+    },
+    vin: {
+      signal: 'Same vehicle VIN registered under another active MC',
+      severity: 'high',
+      points: 18,
+      detail: 'One or more vehicle VINs registered to this carrier are also registered under another active MC number. VINs should not appear under two carriers at once without proper transfer paperwork — this can indicate double-bookkeeping, equipment leasing without disclosure, or two operations sharing the same fleet under different authorities.',
+    },
+    vehicle: {
+      signal: 'Same vehicle VIN registered under another active MC',
+      severity: 'high',
+      points: 18,
+      detail: 'One or more vehicle VINs registered to this carrier are also registered under another active MC number. VINs should not appear under two carriers at once without proper transfer paperwork — this can indicate double-bookkeeping, equipment leasing without disclosure, or two operations sharing the same fleet under different authorities.',
+    },
+    officer: {
+      signal: 'Same owner/officer as another active MC',
+      severity: 'medium',
+      points: 12,
+      detail: 'An officer or principal of this carrier is also listed on another currently active MC. Common in family businesses and corporate groups, but worth verifying — the same person controlling multiple authorities can be a way to keep operating after one MC accumulates safety violations.',
+    },
+    principal: {
+      signal: 'Same owner/officer as another active MC',
+      severity: 'medium',
+      points: 12,
+      detail: 'An officer or principal of this carrier is also listed on another currently active MC. Common in family businesses and corporate groups, but worth verifying — the same person controlling multiple authorities can be a way to keep operating after one MC accumulates safety violations.',
+    },
+    phone: {
+      signal: 'Same phone number as another active MC',
+      severity: 'medium',
+      points: 10,
+      detail: 'This carrier uses the same phone number as another active MC. Shared phone numbers across separate authorities can indicate a single dispatch operating multiple MCs in parallel — a pattern that may surface under enforcement scrutiny.',
+    },
+    address: {
+      signal: 'Same physical address as another active MC',
+      severity: 'low',
+      points: 8,
+      detail: 'This carrier operates from the same physical address as another active MC. Shared addresses are common (warehouses, registered agents, corporate parks), so this is a low-weight signal on its own — but it amplifies other chameleon indicators.',
+    },
+  }
 
-      // Shared phone with revoked carrier
-      if (sharedField === 'phone') {
-        flags.push({
-          signal: 'Shared phone with revoked carrier',
-          severity: 'high',
-          points: 15,
-          detail: 'This carrier uses the same phone number as a carrier whose authority was revoked. Reuse of contact information across entities is a common chameleon carrier pattern tracked by FMCSA.',
-          evidence: `Shares phone number with ${otherName} (DOT ${otherDot}), status: REVOKED`,
-        })
-      }
+  // Cap on cumulative active-sharing points across all linked carriers, so a
+  // legitimate corporate group with many sister MCs does not score "high".
+  const ACTIVE_SHARING_CAP = 30
 
-      // Shared VIN with revoked carrier
-      if (sharedField === 'vin' || sharedField === 'vehicle') {
-        flags.push({
-          signal: 'Shared vehicles with revoked carrier',
-          severity: 'high',
-          points: 20,
-          detail: 'Vehicles (VINs) registered to this carrier were also registered to a revoked carrier. Equipment transfers from a shut-down operation to a new MC number is a hallmark of chameleon carriers trying to continue operating the same fleet.',
-          evidence: `Shares vehicle VINs with ${otherName} (DOT ${otherDot}), status: REVOKED`,
-        })
-      }
+  // For active sharing we aggregate ONE flag per signal type (not per carrier),
+  // listing all matched MCs in the evidence. Without this, Schneider's 4 sister
+  // MCs each produce a duplicate "Same phone" flag.
+  const activeMatchesBySignal = new Map<string, V2ChameleonLinkedCarrier[]>()
 
-      // Generic shared field with revoked carrier (catch-all)
-      if (!['ein', 'officer', 'principal', 'address', 'phone', 'vin', 'vehicle'].includes(sharedField)) {
-        flags.push({
-          signal: `Related to revoked carrier (${sharedField})`,
-          severity: 'medium',
-          points: 10,
-          detail: `This carrier shares a "${sharedField}" connection with a carrier whose authority was revoked. FMCSA flags related entities to identify carriers attempting to evade safety enforcement.`,
-          evidence: `Related via "${sharedField}" to ${otherName} (DOT ${otherDot}), status: REVOKED`,
+  for (const lc of linkedCarriers) {
+    const otherLabel = `${lc.legalName}${lc.dbaName ? ` (DBA ${lc.dbaName})` : ''}`
+    const idLabel = idOf(lc)
+
+    // Maintain legacy relatedRevokedCarriers list (one row per shared field, as before)
+    if (lc.status === 'revoked' || lc.status === 'inactive') {
+      for (const sf of lc.sharedFields) {
+        relatedRevokedCarriers.push({
+          mcNumber: lc.mcNumber,
+          dotNumber: lc.dotNumber,
+          legalName: lc.legalName,
+          sharedField: sf,
+          status: lc.status,
+          powerUnits: lc.powerUnits,
+          location: lc.location,
         })
       }
     }
 
-    // Inactive related carriers are a weaker signal but still worth flagging
-    if (isInactive && !isRevoked) {
-      if (['ein', 'officer', 'principal'].includes(sharedField)) {
+    if (lc.status === 'revoked') {
+      // Revoked-sharing rules — strongest chameleon signal. Emit one flag
+      // per unique sharedField on this carrier (preserves prior behavior).
+      for (const sf of lc.sharedFields) {
+        if (sf === 'ein') {
+          flags.push({
+            signal: 'Shared EIN with revoked carrier',
+            severity: 'critical',
+            points: 35,
+            detail: 'This carrier shares an Employer Identification Number (EIN) with a carrier whose authority was revoked by FMCSA. A shared EIN means the same legal entity is operating under a different MC number — a primary indicator of chameleon carrier behavior.',
+            evidence: `Shares EIN with ${otherLabel} — ${idLabel}, status: REVOKED`,
+          })
+        } else if (sf === 'officer' || sf === 'principal') {
+          flags.push({
+            signal: 'Shared officer with revoked carrier',
+            severity: 'critical',
+            points: 30,
+            detail: 'An officer or principal of this carrier is also listed on a carrier whose authority was revoked. FMCSA tracks beneficial ownership to prevent individuals from circumventing safety enforcement by opening new companies.',
+            evidence: `Shares officer/principal with ${otherLabel} — ${idLabel}, status: REVOKED`,
+          })
+        } else if (sf === 'address') {
+          flags.push({
+            signal: 'Shared address with revoked carrier',
+            severity: 'high',
+            points: 20,
+            detail: 'This carrier operates from the same physical address as a carrier whose authority was revoked. While shared addresses can occur legitimately (e.g., shared warehouses), combined with other signals this is a strong chameleon indicator.',
+            evidence: `Shares address with ${otherLabel} — ${idLabel}, status: REVOKED`,
+          })
+        } else if (sf === 'phone') {
+          flags.push({
+            signal: 'Shared phone with revoked carrier',
+            severity: 'high',
+            points: 15,
+            detail: 'This carrier uses the same phone number as a carrier whose authority was revoked. Reuse of contact information across entities is a common chameleon carrier pattern tracked by FMCSA.',
+            evidence: `Shares phone number with ${otherLabel} — ${idLabel}, status: REVOKED`,
+          })
+        } else if (sf === 'vin' || sf === 'vehicle') {
+          flags.push({
+            signal: 'Shared vehicles with revoked carrier',
+            severity: 'high',
+            points: 20,
+            detail: 'Vehicles (VINs) registered to this carrier were also registered to a revoked carrier. Equipment transfers from a shut-down operation to a new MC number is a hallmark of chameleon carriers trying to continue operating the same fleet.',
+            evidence: `Shares vehicle VINs with ${otherLabel} — ${idLabel}, status: REVOKED`,
+          })
+        } else {
+          flags.push({
+            signal: `Related to revoked carrier (${sf})`,
+            severity: 'medium',
+            points: 10,
+            detail: `This carrier shares a "${sf}" connection with a carrier whose authority was revoked. FMCSA flags related entities to identify carriers attempting to evade safety enforcement.`,
+            evidence: `Related via "${sf}" to ${otherLabel} — ${idLabel}, status: REVOKED`,
+          })
+        }
+      }
+    } else if (lc.status === 'inactive') {
+      // Inactive-sharing — only weight identity-level matches.
+      const hasIdentityShare = lc.sharedFields.some(sf => ['ein', 'officer', 'principal'].includes(sf))
+      if (hasIdentityShare) {
+        const sf = lc.sharedFields.find(s => ['ein', 'officer', 'principal'].includes(s)) || 'identity'
         flags.push({
-          signal: `Shared ${sharedField} with inactive carrier`,
+          signal: `Shared ${sf} with inactive carrier`,
           severity: 'low',
           points: 5,
-          detail: `This carrier shares an identity marker with an inactive carrier. While inactive status alone is not evidence of chameleon behavior, it warrants review if combined with other signals.`,
-          evidence: `Shares ${sharedField} with ${otherName} (DOT ${otherDot}), status: INACTIVE`,
+          detail: 'This carrier shares an identity marker with an inactive carrier. While inactive status alone is not evidence of chameleon behavior, it warrants review if combined with other signals.',
+          evidence: `Shares ${lc.sharedFields.join(', ')} with ${otherLabel} — ${idLabel}, status: INACTIVE`,
         })
       }
+    } else {
+      // Active-sharing — bucket this carrier under each signal type it
+      // matches. We emit ONE aggregated flag per signal below (not per
+      // carrier), to avoid duplicate flags when many sisters share the
+      // same field. Suppress evidence-tracking for unrecognized fields.
+      void otherLabel; void idLabel
+      for (const sf of lc.sharedFields) {
+        if (!activeWeights[sf]) continue
+        const list = activeMatchesBySignal.get(sf) || []
+        list.push(lc)
+        activeMatchesBySignal.set(sf, list)
+      }
+    }
+  }
+
+  // Emit one aggregated flag per active-sharing signal type, ordered by
+  // severity. Apply the cumulative cap so corporate groups don't ladder up.
+  const severityRank: Record<ChameleonSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+  const aggregatedActive: V2ChameleonFlag[] = []
+  for (const [sf, matches] of activeMatchesBySignal.entries()) {
+    const cfg = activeWeights[sf]
+    if (!cfg || matches.length === 0) continue
+    const sample = matches.slice(0, 5).map(m => `${m.legalName} — ${idOf(m)}`).join('; ')
+    const more = matches.length > 5 ? ` (+${matches.length - 5} more)` : ''
+    aggregatedActive.push({
+      signal: cfg.signal,
+      severity: cfg.severity,
+      points: cfg.points,
+      detail: cfg.detail,
+      evidence: `${matches.length} active MC${matches.length > 1 ? 's' : ''} ${matches.length === 1 ? 'shares' : 'share'} the same ${sf === 'vin' || sf === 'ein' ? sf.toUpperCase() : sf}: ${sample}${more}`,
+    })
+  }
+  aggregatedActive.sort((a, b) => severityRank[a.severity] - severityRank[b.severity] || b.points - a.points)
+
+  let activeSharingPoints = 0
+  for (const f of aggregatedActive) {
+    if (activeSharingPoints + f.points <= ACTIVE_SHARING_CAP) {
+      flags.push(f)
+      activeSharingPoints += f.points
+    } else if (activeSharingPoints < ACTIVE_SHARING_CAP) {
+      flags.push({ ...f, points: ACTIVE_SHARING_CAP - activeSharingPoints })
+      activeSharingPoints = ACTIVE_SHARING_CAP
+      break
+    } else {
+      break
     }
   }
 
@@ -2037,16 +2169,28 @@ export function detectChameleonCarrier(report: any, listing?: MCListingExtended)
     else if (sharedVinCount > 5) { severity = 'high'; points = 15 }
 
     const otherCarriers = Array.isArray(sharedVinDetails)
-      ? sharedVinDetails.slice(0, 3).map((s: any) =>
-          `${s.sharedWithName || s.otherLegalName || 'Unknown'} (DOT ${s.sharedWithDot || s.otherDotNumber || '?'})`
-        ).join(', ')
+      ? sharedVinDetails.slice(0, 3).map((s: any) => {
+          const sharedDot = String(s.sharedWithDot || s.otherDotNumber || '')
+          const linked = sharedDot ? linkedByDot.get(sharedDot) : undefined
+          const id = linked ? idOf(linked) : `DOT ${sharedDot || '?'}`
+          const name = s.sharedWithName || s.otherLegalName || linked?.legalName || 'Unknown'
+          return `${name} — ${id}`
+        }).join('; ')
+      : ''
+
+    // Sample VIN list (first 3) so the evidence shows the actual VIN strings.
+    const vinSamples = Array.isArray(sharedVinDetails)
+      ? sharedVinDetails.slice(0, 3).map((s: any) => s.vin).filter(Boolean)
+      : []
+    const vinPreview = vinSamples.length > 0
+      ? ` Sample VIN${vinSamples.length > 1 ? 's' : ''}: ${vinSamples.join(', ')}${sharedVinCount > vinSamples.length ? ` (+${sharedVinCount - vinSamples.length} more)` : ''}.`
       : ''
 
     flags.push({
       signal: `${sharedVinCount} vehicle${sharedVinCount > 1 ? 's' : ''} shared with other carriers`,
       severity,
       points,
-      detail: `${sharedPowerUnits > 0 ? sharedPowerUnits + ' power units' : ''}${sharedPowerUnits > 0 && sharedTrailers > 0 ? ' and ' : ''}${sharedTrailers > 0 ? sharedTrailers + ' trailers' : ''} registered to this carrier are also registered under other DOT numbers. Shared equipment between carriers can indicate the same operation running under multiple authorities to distribute safety risk or evade enforcement.`,
+      detail: `${sharedPowerUnits > 0 ? sharedPowerUnits + ' power units' : ''}${sharedPowerUnits > 0 && sharedTrailers > 0 ? ' and ' : ''}${sharedTrailers > 0 ? sharedTrailers + ' trailers' : ''} registered to this carrier are also registered under other MC numbers. Shared equipment between carriers can indicate the same operation running under multiple authorities to distribute safety risk or evade enforcement.${vinPreview}`,
       evidence: otherCarriers ? `Shared with: ${otherCarriers}` : `${sharedVinCount} VINs shared across carriers`,
     })
   }
@@ -2192,5 +2336,6 @@ export function detectChameleonCarrier(report: any, listing?: MCListingExtended)
     flags,
     summary,
     relatedRevokedCarriers,
+    linkedCarriers,
   }
 }

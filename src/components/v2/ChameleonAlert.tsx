@@ -153,37 +153,67 @@ export default function ChameleonAlert({ analysis }: ChameleonAlertProps) {
             </div>
           )}
 
-          {/* Related revoked carriers */}
-          {analysis.relatedRevokedCarriers.length > 0 && (
+          {/* Linked carriers — every related MC, grouped by DOT, with all sharedFields */}
+          {analysis.linkedCarriers.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Linked Revoked / Inactive Carriers</h4>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Other MCs Sharing Identity Markers ({analysis.linkedCarriers.length})
+              </h4>
+              <p className="text-xs text-gray-500 mb-2">
+                Carriers that share at least one of: VIN, address, phone, EIN, or owner/officer with this MC.
+              </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Carrier</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">DOT</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Connection</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">MC #</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">DOT #</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Shares</th>
                       <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {analysis.relatedRevokedCarriers.map((rc, i) => (
+                    {analysis.linkedCarriers.map((lc, i) => (
                       <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2 px-3 text-gray-700 font-medium">{rc.legalName}</td>
+                        <td className="py-2 px-3">
+                          <div className="text-gray-700 font-medium">{lc.legalName}</div>
+                          {lc.dbaName && <div className="text-xs text-gray-500">DBA {lc.dbaName}</div>}
+                          {lc.location && <div className="text-xs text-gray-400">{lc.location}{lc.powerUnits > 0 ? ` · ${lc.powerUnits} pu` : ''}</div>}
+                        </td>
+                        <td className="py-2 px-3 font-mono text-xs text-gray-600">
+                          {lc.mcNumber ? (lc.mcNumber.toUpperCase().startsWith('MC') ? lc.mcNumber : `MC-${lc.mcNumber}`) : <span className="text-gray-300">—</span>}
+                        </td>
                         <td className="py-2 px-3 font-mono text-xs text-gray-600">
                           <span className="inline-flex items-center gap-1">
-                            {rc.dotNumber}
+                            {lc.dotNumber}
                             <ExternalLink className="w-3 h-3 text-gray-400" />
                           </span>
                         </td>
                         <td className="py-2 px-3">
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full capitalize">{rc.sharedField}</span>
+                          <div className="flex flex-wrap gap-1">
+                            {lc.sharedFields.map((sf, j) => (
+                              <span
+                                key={j}
+                                className={`px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase ${
+                                  sf === 'ein' || sf === 'officer' || sf === 'principal'
+                                    ? 'bg-purple-100 text-purple-700'
+                                    : sf === 'vin' || sf === 'vehicle'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                {sf === 'principal' ? 'officer' : sf === 'vehicle' ? 'vin' : sf}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="py-2 px-3">
                           <span className={`px-2 py-0.5 text-xs font-semibold rounded-full uppercase ${
-                            rc.status === 'revoked' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
-                          }`}>{rc.status}</span>
+                            lc.status === 'revoked' ? 'bg-red-100 text-red-700'
+                            : lc.status === 'inactive' ? 'bg-gray-100 text-gray-600'
+                            : 'bg-emerald-100 text-emerald-700'
+                          }`}>{lc.status}</span>
                         </td>
                       </tr>
                     ))}

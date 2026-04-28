@@ -458,17 +458,32 @@ export interface V2ChameleonFlag {
   evidence: string            // Specific data that triggered this flag
 }
 
+export interface V2ChameleonLinkedCarrier {
+  mcNumber: string            // MC number of the related carrier ('' if none assigned)
+  dotNumber: string
+  legalName: string
+  dbaName: string
+  status: 'active' | 'inactive' | 'revoked'
+  sharedFields: string[]      // All fields shared with this carrier: address, phone, ein, officer, vin
+  powerUnits: number
+  location: string            // City, State
+}
+
 export interface V2ChameleonAnalysis {
   riskScore: number           // 0-100 composite score
   riskLevel: 'none' | 'low' | 'moderate' | 'high' | 'critical'
   flags: V2ChameleonFlag[]
   summary: string             // One-sentence verdict
   relatedRevokedCarriers: Array<{
+    mcNumber: string
     dotNumber: string
     legalName: string
     sharedField: string       // What they share: address, EIN, officer, phone, VIN
     status: string
+    powerUnits: number
+    location: string
   }>
+  linkedCarriers: V2ChameleonLinkedCarrier[]   // All flagged related carriers grouped by DOT (active + inactive + revoked)
 }
 
 // ============================================================

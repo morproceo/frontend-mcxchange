@@ -2462,7 +2462,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
         availableDocuments: [], complianceFinancials: fallbackComplianceFinancials,
         relatedCarriers: [], percentiles: [], monitoringAlerts: [], riskScoreTrend: [],
         contactHistory: fallbackContactHistory, vinInspections: [], networkSignals: [],
-        benchmarks: [], chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [] },
+        benchmarks: [], chameleonAnalysis: { riskScore: 0, riskLevel: 'none', flags: [], summary: '', relatedRevokedCarriers: [], linkedCarriers: [] },
         healthCategories: [], carrierLoading, carrierError, previewMode,
       }
     }
