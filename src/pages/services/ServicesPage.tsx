@@ -91,6 +91,14 @@ const ServicesPage = () => {
 
   const services = [
     {
+      icon: SquareParking,
+      title: 'Parking',
+      description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.',
+      link: 'https://www.gospotty.com/',
+      external: true,
+      features: ['Monetize unused parking space', 'Secure overnight parking nationwide', 'Powered by Spotty Network']
+    },
+    {
       icon: Users,
       title: 'Driver Recruiting',
       description: 'We recruit company drivers, owner operators for Amazon Relay, and lease drivers. Our recruiters are trained by the owner and understand the industry inside out.',
@@ -124,14 +132,6 @@ const ServicesPage = () => {
       description: 'Streamline your back office with our comprehensive administrative support services.',
       link: '/services/admin',
       features: ['Invoicing & billing', 'Document management', 'IFTA/IRP filing']
-    },
-    {
-      icon: SquareParking,
-      title: 'Parking',
-      description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.',
-      link: 'https://www.gospotty.com/',
-      external: true,
-      features: ['Monetize unused parking space', 'Secure overnight parking nationwide', 'Powered by Spotty Network']
     }
   ]
 

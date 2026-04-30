@@ -89,13 +89,13 @@ const steps = [
 ]
 
 const services = [
+  { icon: SquareParking, title: 'Parking', description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.', href: 'https://www.gospotty.com/', external: true },
   { icon: Fuel, title: 'Fuel Program', description: 'Discounted diesel at 4,000+ truck stops nationwide. Save $0.20–$0.50/gallon.', href: '/services/fuel-program' },
   { icon: HardHat, title: 'Safety & DOT Compliance', description: 'Mock audits, driver files, drug testing, and CSA monitoring to keep you running clean.', href: '/services/safety' },
   { icon: UserPlus, title: 'Driver Recruiting', description: 'Qualified CDL drivers delivered to your inbox. Pre-screened and ready to roll.', href: '/services/recruiting' },
   { icon: Headphones, title: 'Dispatch Services', description: 'Professional dispatchers finding top-paying loads and handling broker negotiations.', href: '/services/dispatch' },
   { icon: Briefcase, title: 'Admin & Back Office', description: 'IFTA, permits, BOC-3, process agent — all the paperwork handled so you can drive.', href: '/services/admin' },
   { icon: Search, title: 'Carrier Search & MC Lookup', description: 'Instant FMCSA lookups, carrier verification, and business due diligence reports.', href: '/services' },
-  { icon: SquareParking, title: 'Parking', description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.', href: 'https://www.gospotty.com/', external: true },
 ]
 
 const testimonials = [
