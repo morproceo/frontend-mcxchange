@@ -21,6 +21,7 @@ import {
   Bot,
   DollarSign,
   ShieldAlert,
+  SquareParking,
 } from 'lucide-react'
 import { useState } from 'react'
 import Button from './ui/Button'
@@ -42,6 +43,7 @@ const Navbar = () => {
   ]
 
   const serviceLinks = [
+    { name: 'Parking', href: 'https://www.gospotty.com/', icon: SquareParking, desc: 'List or find truck parking', external: true },
     { name: 'Fuel Program', href: '/services/fuel-program', icon: Fuel, desc: 'Save on fuel costs' },
     { name: 'Safety Services', href: '/services/safety', icon: Shield, desc: 'DOT compliance' },
     { name: 'Recruiting', href: '/services/recruiting', icon: Users, desc: 'Find qualified drivers' },
@@ -176,21 +178,39 @@ const Navbar = () => {
                   >
                     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                       <div className="p-2">
-                        {serviceLinks.map((service) => (
-                          <Link
-                            key={service.name}
-                            to={service.href}
-                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
-                          >
-                            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-gray-900 transition-colors">
-                              <service.icon className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">{service.name}</div>
-                              <div className="text-sm text-gray-500">{service.desc}</div>
-                            </div>
-                          </Link>
-                        ))}
+                        {serviceLinks.map((service) => {
+                          const itemInner = (
+                            <>
+                              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-gray-900 transition-colors">
+                                <service.icon className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{service.name}</div>
+                                <div className="text-sm text-gray-500">{service.desc}</div>
+                              </div>
+                            </>
+                          )
+                          const itemClass = "flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
+                          return service.external ? (
+                            <a
+                              key={service.name}
+                              href={service.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={itemClass}
+                            >
+                              {itemInner}
+                            </a>
+                          ) : (
+                            <Link
+                              key={service.name}
+                              to={service.href}
+                              className={itemClass}
+                            >
+                              {itemInner}
+                            </Link>
+                          )
+                        })}
                       </div>
                       <div className="border-t border-gray-100 p-3">
                         <Link
@@ -366,17 +386,32 @@ const Navbar = () => {
                   Services
                 </Link>
                 <div className="mt-2 space-y-1 pl-4 border-l-2 border-gray-100">
-                  {serviceLinks.map((service) => (
-                    <Link
-                      key={service.name}
-                      to={service.href}
-                      className="flex items-center gap-2 py-2 text-sm text-gray-500 hover:text-gray-900"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <service.icon className="w-4 h-4" />
-                      {service.name}
-                    </Link>
-                  ))}
+                  {serviceLinks.map((service) => {
+                    const itemClass = "flex items-center gap-2 py-2 text-sm text-gray-500 hover:text-gray-900"
+                    return service.external ? (
+                      <a
+                        key={service.name}
+                        href={service.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={itemClass}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <service.icon className="w-4 h-4" />
+                        {service.name}
+                      </a>
+                    ) : (
+                      <Link
+                        key={service.name}
+                        to={service.href}
+                        className={itemClass}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <service.icon className="w-4 h-4" />
+                        {service.name}
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
 
