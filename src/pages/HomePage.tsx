@@ -27,8 +27,6 @@ import {
   XCircle,
   Activity,
   Gauge,
-  Radar,
-  FileBarChart,
   BarChart3,
   Truck,
   Umbrella,
@@ -376,8 +374,6 @@ const HomePage = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { icon: Gauge, label: 'Health Score (0-100)', desc: 'Weighted score across safety, compliance, insurance, fleet & history' },
-                    { icon: Radar, label: 'Chameleon Detection', desc: 'Catch carriers hiding behind new MC numbers after shutdowns' },
-                    { icon: FileBarChart, label: 'Safety Improvement Report', desc: 'Prioritized action plan with grades A+ to D' },
                     { icon: BarChart3, label: 'Industry Benchmarks', desc: 'Compare OOS rates, clean inspection rates vs national averages' },
                     { icon: TrendingUp, label: 'Violation Trends', desc: '24-month trends showing if safety is improving or worsening' },
                     { icon: Umbrella, label: 'Insurance Gap Analysis', desc: 'Coverage gaps, pending cancellations & renewal timeline' },
@@ -427,8 +423,6 @@ const HomePage = () => {
                     { feature: 'Insurance Gap Detection', fmcsa: false, pulse: true },
                     { feature: 'Coverage Amount Analysis', fmcsa: false, pulse: true },
                     { feature: 'Fleet Age & VIN Inspection Data', fmcsa: false, pulse: true },
-                    { feature: 'Chameleon Carrier Detection', fmcsa: false, pulse: true, bundle: true },
-                    { feature: 'Safety Improvement Report', fmcsa: false, pulse: true, bundle: true },
                     { feature: 'Prioritized Action Plan (A+ to D)', fmcsa: false, pulse: true, bundle: true },
                   ].map((row, i) => (
                     <div key={i} className={`grid grid-cols-[1fr,80px,80px] px-6 py-2.5 items-center ${!row.fmcsa ? 'bg-indigo-500/[0.03]' : ''}`}>
