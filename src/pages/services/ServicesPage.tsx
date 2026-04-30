@@ -25,6 +25,7 @@ import {
   Sparkles,
   ShieldAlert,
   Eye,
+  SquareParking,
 } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -123,6 +124,14 @@ const ServicesPage = () => {
       description: 'Streamline your back office with our comprehensive administrative support services.',
       link: '/services/admin',
       features: ['Invoicing & billing', 'Document management', 'IFTA/IRP filing']
+    },
+    {
+      icon: SquareParking,
+      title: 'Parking',
+      description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.',
+      link: 'https://www.gospotty.com/register/host',
+      external: true,
+      features: ['Monetize unused parking space', 'Secure overnight parking nationwide', 'Powered by Spotty Network']
     }
   ]
 
@@ -404,42 +413,51 @@ const ServicesPage = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <motion.div
-                key={service.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Link to={service.link}>
-                  <Card hover className="h-full group cursor-pointer">
-                    <div className="mb-6">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors duration-300">
-                        <service.icon className="w-7 h-7 text-gray-700 group-hover:text-white transition-colors duration-300" />
-                      </div>
+            {services.map((service, index) => {
+              const cardInner = (
+                <Card hover className="h-full group cursor-pointer">
+                  <div className="mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors duration-300">
+                      <service.icon className="w-7 h-7 text-gray-700 group-hover:text-white transition-colors duration-300" />
                     </div>
+                  </div>
 
-                    <h3 className="text-2xl font-bold mb-3 text-gray-900">{service.title}</h3>
-                    <p className="text-gray-500 mb-6">{service.description}</p>
+                  <h3 className="text-2xl font-bold mb-3 text-gray-900">{service.title}</h3>
+                  <p className="text-gray-500 mb-6">{service.description}</p>
 
-                    <ul className="space-y-2 mb-6">
-                      {service.features.map((feature) => (
-                        <li key={feature} className="flex items-center text-sm text-gray-600">
-                          <CheckCircle className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
+                  <ul className="space-y-2 mb-6">
+                    {service.features.map((feature) => (
+                      <li key={feature} className="flex items-center text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
 
-                    <div className="flex items-center text-indigo-600 font-medium group-hover:text-indigo-700">
-                      Learn more
-                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
+                  <div className="flex items-center text-indigo-600 font-medium group-hover:text-indigo-700">
+                    Learn more
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Card>
+              )
+              return (
+                <motion.div
+                  key={service.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  {service.external ? (
+                    <a href={service.link} target="_blank" rel="noopener noreferrer">
+                      {cardInner}
+                    </a>
+                  ) : (
+                    <Link to={service.link}>{cardInner}</Link>
+                  )}
+                </motion.div>
+              )
+            })}
           </div>
         </div>
       </section>
