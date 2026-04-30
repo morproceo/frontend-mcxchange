@@ -32,6 +32,7 @@ import {
   BarChart3,
   Truck,
   Umbrella,
+  SquareParking,
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -96,6 +97,7 @@ const services = [
   { icon: Headphones, title: 'Dispatch Services', description: 'Professional dispatchers finding top-paying loads and handling broker negotiations.', href: '/services/dispatch' },
   { icon: Briefcase, title: 'Admin & Back Office', description: 'IFTA, permits, BOC-3, process agent — all the paperwork handled so you can drive.', href: '/services/admin' },
   { icon: Search, title: 'Carrier Search & MC Lookup', description: 'Instant FMCSA lookups, carrier verification, and business due diligence reports.', href: '/services' },
+  { icon: SquareParking, title: 'Parking', description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.', href: 'https://www.gospotty.com/register/host', external: true },
 ]
 
 const testimonials = [
@@ -651,26 +653,35 @@ const HomePage = () => {
             viewport={{ once: true }}
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            {services.map((s) => (
-              <motion.div key={s.title} variants={fadeUp}>
-                <Link to={s.href}>
-                  <Card hover className="h-full group">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                        <s.icon className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">
-                          {s.title}
-                        </h3>
-                        <p className="text-sm text-gray-500">{s.description}</p>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors flex-shrink-0 mt-1" />
+            {services.map((s) => {
+              const cardInner = (
+                <Card hover className="h-full group">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                      <s.icon className="w-5 h-5 text-indigo-600" />
                     </div>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">
+                        {s.title}
+                      </h3>
+                      <p className="text-sm text-gray-500">{s.description}</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors flex-shrink-0 mt-1" />
+                  </div>
+                </Card>
+              )
+              return (
+                <motion.div key={s.title} variants={fadeUp}>
+                  {s.external ? (
+                    <a href={s.href} target="_blank" rel="noopener noreferrer">
+                      {cardInner}
+                    </a>
+                  ) : (
+                    <Link to={s.href}>{cardInner}</Link>
+                  )}
+                </motion.div>
+              )
+            })}
           </motion.div>
         </div>
       </section>
