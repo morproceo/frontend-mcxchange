@@ -129,7 +129,7 @@ const ServicesPage = () => {
       icon: SquareParking,
       title: 'Parking',
       description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.',
-      link: 'https://www.gospotty.com/register/host',
+      link: 'https://www.gospotty.com/',
       external: true,
       features: ['Monetize unused parking space', 'Secure overnight parking nationwide', 'Powered by Spotty Network']
     }

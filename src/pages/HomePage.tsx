@@ -95,7 +95,7 @@ const services = [
   { icon: Headphones, title: 'Dispatch Services', description: 'Professional dispatchers finding top-paying loads and handling broker negotiations.', href: '/services/dispatch' },
   { icon: Briefcase, title: 'Admin & Back Office', description: 'IFTA, permits, BOC-3, process agent — all the paperwork handled so you can drive.', href: '/services/admin' },
   { icon: Search, title: 'Carrier Search & MC Lookup', description: 'Instant FMCSA lookups, carrier verification, and business due diligence reports.', href: '/services' },
-  { icon: SquareParking, title: 'Parking', description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.', href: 'https://www.gospotty.com/register/host', external: true },
+  { icon: SquareParking, title: 'Parking', description: 'List your truck parking spots and earn extra income, or find secure overnight parking on the road.', href: 'https://www.gospotty.com/', external: true },
 ]
 
 const testimonials = [
