@@ -83,6 +83,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
   const [newTransactionCount, setNewTransactionCount] = useState(0)
   const [activeClosingsCount, setActiveClosingsCount] = useState(0)
   const [paidConsultationsCount, setPaidConsultationsCount] = useState(0)
+  const [pendingAdminOffersCount, setPendingAdminOffersCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -153,6 +154,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
       setNewTransactionCount(0)
       setActiveClosingsCount(0)
       setPaidConsultationsCount(0)
+      setPendingAdminOffersCount(0)
       return
     }
 
@@ -165,6 +167,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           setNewTransactionCount(res.data.newTransactions || 0)
           setActiveClosingsCount(res.data.activeClosings || 0)
           setPaidConsultationsCount(res.data.paidConsultations || 0)
+          setPendingAdminOffersCount(res.data.pendingAdminOffers || 0)
         }
       } catch {
         // ignore
@@ -259,7 +262,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
             icon: Handshake,
             items: [
               { icon: MessageSquare, label: 'Inquiries', path: '/admin/messages', ...(unreadMessageCount > 0 ? { badge: String(unreadMessageCount), badgeColor: 'bg-red-500' } : {}) },
-              { icon: Send, label: 'Offers', path: '/admin/offers' },
+              { icon: Send, label: 'Offers', path: '/admin/offers', ...(pendingAdminOffersCount > 0 ? { badge: String(pendingAdminOffersCount), badgeColor: 'bg-red-500' } : {}) },
               { icon: Scale, label: 'Active Closings', path: '/admin/active-closings', ...(activeClosingsCount > 0 ? { badge: String(activeClosingsCount), badgeColor: 'bg-red-500' } : {}) },
               { icon: Handshake, label: 'Transactions', path: '/admin/transactions', ...(newTransactionCount > 0 ? { badge: String(newTransactionCount), badgeColor: 'bg-red-500' } : {}) },
             ]

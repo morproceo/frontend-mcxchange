@@ -989,7 +989,18 @@ class ApiService {
   }
 
   async getNavBadgeCounts() {
-    return this.request<{ success: boolean; data: { unreadMessages: number; newTransactions: number; activeClosings: number; paidConsultations: number } }>('/notifications/nav-counts');
+    return this.request<{ success: boolean; data: { unreadMessages: number; newTransactions: number; activeClosings: number; paidConsultations: number; pendingAdminOffers: number } }>('/notifications/nav-counts');
+  }
+
+  async addBonusCredits(userId: string, amount: number, reason: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>('/credits/bonus', {
+      method: 'POST',
+      body: JSON.stringify({ userId, amount, reason }),
+    });
   }
 
   async sendInquiryToAdmin(listingId: string | undefined, content: string, contactPhone?: string) {

@@ -83,6 +83,13 @@ const AdminOffersPage = () => {
   const [adminNotes, setAdminNotes] = useState('')
   const [sellerAmountInput, setSellerAmountInput] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [selectedParty, setSelectedParty] = useState<'buyer' | 'seller' | null>(null)
+  const [actionMode, setActionMode] = useState<'message' | 'credits'>('message')
+  const [messageText, setMessageText] = useState('')
+  const [creditAmount, setCreditAmount] = useState('')
+  const [creditReason, setCreditReason] = useState('')
+  const [actionSubmitting, setActionSubmitting] = useState(false)
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -155,7 +162,7 @@ const AdminOffersPage = () => {
     setProcessing(true)
     try {
       await api.approveOffer(selectedOffer.id, adminNotes || undefined)
-      setShowDetailModal(false)
+      closeDetailModal()
       setAdminNotes('')
       fetchOffers()
     } catch (err: any) {
@@ -175,7 +182,7 @@ const AdminOffersPage = () => {
     setProcessing(true)
     try {
       await api.forwardOfferToSeller(selectedOffer.id, amount, adminNotes || undefined)
-      setShowDetailModal(false)
+      closeDetailModal()
       setAdminNotes('')
       setSellerAmountInput('')
       fetchOffers()
@@ -195,13 +202,78 @@ const AdminOffersPage = () => {
     setProcessing(true)
     try {
       await api.rejectOffer(selectedOffer.id, adminNotes)
-      setShowDetailModal(false)
+      closeDetailModal()
       setAdminNotes('')
       fetchOffers()
     } catch (err: any) {
       alert(err.message || 'Failed to reject offer')
     } finally {
       setProcessing(false)
+    }
+  }
+
+  const closeDetailModal = () => {
+    closeDetailModal()
+    setSelectedParty(null)
+    setMessageText('')
+    setCreditAmount('')
+    setCreditReason('')
+    setActionFeedback(null)
+  }
+
+  const openParty = (party: 'buyer' | 'seller') => {
+    setSelectedParty(prev => (prev === party ? null : party))
+    setActionFeedback(null)
+    if (party === 'seller' && selectedOffer?.listing?.status === 'SOLD') {
+      setActionMode('credits')
+      if (!creditReason) setCreditReason('Listing sold — credit refund')
+    } else {
+      setActionMode('message')
+    }
+  }
+
+  const handleSendPartyMessage = async () => {
+    if (!selectedOffer || !selectedParty) return
+    const receiverId = selectedParty === 'buyer' ? selectedOffer.buyerId : selectedOffer.sellerId
+    if (!messageText.trim()) {
+      setActionFeedback({ type: 'error', text: 'Message cannot be empty' })
+      return
+    }
+    setActionSubmitting(true)
+    setActionFeedback(null)
+    try {
+      await api.sendMessage(receiverId, messageText.trim(), selectedOffer.listingId)
+      setMessageText('')
+      setActionFeedback({ type: 'success', text: 'Message sent (email also delivered).' })
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', text: err.message || 'Failed to send message' })
+    } finally {
+      setActionSubmitting(false)
+    }
+  }
+
+  const handleAddCredits = async () => {
+    if (!selectedOffer || !selectedParty) return
+    const userId = selectedParty === 'buyer' ? selectedOffer.buyerId : selectedOffer.sellerId
+    const amount = parseInt(creditAmount, 10)
+    if (!amount || amount <= 0) {
+      setActionFeedback({ type: 'error', text: 'Enter a positive credit amount' })
+      return
+    }
+    if (!creditReason.trim()) {
+      setActionFeedback({ type: 'error', text: 'Reason is required' })
+      return
+    }
+    setActionSubmitting(true)
+    setActionFeedback(null)
+    try {
+      await api.addBonusCredits(userId, amount, creditReason.trim())
+      setCreditAmount('')
+      setActionFeedback({ type: 'success', text: `${amount} credits added.` })
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', text: err.message || 'Failed to add credits' })
+    } finally {
+      setActionSubmitting(false)
     }
   }
 
@@ -212,7 +284,7 @@ const AdminOffersPage = () => {
       await api.deleteOffer(offerId)
       setOffers(prev => prev.filter(o => o.id !== offerId))
       if (selectedOffer?.id === offerId) {
-        setShowDetailModal(false)
+        closeDetailModal()
         setSelectedOffer(null)
       }
     } catch (err: any) {
@@ -504,7 +576,7 @@ const AdminOffersPage = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:p-4"
-            onClick={() => setShowDetailModal(false)}
+            onClick={() => closeDetailModal()}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -529,7 +601,7 @@ const AdminOffersPage = () => {
                     )}
                   </div>
                   <button
-                    onClick={() => setShowDetailModal(false)}
+                    onClick={() => closeDetailModal()}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <X className="w-5 h-5 text-gray-500" />
@@ -580,9 +652,15 @@ const AdminOffersPage = () => {
 
                 {/* Buyer & Seller Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="bg-blue-50 rounded-xl p-3 sm:p-4">
+                  <div className={`bg-blue-50 rounded-xl p-3 sm:p-4 ${selectedParty === 'buyer' ? 'ring-2 ring-blue-400' : ''}`}>
                     <h4 className="text-sm font-medium text-blue-800 mb-2 sm:mb-3">Buyer</h4>
-                    <p className="font-semibold text-gray-900 text-sm sm:text-base">{selectedOffer.buyer?.name || 'N/A'}</p>
+                    <button
+                      type="button"
+                      onClick={() => openParty('buyer')}
+                      className="font-semibold text-gray-900 text-sm sm:text-base hover:text-blue-700 hover:underline text-left"
+                    >
+                      {selectedOffer.buyer?.name || 'N/A'}
+                    </button>
                     <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedOffer.buyer?.email || 'N/A'}</p>
                     {selectedOffer.buyer?.phone && (
                       <p className="text-xs sm:text-sm text-gray-500">{selectedOffer.buyer.phone}</p>
@@ -592,15 +670,121 @@ const AdminOffersPage = () => {
                       <span className="font-medium text-gray-900">{selectedOffer.buyer?.trustScore || 0}%</span>
                     </div>
                   </div>
-                  <div className="bg-purple-50 rounded-xl p-3 sm:p-4">
+                  <div className={`bg-purple-50 rounded-xl p-3 sm:p-4 ${selectedParty === 'seller' ? 'ring-2 ring-purple-400' : ''}`}>
                     <h4 className="text-sm font-medium text-purple-800 mb-2 sm:mb-3">Seller</h4>
-                    <p className="font-semibold text-gray-900 text-sm sm:text-base">{selectedOffer.seller?.name || 'N/A'}</p>
+                    <button
+                      type="button"
+                      onClick={() => openParty('seller')}
+                      className="font-semibold text-gray-900 text-sm sm:text-base hover:text-purple-700 hover:underline text-left"
+                    >
+                      {selectedOffer.seller?.name || 'N/A'}
+                    </button>
                     <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedOffer.seller?.email || 'N/A'}</p>
                     {selectedOffer.seller?.phone && (
                       <p className="text-xs sm:text-sm text-gray-500">{selectedOffer.seller.phone}</p>
                     )}
+                    {selectedOffer.listing?.status === 'SOLD' && (
+                      <p className="mt-2 text-xs text-emerald-700 font-medium">✓ Listing sold — refund eligible</p>
+                    )}
                   </div>
                 </div>
+
+                {/* Inline Action Panel — appears when buyer/seller name is clicked */}
+                {selectedParty && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-900">
+                        {selectedParty === 'buyer' ? selectedOffer.buyer?.name : selectedOffer.seller?.name}
+                        <span className="text-gray-500 font-normal"> — quick action</span>
+                      </h4>
+                      <button
+                        onClick={() => setSelectedParty(null)}
+                        className="p-1 hover:bg-gray-200 rounded"
+                      >
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setActionMode('message'); setActionFeedback(null) }}
+                        className={`px-3 py-1.5 text-sm rounded-lg ${actionMode === 'message' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 border border-gray-200'}`}
+                      >
+                        <MessageSquare className="w-4 h-4 inline mr-1" />
+                        Message
+                      </button>
+                      <button
+                        onClick={() => { setActionMode('credits'); setActionFeedback(null) }}
+                        className={`px-3 py-1.5 text-sm rounded-lg ${actionMode === 'credits' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 border border-gray-200'}`}
+                      >
+                        <CreditCard className="w-4 h-4 inline mr-1" />
+                        Add Credits
+                      </button>
+                    </div>
+
+                    {actionMode === 'message' && (
+                      <div className="space-y-2">
+                        <textarea
+                          value={messageText}
+                          onChange={(e) => setMessageText(e.target.value)}
+                          rows={3}
+                          placeholder={`Message ${selectedParty}...`}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900 resize-none text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={handleSendPartyMessage}
+                          loading={actionSubmitting}
+                          disabled={!messageText.trim()}
+                        >
+                          <Send className="w-4 h-4 mr-1" />
+                          Send (email + in-app)
+                        </Button>
+                      </div>
+                    )}
+
+                    {actionMode === 'credits' && (
+                      <div className="space-y-2">
+                        {selectedParty === 'seller' && selectedOffer.listing?.status === 'SOLD' && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs text-emerald-800">
+                            Listing was sold. Use this to refund or grant bonus credits to the seller without leaving the offer.
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={creditAmount}
+                            onChange={(e) => setCreditAmount(e.target.value)}
+                            placeholder="Credits"
+                            className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={creditReason}
+                            onChange={(e) => setCreditReason(e.target.value)}
+                            placeholder="Reason"
+                            className="sm:col-span-2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-gray-900 text-sm"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleAddCredits}
+                          loading={actionSubmitting}
+                          disabled={!creditAmount || !creditReason.trim()}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Add Credits
+                        </Button>
+                      </div>
+                    )}
+
+                    {actionFeedback && (
+                      <div className={`text-sm ${actionFeedback.type === 'success' ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {actionFeedback.text}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Buyer Message */}
                 {selectedOffer.message && (
@@ -729,7 +913,7 @@ const AdminOffersPage = () => {
                   <Button
                     fullWidth
                     variant="outline"
-                    onClick={() => setShowDetailModal(false)}
+                    onClick={() => closeDetailModal()}
                     className="py-3 sm:py-2"
                   >
                     Close
