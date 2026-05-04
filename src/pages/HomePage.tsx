@@ -447,8 +447,8 @@ const HomePage = () => {
                 <div className="px-6 py-5 bg-gradient-to-r from-indigo-600/10 to-cyan-600/10 border-t border-white/[0.08]">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                      <p className="text-sm font-semibold text-white">Pulse Bundle</p>
-                      <p className="text-xs text-gray-400">Unlimited lookups + all tools — <span className="text-cyan-400 font-semibold">$14.99/mo</span></p>
+                      <p className="text-sm font-semibold text-white">CarrierPulse</p>
+                      <p className="text-xs text-gray-400">Unlimited lookups + all tools — <span className="text-cyan-400 font-semibold">$12.99/mo</span></p>
                     </div>
                     <Link to="/pricing">
                       <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/25">

@@ -146,7 +146,7 @@ export default function ChameleonCheckPreviewPage() {
               {user ? 'Start Checking Carriers' : 'Get Started — Create Free Account'}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <p className="text-sm text-gray-400 mt-4">Included in Pulse Bundle. Cancel anytime.</p>
+            <p className="text-sm text-gray-400 mt-4">Included in CarrierPulse. Cancel anytime.</p>
           </motion.div>
         </div>
       </div>
@@ -352,8 +352,8 @@ export default function ChameleonCheckPreviewPage() {
       {/* Included with */}
       <div className="max-w-4xl mx-auto px-6 pb-16">
         <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Included in Pulse Bundle</h3>
-          <p className="text-gray-500 text-sm mb-6">$14.99/mo gets you Chameleon Check + Safety Improvement Report + CarrierPulse. Or upgrade to Professional for all tools.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Included in CarrierPulse</h3>
+          <p className="text-gray-500 text-sm mb-6">CarrierPulse includes Chameleon Check, the Safety Improvement Report, and full carrier intelligence. Or upgrade to Professional for all tools.</p>
           <div className="flex flex-wrap justify-center gap-3">
             {[
               'Unlimited chameleon checks',

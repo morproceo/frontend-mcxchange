@@ -383,8 +383,8 @@ const ServicesPage = () => {
                 <div className="px-5 py-5 bg-gradient-to-r from-indigo-50 to-indigo-100/50 border-t border-indigo-100">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                      <p className="text-sm font-bold text-gray-900">Pulse Bundle</p>
-                      <p className="text-xs text-gray-500">Unlimited lookups + all tools — <span className="text-indigo-600 font-bold">$14.99/mo</span></p>
+                      <p className="text-sm font-bold text-gray-900">CarrierPulse</p>
+                      <p className="text-xs text-gray-500">Unlimited lookups + all tools — <span className="text-indigo-600 font-bold">$12.99/mo</span></p>
                     </div>
                     <Link to="/pricing">
                       <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/20">

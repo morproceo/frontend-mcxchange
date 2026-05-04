@@ -191,8 +191,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
     const hasEnterpriseAccess =
       (planLower === 'enterprise' || planLower === 'vip_access') && isActive
 
-    const hasPulseBundleAccess =
-      (planLower === 'package_tool' || planLower === 'professional' || hasPremiumAccess) && isActive
+    const hasPulseAccess =
+      ((planLower === 'package_tool' || planLower === 'professional' || hasPremiumAccess) && isActive) || hasStandaloneCarrierPulse
 
     switch (user?.role) {
       case 'seller':
@@ -232,19 +232,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           ...(hasPremiumAccess && !buyerSubscriptionLoading
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
             : [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/credit-report', badge: '$55/report' as const }]),
-          ...(hasPulseBundleAccess
-            ? [
-                { icon: Package, label: 'Pulse Bundle', path: '/buyer/carrier-pulse' },
-              ]
-            : hasStandaloneCarrierPulse
-            ? [
-                { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse' },
-                { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'Upgrade' as const, badgeColor: 'bg-pink-500' },
-              ]
-            : [
-                { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' as const },
-                { icon: Package, label: 'Pulse Bundle', path: '/buyer/package-tool', badge: 'New' as const, badgeColor: 'bg-pink-500' },
-              ]),
+          hasPulseAccess
+            ? { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse' }
+            : { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' as const },
           {
             label: 'Services',
             icon: Briefcase,

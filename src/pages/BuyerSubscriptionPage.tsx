@@ -756,11 +756,12 @@ const BuyerSubscriptionPage = () => {
           })}
         </div>
 
-        {/* Pulse Bundle Add-On */}
+        {/* Pulse Bundle — legacy add-on, only shown to grandfathered subscribers */}
         {(() => {
           const pkgPlan = plans.find(p => p.id === 'package_tool')
           if (!pkgPlan) return null
           const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === 'package_tool'
+          if (!isCurrentPlan) return null
           const isSelected = selectedPlan === 'package_tool'
           const displayPrice = billingCycle === 'monthly' ? pkgPlan.priceMonthly : Number(getMonthlyEquivalent(pkgPlan))
 

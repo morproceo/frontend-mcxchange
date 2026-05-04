@@ -153,8 +153,6 @@ function useCarrierDataContext(): CarrierDataContextType {
   return ctx
 }
 
-const BUNDLE_ONLY_TABS = new Set(['chameleon', 'safety-improvement'])
-
 const baseTabs: TabItem[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'authority', label: 'Authority & Compliance', icon: Shield },
@@ -2282,7 +2280,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
   // Access gating
   const [accessChecked, setAccessChecked] = useState(false)
   const [hasAccess, setHasAccess] = useState(false)
-  const [accessReason, setAccessReason] = useState<string>('none')
   const [currentPlan, setCurrentPlan] = useState<string | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [purchaseSuccess, setPurchaseSuccess] = useState(false)
@@ -2292,7 +2289,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     // Preview mode — skip access gating, allow free search
     if (previewMode) {
       setHasAccess(true)
-      setAccessReason('preview')
       setAccessChecked(true)
       return
     }
@@ -2300,7 +2296,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     // Admin and seller always have access (no buyer subscription check needed)
     if (user?.role === 'admin' || user?.role === 'seller') {
       setHasAccess(true)
-      setAccessReason('admin')
       setAccessChecked(true)
       return
     }
@@ -2310,7 +2305,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
         const res = await api.getCarrierPulseAccess()
         if (res.success && res.data) {
           setHasAccess(res.data.hasAccess)
-          setAccessReason(res.data.reason)
           setCurrentPlan(res.data.currentPlan)
         }
       } catch {
@@ -2328,7 +2322,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     if (searchParams.get('purchase') === 'success') {
       setPurchaseSuccess(true)
       setHasAccess(true)
-      setAccessReason('standalone')
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [searchParams])
@@ -2347,16 +2340,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
     }
   }
 
-  // Bundle access: plans that include Chameleon Check + Safety Improvement Report
-  const hasBundleAccess = accessReason === 'included_in_plan' || accessReason === 'admin' || user?.role === 'admin' || user?.role === 'seller'
-
-  // Build tabs: mark bundle-only tabs with badge for standalone users
-  const tabs = baseTabs.map(t => {
-    if (BUNDLE_ONLY_TABS.has(t.id) && !hasBundleAccess) {
-      return { ...t, badge: 'Bundle', badgeColor: 'bg-amber-100 text-amber-700' }
-    }
-    return t
-  })
+  const tabs = [...baseTabs]
   // Admin-only: Credit Report tab (Creditsafe pull, no charge to admins)
   if (user?.role === 'admin') {
     tabs.push({ id: 'credit-report', label: 'Credit Report', icon: DollarSign })
@@ -2622,9 +2606,9 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
       { feature: 'Violation Trend Analysis (24 mo)', fmcsa: false, pulse: true },
       { feature: 'Insurance Gap Detection & Coverage Analysis', fmcsa: false, pulse: true },
       { feature: 'Fleet Age & VIN Inspection Data', fmcsa: false, pulse: true },
-      { feature: 'Chameleon Carrier Detection', fmcsa: false, pulse: true, bundle: true },
-      { feature: 'Safety Improvement Report (A+ to D)', fmcsa: false, pulse: true, bundle: true },
-      { feature: 'Prioritized Action Plan', fmcsa: false, pulse: true, bundle: true },
+      { feature: 'Chameleon Carrier Detection', fmcsa: false, pulse: true },
+      { feature: 'Safety Improvement Report (A+ to D)', fmcsa: false, pulse: true },
+      { feature: 'Prioritized Action Plan', fmcsa: false, pulse: true },
     ]
 
     const pulseFeatures = [
@@ -2787,7 +2771,6 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                   <div key={i} className={`grid grid-cols-[1fr,72px,72px] px-5 py-3 items-center ${!row.fmcsa ? 'bg-indigo-50/30' : ''}`}>
                     <span className="text-sm text-gray-700">
                       {row.feature}
-                      {row.bundle && <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-100 text-indigo-600 uppercase">Bundle</span>}
                     </span>
                     <span className="text-center">
                       {row.fmcsa
@@ -2806,7 +2789,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
               <div className="px-5 py-5 bg-gradient-to-r from-indigo-50 to-indigo-100/50 border-t border-indigo-100">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Pulse Bundle</p>
+                    <p className="text-sm font-bold text-gray-900">CarrierPulse</p>
                     <p className="text-xs text-gray-500">Unlimited lookups + all tools — <span className="text-indigo-600 font-bold">$14.99/mo</span></p>
                   </div>
                   <Link to="/pricing">
@@ -2890,37 +2873,7 @@ export default function CarrierPulsePage({ previewMode = false }: { previewMode?
                 <TabNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
                 <AnimatePresence mode="wait">
                   <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                    {!hasBundleAccess && BUNDLE_ONLY_TABS.has(activeTab) ? (
-                      <div className="relative min-h-[500px]">
-                        <div className="pointer-events-none select-none opacity-30">
-                          {tabContent[activeTab]}
-                        </div>
-                        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm bg-white/70 rounded-2xl">
-                        <div className="text-center max-w-md px-6">
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/25">
-                            <Package className="w-8 h-8 text-white" />
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">
-                            {activeTab === 'chameleon' ? 'Chameleon Check' : 'Safety Improvement Report'}
-                          </h3>
-                          <p className="text-gray-500 text-sm mb-2">
-                            {activeTab === 'chameleon'
-                              ? 'Detect chameleon carriers — companies that shut down and reopen under new names to dodge safety records.'
-                              : 'Get detailed safety analysis with trends, risk areas, and actionable recommendations.'}
-                          </p>
-                          <p className="text-amber-600 text-sm font-semibold mb-6">
-                            Subscribe to Pulse Bundle to unlock Chameleon Check and Safety Improvement Report.
-                          </p>
-                          <Link to="/buyer/package-tool">
-                            <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-                              <Package className="w-4 h-4 mr-2" />
-                              Subscribe to Pulse Bundle
-                            </Button>
-                          </Link>
-                        </div>
-                        </div>
-                      </div>
-                    ) : previewMode && activeTab !== 'overview' ? (
+                    {previewMode && activeTab !== 'overview' ? (
                       <div className="relative">
                         {/* Sticky CTA Banner */}
                         <motion.div

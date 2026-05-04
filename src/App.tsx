@@ -50,8 +50,6 @@ const SellerTransactionsPage = lazy(() => import('./pages/SellerTransactionsPage
 const SellerMessagesPage = lazy(() => import('./pages/SellerMessagesPage'))
 const SellerPayoutSetupPage = lazy(() => import('./pages/SellerPayoutSetupPage'))
 
-const PulseBundlePage = lazy(() => import('./pages/PulseBundlePage'))
-
 // Buyer pages
 const BuyerWelcomePage = lazy(() => import('./pages/BuyerWelcomePage'))
 const BuyerDashboard = lazy(() => import('./pages/BuyerDashboard'))
@@ -226,7 +224,7 @@ function App() {
               <Route path="carrier-pulse/:dotNumber" element={<CarrierPulsePage />} />
               <Route path="chameleon-check" element={<ChameleonCheckPage />} />
               <Route path="chameleon-check/:dotNumber" element={<ChameleonCheckPage />} />
-              <Route path="package-tool" element={<PulseBundlePage />} />
+              <Route path="package-tool" element={<Navigate to="/carrier-pulse-preview" replace />} />
             </Route>
 
             {/* Admin Dashboard Routes */}
