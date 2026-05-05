@@ -17,13 +17,13 @@ const planStyles = {
     bgColor: 'from-blue-50 to-cyan-50',
     popular: false,
   },
-  professional: {
+  premium: {
     icon: Shield,
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'from-emerald-50 to-teal-50',
     popular: true,
   },
-  premium: {
+  enterprise: {
     icon: Zap,
     color: 'from-purple-500 to-indigo-500',
     bgColor: 'from-purple-50 to-indigo-50',
@@ -59,7 +59,7 @@ export default function PricingPage() {
       api.getCreditPacks(),
     ]).then(([plansRes, packsRes]) => {
       if (plansRes.data?.length) {
-        const offered = ['starter', 'professional', 'premium', 'vip_access']
+        const offered = ['starter', 'premium', 'enterprise', 'vip_access']
         setPlans(plansRes.data
           .filter(plan => offered.includes(plan.id.toLowerCase()))
           .map(plan => {

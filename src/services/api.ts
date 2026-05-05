@@ -2569,8 +2569,8 @@ class ApiService {
       data: {
         subscriptionPlans: {
           starter: SubscriptionPlanConfig;
-          professional: SubscriptionPlanConfig;
           premium: SubscriptionPlanConfig;
+          enterprise: SubscriptionPlanConfig;
           vip_access: SubscriptionPlanConfig;
         };
         platformFees: {
@@ -2592,8 +2592,8 @@ class ApiService {
   async updatePricingConfig(config: Partial<{
     subscriptionPlans: Partial<{
       starter: Partial<SubscriptionPlanConfig>;
-      professional: Partial<SubscriptionPlanConfig>;
       premium: Partial<SubscriptionPlanConfig>;
+      enterprise: Partial<SubscriptionPlanConfig>;
       vip_access: Partial<SubscriptionPlanConfig>;
     }>;
     platformFees: Partial<{

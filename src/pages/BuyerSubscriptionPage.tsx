@@ -48,18 +48,19 @@ const planStyles = {
     popular: false,
   },
   professional: {
+    // Grandfathered — kept so existing Professional subscribers' plan card still styles.
+    icon: Shield,
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'from-emerald-50 to-teal-50',
+    borderColor: 'border-emerald-200',
+    popular: false,
+  },
+  premium: {
     icon: Shield,
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'from-emerald-50 to-teal-50',
     borderColor: 'border-emerald-200',
     popular: true,
-  },
-  premium: {
-    icon: Zap,
-    color: 'from-purple-500 to-indigo-500',
-    bgColor: 'from-purple-50 to-indigo-50',
-    borderColor: 'border-purple-200',
-    popular: false,
   },
   enterprise: {
     icon: Crown,

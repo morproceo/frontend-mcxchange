@@ -543,8 +543,8 @@ export interface PlatformFeesConfig {
 export interface PricingConfig {
   subscriptionPlans: {
     starter: SubscriptionPlanConfig
-    professional: SubscriptionPlanConfig
     premium: SubscriptionPlanConfig
+    enterprise: SubscriptionPlanConfig
     vip_access: SubscriptionPlanConfig
   }
   platformFees: PlatformFeesConfig
