@@ -212,7 +212,7 @@ const AdminSettingsPage = () => {
   }
 
   const updateSubscriptionPlan = (
-    planKey: 'starter' | 'premium' | 'enterprise',
+    planKey: 'starter' | 'professional' | 'premium' | 'vip_access',
     field: keyof SubscriptionPlanConfig,
     value: string | number | string[]
   ) => {
@@ -1033,7 +1033,7 @@ const AdminSettingsPage = () => {
                   </div>
 
                   <div className="space-y-6">
-                    {(['starter', 'premium', 'enterprise'] as const).map((planKey) => {
+                    {(['starter', 'professional', 'premium', 'vip_access'] as const).map((planKey) => {
                       const plan = pricingConfig.subscriptionPlans[planKey]
                       return (
                         <div key={planKey} className="p-4 bg-gray-50 rounded-lg">

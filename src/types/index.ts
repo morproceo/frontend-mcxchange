@@ -60,7 +60,8 @@ export interface UserResponse {
   identityVerificationStatus?: string | null
 }
 
-// Subscription Types
+// Subscription Types — `package_tool` and `enterprise` are grandfathered
+// (no longer offered to new signups, but still appear on legacy subscriptions).
 export type SubscriptionPlan = 'package_tool' | 'starter' | 'professional' | 'premium' | 'enterprise' | 'vip_access'
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'INCOMPLETE'
 
@@ -542,9 +543,9 @@ export interface PlatformFeesConfig {
 export interface PricingConfig {
   subscriptionPlans: {
     starter: SubscriptionPlanConfig
-    professional?: SubscriptionPlanConfig
+    professional: SubscriptionPlanConfig
     premium: SubscriptionPlanConfig
-    enterprise: SubscriptionPlanConfig
+    vip_access: SubscriptionPlanConfig
   }
   platformFees: PlatformFeesConfig
   creditPacks: CreditPack[]

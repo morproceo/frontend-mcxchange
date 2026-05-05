@@ -1442,6 +1442,28 @@ class ApiService {
     });
   }
 
+  async adminAcceptOfferOnBehalf(offerId: string, notes?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/admin/offers/${offerId}/accept-on-behalf`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async adminRejectOfferOnBehalf(offerId: string, reason?: string) {
+    return this.request<{
+      success: boolean;
+      data: any;
+      message: string;
+    }>(`/admin/offers/${offerId}/reject-on-behalf`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   // Buyer offer actions
   async withdrawOffer(offerId: string) {
     return this.request<{
@@ -2547,8 +2569,9 @@ class ApiService {
       data: {
         subscriptionPlans: {
           starter: SubscriptionPlanConfig;
+          professional: SubscriptionPlanConfig;
           premium: SubscriptionPlanConfig;
-          enterprise: SubscriptionPlanConfig;
+          vip_access: SubscriptionPlanConfig;
         };
         platformFees: {
           listingFee: number;
@@ -2569,8 +2592,9 @@ class ApiService {
   async updatePricingConfig(config: Partial<{
     subscriptionPlans: Partial<{
       starter: Partial<SubscriptionPlanConfig>;
+      professional: Partial<SubscriptionPlanConfig>;
       premium: Partial<SubscriptionPlanConfig>;
-      enterprise: Partial<SubscriptionPlanConfig>;
+      vip_access: Partial<SubscriptionPlanConfig>;
     }>;
     platformFees: Partial<{
       listingFee: number;

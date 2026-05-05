@@ -29,12 +29,6 @@ const planStyles = {
     bgColor: 'from-purple-50 to-indigo-50',
     popular: false,
   },
-  enterprise: {
-    icon: Crown,
-    color: 'from-yellow-500 to-orange-500',
-    bgColor: 'from-yellow-50 to-orange-50',
-    popular: false,
-  },
   vip_access: {
     icon: Crown,
     color: 'from-amber-500 to-red-500',
@@ -65,8 +59,9 @@ export default function PricingPage() {
       api.getCreditPacks(),
     ]).then(([plansRes, packsRes]) => {
       if (plansRes.data?.length) {
+        const offered = ['starter', 'professional', 'premium', 'vip_access']
         setPlans(plansRes.data
-          .filter(plan => plan.id.toLowerCase() !== 'package_tool')
+          .filter(plan => offered.includes(plan.id.toLowerCase()))
           .map(plan => {
             const key = plan.id.toLowerCase() as keyof typeof planStyles
             return { ...plan, ...(planStyles[key] || planStyles.starter), id: key }
@@ -78,12 +73,16 @@ export default function PricingPage() {
 
   const getMonthlyEquivalent = (plan: DisplayPlan) => (plan.priceYearly / 12).toFixed(2)
 
-  const handleGetStarted = () => {
-    if (user) {
-      navigate('/buyer/subscription')
-    } else {
-      navigate('/register')
+  const handleGetStarted = (planId?: string) => {
+    if (!user) {
+      navigate(planId === 'vip_access' ? '/register?redirect=/buyer/subscription?vip=1' : '/register')
+      return
     }
+    if (planId === 'vip_access') {
+      navigate('/buyer/subscription?vip=1')
+      return
+    }
+    navigate('/buyer/subscription')
   }
 
   if (loading) {
@@ -249,14 +248,14 @@ export default function PricingPage() {
 
                   {/* CTA */}
                   <button
-                    onClick={handleGetStarted}
+                    onClick={() => handleGetStarted(plan.id)}
                     className={`w-full py-3 rounded-xl font-semibold transition-all ${
                       plan.popular
                         ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg shadow-purple-500/25'
                         : 'bg-gray-900 text-white hover:bg-gray-800'
                     }`}
                   >
-                    Get Started
+                    {isVip ? 'Get the Pass' : 'Get Started'}
                   </button>
                 </div>
               </motion.div>
@@ -307,8 +306,8 @@ export default function PricingPage() {
               <span className="text-2xl font-bold text-gray-900">$12.99</span>
               <span className="text-gray-500">/month</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Professional, Premium, Enterprise & VIP plans</p>
-            <button onClick={handleGetStarted} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:from-indigo-600 hover:to-purple-700 transition-colors shadow-lg shadow-indigo-500/25">
+            <p className="text-xs text-emerald-600 font-medium mb-4">Included free with Professional, Premium & VIP / Deal Access Pass</p>
+            <button onClick={() => handleGetStarted()} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:from-indigo-600 hover:to-purple-700 transition-colors shadow-lg shadow-indigo-500/25">
               Get CarrierPulse
             </button>
           </div>
@@ -330,10 +329,10 @@ export default function PricingPage() {
               <span className="text-2xl font-bold text-gray-900">2 credits</span>
               <span className="text-gray-500">/report</span>
             </div>
-            <p className="text-xs text-emerald-600 font-medium mb-1">Included with Professional, Premium, Enterprise & VIP plans</p>
-            <p className="text-xs text-gray-500 mb-4">Or <span className="font-semibold text-gray-700">$55 per report</span> — no subscription needed</p>
+            <p className="text-xs text-emerald-600 font-medium mb-1">Included with Professional & Premium plans</p>
+            <p className="text-xs text-gray-500 mb-4">Or <span className="font-semibold text-gray-700">$35 per report</span> — no subscription needed</p>
             <button onClick={() => user ? navigate('/buyer/credit-report') : navigate('/register?redirect=/buyer/credit-report')} className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors">
-              Buy a Report — $55
+              Buy a Report — $35
             </button>
           </div>
 
@@ -364,7 +363,7 @@ export default function PricingPage() {
               </div>
               <p className="text-xs text-gray-400 mb-4">${(pack.price / pack.credits).toFixed(2)} per credit</p>
               <button
-                onClick={handleGetStarted}
+                onClick={() => handleGetStarted()}
                 className="w-full py-2.5 rounded-xl bg-yellow-500 text-white font-semibold hover:bg-yellow-600 transition-colors"
               >
                 Buy Credits
@@ -381,11 +380,11 @@ export default function PricingPage() {
         </div>
         <div className="space-y-4">
           {[
-            { q: 'What are credits used for?', a: 'Credits are used to unlock full listing details. Each listing unlock costs 1 credit. Credit reports cost 2 credits (free for Enterprise & VIP).' },
+            { q: 'What are credits used for?', a: 'Credits are used to unlock full listing details. Each listing unlock costs 1 credit. Credit reports are included with Premium and VIP / Deal Access Pass; otherwise $35 per report.' },
             { q: 'Do unused credits roll over?', a: 'No, credits reset each billing period. You start fresh with your plan\'s credit allocation each month.' },
             { q: 'Can I upgrade or downgrade my plan?', a: 'Yes, you can change your plan at any time. Contact support and we\'ll help you switch plans.' },
             { q: 'What is CarrierPulse?', a: 'CarrierPulse is our carrier intelligence tool. Look up any carrier by DOT or MC number and get instant safety scores, inspection history, insurance details, and more.' },
-            { q: 'What\'s included in the VIP plan?', a: 'VIP gives you unlimited listing unlocks, free credit reports, CarrierPulse, Chameleon Check, Safety Improvement Report, a personal consultation with Maria, and your $399 fee is credited toward your purchase.' },
+            { q: 'What\'s included in the VIP / Deal Access Pass?', a: 'A one-time $399 pass (not a subscription) — unlimited listing unlocks until you purchase, $399 credited toward your final MC purchase, admin full support, a 1-on-1 consultation, and AI+ Reports.' },
           ].map((faq, i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5">
               <h3 className="font-semibold text-gray-900 mb-2">{faq.q}</h3>

@@ -235,6 +235,11 @@ const BuyerSubscriptionPage = () => {
       setError('Subscription checkout was canceled.')
       window.history.replaceState({}, '', '/buyer/subscription')
     }
+
+    // Pre-select VIP / Deal Access Pass if the user landed here via the VIP CTA
+    if (searchParams.get('vip') === '1') {
+      setSelectedPlan('vip_access')
+    }
   }, [searchParams, user])
 
   // Fetch subscription status
@@ -607,7 +612,7 @@ const BuyerSubscriptionPage = () => {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
-          {plans.filter(p => p.id !== 'package_tool').map((plan, index) => {
+          {plans.filter(p => p.id !== 'package_tool' && p.id !== 'enterprise').map((plan, index) => {
             const Icon = plan.icon
             const isSelected = selectedPlan === plan.id
             const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === plan.id
@@ -898,13 +903,13 @@ const BuyerSubscriptionPage = () => {
                 </div>
               </div>
 
-              {/* VIP Credit Notice */}
+              {/* VIP / Deal Access Pass Notice */}
               {selectedPlan === 'vip_access' && (
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3 mb-6">
                   <Sparkles className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-semibold text-amber-700 mb-1">Your $399 goes toward your MC purchase</p>
-                    <p className="text-gray-600">Enjoy unlimited access to browse, unlock, and research every listing on the platform. Includes a free consultation call with Maria. When you're ready to buy, your $399 VIP fee is credited toward the final purchase price.</p>
+                    <p className="font-semibold text-amber-700 mb-1">$399 one-time — credited toward your MC purchase</p>
+                    <p className="text-gray-600">VIP / Deal Access Pass is a one-time payment, not a subscription. Get unlimited unlocks until you purchase, admin full support, a 1-on-1 consultation, and AI+ Reports. Your $399 is credited toward the final MC purchase price.</p>
                   </div>
                 </div>
               )}
@@ -918,7 +923,7 @@ const BuyerSubscriptionPage = () => {
                 </div>
               </div>
 
-              {/* Subscribe Button */}
+              {/* Subscribe / Pass Button */}
               <Button
                 fullWidth
                 size="lg"
@@ -927,11 +932,13 @@ const BuyerSubscriptionPage = () => {
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
-                {hasActiveSubscription ? 'Upgrade Now' : 'Subscribe Now'}
+                {selectedPlan === 'vip_access'
+                  ? 'Get the Pass — $399 one-time'
+                  : hasActiveSubscription ? 'Upgrade Now' : 'Subscribe Now'}
               </Button>
 
               <p className="text-xs text-center text-gray-500 mt-4">
-                By subscribing, you confirm your agreement to our <a href="/terms" target="_blank" className="underline hover:text-gray-700">Terms of Service</a> and <a href="/privacy" target="_blank" className="underline hover:text-gray-700">Privacy Policy</a>, including the Payment Terms, Subscription Billing, and Dispute Prohibition policies (Article 7). Subscriptions are billed month-to-month. All payments are final and non-refundable. You may cancel at any time by contacting info@domilea.com.
+                By {selectedPlan === 'vip_access' ? 'purchasing' : 'subscribing'}, you confirm your agreement to our <a href="/terms" target="_blank" className="underline hover:text-gray-700">Terms of Service</a> and <a href="/privacy" target="_blank" className="underline hover:text-gray-700">Privacy Policy</a>, including the Payment Terms, Subscription Billing, and Dispute Prohibition policies (Article 7). {selectedPlan === 'vip_access' ? 'VIP / Deal Access Pass is a one-time payment.' : 'Subscriptions are billed month-to-month.'} All payments are final and non-refundable. You may cancel a subscription at any time by contacting info@domilea.com.
               </p>
             </Card>
           </motion.div>
