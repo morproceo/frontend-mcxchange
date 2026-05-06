@@ -418,7 +418,15 @@ class ApiService {
       totalSubscriptions: number;
       mrrCents: number;
       mrrDollars: number;
-      unmappedPriceIds: Array<{ priceId: string; count: number }>;
+      unmappedPriceIds: Array<{
+        priceId: string;
+        count: number;
+        productName: string | null;
+        nickname: string | null;
+        unitAmount: number | null;
+        currency: string | null;
+        interval: string | null;
+      }>;
     }>>(`/admin/analytics/subscriptions`);
   }
 

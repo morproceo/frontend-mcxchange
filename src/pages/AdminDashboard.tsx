@@ -92,7 +92,15 @@ const AdminDashboard = () => {
     totalSubscriptions: number
     mrrCents: number
     mrrDollars: number
-    unmappedPriceIds: Array<{ priceId: string; count: number }>
+    unmappedPriceIds: Array<{
+      priceId: string
+      count: number
+      productName: string | null
+      nickname: string | null
+      unitAmount: number | null
+      currency: string | null
+      interval: string | null
+    }>
   }
   const [subAnalytics, setSubAnalytics] = useState<SubscriptionAnalytics | null>(null)
   const [subAnalyticsLoading, setSubAnalyticsLoading] = useState(true)
@@ -594,10 +602,21 @@ const AdminDashboard = () => {
                     </div>
                     <div className="text-xs text-amber-700">
                       These subs point at price IDs not configured in env vars (legacy or stale). Counts shown under "unknown" plan.
-                      <ul className="mt-1 list-disc list-inside font-mono">
-                        {subAnalytics.unmappedPriceIds.map((u) => (
-                          <li key={u.priceId}>{u.priceId} ({u.count})</li>
-                        ))}
+                      <ul className="mt-1 space-y-1">
+                        {subAnalytics.unmappedPriceIds.map((u) => {
+                          const label = u.productName || u.nickname || 'Unknown product'
+                          const amount = u.unitAmount != null ? `$${(u.unitAmount / 100).toFixed(2)}` : null
+                          const interval = u.interval ? `/${u.interval}` : (u.unitAmount != null ? ' one-time' : '')
+                          const priceLabel = amount ? `${amount}${interval}` : null
+                          return (
+                            <li key={u.priceId} className="flex flex-wrap items-baseline gap-x-2">
+                              <span className="font-medium text-amber-900">{label}</span>
+                              {priceLabel && <span className="text-amber-700">{priceLabel}</span>}
+                              <span className="text-amber-700">— {u.count} sub{u.count > 1 ? 's' : ''}</span>
+                              <span className="font-mono text-[11px] text-amber-600">{u.priceId}</span>
+                            </li>
+                          )
+                        })}
                       </ul>
                     </div>
                   </div>
