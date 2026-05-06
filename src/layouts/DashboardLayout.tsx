@@ -194,8 +194,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
     const hasEnterpriseAccess =
       (planLower === 'enterprise' || planLower === 'vip_access') && isActive
 
-    const hasPulseAccess =
-      ((planLower === 'package_tool' || planLower === 'professional' || hasPremiumAccess) && isActive) || hasStandaloneCarrierPulse
+    // CarrierPulse is included with any active subscription
+    const hasPulseAccess = isActive || hasStandaloneCarrierPulse
 
     switch (user?.role) {
       case 'seller':
