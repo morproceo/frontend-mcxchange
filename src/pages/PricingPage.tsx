@@ -67,7 +67,7 @@ export default function PricingPage() {
             return { ...plan, ...(planStyles[key] || planStyles.starter), id: key }
           }))
       }
-      if (packsRes.data) setCreditPacks(packsRes.data)
+      if (packsRes.data) setCreditPacks(packsRes.data.filter(p => p.credits !== 5))
     }).finally(() => setLoading(false))
   }, [])
 
