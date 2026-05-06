@@ -213,12 +213,54 @@ const AdminOffersPage = () => {
   }
 
   const closeDetailModal = () => {
-    closeDetailModal()
+    setShowDetailModal(false)
+    setSelectedOffer(null)
     setSelectedParty(null)
     setMessageText('')
     setCreditAmount('')
     setCreditReason('')
     setActionFeedback(null)
+  }
+
+  const handleAcceptOnBehalf = async () => {
+    if (!selectedOffer) return
+    const buyerPrice = Number(selectedOffer.counterAmount || selectedOffer.amount)
+    const sellerPrice = Number(selectedOffer.sellerAmount || buyerPrice)
+    const confirmed = confirm(
+      `Accept this offer on behalf of the seller?\n\n` +
+      `Buyer pays: $${buyerPrice.toLocaleString()}\n` +
+      `Seller gets: $${sellerPrice.toLocaleString()}\n\n` +
+      `This creates a transaction and notifies both parties.`
+    )
+    if (!confirmed) return
+    setProcessing(true)
+    try {
+      await api.adminAcceptOfferOnBehalf(selectedOffer.id, adminNotes || undefined)
+      closeDetailModal()
+      setAdminNotes('')
+      fetchOffers()
+    } catch (err: any) {
+      alert(err.message || 'Failed to accept offer on behalf of seller')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleRejectOnBehalf = async () => {
+    if (!selectedOffer) return
+    const reason = prompt('Reason for rejecting on behalf of seller (optional, internal note):')
+    if (reason === null) return
+    setProcessing(true)
+    try {
+      await api.adminRejectOfferOnBehalf(selectedOffer.id, reason.trim() || undefined)
+      closeDetailModal()
+      setAdminNotes('')
+      fetchOffers()
+    } catch (err: any) {
+      alert(err.message || 'Failed to reject offer on behalf of seller')
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const openParty = (party: 'buyer' | 'seller') => {
@@ -909,7 +951,49 @@ const AdminOffersPage = () => {
                     </Button>
                   </div>
                 )}
-                {selectedOffer.status !== 'PENDING_ADMIN' && (
+                {(selectedOffer.status === 'FORWARDED' || selectedOffer.status === 'PENDING' || selectedOffer.status === 'COUNTERED') && (
+                  <div className="space-y-3">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
+                      <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-800">
+                        <p className="font-medium">Seller Hasn't Responded</p>
+                        <p className="text-amber-700">
+                          Use these only if the seller is unreachable. Both buyer and seller will be notified.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <Button
+                        fullWidth
+                        onClick={handleAcceptOnBehalf}
+                        loading={processing}
+                        className="bg-emerald-600 hover:bg-emerald-700 order-1 sm:order-2 sm:flex-1 py-3 sm:py-2"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Accept on Behalf
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="outline"
+                        onClick={handleRejectOnBehalf}
+                        loading={processing}
+                        className="text-red-600 border-red-200 hover:bg-red-50 order-2 sm:order-1 sm:w-auto py-3 sm:py-2"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Reject on Behalf
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="outline"
+                        onClick={() => closeDetailModal()}
+                        className="order-3 sm:order-3 sm:w-auto py-3 sm:py-2"
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {selectedOffer.status !== 'PENDING_ADMIN' && selectedOffer.status !== 'FORWARDED' && selectedOffer.status !== 'PENDING' && selectedOffer.status !== 'COUNTERED' && (
                   <Button
                     fullWidth
                     variant="outline"
