@@ -116,7 +116,7 @@ export default function CreditReportPreviewPage() {
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="flex items-center gap-2 px-6 py-3 bg-white rounded-2xl border border-gray-200 shadow-lg shadow-gray-200/50">
                 <DollarSign className="w-6 h-6 text-blue-600" />
-                <span className="text-3xl font-bold text-gray-900">55</span>
+                <span className="text-3xl font-bold text-gray-900">35</span>
                 <span className="text-gray-500">per report</span>
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function CreditReportPreviewPage() {
           <div className="grid md:grid-cols-3 gap-8 mb-10">
             {[
               { step: '1', title: 'Search', desc: 'Enter any company name to find them in our database' },
-              { step: '2', title: 'Purchase', desc: 'Pay $55 securely via Stripe — no subscription needed' },
+              { step: '2', title: 'Purchase', desc: 'Pay $35 securely via Stripe — no subscription needed' },
               { step: '3', title: 'View Report', desc: 'Access your full credit report instantly after payment' },
             ].map((item) => (
               <div key={item.step}>

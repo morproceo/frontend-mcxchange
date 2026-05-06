@@ -167,7 +167,7 @@ const CreditReportPurchasePage = () => {
                   Credit Reports
                 </h1>
                 <p className="text-gray-500">
-                  Search any company and purchase a full business credit report — <span className="text-indigo-600 font-semibold">$55 per report</span>
+                  Search any company and purchase a full business credit report — <span className="text-indigo-600 font-semibold">$35 per report</span>
                 </p>
               </div>
             </div>
@@ -368,7 +368,7 @@ const CreditReportPurchasePage = () => {
                         </p>
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 border border-blue-200 mb-6">
                           <CircleDollarSign className="w-5 h-5 text-blue-600" />
-                          <span className="text-2xl font-bold text-blue-700">$55</span>
+                          <span className="text-2xl font-bold text-blue-700">$35</span>
                           <span className="text-sm text-blue-500">one-time</span>
                         </div>
                         <div>
@@ -385,7 +385,7 @@ const CreditReportPurchasePage = () => {
                             ) : (
                               <>
                                 <CreditCard className="w-5 h-5 mr-2" />
-                                Purchase Report — $55
+                                Purchase Report — $35
                               </>
                             )}
                           </Button>

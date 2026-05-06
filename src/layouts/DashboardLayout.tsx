@@ -234,7 +234,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps = {}) => {
           { icon: CreditCard, label: 'Subscription', path: '/buyer/subscription' },
           ...(hasPremiumAccess && !buyerSubscriptionLoading
             ? [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/creditsafe' }]
-            : [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/credit-report', badge: '$55/report' as const }]),
+            : [{ icon: FileSearch, label: 'Credit Reports', path: '/buyer/credit-report', badge: '$35/report' as const }]),
           hasPulseAccess
             ? { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse' }
             : { icon: Activity, label: 'CarrierPulse', path: '/buyer/carrier-pulse', badge: 'New' as const },

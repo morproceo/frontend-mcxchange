@@ -3487,7 +3487,7 @@ class ApiService {
     );
   }
 
-  // Credit Report one-time purchase ($55)
+  // Credit Report one-time purchase ($35)
   async createCreditReportCheckout(connectId: string, companyName: string) {
     return this.request<{ success: boolean; data: { sessionId: string; url: string } }>(
       '/buyer/creditsafe/checkout',

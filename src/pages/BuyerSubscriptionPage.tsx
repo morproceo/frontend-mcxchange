@@ -612,8 +612,8 @@ const BuyerSubscriptionPage = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
-          {plans.filter(p => p.id !== 'package_tool' && p.id !== 'enterprise').map((plan, index) => {
+        <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
+          {plans.filter(p => p.id !== 'package_tool' && p.id !== 'professional').map((plan, index) => {
             const Icon = plan.icon
             const isSelected = selectedPlan === plan.id
             const isCurrentPlan = hasActiveSubscription && subscription.plan.toLowerCase() === plan.id
