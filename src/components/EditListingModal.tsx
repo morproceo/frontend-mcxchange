@@ -109,6 +109,7 @@ interface ListingData {
   sellingWithPhone?: boolean
   rmisSetup?: boolean
   setupWithBrokers?: boolean
+  authorityType?: string
 }
 
 const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListingModalProps) => {
@@ -140,6 +141,7 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
     sellingWithPhone: false,
     rmisSetup: false,
     setupWithBrokers: false,
+    authorityType: 'MOTOR_CARRIER' as 'MOTOR_CARRIER' | 'BROKER' | 'MOTOR_CARRIER_AND_BROKER' | 'FREIGHT_FORWARDER',
   })
 
   useEffect(() => {
@@ -179,6 +181,7 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
           sellingWithPhone: data.sellingWithPhone || false,
           rmisSetup: data.rmisSetup || false,
           setupWithBrokers: data.setupWithBrokers || false,
+          authorityType: (data.authorityType as any) || 'MOTOR_CARRIER',
         })
       }
     } catch (err: any) {
@@ -217,6 +220,7 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
         sellingWithPhone: formData.sellingWithPhone,
         rmisSetup: formData.rmisSetup,
         setupWithBrokers: formData.setupWithBrokers,
+        authorityType: formData.authorityType,
       }
 
       // Remove undefined values
@@ -351,6 +355,32 @@ const EditListingModal = ({ isOpen, onClose, listingId, onSuccess }: EditListing
                   {/* Authority Details */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Authority Details</h3>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Authority Type</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { value: 'MOTOR_CARRIER', label: 'Motor Carrier' },
+                          { value: 'BROKER', label: 'Broker' },
+                          { value: 'MOTOR_CARRIER_AND_BROKER', label: 'Carrier + Broker' },
+                          { value: 'FREIGHT_FORWARDER', label: 'Freight Forwarder' },
+                        ].map((option) => {
+                          const selected = formData.authorityType === option.value
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => handleChange('authorityType', option.value)}
+                              className={`px-3 py-2 rounded-lg border text-sm transition-all ${
+                                selected ? 'border-primary-500 bg-primary-50 text-primary-700 font-semibold' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <Input

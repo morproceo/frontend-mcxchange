@@ -630,6 +630,7 @@ class ApiService {
     sellingWithEmail?: boolean;
     sellingWithPhone?: boolean;
     cargoTypes?: string[];
+    authorityType?: string;
     fmcsaData?: string;
     authorityHistory?: string;
     insuranceHistory?: string;
@@ -717,6 +718,7 @@ class ApiService {
     sellingWithEmail?: boolean;
     sellingWithPhone?: boolean;
     cargoTypes?: string[];
+    authorityType?: string;
     isPremium?: boolean;
     isVip?: boolean;
     visibility?: string;
@@ -1168,6 +1170,7 @@ class ApiService {
     rmisSetup?: boolean;
     setupWithBrokers?: boolean;
     cargoTypes?: string[];
+    authorityType?: string;
     visibility?: string;
   }) {
     return this.request<{

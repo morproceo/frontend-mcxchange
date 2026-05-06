@@ -552,8 +552,10 @@ const AdminAllListingsPage = () => {
     effectiveDate: '',
     revocationDate: '',
     assignedTo: '',
-    notes: ''
+    notes: '',
+    authorityType: 'MOTOR_CARRIER' as 'MOTOR_CARRIER' | 'BROKER' | 'MOTOR_CARRIER_AND_BROKER' | 'FREIGHT_FORWARDER',
   })
+  const [addListingAuthorityTypeTouched, setAddListingAuthorityTypeTouched] = useState(false)
 
   // Add Listing modal states
   const [addListingLoading, setAddListingLoading] = useState(false)
@@ -722,12 +724,19 @@ const AdminAllListingsPage = () => {
             setAddListingAuthorityHistory(authResponse.data)
             // Auto-fill authority date fields if available
             const auth = authResponse.data
+            const carrierActive = auth.commonAuthorityStatus === 'ACTIVE' || auth.contractAuthorityStatus === 'ACTIVE'
+            const brokerActive = auth.brokerAuthorityStatus === 'ACTIVE'
+            let derivedType: 'MOTOR_CARRIER' | 'BROKER' | 'MOTOR_CARRIER_AND_BROKER' | 'FREIGHT_FORWARDER' = 'MOTOR_CARRIER'
+            if (carrierActive && brokerActive) derivedType = 'MOTOR_CARRIER_AND_BROKER'
+            else if (brokerActive) derivedType = 'BROKER'
+            else if (carrierActive) derivedType = 'MOTOR_CARRIER'
             setNewListing(prev => ({
               ...prev,
               applicationDate: auth.applicationDate || prev.applicationDate,
               grantDate: auth.grantDate || auth.commonAuthorityGrantDate || prev.grantDate,
               effectiveDate: auth.effectiveDate || prev.effectiveDate,
               revocationDate: auth.revocationDate || auth.commonAuthorityRevokedDate || prev.revocationDate,
+              authorityType: addListingAuthorityTypeTouched ? prev.authorityType : derivedType,
             }))
           }
         } catch (e) {
@@ -873,6 +882,7 @@ const AdminAllListingsPage = () => {
       grantDate: parsedAuth?.grantDate || parsedAuth?.commonAuthorityGrantDate || '',
       effectiveDate: parsedAuth?.effectiveDate || '',
       revocationDate: parsedAuth?.revocationDate || parsedAuth?.commonAuthorityRevokedDate || '',
+      authorityType: (listing as any).authorityType || 'MOTOR_CARRIER',
     })
     setIsEditMode(true)
     setEditError(null)
@@ -937,6 +947,7 @@ const AdminAllListingsPage = () => {
         isVip: editForm.isVip,
         visibility: editForm.visibility || undefined,
         cargoTypes: editForm.cargoTypes?.length > 0 ? editForm.cargoTypes : undefined,
+        authorityType: editForm.authorityType || undefined,
         status: editForm.status?.toUpperCase() || undefined,
         authorityHistory: authorityHistoryUpdate,
       })
@@ -998,13 +1009,15 @@ const AdminAllListingsPage = () => {
       effectiveDate: '',
       revocationDate: '',
       assignedTo: '',
-      notes: ''
+      notes: '',
+      authorityType: 'MOTOR_CARRIER',
     })
     setAddListingError(null)
     setAddListingFmcsaSuccess(false)
     setAddListingFmcsaError(null)
     setAddListingAuthorityHistory(null)
     setAddListingFmcsaCarrierData(null)
+    setAddListingAuthorityTypeTouched(false)
     setSelectedSeller(null)
     setSellerSearchTerm('')
     setSellerSearchResults([])
@@ -1061,6 +1074,7 @@ const AdminAllListingsPage = () => {
         sellingWithEmail: newListing.sellingWithEmail,
         sellingWithPhone: newListing.sellingWithPhone,
         cargoTypes: newListing.cargoTypes.length > 0 ? newListing.cargoTypes : undefined,
+        authorityType: newListing.authorityType,
         isPremium: newListing.isPremium,
         isVip: newListing.isVip,
         visibility: newListing.visibility || 'public',
@@ -1785,6 +1799,37 @@ const AdminAllListingsPage = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-1">Revoked</label>
                           <Input type="date" value={editForm.revocationDate} onChange={(e: any) => setEditForm({ ...editForm, revocationDate: e.target.value })} />
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Authority Type */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Truck className="w-5 h-5 text-indigo-600" />
+                        Authority Type
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { value: 'MOTOR_CARRIER', label: 'Motor Carrier', sub: 'Common / Contract' },
+                          { value: 'BROKER', label: 'Broker', sub: 'Brokerage authority' },
+                          { value: 'MOTOR_CARRIER_AND_BROKER', label: 'Carrier + Broker', sub: 'Dual authority' },
+                          { value: 'FREIGHT_FORWARDER', label: 'Freight Forwarder', sub: 'Forwarder authority' },
+                        ].map((option) => {
+                          const selected = editForm.authorityType === option.value
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setEditForm({ ...editForm, authorityType: option.value })}
+                              className={`p-3 rounded-xl border-2 transition-all text-center ${
+                                selected ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                              }`}
+                            >
+                              <div className={`text-sm font-semibold ${selected ? 'text-indigo-700' : 'text-gray-700'}`}>{option.label}</div>
+                              <div className="text-xs text-gray-400 mt-1">{option.sub}</div>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -2557,6 +2602,42 @@ const AdminAllListingsPage = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Authority Type */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-indigo-600" />
+                    Authority Type
+                    {addListingFmcsaSuccess && !addListingAuthorityTypeTouched && <span className="text-xs font-normal text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Auto-detected</span>}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { value: 'MOTOR_CARRIER', label: 'Motor Carrier', sub: 'Common / Contract' },
+                      { value: 'BROKER', label: 'Broker', sub: 'Brokerage authority' },
+                      { value: 'MOTOR_CARRIER_AND_BROKER', label: 'Carrier + Broker', sub: 'Dual authority' },
+                      { value: 'FREIGHT_FORWARDER', label: 'Freight Forwarder', sub: 'Forwarder authority' },
+                    ].map((option) => {
+                      const selected = newListing.authorityType === option.value
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setAddListingAuthorityTypeTouched(true)
+                            setNewListing({ ...newListing, authorityType: option.value as typeof newListing.authorityType })
+                          }}
+                          className={`p-3 rounded-xl border-2 transition-all text-center ${
+                            selected ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                          }`}
+                        >
+                          <div className={`text-sm font-semibold ${selected ? 'text-indigo-700' : 'text-gray-700'}`}>{option.label}</div>
+                          <div className="text-xs text-gray-400 mt-1">{option.sub}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Auto-detected from FMCSA active authorities — adjust if needed.</p>
+                </div>
 
                 {/* MC Authority Dates (editable) */}
                 <div>
