@@ -39,7 +39,8 @@ import {
   Unlock,
   ArrowUpCircle,
   ArrowDownCircle,
-  MapPin
+  MapPin,
+  Key
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -154,6 +155,12 @@ const AdminUsersPage = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', companyName: '' })
   const [profileSaving, setProfileSaving] = useState(false)
+
+  // Admin password reset state
+  const [showResetPasswordForm, setShowResetPasswordForm] = useState(false)
+  const [resetPasswordForm, setResetPasswordForm] = useState({ newPassword: '', confirmPassword: '' })
+  const [resetPasswordSaving, setResetPasswordSaving] = useState(false)
+  const [resetPasswordFeedback, setResetPasswordFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
   // Activity log modal state
   const [showActivityModal, setShowActivityModal] = useState(false)
@@ -371,6 +378,31 @@ const AdminUsersPage = () => {
     } catch (err: any) {
       console.error('Failed to cancel subscription:', err)
       alert(err.message || 'Failed to cancel subscription')
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!selectedUser) return
+    const { newPassword, confirmPassword } = resetPasswordForm
+    if (newPassword.length < 8) {
+      setResetPasswordFeedback({ type: 'error', msg: 'Password must be at least 8 characters.' })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setResetPasswordFeedback({ type: 'error', msg: 'Passwords do not match.' })
+      return
+    }
+    try {
+      setResetPasswordSaving(true)
+      setResetPasswordFeedback(null)
+      const res = await api.adminResetUserPassword(selectedUser.id, newPassword)
+      setResetPasswordFeedback({ type: 'success', msg: res?.data?.message || 'Password reset successfully.' })
+      setResetPasswordForm({ newPassword: '', confirmPassword: '' })
+    } catch (err: any) {
+      console.error('Failed to reset password:', err)
+      setResetPasswordFeedback({ type: 'error', msg: err.message || 'Failed to reset password' })
+    } finally {
+      setResetPasswordSaving(false)
     }
   }
 
@@ -1086,6 +1118,9 @@ const AdminUsersPage = () => {
             onClick={() => {
               setShowDetailModal(false)
               setUserDetails(null)
+              setShowResetPasswordForm(false)
+              setResetPasswordForm({ newPassword: '', confirmPassword: '' })
+              setResetPasswordFeedback(null)
             }}
           >
             <motion.div
@@ -1677,6 +1712,73 @@ const AdminUsersPage = () => {
                   </div>
                 )}
 
+                {/* Admin Reset Password */}
+                {showResetPasswordForm && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Key className="w-4 h-4 text-amber-700 mt-0.5" />
+                        <div className="text-sm text-amber-900">
+                          <p className="font-semibold">Reset password for {selectedUser.name}</p>
+                          <p className="text-xs text-amber-800/80 mt-0.5">
+                            Sets a new password immediately and logs the user out of all sessions. Share the new password with them out-of-band.
+                          </p>
+                        </div>
+                      </div>
+                      <Input
+                        label="New password"
+                        type="password"
+                        placeholder="At least 8 characters"
+                        value={resetPasswordForm.newPassword}
+                        onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, newPassword: e.target.value })}
+                      />
+                      <Input
+                        label="Confirm password"
+                        type="password"
+                        placeholder="Re-enter password"
+                        value={resetPasswordForm.confirmPassword}
+                        onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, confirmPassword: e.target.value })}
+                      />
+                      {resetPasswordFeedback && (
+                        <div
+                          className={`text-sm rounded-lg p-2 ${
+                            resetPasswordFeedback.type === 'success'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}
+                        >
+                          {resetPasswordFeedback.msg}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleResetPassword}
+                          disabled={resetPasswordSaving || !resetPasswordForm.newPassword || !resetPasswordForm.confirmPassword}
+                          className="bg-amber-600 hover:bg-amber-700"
+                        >
+                          {resetPasswordSaving ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Key className="w-4 h-4 mr-2" />
+                          )}
+                          {resetPasswordSaving ? 'Saving…' : 'Set new password'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowResetPasswordForm(false)
+                            setResetPasswordForm({ newPassword: '', confirmPassword: '' })
+                            setResetPasswordFeedback(null)
+                          }}
+                          disabled={resetPasswordSaving}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
                   <Button
@@ -1706,6 +1808,17 @@ const AdminUsersPage = () => {
                   >
                     <History className="w-4 h-4 mr-2" />
                     View Activity Log
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setResetPasswordFeedback(null)
+                      setResetPasswordForm({ newPassword: '', confirmPassword: '' })
+                      setShowResetPasswordForm((v) => !v)
+                    }}
+                  >
+                    <Key className="w-4 h-4 mr-2" />
+                    Reset Password
                   </Button>
                   {!selectedUser.verified && selectedUser.status !== 'BLOCKED' && selectedUser.role === 'SELLER' && (
                     <Button

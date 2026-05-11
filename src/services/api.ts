@@ -353,6 +353,13 @@ class ApiService {
     });
   }
 
+  async adminResetUserPassword(userId: string, newPassword: string) {
+    return this.request<ApiResponse<{ message: string }>>(`/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
   // ============================================
   // Buyer Preferences (admin view)
   // ============================================
