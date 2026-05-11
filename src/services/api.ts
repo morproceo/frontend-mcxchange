@@ -360,6 +360,12 @@ class ApiService {
     });
   }
 
+  async deleteUser(userId: string) {
+    return this.request<ApiResponse<{ message: string }>>(`/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ============================================
   // Buyer Preferences (admin view)
   // ============================================

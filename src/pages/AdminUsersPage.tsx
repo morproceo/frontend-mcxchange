@@ -381,6 +381,30 @@ const AdminUsersPage = () => {
     }
   }
 
+  const handleDeleteUser = async (user: UserData) => {
+    if (user.role === 'ADMIN') {
+      alert('Admin accounts cannot be deleted from the users panel.')
+      return
+    }
+    const ok = confirm(
+      `Delete ${user.name} (${user.email})?\n\nThis cancels any active subscription, anonymizes their personal info, suspends the account, and logs them out everywhere. Historical records (offers, transactions, listings) are kept for audit. This cannot be undone.`
+    )
+    if (!ok) return
+    try {
+      await api.deleteUser(user.id)
+      setShowActionMenu(null)
+      if (selectedUser?.id === user.id) {
+        setShowDetailModal(false)
+        setSelectedUser(null)
+        setUserDetails(null)
+      }
+      fetchUsers()
+    } catch (err: any) {
+      console.error('Failed to delete user:', err)
+      alert(err.message || 'Failed to delete user')
+    }
+  }
+
   const handleResetPassword = async () => {
     if (!selectedUser) return
     const { newPassword, confirmPassword } = resetPasswordForm
@@ -1054,7 +1078,10 @@ const AdminUsersPage = () => {
                             </button>
                           )}
                           {user.role !== 'ADMIN' && (
-                            <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
                               <Trash2 className="w-4 h-4" />
                               Delete User
                             </button>
@@ -1853,6 +1880,15 @@ const AdminUsersPage = () => {
                     >
                       <Ban className="w-4 h-4 mr-2" />
                       Block User
+                    </Button>
+                  )}
+                  {selectedUser.role !== 'ADMIN' && (
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDeleteUser(selectedUser)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete User
                     </Button>
                   )}
                 </div>
