@@ -63,7 +63,7 @@ interface Listing {
   price: number
   askingPrice: number
   listingPrice: number | null
-  status: 'active' | 'pending' | 'sold' | 'rejected' | 'draft'
+  status: 'active' | 'pending' | 'reserved' | 'sold' | 'rejected' | 'draft'
   seller: {
     id: string
     name: string
@@ -119,7 +119,7 @@ interface User {
 
 const AdminAllListingsPage = () => {
   const navigate = useNavigate()
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'rejected' | 'sold' | 'premium' | 'vip' | 'draft'>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'reserved' | 'rejected' | 'sold' | 'premium' | 'vip' | 'draft'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
@@ -328,14 +328,14 @@ const AdminAllListingsPage = () => {
   }
 
   // Map API status to component status
-  const mapStatus = (status: string): 'active' | 'pending' | 'sold' | 'rejected' | 'draft' => {
-    const statusMap: Record<string, 'active' | 'pending' | 'sold' | 'rejected' | 'draft'> = {
+  const mapStatus = (status: string): 'active' | 'pending' | 'reserved' | 'sold' | 'rejected' | 'draft' => {
+    const statusMap: Record<string, 'active' | 'pending' | 'reserved' | 'sold' | 'rejected' | 'draft'> = {
       'ACTIVE': 'active',
       'PENDING_REVIEW': 'pending',
       'SOLD': 'sold',
       'REJECTED': 'rejected',
       'DRAFT': 'draft',
-      'RESERVED': 'sold',
+      'RESERVED': 'reserved',
       'SUSPENDED': 'rejected'
     }
     return statusMap[status] || 'draft'
@@ -352,6 +352,7 @@ const AdminAllListingsPage = () => {
         'all': '',
         'active': 'ACTIVE',
         'pending': 'PENDING_REVIEW',
+        'reserved': 'RESERVED',
         'sold': 'SOLD',
         'rejected': 'REJECTED',
         'draft': 'DRAFT',
@@ -813,6 +814,7 @@ const AdminAllListingsPage = () => {
     { label: 'Total', value: allListings.length, color: 'bg-gray-100 text-gray-700' },
     { label: 'Active', value: allListings.filter(l => l.status === 'active').length, color: 'bg-green-100 text-green-700' },
     { label: 'Pending', value: allListings.filter(l => l.status === 'pending').length, color: 'bg-yellow-100 text-yellow-700' },
+    { label: 'Reserved', value: allListings.filter(l => l.status === 'reserved').length, color: 'bg-orange-100 text-orange-700' },
     { label: 'Sold', value: allListings.filter(l => l.status === 'sold').length, color: 'bg-blue-100 text-blue-700' },
     { label: 'Rejected', value: allListings.filter(l => l.status === 'rejected').length, color: 'bg-red-100 text-red-700' },
     { label: 'Draft', value: allListings.filter(l => l.status === 'draft').length, color: 'bg-purple-100 text-purple-700' },
@@ -824,6 +826,7 @@ const AdminAllListingsPage = () => {
     const styles: Record<string, string> = {
       active: 'bg-green-100 text-green-700',
       pending: 'bg-yellow-100 text-yellow-700',
+      reserved: 'bg-orange-100 text-orange-700',
       sold: 'bg-blue-100 text-blue-700',
       rejected: 'bg-red-100 text-red-700',
       draft: 'bg-purple-100 text-purple-700'
@@ -1292,7 +1295,7 @@ const AdminAllListingsPage = () => {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(['all', 'active', 'pending', 'sold', 'rejected', 'draft', 'premium', 'vip'] as const).map((filter) => (
+            {(['all', 'active', 'pending', 'reserved', 'sold', 'rejected', 'draft', 'premium', 'vip'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -1605,6 +1608,7 @@ const AdminAllListingsPage = () => {
                       <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${
                         selectedListing.status === 'active' ? 'bg-green-400 text-green-900' :
                         selectedListing.status === 'pending' ? 'bg-yellow-400 text-yellow-900' :
+                        selectedListing.status === 'reserved' ? 'bg-orange-400 text-orange-900' :
                         selectedListing.status === 'sold' ? 'bg-blue-400 text-blue-900' :
                         selectedListing.status === 'draft' ? 'bg-purple-400 text-purple-900' :
                         'bg-red-400 text-red-900'
