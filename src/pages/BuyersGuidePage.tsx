@@ -52,6 +52,15 @@ export default function BuyersGuidePage() {
             the people who run the Domilea marketplace. Skip the rookie mistakes that cost
             buyers thousands.
           </p>
+          <a
+            href="/docs/buyers-guide-preview.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 underline underline-offset-4"
+          >
+            <Download className="w-4 h-4" />
+            Download free preview (PDF)
+          </a>
         </motion.div>
       </section>
 
