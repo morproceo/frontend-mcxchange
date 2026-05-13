@@ -26,6 +26,7 @@ const MCDetailPageV2 = lazy(() => import('./pages/MCDetailPageV2'))
 const ConsultationSuccessPage = lazy(() => import('./pages/ConsultationSuccessPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const BuyersGuidePage = lazy(() => import('./pages/BuyersGuidePage'))
+const GuideThankYouPage = lazy(() => import('./pages/GuideThankYouPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const DriversLandingPage = lazy(() => import('./pages/DriversLandingPage'))
@@ -131,6 +132,7 @@ function App() {
               <Route path="register" element={<RegisterPage />} />
               <Route path="pricing" element={<PricingPage />} />
               <Route path="resources/how-to-buy-a-trucking-business" element={<BuyersGuidePage />} />
+              <Route path="guide/thank-you" element={<GuideThankYouPage />} />
               <Route path="terms" element={<TermsPage />} />
               <Route path="privacy" element={<PrivacyPage />} />
               <Route path="admin-register" element={<AdminRegisterPage />} />
