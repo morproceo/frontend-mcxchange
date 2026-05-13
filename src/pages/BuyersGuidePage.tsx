@@ -4,8 +4,12 @@ import {
   TrendingUp, Lock, Zap, BookOpen,
 } from 'lucide-react'
 
-const PAY_LINK_PDF = import.meta.env.VITE_STRIPE_PAYMENT_LINK_GUIDE_PDF || '#'
-const PAY_LINK_BUNDLE = import.meta.env.VITE_STRIPE_PAYMENT_LINK_GUIDE_BUNDLE || '#'
+const PAY_LINK_PDF =
+  import.meta.env.VITE_STRIPE_PAYMENT_LINK_GUIDE_PDF ||
+  'https://buy.stripe.com/5kQdR9deD5zY2Zf9NncV201'
+const PAY_LINK_BUNDLE =
+  import.meta.env.VITE_STRIPE_PAYMENT_LINK_GUIDE_BUNDLE ||
+  'https://buy.stripe.com/bJe00j6Qfd2q1Vb3oZcV202'
 
 const tableOfContents = [
   'How motor-carrier authorities are bought and sold',
